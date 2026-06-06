@@ -1,65 +1,268 @@
-import Image from "next/image";
+import { prisma } from '@/lib/prisma'
+import { HeroBanner } from '@/components/home/hero-banner'
+import { BuyAgainSection } from '@/components/home/buy-again-section'
+import { CategoryGrid } from '@/components/home/category-grid'
+import { DeliveryBanner } from '@/components/home/delivery-banner'
+import { ProductScrollSection } from '@/components/product/product-scroll-section'
+import { ProductCard } from '@/components/product/product-card'
+import { CountdownTimer } from '@/components/shared/countdown-timer'
+import { LastOrderBanner } from '@/components/home/last-order-banner'
+import { TimeSuggestions } from '@/components/home/time-suggestions'
+import { TrendingSection } from '@/components/home/trending-section'
+import { SpeedStrip } from '@/components/home/speed-strip'
+import { Category, Product } from '@/types'
 
-export default function Home() {
+// Revalidate home page every 60 seconds to keep catalog fresh
+export const revalidate = 60
+
+export default async function Home() {
+  // Fetch active banners from database
+  const promoBanners = await prisma.promoBanner.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: 'asc' },
+  }).catch(() => [])
+
+  // 1. Fetch categories
+  const categoriesRaw = await prisma.category.findMany({
+    orderBy: { sortOrder: 'asc' },
+  })
+
+  // 2. Fetch Trending Items (automatically calculated based on order history quantities, fallback to 'popular' tags)
+  let topPicksRaw: any[] = []
+  try {
+    const trendingOrderItems = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      _sum: {
+        quantity: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc',
+        },
+      },
+      take: 12,
+    })
+
+    const trendingProductIds = trendingOrderItems.map((item) => item.productId)
+
+    if (trendingProductIds.length > 0) {
+      const orderHistoryProducts = await prisma.product.findMany({
+        where: {
+          id: { in: trendingProductIds },
+          isAvailable: true,
+        },
+        include: { category: true },
+      })
+      // Sort in order of sales popularity
+      topPicksRaw = orderHistoryProducts.sort(
+        (a, b) => trendingProductIds.indexOf(a.id) - trendingProductIds.indexOf(b.id)
+      )
+    }
+  } catch (error) {
+    console.error('Failed to calculate dynamic trending items:', error)
+  }
+
+  // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
+  if (topPicksRaw.length < 6) {
+    const existingIds = topPicksRaw.map((p) => p.id)
+    const popularProducts = await prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        tags: { has: 'popular' },
+        id: { notIn: existingIds },
+      },
+      take: 12 - topPicksRaw.length,
+      include: { category: true },
+    })
+    topPicksRaw = [...topPicksRaw, ...popularProducts]
+  }
+
+  // 3. Fetch Flash Deals (Discount > 10%)
+  const flashDealsRaw = await prisma.product.findMany({
+    where: {
+      isAvailable: true,
+      discount: { gt: 10 },
+    },
+    orderBy: { discount: 'desc' },
+    take: 10,
+    include: { category: true },
+  })
+
+  // 4. Fetch Best Sellers
+  const bestSellersRaw = await prisma.product.findMany({
+    where: {
+      isAvailable: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 12,
+    include: { category: true },
+  })
+
+  // 5. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
+  const istOffset = 5.5 * 60 * 60 * 1000
+  const serverTime = new Date()
+  const istTime = new Date(serverTime.getTime() + (serverTime.getTimezoneOffset() * 60000) + istOffset)
+  const currentHour = istTime.getHours()
+
+  let suggestionWhereClause: any = { isAvailable: true }
+
+  if (currentHour >= 6 && currentHour < 11) {
+    // Breakfast Essentials: dairy-breakfast category or breakfast/dairy tags
+    suggestionWhereClause = {
+      isAvailable: true,
+      OR: [
+        { tags: { has: 'breakfast' } },
+        { tags: { has: 'dairy' } },
+        { category: { slug: 'dairy-breakfast' } },
+      ],
+    }
+  } else if (currentHour >= 11 && currentHour < 16) {
+    // Lunch Time Picks: staples or atta-rice-dal category
+    suggestionWhereClause = {
+      isAvailable: true,
+      OR: [
+        { tags: { has: 'staples' } },
+        { category: { slug: 'atta-rice-dal' } },
+      ],
+    }
+  } else if (currentHour >= 16 && currentHour < 20) {
+    // Snack O'Clock: snacks/munchies category or snacks tag
+    suggestionWhereClause = {
+      isAvailable: true,
+      OR: [
+        { tags: { has: 'snacks' } },
+        { category: { slug: 'snacks-munchies' } },
+      ],
+    }
+  } else {
+    // Late Night Cravings (8 PM - 5 AM): Admin explicitly marked 'late-night' tag, or category/tag fallbacks
+    suggestionWhereClause = {
+      isAvailable: true,
+      OR: [
+        { tags: { has: 'late-night' } }, // Admin explicitly selected night craving items
+        { tags: { has: 'snacks' } },
+        { tags: { has: 'beverages' } },
+        { category: { slug: 'snacks-munchies' } },
+        { category: { slug: 'beverages' } },
+      ],
+    }
+  }
+
+  // Fetch all matching suggestion items
+  const suggestionsRaw = await prisma.product.findMany({
+    where: suggestionWhereClause,
+    include: { category: true },
+  })
+
+  // Sort: Put products matching explicitly desired smart tags (like 'late-night' for late-night hour) at the very front
+  const preferredTag = currentHour >= 20 || currentHour < 6 ? 'late-night' : (currentHour >= 6 && currentHour < 11 ? 'breakfast' : '')
+  if (preferredTag) {
+    suggestionsRaw.sort((a: any, b: any) => {
+      const aPref = a.tags.includes(preferredTag) ? 1 : 0
+      const bPref = b.tags.includes(preferredTag) ? 1 : 0
+      return bPref - aPref // 1 comes before 0
+    })
+  }
+
+  // Map database categories to UI schema
+  const categories: Category[] = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    imageUrl: c.imageUrl,
+    parentId: c.parentId,
+    sortOrder: c.sortOrder,
+  }))
+
+  const mapProduct = (p: any): Product => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    description: p.description,
+    imageUrl: p.imageUrl,
+    categoryId: p.categoryId,
+    mrp: p.mrp,
+    price: p.price,
+    discount: p.discount,
+    unit: p.unit,
+    stock: p.stock,
+    isAvailable: p.isAvailable,
+    tags: p.tags,
+    category: p.category ? {
+      id: p.category.id,
+      name: p.category.name,
+      slug: p.category.slug,
+      imageUrl: p.category.imageUrl,
+      parentId: p.category.parentId,
+      sortOrder: p.category.sortOrder,
+    } : undefined,
+  })
+
+  const topPicks = topPicksRaw.map(mapProduct)
+  const flashDeals = flashDealsRaw.map(mapProduct)
+  const bestSellers = bestSellersRaw.map(mapProduct)
+  const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="container mx-auto px-4 py-6 space-y-8 max-w-7xl">
+      {/* Top Banner Promos */}
+      <HeroBanner initialBanners={promoBanners} />
+
+      {/* Speed ticker strip */}
+      <SpeedStrip />
+
+      {/* One-tap Reorder Buy Again Section */}
+      <BuyAgainSection />
+
+      {/* Your Last Order - Track active or reorder */}
+      <LastOrderBanner />
+
+      {/* Flash Deals Row */}
+      <ProductScrollSection
+        title="Flash Deals"
+        subtitle="Instant discounts on daily cravings"
+        products={flashDeals}
+        rightElement={
+          <div key="flash-deals-countdown-timer" className="flex items-center gap-2">
+            <span className="text-xs font-bold text-text-secondary">Ends in:</span>
+            <CountdownTimer />
+          </div>
+        }
+      />
+
+      {/* Shop Categories Circular List */}
+      <CategoryGrid categories={categories} />
+
+      {/* Contextual Time of Day Suggestions */}
+      <TimeSuggestions products={suggestionProducts} />
+
+      {/* Trending in Town with Social Proof */}
+      <TrendingSection products={topPicks} />
+
+      {/* Top Picks Row */}
+      <ProductScrollSection
+        title="Top Picks"
+        subtitle="Highly rated and popular in your neighborhood"
+        products={topPicks}
+      />
+
+      {/* Value Proposition Grid */}
+      <DeliveryBanner />
+
+      {/* Best Sellers Grid */}
+      <section className="py-6">
+        <h2 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
+          Best Sellers
+        </h2>
+        <p className="text-sm text-text-secondary mb-6 px-1">
+          Our customer favorites
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {bestSellers.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
     </div>
-  );
+  )
 }
