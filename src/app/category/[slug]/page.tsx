@@ -97,7 +97,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   ]
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
       <div className="flex flex-col md:flex-row gap-6">
         
         {/* Desktop Left Sidebar: Categories Navigation */}
@@ -158,7 +158,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                 <span className="text-3xl" role="img" aria-label={activeCategory.name}>
                   {activeCategory.imageUrl || '🛒'}
                 </span>
-                <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight">
+                <h1 className="text-lg md:text-2xl font-extrabold text-text-primary tracking-tight">
                   {activeCategory.name}
                 </h1>
               </div>
@@ -168,9 +168,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             </div>
 
             {/* Sorting Actions */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-text-secondary">Sort By:</span>
-              <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-text-secondary hidden sm:inline">Sort By:</span>
+              <div className="flex overflow-x-auto gap-1 bg-muted p-1 rounded-xl scrollbar-none w-full sm:w-auto">
                 {sortOptions.map((opt) => {
                   const isActive = sort === opt.value
                   return (
@@ -178,7 +178,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                       key={opt.label}
                       href={`/category/${slug}${opt.value ? `?sort=${opt.value}` : ''}`}
                       className={cn(
-                        "px-3 py-1 text-xs font-bold rounded-lg transition-colors whitespace-nowrap",
+                        "px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex-shrink-0",
                         isActive
                           ? "bg-card text-text-primary shadow-sm"
                           : "text-text-secondary hover:text-text-primary"
@@ -204,7 +204,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+            <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

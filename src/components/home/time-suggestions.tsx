@@ -129,17 +129,17 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
         {/* Section header */}
         <div className="flex items-center justify-between mb-4 px-1">
           <div>
-            <h2 className="text-lg md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
+            <h2 className="text-base md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
               <span className="flex-shrink-0 flex items-center justify-center p-1.5 rounded-lg bg-white/60 shadow-sm border border-white/80 dark:border-zinc-800/50">{timeConfig.icon}</span>
               <span>{timeConfig.title}</span>
             </h2>
-            <p className="text-sm text-text-secondary mt-1">
+            <p className="text-xs md:text-sm text-text-secondary mt-1">
               Curated picks for this time of day
             </p>
           </div>
 
           {/* Scroll buttons */}
-          <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5">
             <button
               onClick={() => scroll('left')}
               className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm"
@@ -160,7 +160,7 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
         {/* Horizontal product scroll */}
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
+          className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {filteredProducts.map((product, index) => (

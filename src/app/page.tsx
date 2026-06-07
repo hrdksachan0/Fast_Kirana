@@ -234,7 +234,7 @@ export default async function Home() {
   const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
 
   return (
-    <div className="container mx-auto px-4 py-4 space-y-2.5 md:space-y-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-3 space-y-1.5 md:space-y-8 max-w-7xl">
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />
 
@@ -281,13 +281,13 @@ export default async function Home() {
 
       {/* Best Sellers Grid */}
       <section className="py-2.5 md:py-6">
-        <h2 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
+        <h2 className="text-lg md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
           Best Sellers
         </h2>
-        <p className="text-sm text-text-secondary mb-6 px-1">
+        <p className="text-xs md:text-sm text-text-secondary mb-3 md:mb-6 px-1">
           Our customer favorites
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
+        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
           {bestSellers.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

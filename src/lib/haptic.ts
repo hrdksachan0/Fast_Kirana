@@ -6,7 +6,7 @@ export type HapticType = 'light' | 'medium' | 'success' | 'warning'
 const PATTERNS: Record<HapticType, number | number[]> = {
   light: 12, // Short, subtle tick
   medium: 25, // Standard button click tick
-  success: [20, 60, 20], // Double short pulse
+  success: [200, 100, 200], // Double firm pulse
   warning: [50, 100, 50], // Double firm pulse
 }
 

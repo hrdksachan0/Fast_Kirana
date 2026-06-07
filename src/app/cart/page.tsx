@@ -147,11 +147,11 @@ export default function CartPage() {
         initial={{ height: 0, opacity: 0, scale: 0.95 }}
         animate={{ height: 'auto', opacity: 1, scale: 1 }}
         exit={{ height: 0, opacity: 0, scale: 0.95 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
         className="overflow-hidden border-b border-border/40 last:border-0"
       >
-        <div className="flex items-center gap-4 py-4">
-          <div className="relative w-16 h-16 rounded-xl border border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+        <div className="flex items-center gap-2.5 min-[375px]:gap-4 py-3 min-[375px]:py-3.5">
+          <div className="relative w-14 h-14 min-[375px]:w-16 min-[375px]:h-16 rounded-xl border border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
             <ProductImage
               src={item.product.imageUrl}
               alt={item.product.name}
@@ -161,10 +161,10 @@ export default function CartPage() {
           </div>
 
           <div className="flex-grow">
-            <h3 className="text-sm font-bold text-text-primary line-clamp-1">{item.product.name}</h3>
+            <h3 className="text-xs min-[375px]:text-sm font-bold text-text-primary line-clamp-1">{item.product.name}</h3>
             <p className="text-xs text-text-secondary mt-0.5">{item.product.unit}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm font-bold text-text-primary">₹{item.product.price}</span>
+              <span className="text-xs min-[375px]:text-sm font-bold text-text-primary">₹{item.product.price}</span>
               {item.product.mrp > item.product.price && (
                 <span className="text-xs text-text-muted line-through">₹{item.product.mrp}</span>
               )}
@@ -203,15 +203,15 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      <h1 className="text-2xl font-black text-text-primary mb-6">Review Cart Items</h1>
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
+      <h1 className="text-lg min-[375px]:text-xl md:text-2xl font-black text-text-primary mb-4 md:mb-6">Review Cart Items</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Left: Items list */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-5 md:space-y-6">
           {/* Grocery Section */}
           {groceryItems.length > 0 && (
-            <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
               <div className="flex flex-col border-b border-border/40 pb-3">
                 <h2 className="text-base font-black text-primary flex items-center gap-1.5">
                   📦 Grocery & Daily Essentials
@@ -256,7 +256,7 @@ export default function CartPage() {
 
           {/* Cafe Section */}
           {cafeItems.length > 0 && (
-            <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
               <div className="flex flex-col border-b border-border/40 pb-3">
                 <h2 className="text-base font-black text-rose-600 flex items-center gap-1.5">
                   ☕ FastKirana Cafe
@@ -303,7 +303,7 @@ export default function CartPage() {
         {/* Right: Summary and Checkout */}
         <div className="space-y-4">
           {/* Coupon entry */}
-          <div className="bg-card border border-border p-4 rounded-2xl shadow-sm space-y-3">
+          <div className="bg-card border border-border p-3.5 min-[375px]:p-4 rounded-2xl shadow-sm space-y-3">
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
               <Ticket className="h-4 w-4 text-primary" />
               Apply Coupon Code
@@ -349,7 +349,7 @@ export default function CartPage() {
           </div>
 
           {/* Bill summary list */}
-          <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
             <h2 className="text-base font-bold text-text-primary border-b border-border/40 pb-2.5">
               Bill Summary
             </h2>

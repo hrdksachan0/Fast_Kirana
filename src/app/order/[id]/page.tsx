@@ -67,7 +67,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 15 * 60 * 1000)
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8 bg-background relative">
+    <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6 md:space-y-8 bg-background relative">
       {/* 60fps Canvas Confetti & Chime sound effects */}
       <OrderSuccessEffects />
 
@@ -94,7 +94,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       )}
 
       {/* Confirmation success block */}
-      <div className="relative z-10 flex flex-col items-center text-center p-6 bg-card border border-border/80 dark:border-zinc-800/60 rounded-3xl shadow-lg animate-card-enter">
+      <div className="relative z-10 flex flex-col items-center text-center p-4 min-[375px]:p-6 bg-card border border-border/80 dark:border-zinc-800/60 rounded-3xl shadow-lg animate-card-enter">
         <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mb-4 border border-accent/20 animate-status-pulse">
           <CheckCircle2 className="h-9 w-9 text-accent animate-bounce-subtle" />
         </div>
@@ -137,7 +137,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Delivery schedules */}
-        <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
             <Clock className="h-4 w-4 text-primary" />
             Delivery Schedule
@@ -163,13 +163,13 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             </div>
             <div className="flex justify-between">
               <span className="text-text-secondary">Order ID</span>
-              <span className="font-mono text-[10px] select-all bg-muted px-1.5 py-0.5 rounded">{order.id}</span>
+              <span className="font-mono text-[10px] select-all bg-muted px-1.5 py-0.5 rounded break-all">{order.id}</span>
             </div>
           </div>
         </div>
 
         {/* Saved Addresses destination */}
-        <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
             <MapPin className="h-4 w-4 text-primary" />
             Delivery Destination
@@ -202,7 +202,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
         {/* Fulfilling Shop */}
         {!order.isB2B && order.shopName && (
-          <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4 md:col-span-2">
+          <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4 md:col-span-2">
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
               <span className="text-base">🏪</span>
               Fulfillment Center
@@ -226,7 +226,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       </div>
 
       {/* Bill summary receipt details */}
-      <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
         <h2 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
           Receipt Details
         </h2>

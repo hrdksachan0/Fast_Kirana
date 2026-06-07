@@ -136,17 +136,17 @@ export function BuyAgainSection() {
         {/* Section header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
+            <h2 className="text-base md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
               <span className="flex-shrink-0 flex items-center justify-center p-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary">
                 <History className="h-4 w-4" />
               </span>
               <span>Buy It Again</span>
             </h2>
-            <p className="text-xs text-text-secondary mt-0.5">
+            <p className="text-[11px] sm:text-xs text-text-secondary mt-0.5">
               Your favorites, one tap away
             </p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5">
             <button
               onClick={() => scroll('left')}
               className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm"

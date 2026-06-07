@@ -29,8 +29,31 @@ export function SpeedStrip() {
   ]
 
   return (
-    <section className="hidden md:block py-3">
-      <div className="relative overflow-hidden rounded-xl glass shadow-sm">
+    <section className="py-1.5 md:py-3">
+      {/* Mobile: Compact stats bar */}
+      <div className="flex md:hidden items-center justify-center gap-4 px-3 py-2 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-zinc-800/30 shadow-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
+            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+          </span>
+          <Zap className="h-3 w-3 text-amber-500 fill-amber-500/10" />
+          <span className="text-[10px] font-black text-text-primary">8 min delivery</span>
+        </div>
+        <span className="h-3 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
+        <div className="flex items-center gap-1.5">
+          <Package className="h-3 w-3 text-blue-500 fill-blue-500/10" />
+          <span className="text-[10px] font-black text-text-primary">{ordersToday.toLocaleString('en-IN')}+ delivered</span>
+        </div>
+        <span className="h-3 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
+        <div className="flex items-center gap-1.5">
+          <Heart className="h-3 w-3 text-rose-500 fill-rose-500/10" />
+          <span className="text-[10px] font-black text-text-primary">5,000+ families</span>
+        </div>
+      </div>
+
+      {/* Desktop: Full ticker */}
+      <div className="hidden md:block relative overflow-hidden rounded-xl glass shadow-sm">
         {/* Subtle gradient overlay on edges for fade effect */}
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white/80 dark:from-zinc-950/80 to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 dark:from-zinc-950/80 to-transparent z-10 pointer-events-none" />

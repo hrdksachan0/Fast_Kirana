@@ -52,11 +52,12 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
       {/* Text Branding */}
       {showText && (
         <div className="flex flex-col text-left leading-none">
-          <span className="text-xl font-black tracking-tight text-[#e20a22] dark:text-white lowercase">
-            fastkirana
+          <span className="text-xl font-black tracking-tight select-none">
+            <span className="text-[#e20a22]">Fast</span>
+            <span className={`dark:text-zinc-200 ${lightMode ? 'text-white' : 'text-[#7c0617]'}`}>Kirana</span>
           </span>
           <div className="flex items-center mt-0.5">
-            {/* Clean red delivery bag with speed lines */}
+            {/* Clean green delivery bag with speed lines */}
             <svg
               viewBox="0 0 60 50"
               className="h-3 w-auto shrink-0 mr-1"
@@ -64,26 +65,26 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
               xmlns="http://www.w3.org/2000/svg"
             >
               {/* Left speed lines for bag */}
-              <line x1="4" y1="23" x2="22" y2="23" stroke="#e20a22" strokeWidth="3.2" strokeLinecap="round" />
-              <line x1="1" y1="29" x2="19" y2="29" stroke="#e20a22" strokeWidth="3.2" strokeLinecap="round" />
-              <line x1="6" y1="35" x2="21" y2="35" stroke="#e20a22" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1="4" y1="23" x2="22" y2="23" stroke="#00b140" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1="1" y1="29" x2="19" y2="29" stroke="#00b140" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1="6" y1="35" x2="21" y2="35" stroke="#00b140" strokeWidth="3.2" strokeLinecap="round" />
 
               {/* Clean upright bag container */}
               {/* Bag handle */}
               <path
                 d="M36 18 C36 13.5 38.5 11 42 11 C45.5 11 48 13.5 48 18"
-                stroke="#e20a22"
+                stroke="#00b140"
                 strokeWidth="3.2"
                 strokeLinecap="round"
               />
               {/* Bag base */}
               <path
                 d="M31 18 H53 L54.5 41 C54.5 42.5 53 44 51.5 44 H32.5 C31 44 29.5 42.5 29.5 41 L31 18 Z"
-                fill="#e20a22"
+                fill="#00b140"
               />
             </svg>
-            <span className={`text-[9px] font-black tracking-widest uppercase ${lightMode ? 'text-gray-300' : 'text-[#e20a22] dark:text-rose-400'}`}>
-              10-Min Delivery
+            <span className={`text-[9px] font-black tracking-widest uppercase ${lightMode ? 'text-gray-300' : 'text-[#00b140] dark:text-emerald-400'}`}>
+              Delivery App
             </span>
           </div>
         </div>

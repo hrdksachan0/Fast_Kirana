@@ -14,7 +14,7 @@ export function CafeSection() {
         {/* Left Content */}
         <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
           <div className="flex items-center gap-1.5">
-            <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-1.5">
+            <h2 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1.5">
               <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent font-black">Café</span>
               <span className="text-base animate-float">☕</span>
             </h2>

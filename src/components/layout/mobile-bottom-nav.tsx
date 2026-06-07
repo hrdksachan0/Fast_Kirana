@@ -53,7 +53,11 @@ export function MobileBottomNav() {
 
         return (
           <Link key={idx} href={item.href} className="flex-1 flex flex-col justify-center h-full items-center">
-            <div className="flex flex-col items-center justify-center w-full">
+            <div className="flex flex-col items-center justify-center w-full relative">
+              {/* Active indicator bar */}
+              {isActive && (
+                <span className="absolute -top-1.5 w-4 h-[3px] rounded-full bg-primary transition-all duration-300" />
+              )}
               {/* Icon Container */}
               <div
                 className={cn(

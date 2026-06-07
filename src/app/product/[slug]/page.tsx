@@ -105,7 +105,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     : null
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-10">
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl space-y-6 md:space-y-10">
       
       {/* Breadcrumbs */}
       <nav className="text-xs font-bold text-text-secondary flex items-center gap-1.5 px-1">
@@ -123,7 +123,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </nav>
 
       {/* Main product details section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 bg-card border border-border p-6 rounded-2xl shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 lg:gap-12 bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm">
         
         {/* Left Column: Image and Badges */}
         <div className="flex flex-col gap-4">
@@ -138,14 +138,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
               src={product.imageUrl}
               alt={product.name}
               categorySlug={product.category?.slug}
-              className="h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-contain p-2 min-[375px]:p-4 md:p-6 transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         </div>
 
         {/* Right Column: Information & Actions */}
-        <div className="flex flex-col justify-between space-y-6">
-          <div className="space-y-4">
+        <div className="flex flex-col justify-between space-y-4 md:space-y-6">
+          <div className="space-y-3 md:space-y-4">
             {/* Category tag */}
             {product.category && (
               <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full">
@@ -154,7 +154,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             )}
 
             {/* Name */}
-            <h1 className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-tight leading-tight">
+            <h1 className="text-xl min-[375px]:text-2xl md:text-3xl font-bold md:font-extrabold text-text-primary tracking-tight leading-tight">
               {product.name}
             </h1>
 
@@ -194,7 +194,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {/* Dark Store verification banner */}
-            <div className="flex items-start gap-3 border border-accent/20 bg-accent/5 p-3.5 rounded-xl shadow-[0_0_12px_rgba(0,177,64,0.03)] border-l-4 border-l-accent">
+            <div className="flex items-start gap-3 border border-accent/20 bg-accent/5 p-2.5 min-[375px]:p-3.5 rounded-xl shadow-[0_0_12px_rgba(0,177,64,0.03)] border-l-4 border-l-accent">
               <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
               <div className="text-xs font-bold text-text-primary">
                 <span className="text-accent">FastKirana DarkStore Fresh Verified</span>
@@ -253,7 +253,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       )}
 
       {/* Reviews Details list */}
-      <section className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
+      <section className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6">
         <h2 className="text-lg md:text-xl font-bold text-text-primary tracking-tight border-b border-border/40 pb-3">
           Customer Reviews
         </h2>

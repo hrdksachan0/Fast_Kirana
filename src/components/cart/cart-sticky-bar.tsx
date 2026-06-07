@@ -107,6 +107,7 @@ export function CartStickyBar() {
         >
           View Cart
           <ArrowRight className="h-3 w-3 stroke-[2.5]" />
+          <span className="text-[9px] font-bold opacity-80 ml-0.5">• {eta}</span>
         </button>
       </div>
     </div>

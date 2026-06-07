@@ -151,29 +151,29 @@ export default function WholesalePage() {
   // 1. REGISTRATION FORM SCREEN
   if (!isRegistered) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden text-white">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-2 min-[375px]:p-4 relative overflow-hidden text-white">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/15 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl relative z-10 space-y-6">
+        <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-4 min-[375px]:p-6 rounded-3xl shadow-2xl relative z-10 space-y-4 sm:space-y-6">
           
           {/* Header */}
-          <div className="text-center space-y-2">
-            <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/20">
-              <Building2 className="h-6 w-6 text-white" />
+          <div className="text-center space-y-1.5 sm:space-y-2">
+            <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/20">
+              <Building2 className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white mt-3">Wholesale B2B Console</h1>
-            <p className="text-xs text-slate-400">
+            <h1 className="text-xl font-black tracking-tight text-white mt-2">Wholesale B2B Console</h1>
+            <p className="text-[11px] sm:text-xs text-slate-400">
               Enter your retail shop credentials to unlock flat 10% wholesaling discount and bulk deliveries.
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-3 sm:space-y-4">
             
             <div className="space-y-1">
-              <label htmlFor="shopName" className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              <label htmlFor="shopName" className="text-[9.5px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block">
                 Shop Name (Dukan ka Naam) *
               </label>
               <div className="relative">
@@ -185,13 +185,13 @@ export default function WholesalePage() {
                   placeholder="e.g. Sharma Grocery Store"
                   value={formShopName}
                   onChange={(e) => setFormShopName(e.target.value)}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="shopPhone" className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              <label htmlFor="shopPhone" className="text-[9.5px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block">
                 Contact Number *
               </label>
               <div className="relative">
@@ -204,20 +204,20 @@ export default function WholesalePage() {
                   placeholder="e.g. 9876543210"
                   value={formShopPhone}
                   onChange={(e) => setFormShopPhone(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="shopType" className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              <label htmlFor="shopType" className="text-[9.5px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block">
                 Business Type
               </label>
               <select
                 id="shopType"
                 value={formShopType}
                 onChange={(e) => setFormShopType(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold"
               >
                 <option value="Kirana Store">Kirana / Retail Store</option>
                 <option value="Cafe / Restaurant">Cafe / Restaurant</option>
@@ -227,7 +227,7 @@ export default function WholesalePage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="gstin" className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              <label htmlFor="gstin" className="text-[9.5px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block">
                 GSTIN Number (Optional)
               </label>
               <div className="relative">
@@ -239,7 +239,7 @@ export default function WholesalePage() {
                   placeholder="e.g. 07AAAAA1111A1Z1"
                   value={formGstin}
                   onChange={(e) => setFormGstin(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold tracking-wide"
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm placeholder:text-slate-600 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all font-semibold tracking-wide"
                 />
               </div>
             </div>
@@ -247,7 +247,7 @@ export default function WholesalePage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-primary hover:bg-primary-dark py-3.5 rounded-xl font-black text-sm text-white transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer mt-6"
+              className="w-full bg-primary hover:bg-primary-dark py-3 rounded-xl font-black text-sm text-white transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer mt-4"
             >
               {isSubmitting ? (
                 <>
@@ -283,7 +283,7 @@ export default function WholesalePage() {
     <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8 animate-fade-in">
       
       {/* Wholesale Header Banner */}
-      <div className="relative rounded-3xl bg-slate-950 overflow-hidden p-6 md:p-8 border border-slate-800 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
+      <div className="relative rounded-3xl bg-slate-950 overflow-hidden p-4 min-[375px]:p-6 md:p-8 border border-slate-800 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 shadow-xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-[80px] pointer-events-none" />
         
@@ -416,7 +416,7 @@ export default function WholesalePage() {
                   <p className="text-xs text-text-muted mt-1">Try resetting your category filters or search query.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-4">
                   {filteredProducts.map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}

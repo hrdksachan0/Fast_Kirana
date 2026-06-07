@@ -207,13 +207,13 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-[85vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950/20 relative overflow-hidden">
+    <div className="flex min-h-[85vh] items-center justify-center px-4 py-6 sm:py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950/20 relative overflow-hidden">
       {/* Decorative gradient blobs in background for a modern visual feel */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-primary/8 dark:bg-primary/10 blur-[100px] pointer-events-none animate-float-slow" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-accent/8 dark:bg-accent/10 blur-[110px] pointer-events-none animate-float-reverse" />
       <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-rose-400/5 dark:bg-rose-400/5 blur-[90px] pointer-events-none animate-float" />
 
-      <div className="w-full max-w-md space-y-8 rounded-3xl border border-white/20 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden transition-all duration-300 hover:shadow-primary/5">
+      <div className="w-full max-w-md space-y-5 sm:space-y-8 rounded-3xl border border-white/20 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-5 min-[375px]:p-6 sm:p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden transition-all duration-300 hover:shadow-primary/5">
         
         {/* Background glow decoration inside card */}
         <div className="absolute top-0 right-0 -mr-16 -mt-16 h-36 w-36 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
@@ -223,13 +223,13 @@ function LoginForm() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e20a22] to-[#ff4d62] text-white shadow-lg shadow-primary/25 hover:rotate-6 transition-transform">
             <ShoppingBag className="h-7 w-7 animate-float" />
           </div>
-          <h2 className="mt-6 text-2xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
+          <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && 'Welcome to FastKirana'}
             {step === 'PASSWORD' && 'Enter Password'}
             {step === 'OTP' && 'Verify Email'}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
-          <p className="mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
+          <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
             {step === 'EMAIL' && 'Log in or sign up to shop groceries delivered in 8 mins'}
             {step === 'PASSWORD' && `Enter password for ${email}`}
             {step === 'OTP' && `We sent a 6-digit OTP code to ${email}`}
@@ -248,7 +248,7 @@ function LoginForm() {
         {/* STEP 1: ENTER EMAIL */}
         {step === 'EMAIL' && (
           <form
-            className="mt-6 space-y-5 animate-slide-down relative z-10"
+            className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handleEmailSubmit}
           >
             <div className="space-y-1.5">
@@ -279,7 +279,7 @@ function LoginForm() {
               Continue
             </Button>
 
-            <div className="relative flex items-center justify-center text-xs uppercase my-4">
+            <div className="relative flex items-center justify-center text-xs uppercase my-3 sm:my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border/60"></div>
               </div>
@@ -308,7 +308,7 @@ function LoginForm() {
         {/* STEP 2: ENTER PASSWORD */}
         {step === 'PASSWORD' && (
           <form
-            className="mt-6 space-y-5 animate-slide-down relative z-10"
+            className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handlePasswordSubmit}
           >
             <div className="space-y-1.5">
@@ -371,7 +371,7 @@ function LoginForm() {
         {/* STEP 2: ENTER OTP */}
         {step === 'OTP' && (
           <form
-            className="mt-6 space-y-5 animate-slide-down relative z-10"
+            className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handleVerifyOtp}
           >
             <div className="space-y-1.5">
@@ -431,7 +431,7 @@ function LoginForm() {
         {/* STEP 3: CONFIGURE PROFILE */}
         {step === 'PROFILE' && (
           <form
-            className="mt-6 space-y-5 animate-slide-down relative z-10"
+            className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handleSaveProfileAndLogin}
           >
             <div className="space-y-4">

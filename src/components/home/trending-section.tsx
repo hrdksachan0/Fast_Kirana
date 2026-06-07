@@ -43,30 +43,30 @@ export function TrendingSection({ products }: TrendingSectionProps) {
     <section className="py-2.5 md:py-6">
       {/* Section header */}
       <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div>
-            <h2 className="text-lg md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
+            <h2 className="text-base md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-1.5">
               <span className="flex-shrink-0 flex items-center justify-center p-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-500">
-                <Flame className="h-5 w-5 fill-current animate-pulse-gentle" />
+                <Flame className="h-4 w-4 md:h-5 md:w-5 fill-current animate-pulse-gentle" />
               </span>
               <span>Trending in Your Town</span>
             </h2>
           </div>
 
           {/* Pulsing LIVE badge */}
-          <div className="flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1">
-            <span className="relative flex h-2 w-2">
+          <div className="flex items-center gap-1 bg-accent/10 border border-accent/20 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1">
+            <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
               <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              <span className="relative inline-flex h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-accent" />
             </span>
-            <span className="text-[10px] font-extrabold text-accent uppercase tracking-widest">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-accent uppercase tracking-widest">
               LIVE
             </span>
           </div>
         </div>
 
         {/* Scroll buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="hidden sm:flex items-center gap-1.5">
           <button
             onClick={() => scroll('left')}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm"
@@ -87,7 +87,7 @@ export function TrendingSection({ products }: TrendingSectionProps) {
       {/* Horizontal product scroll */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
+        className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((product, index) => (

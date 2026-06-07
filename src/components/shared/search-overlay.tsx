@@ -183,17 +183,6 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     addItem(cartProduct)
     saveSearchTerm(product.name)
 
-    // Trigger Fly Animation from clicked button/element
-    const rect = e.currentTarget.getBoundingClientRect()
-    window.dispatchEvent(
-      new CustomEvent('cart-item-fly', {
-        detail: {
-          startX: rect.left + rect.width / 2,
-          startY: rect.top + rect.height / 2,
-          imageUrl: product.imageUrl,
-        },
-      })
-    )
   }
 
   return (
@@ -215,7 +204,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-background md:inset-x-auto md:left-1/2 md:top-8 md:bottom-auto md:w-[640px] md:-translate-x-1/2 md:rounded-2xl md:max-h-[85vh] md:shadow-elevated md:border md:border-border"
           >
             {/* Top: Search bar */}

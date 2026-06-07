@@ -102,7 +102,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
+    <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6">
       <div className="flex flex-col gap-4">
         <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Track Your Delivery</h1>
         

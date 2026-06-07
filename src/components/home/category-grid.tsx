@@ -107,7 +107,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   return (
     <section className="py-2 md:py-6">
       {/* Mobile Header: Shop by Categories + See all */}
-      <div className="flex items-center justify-between mb-4 md:hidden px-1">
+      <div className="flex items-center justify-between mb-2.5 md:hidden px-1">
         <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
           Shop by Categories
         </h2>
@@ -117,7 +117,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       </div>
 
       {/* Mobile: 2x4 Grid layout */}
-      <div className="grid grid-cols-4 gap-2.5 md:hidden px-1">
+      <div className="grid grid-cols-4 gap-x-2 gap-y-3 md:hidden px-1">
         {categories
           .filter((c) => c.slug !== 'cafe')
           .slice(0, 8)

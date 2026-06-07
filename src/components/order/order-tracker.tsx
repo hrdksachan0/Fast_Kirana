@@ -312,7 +312,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     <div className="space-y-8 animate-fade-in">
       
       {/* Visual Delivery Status Card */}
-      <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
+      <div className="bg-card border border-border p-4 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-5 md:space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-4">
           <div>
             <span className="text-[10px] uppercase font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
@@ -502,7 +502,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
       {/* Simulated Tracking Map Panel */}
       {order.status !== 'DELIVERED' && order.status !== 'PENDING' && (
-        <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
             <Navigation className="h-4 w-4 text-primary" />
             Live Rider Position
@@ -566,7 +566,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
       {/* Delivery Proof Card */}
       {order.status === 'DELIVERED' && (
-        <div className="bg-card border-2 border-accent p-5 rounded-2xl shadow-md space-y-4 animate-fade-in">
+        <div className="bg-card border-2 border-accent p-4 min-[375px]:p-5 rounded-2xl shadow-md space-y-4 animate-fade-in">
           <h2 className="text-sm font-black text-text-primary flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-accent" />
             Proof of Delivery
@@ -627,7 +627,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
       )}
 
       {/* Delivery Destination Card */}
-      <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-3">
+      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3">
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
           Delivery Destination
@@ -655,7 +655,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
       </div>
 
       {/* Reciept mini summary */}
-      <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-3">
+      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3">
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
           Receipt details
         </h3>

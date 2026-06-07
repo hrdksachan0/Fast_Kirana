@@ -100,7 +100,7 @@ export function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4">
           {/* Mobile Header (2 Rows) */}
-          <div className="flex flex-col gap-2 md:hidden animate-fade-in">
+          <div className="flex flex-col gap-1.5 md:hidden animate-fade-in">
             <div className="flex items-center justify-between w-full gap-3">
               {/* Left Logo and Location Info combined */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -111,8 +111,9 @@ export function Navbar() {
                   onClick={() => setLocationPickerOpen(true)}
                   className="flex flex-col items-start text-left cursor-pointer group min-w-0 flex-1"
                 >
-                  <span className="text-xs font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-1">
-                    ⚡ Delivery in 8 mins
+                  <span className="text-xs font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-1.5">
+                    <MapPin size={12} className="text-primary animate-bounce-subtle shrink-0" />
+                    Fast Delivery
                   </span>
                   <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-0.5 w-full">
                     <span className="truncate max-w-[180px]">
@@ -123,13 +124,23 @@ export function Navbar() {
                 </button>
               </div>
 
-              {/* User Profile avatar icon on Right */}
-              <Link
-                href="/account"
+              {/* Theme Toggle Button on mobile */}
+              <button
+                onClick={() => {
+                  toggleTheme()
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    navigator.vibrate(12)
+                  }
+                }}
                 className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-zinc-800/40 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors shrink-0"
+                aria-label="Toggle theme"
               >
-                <User size={15} className="text-zinc-700 dark:text-zinc-300 stroke-[2.2]" />
-              </Link>
+                {theme === 'dark' ? (
+                  <Sun size={15} className="text-amber-500 animate-pulse-gentle" />
+                ) : (
+                  <Moon size={15} className="text-indigo-600" />
+                )}
+              </button>
             </div>
 
             {/* Bottom Row: Full-width Search Trigger */}
@@ -142,7 +153,7 @@ export function Navbar() {
                 type="text"
                 placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 readOnly
-                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2 pl-10 pr-4 text-[11px] font-black placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-1.5 pl-10 pr-4 text-[11px] font-black placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
               />
             </div>
           </div>
@@ -159,8 +170,9 @@ export function Navbar() {
                 onClick={() => setLocationPickerOpen(true)}
                 className="flex flex-col items-start hover:opacity-85 transition-opacity text-left cursor-pointer group shrink-0 max-w-[200px]"
               >
-                <span className="text-xs font-black text-primary dark:text-rose-400 tracking-tight flex items-center gap-1">
-                  ⚡ Delivery in 8 mins
+                <span className="text-xs font-black text-primary dark:text-rose-400 tracking-tight flex items-center gap-1.5">
+                  <MapPin size={13} className="text-primary animate-bounce-subtle shrink-0" />
+                  Fast Delivery
                 </span>
                 <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-primary transition-colors flex items-center gap-0.5 mt-0.5 w-full">
                   <span className="truncate max-w-[150px]">

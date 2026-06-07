@@ -94,8 +94,8 @@ export default async function AccountPage() {
   }))
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
-      <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Your Account</h1>
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-4xl space-y-6">
+      <h1 className="text-lg md:text-2xl font-black text-text-primary tracking-tight">Your Account</h1>
       <AccountDashboard
         user={serializedUser}
         addresses={serializedAddresses}

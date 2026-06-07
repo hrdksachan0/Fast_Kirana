@@ -508,20 +508,21 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl space-y-8">
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-5xl space-y-6 md:space-y-8">
       {/* Step Progress Tracker */}
-      <div className="flex items-center justify-center gap-2 md:gap-4 text-xs md:text-sm font-bold text-text-secondary border-b border-border pb-6">
+      <div className="flex items-center justify-center gap-1.5 min-[375px]:gap-2 md:gap-4 text-[10px] min-[375px]:text-xs md:text-sm font-bold text-text-secondary border-b border-border pb-6">
         <button
           onClick={() => setStep(1)}
           className={cn(
-            "flex items-center gap-2 pb-1 transition-colors",
+            "flex items-center gap-1 min-[375px]:gap-2 pb-1 transition-colors",
             step >= 1 ? "text-primary border-b-2 border-primary" : ""
           )}
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">1</span>
-          Fulfillment
+          <span className="flex h-4.5 w-4.5 min-[375px]:h-5 min-[375px]:w-5 items-center justify-center rounded-full bg-primary/10 text-[9px] min-[375px]:text-xs">1</span>
+          <span className="hidden min-[375px]:inline">Fulfillment</span>
+          <span className="min-[375px]:hidden">Address</span>
         </button>
-        <ChevronRight className="h-4 w-4 text-text-muted" />
+        <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-text-muted" />
         <button
           onClick={() => (deliveryMethod === 'PICKUP' || selectedAddressId) && setStep(2)}
           disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
@@ -531,7 +532,8 @@ export default function CheckoutPage() {
           )}
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">2</span>
-          Review & Schedule
+          <span className="hidden min-[375px]:inline">Review & Schedule</span>
+          <span className="min-[375px]:hidden">Review</span>
         </button>
         <ChevronRight className="h-4 w-4 text-text-muted" />
         <button
@@ -543,7 +545,8 @@ export default function CheckoutPage() {
           )}
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">3</span>
-          Payment
+          <span className="hidden min-[375px]:inline">Payment</span>
+          <span className="min-[375px]:hidden">Pay</span>
         </button>
       </div>
 
@@ -570,18 +573,18 @@ export default function CheckoutPage() {
           
           {/* STEP 1: Address Selection / Fulfillment Option */}
           {step === 1 && (
-            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6 animate-fade-in">
-              <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
+              <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
                 Choose Fulfillment Method
               </h2>
 
               {/* Fulfillment Option */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div
                   onClick={() => setDeliveryMethod('DELIVERY')}
                   className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
+                    "flex flex-col items-center justify-center p-3 min-[375px]:p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
                     deliveryMethod === 'DELIVERY' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
                   )}
                 >
@@ -714,7 +717,7 @@ export default function CheckoutPage() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
                             <Label htmlFor="label">Address Label (e.g. Home, Work)</Label>
                             <Input
@@ -735,7 +738,7 @@ export default function CheckoutPage() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
                             <Label htmlFor="houseNo">Flat / House / Apartment No</Label>
                             <Input
@@ -755,7 +758,7 @@ export default function CheckoutPage() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
                             <Label htmlFor="area">Area / Sector / Locality</Label>
                             <Input
@@ -821,7 +824,7 @@ export default function CheckoutPage() {
 
           {/* STEP 2: Order Review & Scheduling */}
           {step === 2 && (
-            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6 animate-fade-in">
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
               <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-primary" />
                 Review Your Cart Items
@@ -924,7 +927,7 @@ export default function CheckoutPage() {
 
           {/* STEP 3: Payment Selection */}
           {step === 3 && (
-            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6 animate-fade-in">
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
               <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" />
                 Choose Payment Method
@@ -1018,10 +1021,10 @@ export default function CheckoutPage() {
                   animation: scan 2s linear infinite;
                 }
               `}</style>
-              <div className="relative bg-white dark:bg-zinc-950 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-hidden">
+              <div className="relative bg-white dark:bg-zinc-950 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-hidden max-h-[90vh] flex flex-col">
                 {/* Brand Top Bar */}
                 <div className={cn(
-                  "px-6 py-4 text-white transition-all duration-300 flex items-center justify-between",
+                  "px-6 py-4 text-white transition-all duration-300 flex items-center justify-between shrink-0",
                   safePayUpiApp === 'PHONEPE' ? "bg-[#5f259f]" :
                   safePayUpiApp === 'GPAY' ? "bg-[#1a73e8]" : "bg-[#00b9f5]"
                 )}>
@@ -1045,14 +1048,15 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Payment details strip */}
-                <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800/40 px-6 py-3.5 flex justify-between items-center text-xs font-semibold">
+                <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800/40 px-6 py-3.5 flex justify-between items-center text-xs font-semibold shrink-0">
                   <div className="text-text-secondary">Amount to Pay</div>
                   <div className="text-sm font-black text-primary">₹{grandTotal.toFixed(0)}</div>
                 </div>
 
-                {/* Main Container */}
-                {!paymentSuccess ? (
-                  <div className="p-6 space-y-6">
+                {/* Scrollable Container */}
+                <div className="overflow-y-auto flex-1">
+                  {!paymentSuccess ? (
+                    <div className="p-6 space-y-6">
                     {/* UPI App Tabs selector */}
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">Select UPI App</label>
@@ -1328,6 +1332,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           )}

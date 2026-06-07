@@ -90,7 +90,7 @@ export function CartDrawer() {
         initial={{ height: 0, opacity: 0, marginBottom: 0 }}
         animate={{ height: 'auto', opacity: 1, marginBottom: 12 }}
         exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
         className="overflow-hidden"
       >
         <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 transition-all duration-300">
@@ -106,7 +106,7 @@ export function CartDrawer() {
           
           {/* Product details */}
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-extrabold text-zinc-850 dark:text-zinc-100 truncate leading-snug">{item.product.name}</h4>
+            <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 truncate leading-snug">{item.product.name}</h4>
             <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{item.product.unit}</p>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>

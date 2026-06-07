@@ -71,12 +71,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl space-y-6">
       
       {/* Search Header */}
       <div className="border-b border-border/60 pb-4">
-        <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight flex items-center gap-2">
-          <Search className="h-6 w-6 text-text-secondary" />
+        <h1 className="text-lg md:text-2xl font-extrabold text-text-primary tracking-tight flex items-center gap-2">
+          <Search className="h-5 w-5 md:h-6 md:w-6 text-text-secondary" />
           {query ? (
             <>
               Search Results for <span className="text-primary">"{query}"</span>
@@ -153,7 +153,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       ) : (
         // Results catalog grid
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 animate-fade-in">
+        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 animate-fade-in px-1">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
