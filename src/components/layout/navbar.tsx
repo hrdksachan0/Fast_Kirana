@@ -39,6 +39,11 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     hydrateLocation()
@@ -148,7 +153,7 @@ export function Navbar() {
                   id="navbar-cart-icon"
                 >
                   <ShoppingBag size={22} className="stroke-[2]" />
-                  {totalItems > 0 && (
+                  {mounted && totalItems > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white animate-badge-bounce shadow-sm">
                       {totalItems}
                     </span>
@@ -236,7 +241,7 @@ export function Navbar() {
                 <span className="text-sm font-bold">{session ? 'Account' : 'Login'}</span>
               </Link>
 
-              {totalItems === 0 ? (
+              {!mounted || totalItems === 0 ? (
                 <button
                   onClick={toggleCart}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-primary/30 hover:bg-primary/5 text-zinc-700 dark:text-zinc-300 hover:text-primary transition-all duration-300 font-bold text-sm cursor-pointer group shadow-sm"

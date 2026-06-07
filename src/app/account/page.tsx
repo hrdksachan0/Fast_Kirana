@@ -13,44 +13,58 @@ export default async function AccountPage() {
 
   const email = session.user.email.toLowerCase().trim()
 
-  // Use raw SQL to work around PrismaPg adapter enum deserialization bug
-  const usersResult: any[] = await prisma.$queryRaw`
-    SELECT id, name, email, phone, role::text as role
-    FROM users WHERE email = ${email} LIMIT 1
-  `
+  let user = null
+  let addresses: any[] = []
+  let orders: any[] = []
+  let allItems: any[] = []
 
-  const user = usersResult[0]
+  try {
+    // Use raw SQL to work around PrismaPg adapter enum deserialization bug
+    const usersResult: any[] = await prisma.$queryRaw`
+      SELECT id, name, email, phone, role::text as role
+      FROM users WHERE email = ${email} LIMIT 1
+    `
+    user = usersResult[0]
 
-  if (!user) {
-    redirect('/api/auth/signout')
+    if (user) {
+      // Fetch addresses normally (no enum fields)
+      addresses = await prisma.address.findMany({
+        where: { userId: user.id },
+      })
+
+      // Fetch orders with raw SQL to avoid enum issues (status, paymentMethod, paymentStatus are enums)
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt"
+        FROM orders o WHERE o."userId" = ${user.id}
+        ORDER BY o."createdAt" DESC
+      `
+
+      // Fetch order items for each order
+      const orderIds = orders.map((o) => o.id)
+      allItems = orderIds.length > 0
+        ? await prisma.$queryRaw`
+            SELECT id, "orderId", name, quantity, price
+            FROM order_items WHERE "orderId" = ANY(${orderIds})
+          `
+        : []
+    }
+  } catch (error) {
+    console.error('Failed to fetch account details from database:', error)
   }
 
-  // Fetch addresses normally (no enum fields)
-  const addresses = await prisma.address.findMany({
-    where: { userId: user.id },
-  })
-
-  // Fetch orders with raw SQL to avoid enum issues (status, paymentMethod, paymentStatus are enums)
-  const orders: any[] = await prisma.$queryRaw`
-    SELECT o.id, o.status::text as status, o.total, o."createdAt"
-    FROM orders o WHERE o."userId" = ${user.id}
-    ORDER BY o."createdAt" DESC
-  `
-
-  // Fetch order items for each order
-  const orderIds = orders.map((o) => o.id)
-  const allItems: any[] = orderIds.length > 0
-    ? await prisma.$queryRaw`
-        SELECT id, "orderId", name, quantity, price
-        FROM order_items WHERE "orderId" = ANY(${orderIds})
-      `
-    : []
+  // Fallback if database is offline/unreachable
+  const activeUser = user || {
+    name: session.user.name || 'User',
+    email: email,
+    phone: '',
+    role: 'USER',
+  }
 
   const serializedUser = {
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role as 'USER' | 'PICKER' | 'CHEF' | 'DELIVERY' | 'ADMIN',
+    name: activeUser.name,
+    email: activeUser.email,
+    phone: activeUser.phone,
+    role: activeUser.role as 'USER' | 'PICKER' | 'CHEF' | 'DELIVERY' | 'ADMIN',
   }
 
   const serializedAddresses = addresses.map((addr) => ({

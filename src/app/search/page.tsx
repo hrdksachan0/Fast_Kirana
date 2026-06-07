@@ -30,7 +30,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       include: {
         category: true,
       },
-    })
+    }).catch(() => [])
 
     products = productsRaw.map((p) => ({
       id: p.id,

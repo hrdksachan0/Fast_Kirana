@@ -22,78 +22,92 @@ export default async function AdminPage() {
   }
 
   // 1. Fetch all store data in parallel
-  const [
-    orderCount,
-    userCount,
-    lowStockCount,
-    deliveredOrders,
-    ordersRaw,
-    productsRaw,
-    categoriesRaw,
-    reviewsRaw,
-    couponsRaw,
-  ] = await Promise.all([
-    prisma.order.count(),
-    prisma.user.count(),
-    prisma.product.count({
-      where: {
-        stock: { lt: 15 },
-        isAvailable: true,
-      },
-    }),
-    prisma.order.findMany({
-      where: { status: 'DELIVERED' },
-      select: { total: true },
-    }),
-    prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
+  let orderCount = 0
+  let userCount = 0
+  let lowStockCount = 0
+  let deliveredOrders: { total: number }[] = []
+  let ordersRaw: any[] = []
+  let productsRaw: any[] = []
+  let categoriesRaw: any[] = []
+  let reviewsRaw: any[] = []
+  let couponsRaw: any[] = []
+  let usersRaw: any[] = []
+
+  try {
+    const results = await Promise.all([
+      prisma.order.count(),
+      prisma.user.count(),
+      prisma.product.count({
+        where: {
+          stock: { lt: 15 },
+          isAvailable: true,
+        },
+      }),
+      prisma.order.findMany({
+        where: { status: 'DELIVERED' },
+        select: { total: true },
+      }),
+      prisma.order.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          address: true,
+        },
+        take: 100,
+      }),
+      prisma.product.findMany({
+        include: {
+          category: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.category.findMany({
+        include: {
+          _count: {
+            select: { products: true },
           },
         },
-        address: true,
-      },
-      take: 100,
-    }),
-    prisma.product.findMany({
-      include: {
-        category: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    }),
-    prisma.category.findMany({
-      include: {
-        _count: {
-          select: { products: true },
+        orderBy: {
+          sortOrder: 'asc',
         },
-      },
-      orderBy: {
-        sortOrder: 'asc',
-      },
-    }),
-    prisma.review.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        product: { select: { id: true, name: true, slug: true, imageUrl: true } },
-      },
-    }),
-    prisma.coupon.findMany({
-      orderBy: { createdAt: 'desc' },
-    }),
-  ])
+      }),
+      prisma.review.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          product: { select: { id: true, name: true, slug: true, imageUrl: true } },
+        },
+      }),
+      prisma.coupon.findMany({
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.$queryRaw`
+        SELECT u.id, u.name, u.email, u.phone, u.role::text as role, u."createdAt",
+               (SELECT COUNT(*)::int FROM orders o WHERE o."userId" = u.id) as order_count
+        FROM users u ORDER BY u."createdAt" DESC
+      `
+    ])
 
-  // Fetch users separately using raw query to work around PrismaPg enum bug
-  const usersRaw: any[] = await prisma.$queryRaw`
-    SELECT u.id, u.name, u.email, u.phone, u.role::text as role, u."createdAt",
-           (SELECT COUNT(*)::int FROM orders o WHERE o."userId" = u.id) as order_count
-    FROM users u ORDER BY u."createdAt" DESC
-  `
+    orderCount = results[0] as number
+    userCount = results[1] as number
+    lowStockCount = results[2] as number
+    deliveredOrders = results[3] as { total: number }[]
+    ordersRaw = results[4] as any[]
+    productsRaw = results[5] as any[]
+    categoriesRaw = results[6] as any[]
+    reviewsRaw = results[7] as any[]
+    couponsRaw = results[8] as any[]
+    usersRaw = results[9] as any[]
+  } catch (error) {
+    console.error('Failed to fetch admin dashboard details from database:', error)
+  }
 
   // Compute total revenue
   const revenue = deliveredOrders.reduce((sum, o) => sum + o.total, 0)

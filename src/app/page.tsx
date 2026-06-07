@@ -16,19 +16,32 @@ import { Category, Product } from '@/types'
 export const revalidate = 60
 
 export default async function Home() {
+  let promoBanners: any[] = []
+  let categoriesRaw: any[] = []
+  let topPicksRaw: any[] = []
+  let flashDealsRaw: any[] = []
+  let bestSellersRaw: any[] = []
+
   // Fetch active banners from database
-  const promoBanners = await prisma.promoBanner.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: 'asc' },
-  }).catch(() => [])
+  try {
+    promoBanners = await prisma.promoBanner.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    })
+  } catch (error) {
+    console.error('Failed to fetch promo banners:', error)
+  }
 
   // 1. Fetch categories
-  const categoriesRaw = await prisma.category.findMany({
-    orderBy: { sortOrder: 'asc' },
-  }).catch(() => [])
+  try {
+    categoriesRaw = await prisma.category.findMany({
+      orderBy: { sortOrder: 'asc' },
+    })
+  } catch (error) {
+    console.error('Failed to fetch categories:', error)
+  }
 
   // 2. Fetch Trending Items (automatically calculated based on order history quantities, fallback to 'popular' tags)
-  let topPicksRaw: any[] = []
   try {
     const trendingOrderItems = await prisma.orderItem.groupBy({
       by: ['productId'],
@@ -65,38 +78,50 @@ export default async function Home() {
   // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
   if (topPicksRaw.length < 6) {
     const existingIds = topPicksRaw.map((p) => p.id)
-    const popularProducts = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-        tags: { has: 'popular' },
-        id: { notIn: existingIds },
-      },
-      take: 12 - topPicksRaw.length,
-      include: { category: true },
-    }).catch(() => [])
-    topPicksRaw = [...topPicksRaw, ...popularProducts]
+    try {
+      const popularProducts = await prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          tags: { has: 'popular' },
+          id: { notIn: existingIds },
+        },
+        take: 12 - topPicksRaw.length,
+        include: { category: true },
+      })
+      topPicksRaw = [...topPicksRaw, ...popularProducts]
+    } catch (error) {
+      console.error('Failed to fetch popular fallback products:', error)
+    }
   }
 
   // 3. Fetch Flash Deals (Discount > 10%)
-  const flashDealsRaw = await prisma.product.findMany({
-    where: {
-      isAvailable: true,
-      discount: { gt: 10 },
-    },
-    orderBy: { discount: 'desc' },
-    take: 10,
-    include: { category: true },
-  }).catch(() => [])
+  try {
+    flashDealsRaw = await prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        discount: { gt: 10 },
+      },
+      orderBy: { discount: 'desc' },
+      take: 10,
+      include: { category: true },
+    })
+  } catch (error) {
+    console.error('Failed to fetch flash deals:', error)
+  }
 
   // 4. Fetch Best Sellers
-  const bestSellersRaw = await prisma.product.findMany({
-    where: {
-      isAvailable: true,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 12,
-    include: { category: true },
-  }).catch(() => [])
+  try {
+    bestSellersRaw = await prisma.product.findMany({
+      where: {
+        isAvailable: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 12,
+      include: { category: true },
+    })
+  } catch (error) {
+    console.error('Failed to fetch best sellers:', error)
+  }
 
   // 5. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
   const istOffset = 5.5 * 60 * 60 * 1000
@@ -149,10 +174,15 @@ export default async function Home() {
   }
 
   // Fetch all matching suggestion items
-  const suggestionsRaw = await prisma.product.findMany({
-    where: suggestionWhereClause,
-    include: { category: true },
-  }).catch(() => [])
+  let suggestionsRaw: any[] = []
+  try {
+    suggestionsRaw = await prisma.product.findMany({
+      where: suggestionWhereClause,
+      include: { category: true },
+    })
+  } catch (error) {
+    console.error('Failed to fetch suggestion items:', error)
+  }
 
   // Sort: Put products matching explicitly desired smart tags (like 'late-night' for late-night hour) at the very front
   const preferredTag = currentHour >= 20 || currentHour < 6 ? 'late-night' : (currentHour >= 6 && currentHour < 11 ? 'breakfast' : '')

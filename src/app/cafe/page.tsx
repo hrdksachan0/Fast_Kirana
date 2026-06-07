@@ -8,12 +8,13 @@ export const revalidate = 30
 
 export default async function CafePage() {
   // 1. Self-healing seeding for Cafe category & hot food products
-  let cafeCategory = await prisma.category.findUnique({
-    where: { slug: 'cafe' }
-  })
+  let cafeCategory = null
+  try {
+    cafeCategory = await prisma.category.findUnique({
+      where: { slug: 'cafe' }
+    })
 
-  if (!cafeCategory) {
-    try {
+    if (!cafeCategory) {
       cafeCategory = await prisma.category.create({
         data: {
           name: 'FastKirana Cafe',
@@ -22,12 +23,9 @@ export default async function CafePage() {
           sortOrder: 0,
         }
       })
-    } catch (e) {
-      // Handle concurrent creation
-      cafeCategory = await prisma.category.findUnique({
-        where: { slug: 'cafe' }
-      })
     }
+  } catch (e) {
+    console.error('Failed to fetch or seed cafe category:', e)
   }
 
   // Define hot cafe items to seed if they do not exist
@@ -94,42 +92,53 @@ export default async function CafePage() {
     }
   ]
 
-  for (const item of hotCafeProducts) {
-    const existing = await prisma.product.findUnique({
-      where: { slug: item.slug }
-    })
-    if (!existing && cafeCategory) {
-      await prisma.product.create({
-        data: {
-          name: item.name,
-          slug: item.slug,
-          description: item.description,
-          imageUrl: item.imageUrl,
-          categoryId: cafeCategory.id,
-          mrp: item.mrp,
-          price: item.price,
-          discount: item.discount,
-          unit: item.unit,
-          stock: item.stock,
-          isAvailable: true,
-          tags: item.tags,
+  if (cafeCategory) {
+    for (const item of hotCafeProducts) {
+      try {
+        const existing = await prisma.product.findUnique({
+          where: { slug: item.slug }
+        })
+        if (!existing) {
+          await prisma.product.create({
+            data: {
+              name: item.name,
+              slug: item.slug,
+              description: item.description,
+              imageUrl: item.imageUrl,
+              categoryId: cafeCategory.id,
+              mrp: item.mrp,
+              price: item.price,
+              discount: item.discount,
+              unit: item.unit,
+              stock: item.stock,
+              isAvailable: true,
+              tags: item.tags,
+            }
+          })
         }
-      }).catch(err => console.error('Failed to dynamically seed cafe product:', err))
+      } catch (err) {
+        console.error('Failed to dynamically seed cafe product:', err)
+      }
     }
   }
 
   // 2. Fetch all products under Cafe category or tagged with 'cafe'
-  const dbCafeProducts = await prisma.product.findMany({
-    where: {
-      OR: [
-        { categoryId: cafeCategory?.id },
-        { tags: { has: 'cafe' } },
-        { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
-      ],
-      isAvailable: true,
-    },
-    include: { category: true }
-  })
+  let dbCafeProducts: any[] = []
+  try {
+    dbCafeProducts = await prisma.product.findMany({
+      where: {
+        OR: [
+          { categoryId: cafeCategory?.id || 'non-existent' },
+          { tags: { has: 'cafe' } },
+          { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
+        ],
+        isAvailable: true,
+      },
+      include: { category: true }
+    })
+  } catch (e) {
+    console.error('Failed to fetch cafe products:', e)
+  }
 
   // Group products into custom categories for layout
   const hotBrews = dbCafeProducts.filter(p => p.tags.includes('hot-beverage') || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))

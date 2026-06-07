@@ -18,13 +18,20 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
 
   const { id } = await params
 
-  const orderRaw = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      items: true,
-      address: true,
-    },
-  })
+  let orderRaw = null
+  let companionOrder = null
+
+  try {
+    orderRaw = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: true,
+        address: true,
+      },
+    })
+  } catch (error) {
+    console.error('Failed to fetch tracking order from database:', error)
+  }
 
   if (!orderRaw) {
     notFound()
@@ -35,19 +42,23 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
     redirect('/')
   }
 
-  // Find other orders placed by the same user within 5 seconds of this order
-  const fiveSecondsAgo = new Date(orderRaw.createdAt.getTime() - 5000)
-  const fiveSecondsAfter = new Date(orderRaw.createdAt.getTime() + 5000)
-  const companionOrder = await prisma.order.findFirst({
-    where: {
-      userId: orderRaw.userId,
-      id: { not: orderRaw.id },
-      createdAt: {
-        gte: fiveSecondsAgo,
-        lte: fiveSecondsAfter,
+  try {
+    // Find other orders placed by the same user within 5 seconds of this order
+    const fiveSecondsAgo = new Date(orderRaw.createdAt.getTime() - 5000)
+    const fiveSecondsAfter = new Date(orderRaw.createdAt.getTime() + 5000)
+    companionOrder = await prisma.order.findFirst({
+      where: {
+        userId: orderRaw.userId,
+        id: { not: orderRaw.id },
+        createdAt: {
+          gte: fiveSecondsAgo,
+          lte: fiveSecondsAfter,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('Failed to fetch tracking companion order:', error)
+  }
 
   const isCafeOrder = orderRaw.shopName === 'FastKirana Cafe Kitchen'
   const isCompanionCafe = companionOrder?.shopName === 'FastKirana Cafe Kitchen'

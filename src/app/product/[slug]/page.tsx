@@ -49,7 +49,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         },
       },
     },
-  })
+  }).catch(() => null)
 
   if (!productRaw) {
     notFound()
@@ -66,7 +66,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     include: {
       category: true,
     },
-  })
+  }).catch(() => [])
 
   // Map to UI types
   const mapProduct = (p: any): Product => ({

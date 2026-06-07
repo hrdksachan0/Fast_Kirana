@@ -24,7 +24,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       slug: { not: 'cafe' },
     },
     orderBy: { sortOrder: 'asc' },
-  })
+  }).catch(() => [])
 
   // 2. Fetch the active category
   const activeCategory = categoriesRaw.find((c) => c.slug === slug)
@@ -53,7 +53,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     include: {
       category: true,
     },
-  })
+  }).catch(() => [])
 
   // Map database categories and products to UI models
   const categories: Category[] = categoriesRaw.map((c) => ({
