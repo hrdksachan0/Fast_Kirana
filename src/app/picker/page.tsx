@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
+import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { triggerHaptic } from '@/lib/haptic'
 import { 
   Loader2, 
   ShoppingBag, 
@@ -208,6 +210,22 @@ export default function PickerDashboard() {
     return () => clearInterval(t)
   }, [])
 
+  const prevOrdersCountRef = useRef<number | null>(null)
+
+  // Audio alert when new orders arrive in the picker queue
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    if (prevOrdersCountRef.current !== null && orders.length > prevOrdersCountRef.current) {
+      playNotificationChime()
+      triggerHaptic('success')
+      toast.info('New order arrived in queue!', {
+        id: 'new-order-alert',
+        icon: '🔔',
+      })
+    }
+    prevOrdersCountRef.current = orders.length
+  }, [orders, status])
+
   // Auto-refresh every 30 seconds with progress indicator
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -281,6 +299,7 @@ export default function PickerDashboard() {
   // Web Audio API Beep Sound generator
   const playBeep = () => {
     try {
+      triggerHaptic('light')
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()

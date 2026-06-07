@@ -4,6 +4,7 @@ import { useCartStore, CartProduct } from '@/stores/cart-store'
 import { toast } from 'sonner'
 import { isCafeProduct } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
+import { playCartPop } from '@/lib/audio'
 
 export function useCart() {
   const store = useCartStore()
@@ -30,6 +31,7 @@ export function useCart() {
     }
 
     store.addItem(product)
+    playCartPop()
     triggerHaptic('light')
     toast.success(`${product.name} added to cart`, {
       id: `cart-add-${product.id}`,
@@ -65,6 +67,9 @@ export function useCart() {
     }
 
     store.updateQuantity(productId, quantity)
+    if (quantity > currentQty) {
+      playCartPop()
+    }
     triggerHaptic('light')
 
     if (quantity > currentQty) {

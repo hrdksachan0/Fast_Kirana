@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
+import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { triggerHaptic } from '@/lib/haptic'
 import { 
   Loader2, 
   MapPin, 
@@ -147,6 +149,23 @@ export default function DeliveryDashboard() {
     return () => clearInterval(id)
   }, [status, fetchOrders])
 
+  const prevPendingCountRef = useRef<number | null>(null)
+
+  // Audio alert when new packed/ready orders arrive for pickup
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const currentPending = orders.filter((o) => o.status === 'PACKED')
+    if (prevPendingCountRef.current !== null && currentPending.length > prevPendingCountRef.current) {
+      playNotificationChime()
+      triggerHaptic('success')
+      toast.info('New order ready for pickup!', {
+        id: 'new-pickup-alert',
+        icon: '📦',
+      })
+    }
+    prevPendingCountRef.current = currentPending.length
+  }, [orders, status])
+
   const handleUpdateStatus = async (orderId: string, newStatus: string, extraData: any = {}) => {
     setUpdatingId(orderId)
     try {
@@ -157,6 +176,12 @@ export default function DeliveryDashboard() {
       })
 
       if (res.ok) {
+        if (newStatus === 'DELIVERED') {
+          playSuccessChime()
+          triggerHaptic('success')
+        } else {
+          triggerHaptic('medium')
+        }
         toast.success(`Order updated successfully!`)
         // Refresh local orders list
         fetchOrders(true)

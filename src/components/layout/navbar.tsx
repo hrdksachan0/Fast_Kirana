@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, ShoppingBag, MapPin, User, ChevronDown } from 'lucide-react'
+import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useCartStore } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -11,6 +11,7 @@ import { SearchOverlay } from '@/components/shared/search-overlay'
 import { Logo } from '@/components/layout/logo'
 import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/providers/theme-provider'
 
 const SEARCH_PLACEHOLDERS = [
   'Search "milk"',
@@ -35,6 +36,7 @@ export function Navbar() {
   const hydrateLocation = useUIStore((s) => s.hydrateLocation)
   const setStoreStatus = useUIStore((s) => s.setStoreStatus)
   const { data: session } = useSession()
+  const { theme, toggleTheme } = useTheme()
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
 
@@ -118,6 +120,22 @@ export function Navbar() {
 
               {/* Actions (mobile) */}
               <div className="flex items-center gap-4 shrink-0">
+                <button
+                  onClick={() => {
+                    toggleTheme()
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                      navigator.vibrate(10)
+                    }
+                  }}
+                  className="text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors p-1"
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'dark' ? (
+                    <Sun size={20} className="text-amber-500" />
+                  ) : (
+                    <Moon size={20} className="text-indigo-600" />
+                  )}
+                </button>
                 <Link href="/account" className="text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors">
                   <User size={22} className="stroke-[2]" />
                 </Link>
@@ -194,6 +212,22 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-6 shrink-0">
+              <button
+                onClick={() => {
+                  toggleTheme()
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    navigator.vibrate(12)
+                  }
+                }}
+                className="p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400 hover:text-primary dark:hover:text-primary transition-all duration-300 shadow-sm"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun size={18} className="text-amber-500 animate-pulse-gentle" />
+                ) : (
+                  <Moon size={18} className="text-indigo-600" />
+                )}
+              </button>
               <Link
                 href="/account"
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors cursor-pointer group"
