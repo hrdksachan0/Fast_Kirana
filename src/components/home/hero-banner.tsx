@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Gift, Apple, Milk, Leaf, Salad, Cookie, CupSoda, Zap } from 'lucide-react'
-import { useUIStore } from '@/stores/ui-store'
 
 interface BannerItem {
   id: string | number
@@ -23,7 +22,7 @@ const DEFAULT_BANNERS: BannerItem[] = [
     title: 'Super Savings on First Order!',
     description: 'Get flat 50% off up to ₹100 on fruits, veggies, dairy, and snacks.',
     code: 'WELCOME50',
-    gradient: 'from-primary via-rose-500 to-orange-400',
+    gradient: 'from-rose-600 via-rose-500 to-orange-400',
     type: 'first-order',
   },
   {
@@ -31,7 +30,7 @@ const DEFAULT_BANNERS: BannerItem[] = [
     title: 'Farm Fresh Vegetables & Fruits',
     description: 'Directly sourced from local farms. Handpicked for premium quality.',
     code: 'SAVE20',
-    gradient: 'from-accent via-emerald-500 to-teal-400',
+    gradient: 'from-emerald-600 via-emerald-500 to-teal-400',
     type: 'fresh',
   },
   {
@@ -39,23 +38,12 @@ const DEFAULT_BANNERS: BannerItem[] = [
     title: 'Midnight Snack Craving?',
     description: 'Get chocolates, chips, ice creams, and cold drinks delivered instantly.',
     code: 'MEGA200',
-    gradient: 'from-discount via-orange-500 to-amber-400',
+    gradient: 'from-orange-500 via-orange-500 to-amber-400',
     type: 'snacks',
   },
 ]
 
 const INTERVAL_MS = 5000
-
-function getDeliveryETA(): string {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() + 10)
-  const hours = now.getHours()
-  const minutes = now.getMinutes()
-  const ampm = hours >= 12 ? 'PM' : 'AM'
-  const displayHours = hours % 12 || 12
-  const displayMinutes = minutes.toString().padStart(2, '0')
-  return `${displayHours}:${displayMinutes} ${ampm}`
-}
 
 function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   return currentBanner.imageUrl ? (
@@ -66,87 +54,85 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         className="w-full h-full object-cover pointer-events-none"
       />
       {currentBanner.code && (
-        <div className="absolute top-4 left-4 z-10">
-          <span className="inline-flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1 rounded-full text-xs font-bold text-white backdrop-blur-md shadow-sm">
-            <Gift className="h-3.5 w-3.5" />
-            Use Code: {currentBanner.code}
+        <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10">
+          <span className="inline-flex items-center gap-1 bg-black/45 border border-white/10 px-2 py-0.5 rounded-full text-[9px] md:text-xs font-black text-white backdrop-blur-md shadow-sm">
+            <Gift className="h-3 w-3" />
+            Code: {currentBanner.code}
           </span>
         </div>
       )}
     </div>
   ) : (
-    <div className={`absolute inset-0 flex items-center justify-between p-6 md:p-12 text-white bg-gradient-to-br ${currentBanner.gradient}`}>
+    <div className={`absolute inset-0 flex items-center justify-between p-4 md:p-12 text-white bg-gradient-to-br ${currentBanner.gradient}`}>
       {/* Floating Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-4 right-[30%] h-16 w-16 rounded-full bg-white/10 animate-float-slow" />
-        <div className="absolute bottom-6 right-[20%] h-10 w-10 rounded-full bg-white/10 animate-float-reverse" />
-        <div className="absolute top-[60%] left-[15%] h-8 w-8 rounded-full bg-white/5 animate-float" />
-        <div className="absolute top-2 left-[40%] h-6 w-6 rounded-full bg-white/8 animate-float-reverse" />
-        <div className="absolute bottom-10 left-[60%] h-12 w-12 rounded-full bg-white/5 animate-float-slow" />
+        <div className="absolute top-2 right-[30%] h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/10 animate-float-slow" />
+        <div className="absolute bottom-3 right-[20%] h-6 w-6 md:h-10 md:w-10 rounded-full bg-white/10 animate-float-reverse" />
+        <div className="absolute top-[65%] left-[10%] h-5 w-5 md:h-8 md:w-8 rounded-full bg-white/5 animate-float" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-[70%] space-y-2 md:space-y-4">
+      <div className="relative z-10 max-w-[75%] md:max-w-[70%] space-y-1 md:space-y-4 text-left">
         {/* Promo Code Badge with Glassmorphism */}
-        <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md shadow-sm">
-          <Gift className="h-3.5 w-3.5" />
-          Use Code: {currentBanner.code}
+        <span className="inline-flex items-center gap-1 bg-white/20 border border-white/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[9px] md:text-xs font-black backdrop-blur-md shadow-sm">
+          <Gift className="h-3 w-3" />
+          Code: {currentBanner.code}
         </span>
 
-        <h2 className="text-xl md:text-4xl font-extrabold tracking-tight leading-tight drop-shadow-sm">
+        <h2 className="text-sm sm:text-xl md:text-4xl font-black tracking-tight leading-tight drop-shadow-sm select-none">
           {currentBanner.title}
         </h2>
-        <p className="text-xs md:text-sm text-white/90 font-medium max-w-md line-clamp-2 md:line-clamp-none leading-relaxed">
+        <p className="text-[9px] sm:text-xs md:text-sm text-white/90 font-bold max-w-md line-clamp-1 md:line-clamp-none leading-relaxed">
           {currentBanner.description}
         </p>
 
         {/* Delivery ETA Display */}
-        <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] md:text-xs font-semibold mt-1">
-          <Zap className="h-3 w-3 text-amber-300" />
-          Order now → Fast Instant Delivery
+        <div className="inline-flex items-center gap-1 bg-white/25 backdrop-blur-sm px-2 py-0.5 rounded-full text-[8px] md:text-xs font-black mt-1">
+          <Zap className="h-2.5 w-2.5 text-amber-300 fill-amber-300" />
+          <span>Instant Delivery</span>
         </div>
       </div>
 
       {/* Interactive Premium Visual Badge */}
-      <div className="relative z-10 flex items-center justify-center h-20 w-20 md:h-36 md:w-36 rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-500 mr-2 md:mr-6 flex-shrink-0">
+      <div className="relative z-10 flex items-center justify-center h-14 w-14 sm:h-20 sm:w-20 md:h-36 md:w-36 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-500 mr-1 md:mr-6 flex-shrink-0">
         {/* Glow effect */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
         
         {currentBanner.type === 'first-order' && (
           <div className="relative flex items-center justify-center w-full h-full">
-            <div className="absolute top-2 left-2 md:top-4 md:left-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
-              <Apple className="h-6 w-6 md:h-9 md:w-9 text-rose-100 fill-rose-600/20" />
+            <div className="absolute top-1 left-1 md:top-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+              <Apple className="h-4 w-4 md:h-9 md:w-9 text-rose-100 fill-rose-600/20" />
             </div>
-            <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
-              <Milk className="h-6 w-6 md:h-9 md:w-9 text-blue-100 fill-blue-600/20" />
+            <div className="absolute bottom-1 right-1 md:bottom-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+              <Milk className="h-4 w-4 md:h-9 md:w-9 text-blue-100 fill-blue-600/20" />
             </div>
           </div>
         )}
 
         {currentBanner.type === 'fresh' && (
           <div className="relative flex items-center justify-center w-full h-full">
-            <div className="absolute top-2 right-2 md:top-4 md:right-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
-              <Leaf className="h-6 w-6 md:h-9 md:w-9 text-emerald-100 fill-emerald-600/20" />
+            <div className="absolute top-1 right-1 md:top-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+              <Leaf className="h-4 w-4 md:h-9 md:w-9 text-emerald-100 fill-emerald-600/20" />
             </div>
-            <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
-              <Salad className="h-6 w-6 md:h-9 md:w-9 text-green-100 fill-green-600/20" />
+            <div className="absolute bottom-1 left-1 md:bottom-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+              <Salad className="h-4 w-4 md:h-9 md:w-9 text-green-100 fill-green-600/20" />
             </div>
           </div>
         )}
 
         {currentBanner.type === 'snacks' && (
           <div className="relative flex items-center justify-center w-full h-full">
-            <div className="absolute top-2 left-2 md:top-4 md:left-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
-              <Cookie className="h-6 w-6 md:h-9 md:w-9 text-amber-100 fill-amber-600/20" />
+            <div className="absolute top-1 left-1 md:top-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+              <Cookie className="h-4 w-4 md:h-9 md:w-9 text-amber-100 fill-amber-600/20" />
             </div>
-            <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
-              <CupSoda className="h-6 w-6 md:h-9 md:w-9 text-purple-100 fill-purple-600/20" />
+            <div className="absolute bottom-1 right-1 md:bottom-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+              <CupSoda className="h-4 w-4 md:h-9 md:w-9 text-purple-100 fill-purple-600/20" />
             </div>
           </div>
         )}
 
         {(currentBanner.type === 'festival' || currentBanner.type === 'custom') && (
-          <div className="relative flex items-center justify-center w-full h-full text-white text-3xl md:text-5xl font-black">
+          <div className="relative flex items-center justify-center w-full h-full text-white text-xl md:text-5xl font-black">
             {currentBanner.type === 'festival' ? '🪔' : '📦'}
           </div>
         )}
@@ -156,22 +142,17 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 }
 
 export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
-  const selectedLocation = useUIStore((s) => s.selectedLocation)
-  const locationName = selectedLocation ? selectedLocation.split(',')[0].trim() : 'Ghatampur'
-
   const displayBanners = useMemo(() => {
     return initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
   }, [initialBanners])
 
   const [current, setCurrent] = useState(0)
   const [progressKey, setProgressKey] = useState(0)
-  const deliveryETA = useMemo(() => getDeliveryETA(), [])
 
   // Auto-slide effect
   useEffect(() => {
     if (displayBanners.length <= 1) return
     
-    // Reset index if it becomes out of bounds due to array length changing
     if (current >= displayBanners.length) {
       setCurrent(0)
     }
@@ -201,123 +182,68 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   if (!currentBanner) return null
 
   return (
-    <>
-      {/* Mobile view: beautiful static delivery banner */}
-      <div className="relative w-full overflow-hidden rounded-[20px] bg-[#fff0f0] p-4 flex items-center justify-between min-h-[130px] shadow-sm md:hidden border border-rose-100/50">
-        <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5">
-          <span className="text-[9px] font-black text-rose-800 uppercase tracking-wider">
-            Fast Delivery in
-          </span>
-          <h2 className="text-lg font-black text-primary leading-tight tracking-tight">
-            {locationName}
-          </h2>
-          <p className="text-[9px] text-rose-950/60 font-bold leading-tight max-w-[150px]">
-            Milk, Fruits, Vegetables, Snacks & more
-          </p>
-          <Link href="/category/fruits-vegetables">
-            <button className="bg-primary hover:bg-primary-light text-white text-[9px] font-black px-3.5 py-1.5 rounded-full mt-2 shadow-md active:scale-95 transition-all cursor-pointer">
-              Shop Now →
-            </button>
-          </Link>
-        </div>
-
-        {/* Right side: Grocery Bag Image & Badge */}
-        <div className="absolute right-0 bottom-0 top-0 w-[45%] flex items-center justify-end select-none pointer-events-none">
-          <div className="relative w-full h-full flex items-center justify-center">
-            {/* The circular 10-min badge */}
-            <div className="absolute top-2 left-0 z-20 bg-white text-zinc-900 rounded-full h-9 w-9 flex flex-col items-center justify-center shadow-lg border border-rose-100">
-              <span className="text-[10px] font-black text-primary leading-none">10</span>
-              <span className="text-[6px] font-bold text-primary uppercase leading-none mt-0.5">min</span>
-              <span className="text-[5px] font-bold text-zinc-500 uppercase leading-none mt-0.5">Delivery</span>
-            </div>
-            
-            {/* Grocery Bag Image */}
-            <img
-              src="/grocery_bag_banner.png"
-              alt="Grocery bag with fresh vegetables"
-              className="object-contain max-h-[110px] max-w-[110px] w-auto h-auto drop-shadow-lg translate-x-1 translate-y-1.5"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile view sub-banner (Fast Delivery) */}
-      <div className="mt-3 bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-200/50 dark:border-white/[0.05] p-3 flex items-center gap-3 md:hidden shadow-sm">
-        <div className="h-8 w-8 rounded-full bg-[#fff0f0] dark:bg-rose-950/20 flex items-center justify-center shrink-0">
-          <Zap className="h-4.5 w-4.5 text-primary stroke-[2.5]" />
-        </div>
-        <div className="text-left leading-tight">
-          <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-100">Fast Delivery</h4>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold mt-0.5">
-            Most orders delivered within 15 minutes
-          </p>
-        </div>
-      </div>
-
-      {/* Desktop view: Carousel slider */}
-      <div className="hidden md:block relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[180px] md:h-[260px] shadow-elevated select-none group">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={current}
-            initial={{ opacity: 0, x: 80 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -80 }}
-            transition={{
-              type: 'spring',
-              stiffness: 180,
-              damping: 24,
-              mass: 0.8
-            }}
-            className="absolute inset-0 w-full h-full"
-          >
-            {currentBanner.linkUrl ? (
-              <Link href={currentBanner.linkUrl} className="block w-full h-full cursor-pointer">
-                <BannerInner currentBanner={currentBanner} />
-              </Link>
-            ) : (
+    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[120px] sm:h-[180px] md:h-[260px] shadow-elevated select-none group">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current}
+          initial={{ opacity: 0, x: 80 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -80 }}
+          transition={{
+            type: 'spring',
+            stiffness: 180,
+            damping: 24,
+            mass: 0.8
+          }}
+          className="absolute inset-0 w-full h-full"
+        >
+          {currentBanner.linkUrl ? (
+            <Link href={currentBanner.linkUrl} className="block w-full h-full cursor-pointer">
               <BannerInner currentBanner={currentBanner} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+            </Link>
+          ) : (
+            <BannerInner currentBanner={currentBanner} />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
-        {/* Slide Navigation Buttons */}
-        {displayBanners.length > 1 && (
-          <>
-            <button
-              onClick={handlePrev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
+      {/* Slide Navigation Buttons (hidden on mobile, visible on hover on desktop) */}
+      {displayBanners.length > 1 && (
+        <>
+          <button
+            onClick={handlePrev}
+            className="absolute left-3 top-1/2 -translate-y-1/2 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleNext}
+            className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
 
-        {/* Auto-Progress Bar at bottom */}
-        {displayBanners.length > 1 && (
-          <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-1 px-4 pb-2">
-            {displayBanners.map((_, idx) => (
-              <div key={idx} className="h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
-                {idx === current ? (
-                  <div
-                    key={progressKey}
-                    className="h-full rounded-full bg-white animate-progress"
-                  />
-                ) : idx < current ? (
-                  <div className="h-full w-full rounded-full bg-white/50" />
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
+      {/* Auto-Progress Bar at bottom */}
+      {displayBanners.length > 1 && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-1 px-4 pb-1.5 md:pb-2">
+          {displayBanners.map((_, idx) => (
+            <div key={idx} className="h-0.5 md:h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
+              {idx === current ? (
+                <div
+                  key={progressKey}
+                  className="h-full rounded-full bg-white animate-progress"
+                />
+              ) : idx < current ? (
+                <div className="h-full w-full rounded-full bg-white/50" />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

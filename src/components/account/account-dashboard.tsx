@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { BuyAgainSection } from '@/components/home/buy-again-section'
 
 interface AccountDashboardProps {
   user: {
@@ -171,6 +172,9 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders }: 
               </div>
             ))
           )}
+
+          {/* One-tap Reorder Buy Again Section */}
+          <BuyAgainSection />
         </TabsContent>
 
         {/* Tab Content: Saved Addresses */}

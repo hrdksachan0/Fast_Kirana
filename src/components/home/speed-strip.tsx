@@ -29,7 +29,7 @@ export function SpeedStrip() {
   ]
 
   return (
-    <section className="py-3">
+    <section className="hidden md:block py-3">
       <div className="relative overflow-hidden rounded-xl glass shadow-sm">
         {/* Subtle gradient overlay on edges for fade effect */}
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white/80 dark:from-zinc-950/80 to-transparent z-10 pointer-events-none" />

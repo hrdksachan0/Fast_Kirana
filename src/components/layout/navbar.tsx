@@ -100,41 +100,36 @@ export function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4">
           {/* Mobile Header (2 Rows) */}
-          <div className="flex flex-col gap-1.5 md:hidden animate-fade-in">
-            <div className="flex items-center justify-between w-full gap-2">
-              {/* Simple logo */}
-              <Link href="/" className="flex items-center shrink-0">
-                <Logo simple={true} showText={false} />
-              </Link>
-
-              {/* Location Select (mobile) */}
-              <button
-                onClick={() => setLocationPickerOpen(true)}
-                className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/20 dark:border-zinc-800/20 px-3 py-1.5 rounded-full transition-all shrink-0 select-none cursor-pointer max-w-[65%] shadow-sm"
-              >
-                <MapPin size={12} className="text-primary shrink-0" />
-                <span className="text-[11px] font-black truncate text-zinc-800 dark:text-zinc-200 max-w-[120px]">
-                  {selectedLocation ? selectedLocation.split(',')[0].trim() : "Select Location"}
-                </span>
-                <ChevronDown size={12} className="text-zinc-500 shrink-0" />
-              </button>
-
-              {/* Cart Icon on Right (mobile) */}
-              <button
-                onClick={toggleCart}
-                className={cn(
-                  "relative text-zinc-800 dark:text-zinc-200 p-2 transition-all duration-300 active:scale-90",
-                  isCartBouncing && "scale-110 text-primary"
-                )}
-                id="navbar-cart-icon"
-              >
-                <ShoppingBag size={22} className="stroke-[2]" />
-                {mounted && totalItems > 0 && (
-                  <span className="absolute top-0 right-0 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
-                    {totalItems}
+          <div className="flex flex-col gap-2 md:hidden animate-fade-in">
+            <div className="flex items-center justify-between w-full gap-3">
+              {/* Left Logo and Location Info combined */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Link href="/" className="flex items-center shrink-0">
+                  <Logo simple={true} showText={false} className="h-8 w-8" />
+                </Link>
+                <button
+                  onClick={() => setLocationPickerOpen(true)}
+                  className="flex flex-col items-start text-left cursor-pointer group min-w-0 flex-1"
+                >
+                  <span className="text-xs font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-1">
+                    ⚡ Delivery in 8 mins
                   </span>
-                )}
-              </button>
+                  <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-0.5 w-full">
+                    <span className="truncate max-w-[180px]">
+                      {selectedLocation || "Select Location"}
+                    </span>
+                    <ChevronDown size={10} className="text-zinc-400 shrink-0" />
+                  </span>
+                </button>
+              </div>
+
+              {/* User Profile avatar icon on Right */}
+              <Link
+                href="/account"
+                className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-zinc-800/40 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors shrink-0"
+              >
+                <User size={15} className="text-zinc-700 dark:text-zinc-300 stroke-[2.2]" />
+              </Link>
             </div>
 
             {/* Bottom Row: Full-width Search Trigger */}
@@ -142,12 +137,12 @@ export function Navbar() {
               onClick={() => setSearchOpen(true)}
               className="w-full relative cursor-pointer group"
             >
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Search for milk, bread, eggs..."
+                placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 readOnly
-                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2 pl-10 pr-4 text-[11px] font-black placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
               />
             </div>
           </div>
@@ -159,18 +154,19 @@ export function Navbar() {
               <Link href="/" className="flex items-center shrink-0">
                 <Logo />
               </Link>
-              <div className="h-8 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-2" />
+              <div className="h-8 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />
               <button
                 onClick={() => setLocationPickerOpen(true)}
-                className="flex flex-col items-start hover:opacity-85 transition-opacity text-left cursor-pointer group shrink-0"
+                className="flex flex-col items-start hover:opacity-85 transition-opacity text-left cursor-pointer group shrink-0 max-w-[200px]"
               >
-                <span className="text-[10px] font-extrabold text-primary dark:text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                  <MapPin size={10} className="text-primary animate-bounce-subtle" />
-                  Deliver to
+                <span className="text-xs font-black text-primary dark:text-rose-400 tracking-tight flex items-center gap-1">
+                  ⚡ Delivery in 8 mins
                 </span>
-                <span className="text-sm font-black text-zinc-800 dark:text-zinc-100 group-hover:text-primary transition-colors flex items-center gap-1 mt-0.5">
-                  {selectedLocation || "Select Location"}
-                  <ChevronDown size={14} className="text-zinc-500 shrink-0 group-hover:translate-y-0.5 transition-transform" />
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-primary transition-colors flex items-center gap-0.5 mt-0.5 w-full">
+                  <span className="truncate max-w-[150px]">
+                    {selectedLocation || "Select Location"}
+                  </span>
+                  <ChevronDown size={12} className="text-zinc-400 shrink-0 group-hover:translate-y-0.5 transition-transform" />
                 </span>
               </button>
             </div>

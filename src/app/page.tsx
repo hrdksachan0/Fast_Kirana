@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import { HeroBanner } from '@/components/home/hero-banner'
-import { BuyAgainSection } from '@/components/home/buy-again-section'
 import { CategoryGrid } from '@/components/home/category-grid'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { ProductScrollSection } from '@/components/product/product-scroll-section'
@@ -235,18 +234,21 @@ export default async function Home() {
   const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
 
   return (
-    <div className="container mx-auto px-4 py-4 space-y-4 md:space-y-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-4 space-y-2.5 md:space-y-8 max-w-7xl">
+      {/* Shop Categories Circular List */}
+      <CategoryGrid categories={categories} />
+
       {/* Top Banner Promos */}
       <HeroBanner initialBanners={promoBanners} />
 
       {/* Speed ticker strip */}
       <SpeedStrip />
 
-      {/* One-tap Reorder Buy Again Section */}
-      <BuyAgainSection />
-
       {/* Your Last Order - Track active or reorder */}
       <LastOrderBanner />
+
+      {/* Café Section (Hot & Fresh South Indian / Chinese) */}
+      <CafeSection />
 
       {/* Flash Deals Row */}
       <ProductScrollSection
@@ -260,12 +262,6 @@ export default async function Home() {
           </div>
         }
       />
-
-      {/* Café Section (Hot & Fresh South Indian / Chinese) */}
-      <CafeSection />
-
-      {/* Shop Categories Circular List */}
-      <CategoryGrid categories={categories} />
 
       {/* Contextual Time of Day Suggestions */}
       <TimeSuggestions products={suggestionProducts} />
@@ -284,14 +280,14 @@ export default async function Home() {
       <DeliveryBanner />
 
       {/* Best Sellers Grid */}
-      <section className="py-6">
+      <section className="py-2.5 md:py-6">
         <h2 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
           Best Sellers
         </h2>
         <p className="text-sm text-text-secondary mb-6 px-1">
           Our customer favorites
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
           {bestSellers.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

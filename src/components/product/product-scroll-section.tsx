@@ -34,7 +34,7 @@ export function ProductScrollSection({
   if (!products || products.length === 0) return null
 
   return (
-    <section className="py-6">
+    <section className="py-2.5 md:py-6">
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight">{title}</h2>
@@ -75,7 +75,7 @@ export function ProductScrollSection({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((product, index) => (
-          <div key={`${product.id}-${index}`} className="w-[180px] md:w-[210px] flex-shrink-0 snap-start">
+          <div key={`${product.id}-${index}`} className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[200px] flex-shrink-0 snap-start">
             <ProductCard product={product} />
           </div>
         ))}

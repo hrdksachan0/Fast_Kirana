@@ -19,6 +19,17 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   'atta-rice-dal': Wheat,
 }
 
+const categoryPhotos: Record<string, string> = {
+  'fruits-vegetables': '/fruits_vegetables_category.png',
+  'dairy-breakfast': '/dairy_breakfast_category.png',
+  'snacks-munchies': '/snacks_munchies_category.png',
+  'beverages': '/beverages_category.png',
+  'personal-care': '/personal_care_category.png',
+  'household': '/household_category.png',
+  'bakery-biscuits': '/bakery_biscuits_category.png',
+  'atta-rice-dal': '/atta_rice_dal_category.png',
+}
+
 // Generate a consistent item count (15-80) from a string
 function getItemCount(name: string): number {
   let hash = 0
@@ -94,7 +105,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   }
 
   return (
-    <section className="py-6">
+    <section className="py-2 md:py-6">
       {/* Mobile Header: Shop by Categories + See all */}
       <div className="flex items-center justify-between mb-4 md:hidden px-1">
         <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
@@ -124,13 +135,23 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 href={`/category/${category.slug}`}
                 className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all max-w-[70px] mx-auto"
               >
-                {/* Pastel Rounded Card */}
+                {/* Pastel Rounded Card with Real Photo */}
                 <div
-                  className={`w-full aspect-square rounded-2xl ${config.bg} flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02]`}
+                  className={`w-full aspect-square rounded-2xl ${config.bg} overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
                 >
-                  <span className="text-3xl select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                    {config.emoji}
-                  </span>
+                  {categoryPhotos[category.slug] ? (
+                    <img
+                      src={categoryPhotos[category.slug]}
+                      alt={config.label}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-3xl select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                        {config.emoji}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {/* Category Label */}
                 <span className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 mt-2 leading-tight tracking-tight line-clamp-1">
@@ -185,7 +206,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <div
                 className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
               >
-                {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                {categoryPhotos[category.slug] ? (
+                  <img src={categoryPhotos[category.slug]} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                ) : category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                   <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 ) : category.imageUrl && category.imageUrl.length < 5 ? (
                   <span className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>

@@ -123,7 +123,7 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
   if (!timeConfig || filteredProducts.length === 0) return null
 
   return (
-    <section className="py-6">
+    <section className="py-2.5 md:py-6">
       {/* Warm gradient background card */}
       <div className={`rounded-2xl ${timeConfig.bgTint} border border-border/30 p-4 md:p-5`}>
         {/* Section header */}
@@ -166,7 +166,7 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
           {filteredProducts.map((product, index) => (
             <div
               key={`${product.id}-${index}`}
-              className="w-[180px] md:w-[210px] flex-shrink-0 snap-start"
+              className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[200px] flex-shrink-0 snap-start"
             >
               <ProductCard product={product} />
             </div>

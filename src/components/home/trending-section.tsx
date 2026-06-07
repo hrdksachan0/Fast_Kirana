@@ -40,7 +40,7 @@ export function TrendingSection({ products }: TrendingSectionProps) {
   if (!products || products.length === 0) return null
 
   return (
-    <section className="py-6">
+    <section className="py-2.5 md:py-6">
       {/* Section header */}
       <div className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-3">
@@ -93,7 +93,7 @@ export function TrendingSection({ products }: TrendingSectionProps) {
         {products.map((product, index) => (
           <div
             key={`${product.id}-${index}`}
-            className="w-[180px] md:w-[210px] flex-shrink-0 snap-start relative"
+            className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[200px] flex-shrink-0 snap-start relative"
           >
             <ProductCard product={product} />
           </div>

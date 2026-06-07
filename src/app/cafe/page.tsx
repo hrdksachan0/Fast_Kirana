@@ -172,7 +172,7 @@ export default async function CafePage() {
   })
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-8">
+    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-3.5 md:space-y-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
         <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
@@ -181,33 +181,40 @@ export default async function CafePage() {
       </nav>
 
       {/* Hero Cafe Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-6 md:p-10 text-white shadow-xl">
-        <div className="relative z-10 max-w-lg space-y-3">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-[10px] font-black tracking-wider uppercase">
-            <Flame className="h-3 w-3 text-orange-200 fill-orange-200" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2c1810] via-[#1a0c07] to-[#0f0502] p-6 md:p-10 text-white shadow-[0_8px_32px_rgba(35,21,16,0.25)] border border-[#48281d] dark:border-[#22100a]">
+        {/* Background Glowing Ambient Orb */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-amber-500/10 blur-[60px] pointer-events-none" />
+
+        <div className="relative z-10 max-w-xs min-[480px]:max-w-md md:max-w-lg space-y-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-black tracking-wider uppercase text-amber-300">
+            <Flame className="h-3 w-3 text-amber-400 fill-amber-400 animate-pulse-gentle" />
             Freshly Prepared & Hot
           </span>
-          <h1 className="text-2xl md:text-4xl font-black leading-tight tracking-tight">
+          <h1 className="text-2xl md:text-4.5xl font-black leading-tight tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent">
             FastKirana Cafe
           </h1>
-          <p className="text-xs md:text-sm text-white/95 leading-relaxed font-semibold">
-            Steaming hot tea, fresh filter coffee, and delicious hot bites delivered alongside your groceries in just 10 minutes!
+          <p className="text-xs md:text-sm text-white/80 leading-relaxed font-semibold max-w-sm md:max-w-md">
+            Steaming hot tea, fresh filter coffee, and delicious hot bites prepared fresh and delivered warm straight to your doorstep!
           </p>
-          <div className="flex items-center gap-4 pt-2 text-[10px] md:text-xs font-bold text-white/90">
-            <span className="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">⚡ 10 Min Delivery</span>
-            <span className="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">🔥 Steaming Hot</span>
+          <div className="flex items-center gap-3 pt-1 text-[10px] md:text-xs font-bold text-white/90">
+            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">⚡ Fast Delivery</span>
+            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">🔥 Served Steaming Hot</span>
           </div>
         </div>
         
-        {/* Floating emoji decorations */}
-        <div className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 text-8xl md:text-9xl opacity-30 select-none pointer-events-none animate-bounce-gentle">
-          ☕
+        {/* Right side: Premium Cafe Specials Food Image */}
+        <div className="absolute right-4 md:right-10 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
+          <img
+            src="/cafe_banner.png"
+            alt="Steaming Hot Tea & Café Specials"
+            className="object-contain max-h-[120px] md:max-h-[190px] w-auto h-auto drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-float"
+          />
         </div>
       </div>
 
       {/* Section 1: Hot Brews */}
       {hotBrews.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-2.5 md:space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">☕</span>
             <div>
@@ -215,7 +222,7 @@ export default async function CafePage() {
               <p className="text-xs text-text-secondary">Chai, coffee, and fresh brewing mixes</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
             {hotBrews.map(p => (
               <ProductCard key={p.id} product={mapProduct(p)} />
             ))}
@@ -225,7 +232,7 @@ export default async function CafePage() {
 
       {/* Section 2: Hot Bites */}
       {hotBites.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-2.5 md:space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🥟</span>
             <div>
@@ -233,7 +240,7 @@ export default async function CafePage() {
               <p className="text-xs text-text-secondary">Samosas, Momos, and warm treats</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
             {hotBites.map(p => (
               <ProductCard key={p.id} product={mapProduct(p)} />
             ))}
@@ -243,7 +250,7 @@ export default async function CafePage() {
 
       {/* Section 3: Bakery & Desserts */}
       {bakery.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-2.5 md:space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🥐</span>
             <div>
@@ -251,7 +258,7 @@ export default async function CafePage() {
               <p className="text-xs text-text-secondary">Freshly baked croissants, muffins, and sweet nibbles</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
             {bakery.map(p => (
               <ProductCard key={p.id} product={mapProduct(p)} />
             ))}
@@ -261,7 +268,7 @@ export default async function CafePage() {
 
       {/* Section 4: Chilled Sodas */}
       {chilled.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-2.5 md:space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🥤</span>
             <div>
@@ -269,7 +276,7 @@ export default async function CafePage() {
               <p className="text-xs text-text-secondary">Carbonated soft drinks and cold energy boosts</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
             {chilled.map(p => (
               <ProductCard key={p.id} product={mapProduct(p)} />
             ))}
