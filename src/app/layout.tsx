@@ -43,7 +43,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning data-scroll-behavior="smooth">
-      <head>
+      <head />
+      <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
         <Script
           id="theme-init"
           strategy="beforeInteractive"
@@ -59,8 +60,6 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
