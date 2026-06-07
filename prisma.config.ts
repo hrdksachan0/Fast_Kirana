@@ -1,5 +1,11 @@
+import dns from 'dns'
 import fs from 'fs'
 import path from 'path'
+
+// Force Node to resolve IPv4 addresses first to prevent P1001 connection errors on IPv4-only networks (like Render build containers)
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first')
+}
 
 // Load .env file manually if process.env.DATABASE_URL is not set
 if (!process.env.DATABASE_URL) {
