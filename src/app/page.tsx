@@ -25,7 +25,7 @@ export default async function Home() {
   // 1. Fetch categories
   const categoriesRaw = await prisma.category.findMany({
     orderBy: { sortOrder: 'asc' },
-  })
+  }).catch(() => [])
 
   // 2. Fetch Trending Items (automatically calculated based on order history quantities, fallback to 'popular' tags)
   let topPicksRaw: any[] = []
@@ -73,7 +73,7 @@ export default async function Home() {
       },
       take: 12 - topPicksRaw.length,
       include: { category: true },
-    })
+    }).catch(() => [])
     topPicksRaw = [...topPicksRaw, ...popularProducts]
   }
 
@@ -86,7 +86,7 @@ export default async function Home() {
     orderBy: { discount: 'desc' },
     take: 10,
     include: { category: true },
-  })
+  }).catch(() => [])
 
   // 4. Fetch Best Sellers
   const bestSellersRaw = await prisma.product.findMany({
@@ -96,7 +96,7 @@ export default async function Home() {
     orderBy: { createdAt: 'desc' },
     take: 12,
     include: { category: true },
-  })
+  }).catch(() => [])
 
   // 5. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
   const istOffset = 5.5 * 60 * 60 * 1000
@@ -152,7 +152,7 @@ export default async function Home() {
   const suggestionsRaw = await prisma.product.findMany({
     where: suggestionWhereClause,
     include: { category: true },
-  })
+  }).catch(() => [])
 
   // Sort: Put products matching explicitly desired smart tags (like 'late-night' for late-night hour) at the very front
   const preferredTag = currentHour >= 20 || currentHour < 6 ? 'late-night' : (currentHour >= 6 && currentHour < 11 ? 'breakfast' : '')
