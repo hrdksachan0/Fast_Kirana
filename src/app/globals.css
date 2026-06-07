@@ -794,6 +794,119 @@ button,
   transition: background-color 0.35s ease-in-out, border-color 0.35s ease-in-out, color 0.35s ease-in-out, box-shadow 0.35s ease-in-out;
 }
 
+/* ============================================
+   DARK MODE — ADDITIONAL COMPONENT OVERRIDES
+   ============================================ */
+
+/* Buy Again Section: tinted background for dark mode */
+.dark .bg-primary\/5 {
+  background-color: rgba(226, 10, 34, 0.04) !important;
+}
+.dark .bg-primary\/10 {
+  background-color: rgba(226, 10, 34, 0.08) !important;
+}
+.dark .border-primary\/10 {
+  border-color: rgba(226, 10, 34, 0.08) !important;
+}
+.dark .border-primary\/20 {
+  border-color: rgba(226, 10, 34, 0.12) !important;
+}
+
+/* Delivery Banner: glass card override */
+.dark .from-primary\/5,
+.dark .via-accent\/5 {
+  --tw-gradient-from: rgba(226, 10, 34, 0.04);
+  --tw-gradient-via: rgba(0, 177, 64, 0.04);
+}
+
+/* Footer: ensure proper dark mode colors */
+.dark footer.bg-text-primary {
+  background-color: oklch(0.06 0.008 260) !important;
+}
+.dark footer .bg-accent\/10 {
+  background-color: rgba(0, 177, 64, 0.06) !important;
+}
+.dark footer .border-accent\/20 {
+  border-color: rgba(0, 177, 64, 0.1) !important;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Product Card: ensure image area is transparent in dark */
+.dark .bg-transparent {
+  background-color: transparent !important;
+}
+
+/* Countdown timer and badge dark mode contrast */
+.dark .bg-gradient-to-r.from-\[\#ff5722\] {
+  box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
+}
+
+/* Section heading accent bar */
+.dark .bg-primary.animate-pulse-gentle {
+  box-shadow: 0 0 8px rgba(226, 10, 34, 0.3);
+}
+
+/* Speed Strip: edge fades for dark mode */
+.dark .from-white\/80 {
+  --tw-gradient-from: rgba(10, 11, 16, 0.9) !important;
+}
+
+/* ============================================
+   MOBILE-FIRST UX IMPROVEMENTS
+   ============================================ */
+
+/* Larger touch targets on mobile */
+@media (max-width: 767px) {
+  /* Increase mobile nav bar touch zone */
+  .fixed.bottom-5 a {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Product card: tighter padding on small screens */
+  .grid.grid-cols-2 {
+    gap: 0.625rem;
+  }
+  
+  /* Ensure adequate bottom padding for mobile nav */
+  main {
+    padding-bottom: 120px;
+  }
+
+  /* Search input: larger on mobile for easier tapping */
+  input[type="text"][readonly] {
+    min-height: 44px;
+  }
+
+  /* Mobile category scrollbar: snap and spacing */
+  .snap-x.snap-mandatory {
+    scroll-padding-left: 4px;
+  }
+}
+
+/* Hide scrollbar utility (cross-browser) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area insets for notched devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .fixed.bottom-5 {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
