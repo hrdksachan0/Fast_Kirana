@@ -7,18 +7,20 @@ if (!process.env.DATABASE_URL) {
     const envPath = path.resolve(process.cwd(), '.env')
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf-8')
-      for (const line of envContent.split('\n')) {
-        const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/)
+      for (let line of envContent.split('\n')) {
+        line = line.replace(/\r/g, '').trim()
+        if (!line || line.startsWith('#')) continue
+        const match = line.match(/^([\w.-]+)\s*=\s*(.*)?$/)
         if (match) {
           const key = match[1]
-          let value = match[2] || ''
+          let value = (match[2] || '').trim()
           // Remove wrapping quotes
           if (value.startsWith('"') && value.endsWith('"')) {
             value = value.substring(1, value.length - 1)
           } else if (value.startsWith("'") && value.endsWith("'")) {
             value = value.substring(1, value.length - 1)
           }
-          process.env[key] = value
+          process.env[key] = value.trim()
         }
       }
     }
