@@ -718,7 +718,10 @@ body {
 .dark .text-gray-900,
 .dark .text-gray-800,
 .dark .text-gray-700,
-.dark .text-text-primary {
+.dark .text-text-primary,
+.dark .text-black,
+.dark .text-zinc-950,
+.dark .text-gray-950 {
   color: var(--foreground) !important;
 }
 
@@ -771,6 +774,24 @@ body {
 /* Custom Card hover glow */
 .dark .hover\:shadow-card-hover:hover {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 15px rgba(226, 10, 34, 0.04) !important;
+}
+
+/* Smooth theme-switching transitions for background, text, borders and shadows */
+body, 
+header,
+nav, 
+footer,
+input,
+select,
+textarea,
+button,
+.glass,
+.bg-card,
+.bg-background,
+.border-border,
+.text-text-primary,
+.text-text-secondary {
+  transition: background-color 0.35s ease-in-out, border-color 0.35s ease-in-out, color 0.35s ease-in-out, box-shadow 0.35s ease-in-out;
 }
 
 @layer base {
