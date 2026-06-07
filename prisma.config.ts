@@ -13,14 +13,8 @@ if (!process.env.DATABASE_URL) {
         const match = line.match(/^([\w.-]+)\s*=\s*(.*)?$/)
         if (match) {
           const key = match[1]
-          let value = (match[2] || '').trim()
-          // Remove wrapping quotes
-          if (value.startsWith('"') && value.endsWith('"')) {
-            value = value.substring(1, value.length - 1)
-          } else if (value.startsWith("'") && value.endsWith("'")) {
-            value = value.substring(1, value.length - 1)
-          }
-          process.env[key] = value.trim()
+          const value = (match[2] || '').trim()
+          process.env[key] = value
         }
       }
     }
@@ -29,12 +23,25 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
+// Unconditionally clean the connection string to handle quotes and whitespace from both .env and OS environments
+let databaseUrl = process.env.DATABASE_URL || ''
+if (databaseUrl) {
+  databaseUrl = databaseUrl.replace(/\r/g, '').trim()
+  if (databaseUrl.startsWith('"') && databaseUrl.endsWith('"')) {
+    databaseUrl = databaseUrl.substring(1, databaseUrl.length - 1)
+  } else if (databaseUrl.startsWith("'") && databaseUrl.endsWith("'")) {
+    databaseUrl = databaseUrl.substring(1, databaseUrl.length - 1)
+  }
+  databaseUrl = databaseUrl.trim()
+  process.env.DATABASE_URL = databaseUrl
+}
+
 export default {
   schema: 'prisma/schema.prisma',
   migrations: {
     seed: 'npx tsx prisma/seed.ts',
   },
   datasource: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: databaseUrl || 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 }
