@@ -235,7 +235,7 @@ export default async function Home() {
   const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-4 space-y-4 md:space-y-8 max-w-7xl">
       {/* Top Banner Promos */}
       <HeroBanner initialBanners={promoBanners} />
 

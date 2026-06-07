@@ -122,7 +122,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all"
+                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all max-w-[70px] mx-auto"
               >
                 {/* Pastel Rounded Card */}
                 <div

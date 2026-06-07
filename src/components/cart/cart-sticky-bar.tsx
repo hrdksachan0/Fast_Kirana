@@ -57,7 +57,7 @@ export function CartStickyBar() {
   const hasFreeDelivery = needsForFreeDelivery <= 0
 
   return (
-    <div className="fixed bottom-[64px] left-0 right-0 z-30 bg-[#f4fbf7] dark:bg-zinc-950 border-t border-[#e2f0e7] dark:border-zinc-800/30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] md:hidden animate-slide-up">
+    <div className="fixed bottom-[56px] left-0 right-0 z-30 bg-[#f4fbf7] dark:bg-zinc-950 border-t border-[#e2f0e7] dark:border-zinc-800/30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] md:hidden animate-slide-up">
       {/* Integrated delivery progress bar at top edge */}
       {!isB2BMode && !hasFreeDelivery && (
         <div className="w-full h-0.5 bg-[#e2f0e7] dark:bg-zinc-800/30">
@@ -69,31 +69,31 @@ export function CartStickyBar() {
       )}
 
       {/* Main content row */}
-      <div className="flex items-center justify-between px-4 py-2.5">
+      <div className="flex items-center justify-between px-3.5 py-2">
         <div className="flex items-center gap-3">
           {/* Cart Icon Container with Red Badge */}
-          <div onClick={toggleCart} className="relative h-10 w-10 bg-[#00b140]/10 dark:bg-emerald-950/20 text-[#00b140] rounded-full flex items-center justify-center cursor-pointer shrink-0">
-            <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
+          <div onClick={toggleCart} className="relative h-9 w-9 bg-[#00b140]/10 dark:bg-emerald-950/20 text-[#00b140] rounded-full flex items-center justify-center cursor-pointer shrink-0">
+            <ShoppingBag className="h-4.5 w-4.5 stroke-[2.2]" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
               {totalItems}
             </span>
           </div>
 
           {/* Pricing and Savings details */}
           <div className="text-left flex flex-col justify-center">
-            <span className="text-xs font-black text-zinc-800 dark:text-zinc-100 leading-tight">
+            <span className="text-[11px] font-black text-zinc-800 dark:text-zinc-100 leading-tight">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
             </span>
             {savings > 0 && !isB2BMode ? (
-              <span className="text-[10px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
+              <span className="text-[9px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
                 You save {formatPrice(savings)} on this order
               </span>
             ) : !isB2BMode && !hasFreeDelivery ? (
-              <span className="text-[10px] font-bold text-zinc-500 leading-none mt-0.5">
+              <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">
                 Add {formatPrice(needsForFreeDelivery)} for free delivery
               </span>
             ) : (
-              <span className="text-[10px] font-bold text-zinc-500 leading-none mt-0.5">
+              <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">
                 Free delivery on this order
               </span>
             )}
@@ -103,10 +103,10 @@ export function CartStickyBar() {
         {/* View Cart Button */}
         <button
           onClick={toggleCart}
-          className="bg-[#00b140] hover:bg-[#009b35] text-white text-xs font-black px-4.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
+          className="bg-[#00b140] hover:bg-[#009b35] text-white text-[11px] font-black px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
         >
           View Cart
-          <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+          <ArrowRight className="h-3 w-3 stroke-[2.5]" />
         </button>
       </div>
     </div>

@@ -203,19 +203,19 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   return (
     <>
       {/* Mobile view: beautiful static delivery banner */}
-      <div className="relative w-full overflow-hidden rounded-[24px] bg-[#fff0f0] p-5 flex items-center justify-between min-h-[160px] shadow-sm md:hidden border border-rose-100/50">
-        <div className="relative z-10 max-w-[60%] flex flex-col items-start text-left space-y-1">
-          <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider">
+      <div className="relative w-full overflow-hidden rounded-[20px] bg-[#fff0f0] p-4 flex items-center justify-between min-h-[130px] shadow-sm md:hidden border border-rose-100/50">
+        <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5">
+          <span className="text-[9px] font-black text-rose-800 uppercase tracking-wider">
             Fast Delivery in
           </span>
-          <h2 className="text-xl font-black text-primary leading-tight tracking-tight">
+          <h2 className="text-lg font-black text-primary leading-tight tracking-tight">
             {locationName}
           </h2>
-          <p className="text-[10px] text-rose-950/60 font-bold leading-tight max-w-[150px] pt-0.5">
+          <p className="text-[9px] text-rose-950/60 font-bold leading-tight max-w-[150px]">
             Milk, Fruits, Vegetables, Snacks & more
           </p>
           <Link href="/category/fruits-vegetables">
-            <button className="bg-primary hover:bg-primary-light text-white text-[10px] font-black px-4 py-2 rounded-full mt-3.5 shadow-md active:scale-95 transition-all cursor-pointer">
+            <button className="bg-primary hover:bg-primary-light text-white text-[9px] font-black px-3.5 py-1.5 rounded-full mt-2 shadow-md active:scale-95 transition-all cursor-pointer">
               Shop Now →
             </button>
           </Link>
@@ -225,17 +225,17 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
         <div className="absolute right-0 bottom-0 top-0 w-[45%] flex items-center justify-end select-none pointer-events-none">
           <div className="relative w-full h-full flex items-center justify-center">
             {/* The circular 10-min badge */}
-            <div className="absolute top-2 left-0 z-20 bg-white text-zinc-900 rounded-full h-11 w-11 flex flex-col items-center justify-center shadow-lg border border-rose-100">
-              <span className="text-xs font-black text-primary leading-none">10</span>
-              <span className="text-[7px] font-bold text-primary uppercase leading-none mt-0.5">min</span>
-              <span className="text-[6px] font-bold text-zinc-500 uppercase leading-none mt-0.5">Delivery</span>
+            <div className="absolute top-2 left-0 z-20 bg-white text-zinc-900 rounded-full h-9 w-9 flex flex-col items-center justify-center shadow-lg border border-rose-100">
+              <span className="text-[10px] font-black text-primary leading-none">10</span>
+              <span className="text-[6px] font-bold text-primary uppercase leading-none mt-0.5">min</span>
+              <span className="text-[5px] font-bold text-zinc-500 uppercase leading-none mt-0.5">Delivery</span>
             </div>
             
             {/* Grocery Bag Image */}
             <img
               src="/grocery_bag_banner.png"
               alt="Grocery bag with fresh vegetables"
-              className="object-contain max-h-[140px] max-w-[140px] w-auto h-auto drop-shadow-lg translate-x-1 translate-y-2"
+              className="object-contain max-h-[110px] max-w-[110px] w-auto h-auto drop-shadow-lg translate-x-1 translate-y-1.5"
             />
           </div>
         </div>

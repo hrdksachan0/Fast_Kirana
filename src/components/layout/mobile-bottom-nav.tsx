@@ -46,7 +46,7 @@ export function MobileBottomNav() {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-zinc-950/95 border-t border-zinc-200/50 dark:border-zinc-800/30 h-[64px] pb-1 flex items-center justify-around px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] md:hidden animate-slide-up">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-zinc-950/95 border-t border-zinc-200/50 dark:border-zinc-800/30 h-[56px] pb-0.5 flex items-center justify-around px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] md:hidden animate-slide-up">
       {navItems.map((item, idx) => {
         const Icon = item.icon
         const isActive = item.active
@@ -57,13 +57,13 @@ export function MobileBottomNav() {
               {/* Icon Container */}
               <div
                 className={cn(
-                  "flex items-center justify-center h-8 w-8 transition-all duration-300 active:scale-95",
+                  "flex items-center justify-center h-7 w-7 transition-all duration-300 active:scale-95",
                   isActive ? "text-primary" : "text-zinc-400 dark:text-zinc-500"
                 )}
               >
                 <Icon
                   className={cn(
-                    "h-5.5 w-5.5 transition-all duration-300",
+                    "h-5 w-5 transition-all duration-300",
                     isActive ? "stroke-[2.2]" : "stroke-[1.8]"
                   )}
                   fill="none"
@@ -73,7 +73,7 @@ export function MobileBottomNav() {
               {/* Text Label */}
               <span
                 className={cn(
-                  "text-[10px] mt-0.5 font-bold transition-all duration-300",
+                  "text-[9px] mt-0.5 font-bold transition-all duration-300",
                   isActive ? "text-primary font-black" : "text-zinc-500"
                 )}
               >

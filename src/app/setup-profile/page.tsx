@@ -92,9 +92,9 @@ function ProfileSetupForm() {
   return (
     <div className="flex min-h-[85vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950/20 relative overflow-hidden">
       {/* Decorative gradient blobs in background */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-primary/8 dark:bg-primary/10 blur-[100px] pointer-events-none animate-float-slow" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-accent/8 dark:bg-accent/10 blur-[110px] pointer-events-none animate-float-reverse" />
-      <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-rose-400/5 dark:bg-rose-400/5 blur-[90px] pointer-events-none animate-float" />
+      <div className="hidden md:block absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-primary/8 dark:bg-primary/10 blur-[100px] pointer-events-none animate-float-slow" />
+      <div className="hidden md:block absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-accent/8 dark:bg-accent/10 blur-[110px] pointer-events-none animate-float-reverse" />
+      <div className="hidden md:block absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-rose-400/5 dark:bg-rose-400/5 blur-[90px] pointer-events-none animate-float" />
 
       <div className="w-full max-w-md space-y-8 rounded-3xl border border-white/20 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden transition-all duration-300">
         

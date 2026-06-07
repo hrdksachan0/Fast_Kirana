@@ -26,7 +26,7 @@ export function CafeSection() {
             </h2>
           </div>
           <p className="text-[10px] md:text-xs font-black text-amber-300 uppercase tracking-wider">
-            Freshly brewed. Fast delivered.
+            Freshly Prepared. Fast Delivered.
           </p>
           <p className="text-[9px] md:text-[11px] text-white/60 leading-tight font-medium max-w-[200px] line-clamp-2">
             Coffee, Beverages, South Indian, Chinese & more from your favorite café.

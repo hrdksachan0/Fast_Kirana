@@ -92,15 +92,15 @@ export function Navbar() {
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-lg",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b md:backdrop-blur-lg",
           isScrolled
-            ? "bg-white/70 dark:bg-background/75 border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5"
-            : "bg-white/80 dark:bg-background/80 border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5"
+            ? "bg-white dark:bg-background border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5 md:bg-white/70 md:dark:bg-background/75"
+            : "bg-white dark:bg-background border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5 md:bg-white/80 md:dark:bg-background/80"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">
           {/* Mobile Header (2 Rows) */}
-          <div className="flex flex-col gap-2.5 md:hidden animate-fade-in">
+          <div className="flex flex-col gap-1.5 md:hidden animate-fade-in">
             <div className="flex items-center justify-between w-full gap-2">
               {/* Simple logo */}
               <Link href="/" className="flex items-center shrink-0">
@@ -147,7 +147,7 @@ export function Navbar() {
                 type="text"
                 placeholder="Search for milk, bread, eggs..."
                 readOnly
-                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2.5 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
               />
             </div>
           </div>

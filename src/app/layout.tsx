@@ -63,14 +63,14 @@ export default function RootLayout({
           <AuthProvider>
             <ThemeProvider>
               {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
-              <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
+              <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
                 <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
                 <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/8 blur-[120px] animate-float-reverse" />
                 <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full bg-rose-400/5 blur-[100px] animate-float" />
               </div>
 
               <Navbar />
-              <main className="min-h-screen pt-[108px] md:pt-[80px] pb-[76px] md:pb-0">
+              <main className="min-h-screen pt-[96px] md:pt-[80px] pb-[60px] md:pb-0">
                 {children}
               </main>
               <Footer />
