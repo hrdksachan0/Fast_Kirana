@@ -87,10 +87,10 @@ export function Navbar() {
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-lg",
           isScrolled
-            ? "bg-white/80 dark:bg-zinc-950/85 backdrop-blur-md border-zinc-200/50 dark:border-zinc-800/50 shadow-md shadow-zinc-100/40 dark:shadow-none py-1.5"
-            : "bg-white/95 dark:bg-zinc-950/95 border-zinc-100 dark:border-zinc-900 shadow-sm py-2.5"
+            ? "bg-white/70 dark:bg-zinc-950/75 border-zinc-200/30 dark:border-zinc-800/30 shadow-md py-1.5"
+            : "bg-white/80 dark:bg-zinc-950/80 border-zinc-100/40 dark:border-zinc-900/30 shadow-sm py-2.5"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">

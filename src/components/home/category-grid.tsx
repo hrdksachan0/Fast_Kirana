@@ -102,8 +102,8 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           <span className="absolute -top-1.5 right-0.5 z-10 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-1.5 py-0.5 text-[7px] font-black text-white shadow-sm border border-orange-300/30 animate-pulse-gentle whitespace-nowrap">
             HOT
           </span>
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.5)] overflow-hidden">
-            <span className="text-2xl select-none">☕</span>
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.5)] overflow-hidden">
+            <span className="text-2xl select-none transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12">☕</span>
           </div>
           <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 leading-tight line-clamp-2">Cafe</span>
           <span className="text-[9px] text-orange-600 dark:text-orange-400 font-bold mt-0.5">Hot & Fresh</span>
@@ -128,14 +128,14 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               className="group flex flex-col items-center text-center flex-shrink-0 snap-start w-[80px]"
             >
               <div
-                className={`flex items-center justify-center w-16 h-16 rounded-full bg-white/40 dark:bg-zinc-900/40 border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
+                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
               >
                 {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
-                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 ) : category.imageUrl && category.imageUrl.length < 5 ? (
-                  <span className="text-2xl transition-transform duration-300 group-hover:rotate-6 select-none">{category.imageUrl}</span>
+                  <span className="text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>
                 ) : (
-                  <IconComponent className={`h-7 w-7 ${colors.text} transition-transform duration-300 group-hover:rotate-6`} />
+                  <IconComponent className={`h-7 w-7 ${colors.text} transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`} />
                 )}
               </div>
               <span className="text-[11px] font-bold text-text-primary group-hover:text-primary transition-colors leading-tight line-clamp-2">
@@ -159,8 +159,8 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           <span className="absolute -top-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-2 py-0.5 text-[8px] font-black text-white shadow-sm border border-orange-300/30 animate-pulse-gentle whitespace-nowrap">
             ☕ HOT
           </span>
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:ring-orange-400 group-hover:shadow-[0_0_18px_rgba(244,63,94,0.45)] overflow-hidden">
-            <span className="text-3xl transition-transform duration-300 group-hover:scale-110 select-none">☕</span>
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:ring-orange-400 group-hover:shadow-[0_0_18px_rgba(244,63,94,0.45)] overflow-hidden">
+            <span className="text-3xl transition-transform duration-300 group-hover:scale-115 group-hover:rotate-12 select-none">☕</span>
           </div>
           <span className="text-xs font-black text-rose-600 dark:text-rose-400 group-hover:text-rose-700 transition-colors leading-tight line-clamp-2">Cafe</span>
           <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold mt-0.5">Hot & Fresh</span>
@@ -185,14 +185,14 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               className="group flex flex-col items-center text-center p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1"
             >
               <div
-                className={`flex items-center justify-center w-16 h-16 rounded-full bg-white/40 dark:bg-zinc-900/40 border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
+                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
               >
                 {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
-                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 ) : category.imageUrl && category.imageUrl.length < 5 ? (
-                  <span className="text-3xl transition-transform duration-300 group-hover:rotate-6 select-none">{category.imageUrl}</span>
+                  <span className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>
                 ) : (
-                  <IconComponent className={`h-7 w-7 ${colors.text} transition-transform duration-300 group-hover:rotate-6`} />
+                  <IconComponent className={`h-7 w-7 ${colors.text} transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`} />
                 )}
               </div>
               <span className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight line-clamp-2">

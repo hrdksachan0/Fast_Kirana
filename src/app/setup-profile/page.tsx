@@ -83,73 +83,81 @@ function ProfileSetupForm() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950/20">
-      <div className="w-full max-w-md space-y-8 rounded-3xl border border-border/80 dark:border-zinc-800/60 bg-card/80 dark:bg-zinc-900/60 p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
-        
-        {/* Background glow decoration */}
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 h-36 w-36 rounded-full bg-primary/5 blur-2xl" />
+    <div className="flex min-h-[85vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950/20 relative overflow-hidden">
+      {/* Decorative gradient blobs in background */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-primary/8 dark:bg-primary/10 blur-[100px] pointer-events-none animate-float-slow" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-accent/8 dark:bg-accent/10 blur-[110px] pointer-events-none animate-float-reverse" />
+      <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-rose-400/5 dark:bg-rose-400/5 blur-[90px] pointer-events-none animate-float" />
 
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e20a22] to-[#ff4d62] text-white shadow-md">
-            <ShoppingBag className="h-6 w-6 animate-float" />
+      <div className="w-full max-w-md space-y-8 rounded-3xl border border-white/20 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden transition-all duration-300">
+        
+        {/* Background glow decoration inside card */}
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 h-36 w-36 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 h-36 w-36 rounded-full bg-accent/10 blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col items-center text-center relative z-10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e20a22] to-[#ff4d62] text-white shadow-lg shadow-primary/25 hover:rotate-6 transition-transform">
+            <ShoppingBag className="h-7 w-7 animate-float" />
           </div>
-          <h2 className="mt-6 text-2xl md:text-3xl font-black tracking-tight text-text-primary">
+          <h2 className="mt-6 text-2xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             Complete Your Profile
           </h2>
-          <p className="mt-1.5 text-xs md:text-sm text-text-muted">
-            Please enter your name and mobile number to complete your account registration.
+          <p className="mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
+            Please enter your details to complete your account registration
           </p>
         </div>
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+        <form className="mt-6 space-y-5 relative z-10" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="font-bold text-xs">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4.5 w-4.5 text-text-muted" />
+              <Label htmlFor="name" className="font-bold text-xs text-text-secondary">Full Name</Label>
+              <div className="relative group">
+                <User className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
                 <Input
                   id="name"
                   type="text"
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="pl-10 h-11"
+                  className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                   disabled={isLoading}
+                  required
                 />
               </div>
               {errors.name && (
-                <p className="text-xs font-semibold text-danger">{errors.name}</p>
+                <p className="text-xs font-bold text-danger animate-slide-down">{errors.name}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="font-bold text-xs">Mobile Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4.5 w-4.5 text-text-muted" />
+              <Label htmlFor="phone" className="font-bold text-xs text-text-secondary">Mobile Number</Label>
+              <div className="relative group">
+                <Phone className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
                 <Input
                   id="phone"
                   type="tel"
                   placeholder="9876543210"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  className="pl-10 h-11"
+                  className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                   disabled={isLoading}
+                  required
                 />
               </div>
               {errors.phone && (
-                <p className="text-xs font-semibold text-danger">{errors.phone}</p>
+                <p className="text-xs font-bold text-danger animate-slide-down">{errors.phone}</p>
               )}
             </div>
           </div>
 
           <Button
             type="submit"
-            className="w-full h-11 bg-primary text-white hover:bg-primary/95 text-xs font-black rounded-xl transition-all shadow-md"
+            className="w-full h-12 bg-gradient-to-r from-primary to-primary-light text-white text-xs font-black rounded-xl hover:scale-[1.01] active:scale-95 transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-1.5"
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 Saving Details...
               </>
             ) : (

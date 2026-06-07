@@ -647,6 +647,98 @@ body {
   --sidebar-accent-foreground: oklch(0.97 0.005 260);
   --sidebar-border: oklch(0.24 0.01 260);
   --sidebar-ring: oklch(0.62 0.22 22);
+
+  /* Global Dark Mode Overrides for light-theme utility classes */
+  .bg-white,
+  .bg-card {
+    background-color: var(--card) !important;
+  }
+
+  .bg-zinc-50,
+  .bg-gray-50,
+  .bg-zinc-100,
+  .bg-muted {
+    background-color: var(--muted) !important;
+  }
+
+  /* Semi-transparent backgrounds */
+  .bg-white\/80 {
+    background-color: rgba(23, 23, 23, 0.8) !important;
+  }
+  .bg-white\/60 {
+    background-color: rgba(23, 23, 23, 0.65) !important;
+  }
+  .bg-white\/40 {
+    background-color: rgba(23, 23, 23, 0.45) !important;
+  }
+  .bg-white\/20 {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* Borders */
+  .border-zinc-100,
+  .border-zinc-200,
+  .border-border,
+  .border-gray-100,
+  .border-gray-200,
+  .border-zinc-200\/80,
+  .border-zinc-200\/60,
+  .border-zinc-200\/50 {
+    border-color: var(--border) !important;
+  }
+
+  .border-white\/60 {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+  .border-white\/30,
+  .border-white\/20 {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* Text Colors */
+  .text-zinc-800,
+  .text-zinc-900,
+  .text-zinc-700,
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700,
+  .text-text-primary {
+    color: var(--foreground) !important;
+  }
+
+  .text-zinc-500,
+  .text-zinc-600,
+  .text-gray-500,
+  .text-gray-600,
+  .text-text-secondary {
+    color: var(--muted-foreground) !important;
+  }
+
+  /* Shadows */
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl,
+  .shadow-card,
+  .shadow-card-hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  /* Inputs, Selects, Textareas */
+  input, select, textarea {
+    background-color: var(--background) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* Focus and interactive states */
+  .focus\:bg-white:focus {
+    background-color: var(--card) !important;
+  }
 }
 
 @layer base {

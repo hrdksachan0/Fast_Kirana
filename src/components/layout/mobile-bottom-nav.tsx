@@ -46,7 +46,7 @@ export function MobileBottomNav() {
   ]
 
   return (
-    <div className="fixed bottom-5 left-4 right-4 z-40 rounded-3xl bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl h-[80px] flex items-center justify-around px-4 shadow-[0_16px_48px_rgba(0,0,0,0.18)] border border-zinc-200/50 dark:border-zinc-800/40 md:hidden animate-slide-up">
+    <div className="fixed bottom-5 left-4 right-4 z-40 rounded-3xl bg-white/80 dark:bg-zinc-950/75 backdrop-blur-2xl h-[80px] flex items-center justify-around px-4 shadow-[0_16px_48px_rgba(0,0,0,0.18)] border border-zinc-200/30 dark:border-zinc-800/20 md:hidden animate-slide-up">
       {navItems.map((item, idx) => {
         const Icon = item.icon
         const isActive = item.active
