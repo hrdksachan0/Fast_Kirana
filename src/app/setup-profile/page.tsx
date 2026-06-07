@@ -21,6 +21,13 @@ function ProfileSetupForm() {
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({})
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      const currentUrl = window.location.pathname + window.location.search
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`)
+    }
+  }, [status, router])
+
+  useEffect(() => {
     if (session?.user?.name && !name) {
       setName(session.user.name)
     }
@@ -48,7 +55,7 @@ function ProfileSetupForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/profile/setup', {
+      const res = await fetch('/api/profile/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone }),
