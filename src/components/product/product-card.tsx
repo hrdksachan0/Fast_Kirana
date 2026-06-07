@@ -93,7 +93,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const savings = product.mrp - product.price
 
   return (
-    <div className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/60 dark:border-zinc-800/60 bg-card dark:bg-zinc-900/80 p-2.5 sm:p-3 shadow-card transition-all duration-400 hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] hover:border-primary/25 hover:-translate-y-1.5 hover:scale-[1.01]">
+    <div className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/60 dark:border-zinc-800/60 bg-card p-2.5 sm:p-3 shadow-card transition-all duration-400 hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] hover:border-primary/25 hover:-translate-y-1.5 hover:scale-[1.01]">
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
