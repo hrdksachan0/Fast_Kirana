@@ -33,51 +33,51 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   // Map of category slugs to visual themes with glowing rings
   const colorMap: Record<string, { bg: string; text: string; gradient: string; ring: string }> = {
     'fruits-vegetables': { 
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40', 
+      bg: 'bg-emerald-50 dark:bg-emerald-500/5', 
       text: 'text-emerald-500 dark:text-emerald-400', 
-      gradient: 'from-emerald-100/30 to-emerald-50/10 dark:from-emerald-900/20 dark:to-emerald-950/10', 
+      gradient: 'from-emerald-100/30 to-emerald-50/10 dark:from-emerald-500/10 dark:to-transparent', 
       ring: 'group-hover:border-emerald-500/50 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]' 
     },
     'dairy-breakfast': { 
-      bg: 'bg-blue-50 dark:bg-blue-950/40', 
+      bg: 'bg-blue-50 dark:bg-blue-500/5', 
       text: 'text-blue-500 dark:text-blue-400', 
-      gradient: 'from-blue-100/30 to-blue-50/10 dark:from-blue-900/20 dark:to-blue-950/10', 
+      gradient: 'from-blue-100/30 to-blue-50/10 dark:from-blue-500/10 dark:to-transparent', 
       ring: 'group-hover:border-blue-500/50 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]' 
     },
     'snacks-munchies': { 
-      bg: 'bg-amber-50 dark:bg-amber-950/40', 
+      bg: 'bg-amber-50 dark:bg-amber-500/5', 
       text: 'text-amber-500 dark:text-amber-400', 
-      gradient: 'from-amber-100/30 to-amber-50/10 dark:from-amber-900/20 dark:to-amber-950/10', 
+      gradient: 'from-amber-100/30 to-amber-50/10 dark:from-amber-500/10 dark:to-transparent', 
       ring: 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]' 
     },
     'beverages': { 
-      bg: 'bg-purple-50 dark:bg-purple-950/40', 
+      bg: 'bg-purple-50 dark:bg-purple-500/5', 
       text: 'text-purple-500 dark:text-purple-400', 
-      gradient: 'from-purple-100/30 to-purple-50/10 dark:from-purple-900/20 dark:to-purple-950/10', 
+      gradient: 'from-purple-100/30 to-purple-50/10 dark:from-purple-500/10 dark:to-transparent', 
       ring: 'group-hover:border-purple-500/50 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
     },
     'personal-care': { 
-      bg: 'bg-pink-50 dark:bg-pink-950/40', 
+      bg: 'bg-pink-50 dark:bg-pink-500/5', 
       text: 'text-pink-500 dark:text-pink-400', 
-      gradient: 'from-pink-100/30 to-pink-50/10 dark:from-pink-900/20 dark:to-pink-950/10', 
+      gradient: 'from-pink-100/30 to-pink-50/10 dark:from-pink-500/10 dark:to-transparent', 
       ring: 'group-hover:border-pink-500/50 group-hover:shadow-[0_0_15px_rgba(236,72,153,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(236,72,153,0.5)]' 
     },
     'household': { 
-      bg: 'bg-indigo-50 dark:bg-indigo-950/40', 
+      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
       text: 'text-indigo-500 dark:text-indigo-400', 
-      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-900/20 dark:to-indigo-950/10', 
+      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
       ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
     },
     'bakery-biscuits': { 
-      bg: 'bg-orange-50 dark:bg-orange-950/40', 
+      bg: 'bg-orange-50 dark:bg-orange-500/5', 
       text: 'text-orange-500 dark:text-orange-400', 
-      gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-900/20 dark:to-orange-950/10', 
+      gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-500/10 dark:to-transparent', 
       ring: 'group-hover:border-orange-500/50 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]' 
     },
     'atta-rice-dal': { 
-      bg: 'bg-yellow-50 dark:bg-yellow-950/40', 
+      bg: 'bg-yellow-50 dark:bg-yellow-500/5', 
       text: 'text-yellow-500 dark:text-yellow-400', 
-      gradient: 'from-yellow-100/30 to-yellow-50/10 dark:from-yellow-900/20 dark:to-yellow-950/10', 
+      gradient: 'from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-transparent', 
       ring: 'group-hover:border-yellow-500/50 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]' 
     },
   }
@@ -113,7 +113,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           .filter((category) => category.slug !== 'cafe')
           .map((category) => {
           const colors = colorMap[category.slug] || {
-            bg: 'bg-zinc-50 dark:bg-zinc-900/40',
+            bg: 'bg-zinc-50 dark:bg-white/5',
             text: 'text-zinc-500 dark:text-zinc-400',
             gradient: 'from-zinc-100/30 to-zinc-50/10',
             ring: 'group-hover:border-zinc-500/50',
@@ -170,7 +170,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           .filter((category) => category.slug !== 'cafe')
           .map((category) => {
           const colors = colorMap[category.slug] || {
-            bg: 'bg-zinc-50 dark:bg-zinc-900/40',
+            bg: 'bg-zinc-50 dark:bg-white/5',
             text: 'text-zinc-500 dark:text-zinc-400',
             gradient: 'from-zinc-100/30 to-zinc-50/10',
             ring: 'group-hover:border-zinc-500/50',
