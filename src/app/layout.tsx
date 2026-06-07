@@ -13,6 +13,7 @@ import { CartFlyAnimation } from '@/components/shared/cart-fly-animation'
 import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
+import Script from 'next/script'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -43,7 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
