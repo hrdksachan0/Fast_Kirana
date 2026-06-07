@@ -7,7 +7,24 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+  let connectionString = process.env.DATABASE_URL || ''
+  
+  if (connectionString) {
+    connectionString = connectionString.replace(/\r/g, '').trim()
+    if (connectionString.startsWith('"') && connectionString.endsWith('"')) {
+      connectionString = connectionString.substring(1, connectionString.length - 1)
+    } else if (connectionString.startsWith("'") && connectionString.endsWith("'")) {
+      connectionString = connectionString.substring(1, connectionString.length - 1)
+    }
+    connectionString = connectionString.trim()
+    
+    if (!connectionString.includes('uselibpqcompat=')) {
+      const separator = connectionString.includes('?') ? '&' : '?'
+      connectionString = `${connectionString}${separator}uselibpqcompat=true`
+    }
+  }
+
+  const pool = new Pool({ connectionString })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
