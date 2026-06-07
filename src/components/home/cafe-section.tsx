@@ -14,26 +14,26 @@ export function CafeSection() {
   return (
     <section className="space-y-3">
       {/* Café Banner Card */}
-      <div className="relative overflow-hidden rounded-[24px] bg-[#231510] text-white p-5 md:p-8 flex items-center justify-between min-h-[160px] shadow-lg border border-[#362119]">
+      <div className="relative overflow-hidden rounded-[20px] bg-[#231510] text-white p-4 md:p-8 flex items-center justify-between min-h-[125px] md:min-h-[160px] shadow-lg border border-[#362119]">
         {/* Background Decorative Glow */}
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-amber-500/10 blur-[60px] pointer-events-none" />
         
         {/* Left Content */}
-        <div className="relative z-10 max-w-[60%] flex flex-col items-start text-left space-y-1">
+        <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
           <div className="flex items-center gap-1">
-            <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-1.5">
-              Café <span className="text-lg animate-float">☕</span>
+            <h2 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1">
+              Café <span className="text-base animate-float">☕</span>
             </h2>
           </div>
-          <p className="text-[11px] md:text-xs font-black text-amber-300 uppercase tracking-wider">
+          <p className="text-[10px] md:text-xs font-black text-amber-300 uppercase tracking-wider">
             Freshly brewed. Fast delivered.
           </p>
-          <p className="text-[10px] md:text-[11px] text-white/60 leading-tight font-medium max-w-[200px] line-clamp-2">
+          <p className="text-[9px] md:text-[11px] text-white/60 leading-tight font-medium max-w-[200px] line-clamp-2">
             Coffee, Beverages, South Indian, Chinese & more from your favorite café.
           </p>
           
           <Link href="/cafe">
-            <button className="bg-white hover:bg-zinc-100 text-[#231510] text-[10px] md:text-xs font-black px-4 py-2 rounded-full mt-3 shadow-md active:scale-95 transition-all cursor-pointer">
+            <button className="bg-white hover:bg-zinc-100 text-[#231510] text-[9px] md:text-xs font-black px-3.5 py-1.5 rounded-full mt-2 md:mt-3 shadow-md active:scale-95 transition-all cursor-pointer">
               Order Now →
             </button>
           </Link>
@@ -43,16 +43,16 @@ export function CafeSection() {
         <div className="absolute right-0 bottom-0 top-0 w-[45%] flex items-center justify-end select-none pointer-events-none">
           <div className="relative w-full h-full flex items-center justify-center">
             {/* The circular 10-min badge */}
-            <div className="absolute top-3 left-0 z-20 bg-amber-500 text-white rounded-full h-10 w-10 flex flex-col items-center justify-center shadow-md border border-amber-400">
-              <span className="text-xs font-black leading-none">10</span>
-              <span className="text-[6px] font-bold uppercase leading-none mt-0.5">min</span>
+            <div className="absolute top-2 left-0 z-20 bg-amber-500 text-white rounded-full h-8 w-8 md:h-10 md:w-10 flex flex-col items-center justify-center shadow-md border border-amber-400">
+              <span className="text-[10px] md:text-xs font-black leading-none">10</span>
+              <span className="text-[5px] md:text-[6px] font-bold uppercase leading-none mt-0.5">min</span>
             </div>
             
             {/* Cafe Food Image */}
             <img
               src="/cafe_banner.png"
               alt="South Indian and Chinese Cafe Specials"
-              className="object-contain max-h-[135px] max-w-[135px] w-auto h-auto drop-shadow-2xl translate-x-3 translate-y-3"
+              className="object-contain max-h-[110px] max-w-[110px] md:max-h-[135px] md:max-w-[135px] w-auto h-auto drop-shadow-2xl translate-x-1.5 translate-y-1.5 md:translate-x-3 md:translate-y-3"
             />
           </div>
         </div>
