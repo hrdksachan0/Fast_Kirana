@@ -23,8 +23,8 @@ function getTimeConfig(hour: number): TimeConfig {
     return {
       icon: <Sun className="h-5 w-5 text-amber-500 fill-amber-500/25 animate-spin-slow" />,
       title: 'Breakfast Essentials',
-      gradient: 'from-amber-50 via-yellow-50 to-orange-50',
-      bgTint: 'bg-gradient-to-r from-amber-50/80 via-yellow-50/60 to-orange-50/40',
+      gradient: 'from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-transparent',
+      bgTint: 'bg-gradient-to-r from-amber-50/80 via-yellow-50/60 to-orange-50/40 dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-zinc-900/10',
       filterFn: (product: Product) => {
         const tags = product.tags?.map((t) => t.toLowerCase()) || []
         const categorySlug = product.category?.slug || ''
@@ -40,8 +40,8 @@ function getTimeConfig(hour: number): TimeConfig {
     return {
       icon: <Utensils className="h-5 w-5 text-orange-500" />,
       title: 'Lunch Time Picks',
-      gradient: 'from-stone-50 via-neutral-50 to-zinc-50',
-      bgTint: 'bg-gradient-to-r from-stone-50/80 via-neutral-50/60 to-zinc-50/40',
+      gradient: 'from-stone-50 via-neutral-50 to-zinc-50 dark:from-zinc-900/30 dark:via-zinc-900/20 dark:to-transparent',
+      bgTint: 'bg-gradient-to-r from-stone-50/80 via-neutral-50/60 to-zinc-50/40 dark:from-zinc-900/20 dark:via-zinc-900/10 dark:to-zinc-900/5',
       filterFn: (product: Product) => {
         const tags = product.tags?.map((t) => t.toLowerCase()) || []
         const categorySlug = product.category?.slug || ''
@@ -56,8 +56,8 @@ function getTimeConfig(hour: number): TimeConfig {
     return {
       icon: <Cookie className="h-5 w-5 text-amber-600 fill-amber-600/10" />,
       title: "Snack O'Clock",
-      gradient: 'from-orange-50 via-amber-50 to-red-50',
-      bgTint: 'bg-gradient-to-r from-orange-50/80 via-amber-50/60 to-red-50/40',
+      gradient: 'from-orange-50 via-amber-50 to-red-50 dark:from-orange-950/20 dark:via-amber-950/10 dark:to-transparent',
+      bgTint: 'bg-gradient-to-r from-orange-50/80 via-amber-50/60 to-red-50/40 dark:from-orange-950/20 dark:via-amber-950/10 dark:to-zinc-900/10',
       filterFn: (product: Product) => {
         const tags = product.tags?.map((t) => t.toLowerCase()) || []
         const categorySlug = product.category?.slug || ''
@@ -72,8 +72,8 @@ function getTimeConfig(hour: number): TimeConfig {
     return {
       icon: <Moon className="h-5 w-5 text-indigo-500 fill-indigo-500/25" />,
       title: 'Late Night Cravings',
-      gradient: 'from-indigo-50 via-purple-50 to-blue-50',
-      bgTint: 'bg-gradient-to-r from-indigo-50/80 via-purple-50/60 to-blue-50/40',
+      gradient: 'from-indigo-50 via-purple-50 to-blue-50 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-transparent',
+      bgTint: 'bg-gradient-to-r from-indigo-50/80 via-purple-50/60 to-blue-50/40 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-zinc-900/10',
       filterFn: (product: Product) => {
         const tags = product.tags?.map((t) => t.toLowerCase()) || []
         const categorySlug = product.category?.slug || ''
@@ -130,7 +130,7 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
         <div className="flex items-center justify-between mb-4 px-1">
           <div>
             <h2 className="text-lg md:text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
-              <span className="flex-shrink-0 flex items-center justify-center p-1.5 rounded-lg bg-white/60 shadow-sm border border-white/80">{timeConfig.icon}</span>
+              <span className="flex-shrink-0 flex items-center justify-center p-1.5 rounded-lg bg-white/60 shadow-sm border border-white/80 dark:border-zinc-800/50">{timeConfig.icon}</span>
               <span>{timeConfig.title}</span>
             </h2>
             <p className="text-sm text-text-secondary mt-1">
