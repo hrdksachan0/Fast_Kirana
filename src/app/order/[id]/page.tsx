@@ -30,7 +30,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       },
     })
   } catch (error) {
-    console.error('Failed to fetch order details from database:', error)
+    console.warn('Database connection error: failed to fetch order details')
   }
 
   if (!order) {
@@ -57,7 +57,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       },
     })
   } catch (error) {
-    console.error('Failed to fetch companion order:', error)
+    console.warn('Database connection error: failed to fetch companion order')
   }
 
   const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'

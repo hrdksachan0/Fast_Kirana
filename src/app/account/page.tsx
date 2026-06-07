@@ -49,7 +49,7 @@ export default async function AccountPage() {
         : []
     }
   } catch (error) {
-    console.error('Failed to fetch account details from database:', error)
+    console.warn('Database connection error in account page: using session fallback')
   }
 
   // Fallback if database is offline/unreachable

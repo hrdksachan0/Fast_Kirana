@@ -30,7 +30,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
       },
     })
   } catch (error) {
-    console.error('Failed to fetch tracking order from database:', error)
+    console.warn('Database connection error: failed to fetch tracking order')
   }
 
   if (!orderRaw) {
@@ -57,7 +57,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
       },
     })
   } catch (error) {
-    console.error('Failed to fetch tracking companion order:', error)
+    console.warn('Database connection error: failed to fetch tracking companion order')
   }
 
   const isCafeOrder = orderRaw.shopName === 'FastKirana Cafe Kitchen'

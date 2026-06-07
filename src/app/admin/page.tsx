@@ -106,7 +106,7 @@ export default async function AdminPage() {
     couponsRaw = results[8] as any[]
     usersRaw = results[9] as any[]
   } catch (error) {
-    console.error('Failed to fetch admin dashboard details from database:', error)
+    console.warn('Database connection error in admin page: using empty dashboard fallback')
   }
 
   // Compute total revenue

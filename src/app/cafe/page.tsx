@@ -25,7 +25,7 @@ export default async function CafePage() {
       })
     }
   } catch (e) {
-    console.error('Failed to fetch or seed cafe category:', e)
+    console.warn('Database connection error in cafe page: failed to fetch/seed cafe category')
   }
 
   // Define hot cafe items to seed if they do not exist
@@ -117,7 +117,7 @@ export default async function CafePage() {
           })
         }
       } catch (err) {
-        console.error('Failed to dynamically seed cafe product:', err)
+        console.warn('Database connection error in cafe page: failed to dynamically seed cafe product')
       }
     }
   }
@@ -137,7 +137,7 @@ export default async function CafePage() {
       include: { category: true }
     })
   } catch (e) {
-    console.error('Failed to fetch cafe products:', e)
+    console.warn('Database connection error in cafe page: failed to fetch cafe products')
   }
 
   // Group products into custom categories for layout

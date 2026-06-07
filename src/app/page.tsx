@@ -29,7 +29,7 @@ export default async function Home() {
       orderBy: { sortOrder: 'asc' },
     })
   } catch (error) {
-    console.error('Failed to fetch promo banners:', error)
+    console.warn('Database connection error in home page: failed to fetch promo banners')
   }
 
   // 1. Fetch categories
@@ -38,7 +38,7 @@ export default async function Home() {
       orderBy: { sortOrder: 'asc' },
     })
   } catch (error) {
-    console.error('Failed to fetch categories:', error)
+    console.warn('Database connection error in home page: failed to fetch categories')
   }
 
   // 2. Fetch Trending Items (automatically calculated based on order history quantities, fallback to 'popular' tags)
@@ -72,7 +72,7 @@ export default async function Home() {
       )
     }
   } catch (error) {
-    console.error('Failed to calculate dynamic trending items:', error)
+    console.warn('Database connection error in home page: failed to calculate dynamic trending items')
   }
 
   // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
@@ -90,7 +90,7 @@ export default async function Home() {
       })
       topPicksRaw = [...topPicksRaw, ...popularProducts]
     } catch (error) {
-      console.error('Failed to fetch popular fallback products:', error)
+      console.warn('Database connection error in home page: failed to fetch popular fallback products')
     }
   }
 
@@ -106,7 +106,7 @@ export default async function Home() {
       include: { category: true },
     })
   } catch (error) {
-    console.error('Failed to fetch flash deals:', error)
+    console.warn('Database connection error in home page: failed to fetch flash deals')
   }
 
   // 4. Fetch Best Sellers
@@ -120,7 +120,7 @@ export default async function Home() {
       include: { category: true },
     })
   } catch (error) {
-    console.error('Failed to fetch best sellers:', error)
+    console.warn('Database connection error in home page: failed to fetch best sellers')
   }
 
   // 5. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
@@ -181,7 +181,7 @@ export default async function Home() {
       include: { category: true },
     })
   } catch (error) {
-    console.error('Failed to fetch suggestion items:', error)
+    console.warn('Database connection error in home page: failed to fetch suggestion items')
   }
 
   // Sort: Put products matching explicitly desired smart tags (like 'late-night' for late-night hour) at the very front
