@@ -286,6 +286,58 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
               </button>
             </div>
 
+            {/* Address Preset Chips */}
+            <div className="px-5 pt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => handleSelectLocation('Ghatampur Market')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-white/40 dark:bg-zinc-900/40 hover:bg-primary/5 hover:border-primary/30 text-[10px] sm:text-xs font-bold text-text-primary transition-all cursor-pointer active:scale-95 shadow-sm"
+              >
+                🏠 Home
+              </button>
+              <button
+                onClick={() => handleSelectLocation('Ghatampur Station Road')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-white/40 dark:bg-zinc-900/40 hover:bg-primary/5 hover:border-primary/30 text-[10px] sm:text-xs font-bold text-text-primary transition-all cursor-pointer active:scale-95 shadow-sm"
+              >
+                💼 Work
+              </button>
+              <button
+                onClick={() => handleSelectLocation('Kanpur Road')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-white/40 dark:bg-zinc-900/40 hover:bg-primary/5 hover:border-primary/30 text-[10px] sm:text-xs font-bold text-text-primary transition-all cursor-pointer active:scale-95 shadow-sm"
+              >
+                🛣️ Highway
+              </button>
+            </div>
+
+            {/* Mock Map Preview */}
+            <div className="mx-5 mt-3.5 relative h-28 rounded-2xl overflow-hidden border border-border/60 dark:border-zinc-800/40 bg-zinc-100/30 dark:bg-zinc-950/30 flex items-center justify-center shadow-inner">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              
+              {/* Mock road lines */}
+              <div className="absolute top-1/2 left-0 right-0 h-3 bg-zinc-200/80 dark:bg-zinc-900/80 -translate-y-1/2" />
+              <div className="absolute left-1/3 top-0 bottom-0 w-3 bg-zinc-200/80 dark:bg-zinc-900/80" />
+              
+              {/* Store icon dot */}
+              <div className="absolute left-1/3 top-1/2 -translate-x-1.5 -translate-y-1.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center shadow">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/80 opacity-75"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-white"></span>
+              </div>
+              <span className="absolute left-1/3 top-1/2 -translate-x-1/2 -translate-y-6 text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap z-10">FastKirana Hub</span>
+
+              {/* Delivery Pin Drop */}
+              <motion.div
+                key={selectedLocation}
+                initial={{ y: -16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+                className="absolute left-2/3 top-1/2 -translate-x-1/2 -translate-y-4 text-accent text-lg"
+              >
+                📍
+              </motion.div>
+              <span className="absolute left-2/3 top-1/2 -translate-x-1/2 translate-y-3.5 text-[8px] font-black bg-accent text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap z-10">
+                {selectedLocation && selectedLocation !== 'Select Location' ? selectedLocation : 'Deliver Here'}
+              </span>
+            </div>
+
             {/* Delivery confirmation */}
             {detectedArea && deliveryAvailable && (
               <motion.div

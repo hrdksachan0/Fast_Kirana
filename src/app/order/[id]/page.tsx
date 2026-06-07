@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { CheckCircle2, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
@@ -55,9 +56,12 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 15 * 60 * 1000)
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8 bg-background">
+    <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8 bg-background relative">
+      {/* 60fps Canvas Confetti & Chime sound effects */}
+      <OrderSuccessEffects />
+
       {companionOrder && (
-        <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 rounded-2xl text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up">
+        <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 rounded-2xl text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up relative z-10">
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
               {isCompanionCafe ? '☕ Cafe Order Split' : '📦 Grocery Order Split'}
@@ -79,24 +83,40 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       )}
 
       {/* Confirmation success block */}
-      <div className="flex flex-col items-center text-center p-6 bg-card border border-border rounded-2xl shadow-sm">
-        <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mb-4 border border-accent/20 animate-scale-up">
+      <div className="relative z-10 flex flex-col items-center text-center p-6 bg-card border border-border/80 dark:border-zinc-800/60 rounded-3xl shadow-lg animate-card-enter">
+        <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mb-4 border border-accent/20 animate-status-pulse">
           <CheckCircle2 className="h-9 w-9 text-accent animate-bounce-subtle" />
         </div>
         <h1 className="text-2xl font-black text-text-primary tracking-tight">Order Placed Successfully!</h1>
         <p className="text-xs text-text-secondary mt-1">Thank you for shopping. Your order has been registered.</p>
         
-        <div className="flex gap-3 mt-6">
+        {/* Animated Delivery Timeline */}
+        <div className="w-full max-w-md mt-6 pt-5 border-t border-border/40 dark:border-zinc-800/40 space-y-3">
+          <div className="flex justify-between items-center text-[10px] font-extrabold text-text-secondary uppercase tracking-wider px-1">
+            <span className="text-accent font-black">Placed</span>
+            <span>Packing</span>
+            <span>On the Way</span>
+            <span>Delivered</span>
+          </div>
+          <div className="relative h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-accent w-[20%] animate-progress-glow rounded-full" />
+          </div>
+          <p className="text-[10px] text-accent font-extrabold animate-pulse-gentle flex items-center justify-center gap-1 pt-1">
+            ⚡ 8-minute delivery active! Estimated arrival in 8 mins
+          </p>
+        </div>
+
+        <div className="flex gap-3 mt-6 w-full sm:w-auto">
           <Link
             href={`/order/${order.id}/track`}
-            className="flex items-center gap-1.5 px-6 py-3 bg-primary hover:bg-primary/95 text-white font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-[0.98]"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-6 py-3 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             Track Delivery Live
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/"
-            className="px-6 py-3 border border-border bg-card hover:bg-muted/30 font-semibold rounded-xl text-sm transition-colors text-text-primary"
+            className="flex-1 sm:flex-initial px-6 py-3 border border-border bg-card hover:bg-muted/30 font-black rounded-xl text-xs transition-colors text-text-primary"
           >
             Continue Shopping
           </Link>
