@@ -14,13 +14,14 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
   
-  // Auth steps: 'EMAIL' | 'OTP' | 'PROFILE'
-  const [step, setStep] = useState<'EMAIL' | 'OTP' | 'PROFILE'>('EMAIL')
+  // Auth steps: 'EMAIL' | 'PASSWORD' | 'OTP' | 'PROFILE'
+  const [step, setStep] = useState<'EMAIL' | 'PASSWORD' | 'OTP' | 'PROFILE'>('EMAIL')
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   // Fields state
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -29,7 +30,7 @@ function LoginForm() {
   const [testOtp, setTestOtp] = useState<string | null>(null)
 
   // Errors state
-  const [errors, setErrors] = useState<{ email?: string; otp?: string; name?: string; phone?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; password?: string; otp?: string; name?: string; phone?: string }>({})
 
   const validateEmail = (val: string) => {
     if (!val) return 'Email is required'
@@ -54,7 +55,7 @@ function LoginForm() {
     return errs
   }
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const emailErr = validateEmail(email)
     if (emailErr) {
@@ -62,8 +63,41 @@ function LoginForm() {
       return
     }
     setErrors({})
+    setStep('PASSWORD')
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!password) {
+      setErrors({ password: 'Password is required' })
+      return
+    }
+    setErrors({})
     setIsLoading(true)
 
+    try {
+      const res = await signIn('credentials', {
+        email: email.toLowerCase().trim(),
+        password,
+        redirect: false,
+      })
+
+      if (res?.error) {
+        toast.error('Invalid password. Please try again.')
+      } else {
+        toast.success('Successfully logged in!')
+        router.push(callbackUrl)
+        router.refresh()
+      }
+    } catch (error) {
+      toast.error('Authentication failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const triggerOtpFlow = async () => {
+    setIsLoading(true)
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
@@ -76,9 +110,9 @@ function LoginForm() {
       if (!res.ok) {
         toast.error(data.error || 'Failed to send OTP code')
       } else {
-        toast.success(`Verification code generated for ${email}`)
+        toast.success(`Verification code sent to ${email}`)
         if (data.otp) {
-          setTestOtp(data.otp) // Expose in UI during development since SMTP is disabled
+          setTestOtp(data.otp)
         }
         setStep('OTP')
       }
@@ -115,7 +149,6 @@ function LoginForm() {
           toast.info('New account detected! Please enter your name and phone to continue.')
           setStep('PROFILE')
         } else {
-          // Profile exists, trigger sign-in directly
           await triggerNextAuthSignIn()
         }
       }
@@ -192,11 +225,13 @@ function LoginForm() {
           </div>
           <h2 className="mt-6 text-2xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && 'Welcome to FastKirana'}
+            {step === 'PASSWORD' && 'Enter Password'}
             {step === 'OTP' && 'Verify Email'}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
             {step === 'EMAIL' && 'Log in or sign up to shop groceries delivered in 8 mins'}
+            {step === 'PASSWORD' && `Enter password for ${email}`}
             {step === 'OTP' && `We sent a 6-digit OTP code to ${email}`}
             {step === 'PROFILE' && 'Enter your name and phone number to finish setup'}
           </p>
@@ -214,7 +249,7 @@ function LoginForm() {
         {step === 'EMAIL' && (
           <form
             className="mt-6 space-y-5 animate-slide-down relative z-10"
-            onSubmit={handleSendOtp}
+            onSubmit={handleEmailSubmit}
           >
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-bold text-xs text-text-secondary">Email Address</Label>
@@ -241,14 +276,7 @@ function LoginForm() {
               className="w-full h-12 bg-gradient-to-r from-primary to-primary-light text-white font-black rounded-xl hover:scale-[1.01] active:scale-95 transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-1.5"
               disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Sending Code...
-                </>
-              ) : (
-                'Send Verification Code'
-              )}
+              Continue
             </Button>
 
             <div className="relative flex items-center justify-center text-xs uppercase my-4">
@@ -274,6 +302,69 @@ function LoginForm() {
               )}
               Google Sign In
             </Button>
+          </form>
+        )}
+
+        {/* STEP 2: ENTER PASSWORD */}
+        {step === 'PASSWORD' && (
+          <form
+            className="mt-6 space-y-5 animate-slide-down relative z-10"
+            onSubmit={handlePasswordSubmit}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="font-bold text-xs text-text-secondary">Password</Label>
+              <div className="relative group">
+                <KeyRound className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
+                  disabled={isLoading}
+                  required
+                  autoFocus
+                />
+              </div>
+              {errors.password && (
+                <p className="text-xs font-bold text-danger animate-slide-down">{errors.password}</p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-gradient-to-r from-primary to-primary-light text-white font-black rounded-xl hover:scale-[1.01] active:scale-95 transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-1.5"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                'Login with Password'
+              )}
+            </Button>
+
+            <div className="flex flex-col gap-2.5 mt-2">
+              <button
+                type="button"
+                onClick={() => triggerOtpFlow()}
+                className="text-xs font-black text-accent dark:text-emerald-400 hover:underline cursor-pointer text-center"
+                disabled={isLoading}
+              >
+                Send OTP code to email instead
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep('EMAIL')}
+                className="text-xs font-bold text-text-muted hover:underline cursor-pointer text-center"
+                disabled={isLoading}
+              >
+                Use another email address
+              </button>
+            </div>
           </form>
         )}
 
