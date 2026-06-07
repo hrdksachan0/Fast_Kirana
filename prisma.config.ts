@@ -33,6 +33,19 @@ if (databaseUrl) {
     databaseUrl = databaseUrl.substring(1, databaseUrl.length - 1)
   }
   databaseUrl = databaseUrl.trim()
+  
+  // Automatically append connect_timeout=30 to handle Neon compute wake-up cold starts
+  if (databaseUrl && !databaseUrl.includes('connect_timeout=')) {
+    const separator = databaseUrl.includes('?') ? '&' : '?'
+    databaseUrl = `${databaseUrl}${separator}connect_timeout=30`
+  }
+  
+  // Suppress SSL warning by appending uselibpqcompat=true
+  if (databaseUrl && !databaseUrl.includes('uselibpqcompat=')) {
+    const separator = databaseUrl.includes('?') ? '&' : '?'
+    databaseUrl = `${databaseUrl}${separator}uselibpqcompat=true`
+  }
+  
   process.env.DATABASE_URL = databaseUrl
 }
 
