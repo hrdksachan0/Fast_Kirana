@@ -57,59 +57,58 @@ export function CartStickyBar() {
   const hasFreeDelivery = needsForFreeDelivery <= 0
 
   return (
-    <div className="fixed bottom-[100px] left-4 right-4 z-30 md:hidden animate-slide-up">
-      <button
-        id="cart-sticky-icon"
-        onClick={toggleCart}
-        className={cn(
-          "w-full bg-gradient-to-r from-accent to-[#00c853] dark:from-emerald-700 dark:to-emerald-600 text-white rounded-2xl shadow-xl flex flex-col overflow-hidden transition-all active:scale-[0.98] cursor-pointer border border-accent-dark/10 dark:border-emerald-500/20",
-          isBouncing && "scale-105 shadow-2xl"
-        )}
-      >
-        {/* Integrated delivery progress bar at top edge */}
-        {!isB2BMode && !hasFreeDelivery && (
-          <div className="w-full h-1 bg-white/20">
-            <div
-              className="h-full bg-white/70 transition-all duration-500 rounded-r-full"
-              style={{ width: `${deliveryProgress}%` }}
-            />
-          </div>
-        )}
+    <div className="fixed bottom-[64px] left-0 right-0 z-30 bg-[#f4fbf7] dark:bg-zinc-950 border-t border-[#e2f0e7] dark:border-zinc-800/30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] md:hidden animate-slide-up">
+      {/* Integrated delivery progress bar at top edge */}
+      {!isB2BMode && !hasFreeDelivery && (
+        <div className="w-full h-0.5 bg-[#e2f0e7] dark:bg-zinc-800/30">
+          <div
+            className="h-full bg-[#00b140] transition-all duration-500"
+            style={{ width: `${deliveryProgress}%` }}
+          />
+        </div>
+      )}
 
-        {/* Main content row */}
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
-              <ShoppingBag className="h-4.5 w-4.5 text-white" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-white leading-none">
-                  {formatPrice(total)}
-                </span>
-                {isB2BMode && <span className="text-[8px] font-semibold text-white/80 bg-white/15 px-1.5 py-0.5 rounded-full">10% Off</span>}
-              </div>
-              <span className="text-[10px] font-bold text-white/70 block leading-none mt-1">
-                {totalItems} {totalItems === 1 ? 'item' : 'items'}
-                {savings > 0 && !isB2BMode && (
-                  <> · Saving {formatPrice(savings)}</>
-                )}
-                {!isB2BMode && !hasFreeDelivery && (
-                  <> · Add {formatPrice(needsForFreeDelivery)} for free delivery</>
-                )}
-                {!isB2BMode && hasFreeDelivery && (
-                  <> · Free delivery ✓</>
-                )}
+      {/* Main content row */}
+      <div className="flex items-center justify-between px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          {/* Cart Icon Container with Red Badge */}
+          <div onClick={toggleCart} className="relative h-10 w-10 bg-[#00b140]/10 dark:bg-emerald-950/20 text-[#00b140] rounded-full flex items-center justify-center cursor-pointer shrink-0">
+            <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
+            <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
+              {totalItems}
+            </span>
+          </div>
+
+          {/* Pricing and Savings details */}
+          <div className="text-left flex flex-col justify-center">
+            <span className="text-xs font-black text-zinc-800 dark:text-zinc-100 leading-tight">
+              {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
+            </span>
+            {savings > 0 && !isB2BMode ? (
+              <span className="text-[10px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
+                You save {formatPrice(savings)} on this order
               </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-white/20 px-3.5 py-2 rounded-xl">
-            View Cart
-            <ArrowRight className="h-3.5 w-3.5" />
+            ) : !isB2BMode && !hasFreeDelivery ? (
+              <span className="text-[10px] font-bold text-zinc-500 leading-none mt-0.5">
+                Add {formatPrice(needsForFreeDelivery)} for free delivery
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-zinc-500 leading-none mt-0.5">
+                Free delivery on this order
+              </span>
+            )}
           </div>
         </div>
-      </button>
+
+        {/* View Cart Button */}
+        <button
+          onClick={toggleCart}
+          className="bg-[#00b140] hover:bg-[#009b35] text-white text-xs font-black px-4.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
+        >
+          View Cart
+          <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+        </button>
+      </div>
     </div>
   )
 }

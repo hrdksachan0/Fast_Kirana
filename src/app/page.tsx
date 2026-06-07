@@ -10,6 +10,7 @@ import { LastOrderBanner } from '@/components/home/last-order-banner'
 import { TimeSuggestions } from '@/components/home/time-suggestions'
 import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
+import { CafeSection } from '@/components/home/cafe-section'
 import { Category, Product } from '@/types'
 
 // Revalidate home page every 60 seconds to keep catalog fresh
@@ -259,6 +260,9 @@ export default async function Home() {
           </div>
         }
       />
+
+      {/* Café Section (Hot & Fresh South Indian / Chinese) */}
+      <CafeSection />
 
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />

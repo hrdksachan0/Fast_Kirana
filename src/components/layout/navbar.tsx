@@ -101,65 +101,40 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-4">
           {/* Mobile Header (2 Rows) */}
           <div className="flex flex-col gap-2.5 md:hidden animate-fade-in">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 min-w-0">
-                <Link href="/" className="flex items-center shrink-0">
-                  <Logo showText={false} />
-                </Link>
-              </div>
+            <div className="flex items-center justify-between w-full gap-2">
+              {/* Simple logo */}
+              <Link href="/" className="flex items-center shrink-0">
+                <Logo simple={true} showText={false} />
+              </Link>
 
               {/* Location Select (mobile) */}
               <button
                 onClick={() => setLocationPickerOpen(true)}
-                className="flex items-center gap-1.5 bg-[#fff1ed] dark:bg-rose-950/20 border border-rose-100/30 dark:border-rose-900/20 px-4 py-2 rounded-full transition-all shrink-0 select-none cursor-pointer max-w-[50%] shadow-sm"
+                className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/20 dark:border-zinc-800/20 px-3 py-1.5 rounded-full transition-all shrink-0 select-none cursor-pointer max-w-[65%] shadow-sm"
               >
-                <MapPin size={14} className="text-primary shrink-0 animate-bounce-subtle" />
-                <span className="text-xs font-black truncate text-zinc-800 dark:text-zinc-100">
-                  {selectedLocation || "Select Location"}
+                <MapPin size={12} className="text-primary shrink-0" />
+                <span className="text-[11px] font-black truncate text-zinc-800 dark:text-zinc-200 max-w-[120px]">
+                  {selectedLocation ? selectedLocation.split(',')[0].trim() : "Select Location"}
                 </span>
-                <span className="h-1.5 w-1.5 rounded-full bg-accent shrink-0 relative flex">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent"></span>
-                </span>
+                <ChevronDown size={12} className="text-zinc-500 shrink-0" />
               </button>
 
-              {/* Actions (mobile) */}
-              <div className="flex items-center gap-4 shrink-0">
-                <button
-                  onClick={() => {
-                    toggleTheme()
-                    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                      navigator.vibrate(10)
-                    }
-                  }}
-                  className="text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors p-1"
-                  aria-label="Toggle theme"
-                >
-                  {theme === 'dark' ? (
-                    <Sun size={20} className="text-amber-500" />
-                  ) : (
-                    <Moon size={20} className="text-indigo-600" />
-                  )}
-                </button>
-                <Link href="/account" className="text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors">
-                  <User size={22} className="stroke-[2]" />
-                </Link>
-                <button
-                  onClick={toggleCart}
-                  className={cn(
-                    "relative text-zinc-600 dark:text-zinc-400 hover:text-primary transition-all duration-300",
-                    isCartBouncing && "scale-110 text-primary"
-                  )}
-                  id="navbar-cart-icon"
-                >
-                  <ShoppingBag size={22} className="stroke-[2]" />
-                  {mounted && totalItems > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white animate-badge-bounce shadow-sm">
-                      {totalItems}
-                    </span>
-                  )}
-                </button>
-              </div>
+              {/* Cart Icon on Right (mobile) */}
+              <button
+                onClick={toggleCart}
+                className={cn(
+                  "relative text-zinc-800 dark:text-zinc-200 p-2 transition-all duration-300 active:scale-90",
+                  isCartBouncing && "scale-110 text-primary"
+                )}
+                id="navbar-cart-icon"
+              >
+                <ShoppingBag size={22} className="stroke-[2]" />
+                {mounted && totalItems > 0 && (
+                  <span className="absolute top-0 right-0 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Bottom Row: Full-width Search Trigger */}
@@ -167,12 +142,12 @@ export function Navbar() {
               onClick={() => setSearchOpen(true)}
               className="w-full relative cursor-pointer group"
             >
-              <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
+                placeholder="Search for milk, bread, eggs..."
                 readOnly
-                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-3 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-2.5 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
               />
             </div>
           </div>

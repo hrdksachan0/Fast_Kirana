@@ -4,9 +4,26 @@ interface LogoProps {
   className?: string
   showText?: boolean
   lightMode?: boolean
+  simple?: boolean
 }
 
-export function Logo({ className = '', showText = true, lightMode = false }: LogoProps) {
+export function Logo({ className = '', showText = true, lightMode = false, simple = false }: LogoProps) {
+  if (simple) {
+    return (
+      <svg
+        viewBox="25 10 100 100"
+        className={`h-9 w-auto shrink-0 ${className}`}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect x="25" y="10" width="100" height="100" rx="32" fill="#e20a22" />
+        <path
+          d="M 62 32 H 98 L 95 46 H 75.5 L 73.4 56 H 89 L 86.5 68 H 71 L 66.8 88 H 50.2 Z"
+          fill="white"
+        />
+      </svg>
+    )
+  }
   return (
     <div className={`flex items-center gap-2 select-none ${className}`}>
       {/* Red Badge Icon with Speed Lines and Custom Italic F */}

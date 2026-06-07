@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Gift, Apple, Milk, Leaf, Salad, Cookie, CupSoda, Zap } from 'lucide-react'
+import { useUIStore } from '@/stores/ui-store'
 
 interface BannerItem {
   id: string | number
@@ -155,6 +156,9 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 }
 
 export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
+  const selectedLocation = useUIStore((s) => s.selectedLocation)
+  const locationName = selectedLocation ? selectedLocation.split(',')[0].trim() : 'Ghatampur'
+
   const displayBanners = useMemo(() => {
     return initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
   }, [initialBanners])
@@ -197,68 +201,123 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   if (!currentBanner) return null
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[180px] md:h-[260px] shadow-elevated select-none group">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current}
-          initial={{ opacity: 0, x: 80 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -80 }}
-          transition={{
-            type: 'spring',
-            stiffness: 180,
-            damping: 24,
-            mass: 0.8
-          }}
-          className="absolute inset-0 w-full h-full"
-        >
-          {currentBanner.linkUrl ? (
-            <Link href={currentBanner.linkUrl} className="block w-full h-full cursor-pointer">
-              <BannerInner currentBanner={currentBanner} />
-            </Link>
-          ) : (
-            <BannerInner currentBanner={currentBanner} />
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Slide Navigation Buttons */}
-      {displayBanners.length > 1 && (
-        <>
-          <button
-            onClick={handlePrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
-            aria-label="Previous slide"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
-            aria-label="Next slide"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </>
-      )}
-
-      {/* Auto-Progress Bar at bottom */}
-      {displayBanners.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-1 px-4 pb-2">
-          {displayBanners.map((_, idx) => (
-            <div key={idx} className="h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
-              {idx === current ? (
-                <div
-                  key={progressKey}
-                  className="h-full rounded-full bg-white animate-progress"
-                />
-              ) : idx < current ? (
-                <div className="h-full w-full rounded-full bg-white/50" />
-              ) : null}
-            </div>
-          ))}
+    <>
+      {/* Mobile view: beautiful static delivery banner */}
+      <div className="relative w-full overflow-hidden rounded-[24px] bg-[#fff0f0] p-5 flex items-center justify-between min-h-[160px] shadow-sm md:hidden border border-rose-100/50">
+        <div className="relative z-10 max-w-[60%] flex flex-col items-start text-left space-y-1">
+          <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider">
+            Fast Delivery in
+          </span>
+          <h2 className="text-xl font-black text-primary leading-tight tracking-tight">
+            {locationName}
+          </h2>
+          <p className="text-[10px] text-rose-950/60 font-bold leading-tight max-w-[150px] pt-0.5">
+            Milk, Fruits, Vegetables, Snacks & more
+          </p>
+          <Link href="/category/fruits-vegetables">
+            <button className="bg-primary hover:bg-primary-light text-white text-[10px] font-black px-4 py-2 rounded-full mt-3.5 shadow-md active:scale-95 transition-all cursor-pointer">
+              Shop Now →
+            </button>
+          </Link>
         </div>
-      )}
-    </div>
+
+        {/* Right side: Grocery Bag Image & Badge */}
+        <div className="absolute right-0 bottom-0 top-0 w-[45%] flex items-center justify-end select-none pointer-events-none">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* The circular 10-min badge */}
+            <div className="absolute top-2 left-0 z-20 bg-white text-zinc-900 rounded-full h-11 w-11 flex flex-col items-center justify-center shadow-lg border border-rose-100">
+              <span className="text-xs font-black text-primary leading-none">10</span>
+              <span className="text-[7px] font-bold text-primary uppercase leading-none mt-0.5">min</span>
+              <span className="text-[6px] font-bold text-zinc-500 uppercase leading-none mt-0.5">Delivery</span>
+            </div>
+            
+            {/* Grocery Bag Image */}
+            <img
+              src="/grocery_bag_banner.png"
+              alt="Grocery bag with fresh vegetables"
+              className="object-contain max-h-[140px] max-w-[140px] w-auto h-auto drop-shadow-lg translate-x-1 translate-y-2"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile view sub-banner (Fast Delivery) */}
+      <div className="mt-3 bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-200/50 dark:border-white/[0.05] p-3 flex items-center gap-3 md:hidden shadow-sm">
+        <div className="h-8 w-8 rounded-full bg-[#fff0f0] dark:bg-rose-950/20 flex items-center justify-center shrink-0">
+          <Zap className="h-4.5 w-4.5 text-primary stroke-[2.5]" />
+        </div>
+        <div className="text-left leading-tight">
+          <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-100">Fast Delivery</h4>
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold mt-0.5">
+            Most orders delivered within 15 minutes
+          </p>
+        </div>
+      </div>
+
+      {/* Desktop view: Carousel slider */}
+      <div className="hidden md:block relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[180px] md:h-[260px] shadow-elevated select-none group">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current}
+            initial={{ opacity: 0, x: 80 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -80 }}
+            transition={{
+              type: 'spring',
+              stiffness: 180,
+              damping: 24,
+              mass: 0.8
+            }}
+            className="absolute inset-0 w-full h-full"
+          >
+            {currentBanner.linkUrl ? (
+              <Link href={currentBanner.linkUrl} className="block w-full h-full cursor-pointer">
+                <BannerInner currentBanner={currentBanner} />
+              </Link>
+            ) : (
+              <BannerInner currentBanner={currentBanner} />
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Slide Navigation Buttons */}
+        {displayBanners.length > 1 && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+        {/* Auto-Progress Bar at bottom */}
+        {displayBanners.length > 1 && (
+          <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-1 px-4 pb-2">
+            {displayBanners.map((_, idx) => (
+              <div key={idx} className="h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
+                {idx === current ? (
+                  <div
+                    key={progressKey}
+                    className="h-full rounded-full bg-white animate-progress"
+                  />
+                ) : idx < current ? (
+                  <div className="h-full w-full rounded-full bg-white/50" />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }

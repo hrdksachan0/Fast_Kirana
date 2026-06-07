@@ -82,72 +82,70 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     },
   }
 
+  const mobileColorMap: Record<string, { bg: string; text: string; label: string; emoji: string }> = {
+    'fruits-vegetables': { bg: 'bg-[#ecf7ed] dark:bg-emerald-950/20', text: 'text-[#2e7d32]', label: 'Fruits & Veg', emoji: '🥦' },
+    'dairy-breakfast': { bg: 'bg-[#e8f4fd] dark:bg-blue-950/20', text: 'text-[#1976d2]', label: 'Milk & Dairy', emoji: '🥛' },
+    'snacks-munchies': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Snacks', emoji: '🍿' },
+    'beverages': { bg: 'bg-[#eef2f6] dark:bg-slate-900/40', text: 'text-[#37474f]', label: 'Beverages', emoji: '🥤' },
+    'personal-care': { bg: 'bg-[#fce4ec] dark:bg-pink-950/20', text: 'text-[#c2185b]', label: 'Personal Care', emoji: '🧴' },
+    'household': { bg: 'bg-[#e0f7fa] dark:bg-teal-950/20', text: 'text-[#00838f]', label: 'Home Care', emoji: '🧼' },
+    'bakery-biscuits': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery', emoji: '🥐' },
+    'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Staples', emoji: '🌾' },
+  }
+
   return (
     <section className="py-6">
-      <h2 className="text-lg md:text-2xl font-black text-text-primary tracking-tight mb-4 px-1 flex items-center gap-2">
+      {/* Mobile Header: Shop by Categories + See all */}
+      <div className="flex items-center justify-between mb-4 md:hidden px-1">
+        <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+          Shop by Categories
+        </h2>
+        <Link href="/category/fruits-vegetables" className="text-xs font-black text-primary hover:opacity-85">
+          See all
+        </Link>
+      </div>
+
+      {/* Mobile: 2x4 Grid layout */}
+      <div className="grid grid-cols-4 gap-2.5 md:hidden px-1">
+        {categories
+          .filter((c) => c.slug !== 'cafe')
+          .slice(0, 8)
+          .map((category) => {
+            const config = mobileColorMap[category.slug] || {
+              bg: 'bg-zinc-50 dark:bg-white/5',
+              text: 'text-zinc-700 dark:text-zinc-300',
+              label: category.name,
+              emoji: '🛒'
+            }
+
+            return (
+              <Link
+                key={category.id}
+                href={`/category/${category.slug}`}
+                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all"
+              >
+                {/* Pastel Rounded Card */}
+                <div
+                  className={`w-full aspect-square rounded-2xl ${config.bg} flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02]`}
+                >
+                  <span className="text-3xl select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                    {config.emoji}
+                  </span>
+                </div>
+                {/* Category Label */}
+                <span className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 mt-2 leading-tight tracking-tight line-clamp-1">
+                  {config.label}
+                </span>
+              </Link>
+            )
+          })}
+      </div>
+
+      {/* Desktop Header */}
+      <h2 className="hidden md:flex text-lg md:text-2xl font-black text-text-primary tracking-tight mb-4 px-1 items-center gap-2">
         <span className="h-5 w-1.5 rounded-full bg-primary animate-pulse-gentle" />
         Shop by Category
       </h2>
-
-      {/* Mobile: Horizontal scroll strip */}
-      <div
-        className="flex gap-3 overflow-x-auto pb-3 md:hidden scrollbar-hide scroll-smooth snap-x snap-mandatory"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {/* Cafe card */}
-        <Link
-          href="/cafe"
-          className="group relative flex flex-col items-center text-center flex-shrink-0 snap-start w-[80px]"
-        >
-          <span className="absolute -top-1.5 right-0.5 z-10 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-1.5 py-0.5 text-[7px] font-black text-white shadow-sm border border-orange-300/30 animate-pulse-gentle whitespace-nowrap">
-            HOT
-          </span>
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.5)] overflow-hidden">
-            <span className="text-2xl select-none transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12">☕</span>
-          </div>
-          <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 leading-tight line-clamp-2">Cafe</span>
-          <span className="text-[9px] text-orange-600 dark:text-orange-400 font-bold mt-0.5">Hot & Fresh</span>
-        </Link>
-
-        {categories
-          .filter((category) => category.slug !== 'cafe')
-          .map((category) => {
-          const colors = colorMap[category.slug] || {
-            bg: 'bg-zinc-50 dark:bg-white/5',
-            text: 'text-zinc-500 dark:text-zinc-400',
-            gradient: 'from-zinc-100/30 to-zinc-50/10',
-            ring: 'group-hover:border-zinc-500/50',
-          }
-          const itemCount = getItemCount(category.name)
-          const IconComponent = iconMap[category.slug] || ShoppingBag
-
-          return (
-            <Link
-              key={category.id}
-              href={`/category/${category.slug}`}
-              className="group flex flex-col items-center text-center flex-shrink-0 snap-start w-[80px]"
-            >
-              <div
-                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
-              >
-                {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
-                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                ) : category.imageUrl && category.imageUrl.length < 5 ? (
-                  <span className="text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>
-                ) : (
-                  <IconComponent className={`h-7 w-7 ${colors.text} transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`} />
-                )}
-              </div>
-              <span className="text-[11px] font-bold text-text-primary group-hover:text-primary transition-colors leading-tight line-clamp-2">
-                {category.name}
-              </span>
-              <span className="text-[9px] text-text-muted mt-0.5">
-                {itemCount} items
-              </span>
-            </Link>
-          )
-        })}
-      </div>
 
       {/* Desktop: Grid layout (8 columns) */}
       <div className="hidden md:grid grid-cols-8 gap-4 stagger-children">
