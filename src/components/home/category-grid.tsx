@@ -128,7 +128,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               className="group flex flex-col items-center text-center flex-shrink-0 snap-start w-[80px]"
             >
               <div
-                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
+                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
               >
                 {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                   <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
@@ -185,7 +185,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               className="group flex flex-col items-center text-center p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1"
             >
               <div
-                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-zinc-800/30 backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
+                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
               >
                 {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                   <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />

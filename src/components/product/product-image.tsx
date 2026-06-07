@@ -178,7 +178,7 @@ export function ProductImage({
         ref={imgRef}
         src={currentSrc!}
         alt={alt}
-        className={className}
+        className={`${className} dark-blend-image`}
         onError={handleError}
       />
     )

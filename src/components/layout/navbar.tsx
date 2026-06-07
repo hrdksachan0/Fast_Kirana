@@ -89,8 +89,8 @@ export function Navbar() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-lg",
           isScrolled
-            ? "bg-white/70 dark:bg-zinc-950/75 border-zinc-200/30 dark:border-zinc-800/30 shadow-md py-1.5"
-            : "bg-white/80 dark:bg-zinc-950/80 border-zinc-100/40 dark:border-zinc-900/30 shadow-sm py-2.5"
+            ? "bg-white/70 dark:bg-background/75 border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5"
+            : "bg-white/80 dark:bg-background/80 border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">
@@ -167,7 +167,7 @@ export function Navbar() {
                 type="text"
                 placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 readOnly
-                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/70 py-3 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-3 pl-11 pr-4 text-xs font-semibold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
               />
             </div>
           </div>
@@ -206,7 +206,7 @@ export function Navbar() {
                   type="text"
                   placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                   readOnly
-                  className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/90 dark:bg-zinc-900/90 py-2.5 pl-11 pr-4 text-sm font-semibold placeholder:text-zinc-400/85 focus:outline-none transition-all duration-300 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 group-hover:bg-zinc-100/50 dark:group-hover:bg-zinc-800/50 shadow-sm"
+                  className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/90 dark:bg-white/[0.04] py-2.5 pl-11 pr-4 text-sm font-semibold placeholder:text-zinc-400/85 focus:outline-none transition-all duration-300 group-hover:border-zinc-300 dark:group-hover:border-white/[0.12] group-hover:bg-zinc-100/50 dark:group-hover:bg-white/[0.08] shadow-sm"
                 />
               </div>
             </div>

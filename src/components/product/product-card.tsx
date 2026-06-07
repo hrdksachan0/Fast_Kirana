@@ -129,7 +129,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
 
         {/* Image Container */}
-        <div ref={imageRef} className="relative aspect-square w-full overflow-hidden rounded-2xl bg-transparent flex items-center justify-center mb-3">
+        <div ref={imageRef} className="relative aspect-square w-full overflow-hidden rounded-2xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center mb-3">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
