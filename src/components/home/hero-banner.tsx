@@ -96,11 +96,10 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
               Shop Now <span className="font-sans">→</span>
             </span>
 
-            {/* 10 Min Delivery Circle Badge */}
+            {/* Fast Delivery Circle Badge */}
             <div className="flex flex-col items-center select-none shrink-0">
               <div className="flex flex-col items-center justify-center h-7 w-7 min-[375px]:h-8 min-[375px]:w-8 sm:h-11 sm:w-11 md:h-14 md:w-14 rounded-full bg-white border border-[#e20a22]/30 shadow-sm leading-none shrink-0">
-                <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs md:text-lg font-black text-[#e20a22]">10</span>
-                <span className="text-[5.5px] sm:text-[7px] md:text-[9px] font-black text-[#e20a22] uppercase">min</span>
+                <span className="text-[6.5px] min-[375px]:text-[7.5px] sm:text-[9px] md:text-xs font-black text-[#e20a22] uppercase">FAST</span>
               </div>
               <span className="text-[5.5px] min-[375px]:text-[6px] sm:text-[7px] md:text-[9px] font-black text-zinc-500 mt-0.5 uppercase tracking-wider leading-none">
                 Delivery
@@ -141,7 +140,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         ) : (
           <span className="inline-flex items-center gap-1.5 bg-white/25 border border-white/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[9px] md:text-xs font-black backdrop-blur-md shadow-sm">
             <Zap className="h-3 w-3 text-amber-300 fill-amber-300 animate-bounce-subtle" />
-            10-Min Delivery
+            Fast Delivery
           </span>
         )}
 
