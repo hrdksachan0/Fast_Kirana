@@ -40,9 +40,54 @@ export function Navbar() {
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [activeRequests, setActiveRequests] = useState(0)
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    let requestCount = 0
+    const updateRequests = (delta: number) => {
+      requestCount = Math.max(0, requestCount + delta)
+      setActiveRequests(requestCount)
+    }
+
+    // Intercept Fetch
+    const originalFetch = window.fetch
+    window.fetch = async (...args) => {
+      updateRequests(1)
+      try {
+        return await originalFetch(...args)
+      } finally {
+        updateRequests(-1)
+      }
+    }
+
+    // Intercept XHR
+    const originalOpen = XMLHttpRequest.prototype.open
+    const originalSend = XMLHttpRequest.prototype.send
+
+    ;(XMLHttpRequest.prototype as any).open = function (this: any, method: string, url: string | URL, ...rest: any[]) {
+      this._url = url
+      return originalOpen.apply(this, [method, url, ...rest] as any)
+    }
+
+    ;(XMLHttpRequest.prototype as any).send = function (this: any, ...args: any[]) {
+      updateRequests(1)
+      this.addEventListener('loadend', () => {
+        updateRequests(-1)
+      })
+      return originalSend.apply(this, args as any)
+    }
+
+    return () => {
+      window.fetch = originalFetch
+      ;(XMLHttpRequest.prototype as any).open = originalOpen
+      ;(XMLHttpRequest.prototype as any).send = originalSend
+    }
   }, [])
 
   useEffect(() => {
@@ -251,6 +296,28 @@ export function Navbar() {
             </div>
           </div>
         </div>
+
+        {/* Subtle top loading progress indicator */}
+        {activeRequests > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-transparent overflow-hidden z-[51]">
+            <div className="h-full bg-[#ffdde3] w-[40%] animate-top-loading-bar rounded-full" />
+          </div>
+        )}
+
+        <style>{`
+          @keyframes topLoadingProgress {
+            0% {
+              left: -40%;
+            }
+            100% {
+              left: 100%;
+            }
+          }
+          .animate-top-loading-bar {
+            position: absolute;
+            animation: topLoadingProgress 1.2s linear infinite;
+          }
+        `}</style>
 
         {(!groceryMartOpen || !cafeOpen) && (
           <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[10px] sm:text-xs font-black py-2 px-4 text-center border-t border-orange-600/20 shadow-lg flex items-center justify-center gap-2 select-none animate-slide-down backdrop-blur-sm">

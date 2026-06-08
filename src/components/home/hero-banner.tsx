@@ -77,32 +77,32 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         </div>
 
         {/* Left Column Content */}
-        <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-1.5 md:space-y-3.5 text-left flex flex-col justify-center h-full">
+        <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-1 min-[375px]:space-y-1.5 md:space-y-3.5 text-left flex flex-col justify-center h-full">
           <div>
-            <span className="text-[10px] sm:text-xs md:text-sm font-black text-[#e20a22] uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-xs md:text-sm font-black text-[#e20a22] uppercase tracking-wider block">
               Fast Delivery in
             </span>
-            <h2 className="text-base sm:text-2xl md:text-4xl lg:text-[42px] font-black text-[#e20a22] tracking-tight leading-tight select-none">
+            <h2 className="text-sm min-[375px]:text-base sm:text-2xl md:text-4xl lg:text-[42px] font-black text-[#e20a22] tracking-tight leading-tight select-none">
               Ghatampur
             </h2>
           </div>
-          <p className="text-[9.5px] sm:text-xs md:text-sm text-[#4d4d4d] font-bold max-w-md line-clamp-1 md:line-clamp-none leading-relaxed">
+          <p className="text-[9px] min-[375px]:text-[9.5px] sm:text-xs md:text-sm text-[#4d4d4d] font-bold max-w-md line-clamp-1 md:line-clamp-none leading-relaxed">
             Milk, Fruits, Vegetables, Snacks & more
           </p>
 
-          <div className="flex items-center gap-3 md:gap-5 pt-0.5 sm:pt-1">
+          <div className="flex items-center gap-2.5 md:gap-5 pt-0">
             {/* Shop Now pill button */}
-            <span className="inline-flex items-center gap-1 bg-[#e20a22] hover:bg-[#c8081c] text-white font-extrabold px-2.5 py-1.5 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+            <span className="inline-flex items-center gap-1 bg-[#e20a22] hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
               Shop Now <span className="font-sans">→</span>
             </span>
 
             {/* 10 Min Delivery Circle Badge */}
             <div className="flex flex-col items-center select-none shrink-0">
-              <div className="flex flex-col items-center justify-center h-8 w-8 sm:h-11 sm:w-11 md:h-14 md:w-14 rounded-full bg-white border border-[#e20a22]/30 shadow-sm leading-none shrink-0">
-                <span className="text-[9px] sm:text-xs md:text-lg font-black text-[#e20a22]">10</span>
+              <div className="flex flex-col items-center justify-center h-7 w-7 min-[375px]:h-8 min-[375px]:w-8 sm:h-11 sm:w-11 md:h-14 md:w-14 rounded-full bg-white border border-[#e20a22]/30 shadow-sm leading-none shrink-0">
+                <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs md:text-lg font-black text-[#e20a22]">10</span>
                 <span className="text-[5.5px] sm:text-[7px] md:text-[9px] font-black text-[#e20a22] uppercase">min</span>
               </div>
-              <span className="text-[6px] sm:text-[7px] md:text-[9px] font-black text-zinc-500 mt-0.5 uppercase tracking-wider leading-none">
+              <span className="text-[5.5px] min-[375px]:text-[6px] sm:text-[7px] md:text-[9px] font-black text-zinc-500 mt-0.5 uppercase tracking-wider leading-none">
                 Delivery
               </span>
             </div>
@@ -242,7 +242,7 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   if (!currentBanner) return null
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[120px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-elevated select-none group">
+    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-elevated select-none group">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
