@@ -14,7 +14,8 @@ import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
 import Script from 'next/script'
-import NextTopLoader from 'nextjs-toploader'
+import { TopProgressBar } from '@/components/shared/top-progress-bar'
+import { Suspense } from 'react'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
   description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service. Fresh fruits, vegetables, dairy, snacks and more.',
   keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'FastKirana', 'kirana store'],
   manifest: '/manifest.json',
+  metadataBase: new URL('https://fast-kirana-gray.vercel.app'),
 }
 
 export const viewport: Viewport = {
@@ -62,17 +64,9 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
-              <NextTopLoader
-                color="#e20a22"
-                initialPosition={0.08}
-                crawlSpeed={200}
-                height={3}
-                crawl={true}
-                showSpinner={false}
-                easing="ease"
-                speed={200}
-                shadow="0 0 10px #e20a22,0 0 5px #e20a22"
-              />
+              <Suspense fallback={null}>
+                <TopProgressBar />
+              </Suspense>
               {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
               <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
                 <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
