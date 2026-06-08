@@ -109,6 +109,22 @@ export async function GET() {
         }),
       ])
 
+    // Retrieve existing snoozed alerts from StoreSetting
+    const setting = await prisma.storeSetting.findUnique({
+      where: { key: 'snoozed_alerts' }
+    }).catch(() => null)
+
+    let snoozedMap: Record<string, string> = {}
+    if (setting) {
+      try {
+        snoozedMap = JSON.parse(setting.value)
+      } catch {
+        snoozedMap = {}
+      }
+    }
+
+    const thirtyMinutesAgoTimestamp = now.getTime() - 30 * 60 * 1000
+
     // Filter delayed accepted orders
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000)
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
@@ -139,37 +155,68 @@ export async function GET() {
       }
     })
 
+    // Filter out snoozed alerts from each category
+    const filteredOutOfStock = outOfStockProducts.filter(p => {
+      const key = `${p.id}:OUT_OF_STOCK`
+      const snoozedAt = snoozedMap[key]
+      return !snoozedAt || new Date(snoozedAt).getTime() < thirtyMinutesAgoTimestamp
+    })
+
+    const filteredLowStock = lowStockProducts.filter(p => {
+      const key = `${p.id}:LOW_STOCK`
+      const snoozedAt = snoozedMap[key]
+      return !snoozedAt || new Date(snoozedAt).getTime() < thirtyMinutesAgoTimestamp
+    })
+
+    const filteredExpiringSoon = expiringSoonProducts.filter(p => {
+      const key = `${p.id}:EXPIRING_SOON`
+      const snoozedAt = snoozedMap[key]
+      return !snoozedAt || new Date(snoozedAt).getTime() < thirtyMinutesAgoTimestamp
+    })
+
+    const filteredExpired = expiredProducts.filter(p => {
+      const key = `${p.id}:EXPIRED`
+      const snoozedAt = snoozedMap[key]
+      return !snoozedAt || new Date(snoozedAt).getTime() < thirtyMinutesAgoTimestamp
+    })
+
+    const filteredPackingDelays = packingDelayAlerts.filter(o => {
+      const key = `${o.id}:PACKING_DELAY`
+      const snoozedAt = snoozedMap[key]
+      return !snoozedAt || new Date(snoozedAt).getTime() < thirtyMinutesAgoTimestamp
+    })
+
     // Map products into alert objects with alertType
     const alerts = [
-      ...outOfStockProducts.map((p) => ({
+      ...filteredOutOfStock.map((p) => ({
         ...p,
         expiryDate: p.expiryDate?.toISOString() ?? null,
         alertType: 'OUT_OF_STOCK' as const,
       })),
-      ...lowStockProducts.map((p) => ({
+      ...filteredLowStock.map((p) => ({
         ...p,
         expiryDate: p.expiryDate?.toISOString() ?? null,
         alertType: 'LOW_STOCK' as const,
       })),
-      ...expiringSoonProducts.map((p) => ({
+      ...filteredExpiringSoon.map((p) => ({
         ...p,
         expiryDate: p.expiryDate?.toISOString() ?? null,
         alertType: 'EXPIRING_SOON' as const,
       })),
-      ...expiredProducts.map((p) => ({
+      ...filteredExpired.map((p) => ({
         ...p,
         expiryDate: p.expiryDate?.toISOString() ?? null,
         alertType: 'EXPIRED' as const,
       })),
-      ...packingDelayAlerts,
+      ...filteredPackingDelays,
     ]
 
     const counts = {
-      outOfStock: outOfStockProducts.length,
-      lowStock: lowStockProducts.length,
-      expiringSoon: expiringSoonProducts.length,
-      expired: expiredProducts.length,
-      packingDelay: packingDelayAlerts.length,
+      outOfStock: filteredOutOfStock.length,
+      lowStock: filteredLowStock.length,
+      expiringSoon: filteredExpiringSoon.length,
+      expired: filteredExpired.length,
+      packingDelay: filteredPackingDelays.length,
       total: alerts.length,
     }
 
@@ -344,5 +391,60 @@ export async function PATCH(request: NextRequest) {
       { error: 'Failed to update alerts' },
       { status: 500 }
     )
+  }
+}
+
+// PUT - Take action on an alert (snooze/hide for 30 minutes)
+export async function PUT(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user || (session.user as any).role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { targetId, alertType } = await request.json()
+    if (!targetId || !alertType) {
+      return NextResponse.json({ error: 'targetId and alertType are required' }, { status: 400 })
+    }
+
+    const now = new Date()
+
+    // Retrieve existing snoozed alerts from StoreSetting
+    const setting = await prisma.storeSetting.findUnique({
+      where: { key: 'snoozed_alerts' }
+    })
+
+    let snoozedMap: Record<string, string> = {}
+    if (setting) {
+      try {
+        snoozedMap = JSON.parse(setting.value)
+      } catch {
+        snoozedMap = {}
+      }
+    }
+
+    // Add/Update current action
+    const alertKey = `${targetId}:${alertType}`
+    snoozedMap[alertKey] = now.toISOString()
+
+    // Clean up old entries (older than 30 minutes)
+    const thirtyMinutesAgo = now.getTime() - 30 * 60 * 1000
+    for (const key in snoozedMap) {
+      if (new Date(snoozedMap[key]).getTime() < thirtyMinutesAgo) {
+        delete snoozedMap[key]
+      }
+    }
+
+    // Save back to StoreSetting
+    await prisma.storeSetting.upsert({
+      where: { key: 'snoozed_alerts' },
+      update: { value: JSON.stringify(snoozedMap) },
+      create: { key: 'snoozed_alerts', value: JSON.stringify(snoozedMap) }
+    })
+
+    return NextResponse.json({ success: true, message: 'Alert actioned successfully' })
+  } catch (error: any) {
+    console.error('Failed to snooze alert:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

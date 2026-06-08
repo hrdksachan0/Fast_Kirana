@@ -92,7 +92,27 @@ export default async function CafePage() {
     }
   ]
 
-  if (cafeCategory) {
+  // 1. Fetch all products under Cafe category or tagged with 'cafe'
+  let dbCafeProducts: any[] = []
+  try {
+    dbCafeProducts = await prisma.product.findMany({
+      where: {
+        OR: [
+          { categoryId: cafeCategory?.id || 'non-existent' },
+          { tags: { has: 'cafe' } },
+          { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
+        ],
+        isAvailable: true,
+      },
+      include: { category: true }
+    })
+  } catch (e) {
+    console.warn('Database connection error in cafe page: failed to fetch cafe products')
+  }
+
+  // 2. Self-healing seeding: Only executes if no cafe products are found in the database
+  if (dbCafeProducts.length === 0 && cafeCategory) {
+    console.info('Cafe products database empty, running dynamic self-healing seed...')
     for (const item of hotCafeProducts) {
       try {
         const existing = await prisma.product.findUnique({
@@ -117,27 +137,26 @@ export default async function CafePage() {
           })
         }
       } catch (err) {
-        console.warn('Database connection error in cafe page: failed to dynamically seed cafe product')
+        console.warn('Database connection error in cafe page: failed to dynamically seed cafe product', err)
       }
     }
-  }
 
-  // 2. Fetch all products under Cafe category or tagged with 'cafe'
-  let dbCafeProducts: any[] = []
-  try {
-    dbCafeProducts = await prisma.product.findMany({
-      where: {
-        OR: [
-          { categoryId: cafeCategory?.id || 'non-existent' },
-          { tags: { has: 'cafe' } },
-          { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
-        ],
-        isAvailable: true,
-      },
-      include: { category: true }
-    })
-  } catch (e) {
-    console.warn('Database connection error in cafe page: failed to fetch cafe products')
+    // Re-fetch after seeding
+    try {
+      dbCafeProducts = await prisma.product.findMany({
+        where: {
+          OR: [
+            { categoryId: cafeCategory.id },
+            { tags: { has: 'cafe' } },
+            { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
+          ],
+          isAvailable: true,
+        },
+        include: { category: true }
+      })
+    } catch (e) {
+      console.warn('Database connection error in cafe page: failed to fetch cafe products after seeding')
+    }
   }
 
   // Group products into custom categories for layout

@@ -51,6 +51,7 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [submittingRestock, setSubmittingRestock] = useState<string | null>(null)
+  const [submittingAction, setSubmittingAction] = useState<string | null>(null)
   
   // Search and tabs filter
   const [search, setSearch] = useState('')
@@ -138,6 +139,29 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
       toast.error('Restock operation failed')
     } finally {
       setSubmittingRestock(null)
+    }
+  }
+
+  // Handle Snooze / Action Taken on alert (snooze alert for 30 minutes)
+  const handleSnooze = async (targetId: string, alertType: string) => {
+    const actionKey = `${targetId}:${alertType}`
+    try {
+      setSubmittingAction(actionKey)
+      const res = await fetch('/api/admin/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId, alertType })
+      })
+
+      if (!res.ok) throw new Error('Failed to take action')
+      
+      toast.success('Alert hidden for 30 minutes')
+      await fetchAlerts()
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to register alert action')
+    } finally {
+      setSubmittingAction(null)
     }
   }
 
@@ -297,6 +321,7 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
                 <th className="px-6 py-3">Current Stock</th>
                 <th className="px-6 py-3">Min Level</th>
                 <th className="px-6 py-3">Expiry Date</th>
+                <th className="px-6 py-3 text-center">Action Taken</th>
                 <th className="px-6 py-3 text-right">Quick Restock</th>
               </tr>
             </thead>
@@ -365,6 +390,22 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
                           {formatExpiry(item.expiryDate, item.alertType)}
                         </span>
                       </div>
+                    </td>
+
+                    {/* Action Taken (Acknowledge / Snooze) */}
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleSnooze(item.id, item.alertType)}
+                        disabled={submittingAction === `${item.id}:${item.alertType}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-muted/20 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-[10px] font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
+                      >
+                        {submittingAction === `${item.id}:${item.alertType}` ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        )}
+                        <span>Acknowledge</span>
+                      </button>
                     </td>
 
                     {/* Restock Actions */}

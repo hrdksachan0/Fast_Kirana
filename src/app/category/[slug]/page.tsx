@@ -18,22 +18,6 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const { slug } = await params
   const { sort } = await searchParams
 
-  // 1. Fetch all categories for the sidebar/navigation
-  const categoriesRaw = await prisma.category.findMany({
-    where: {
-      slug: { not: 'cafe' },
-    },
-    orderBy: { sortOrder: 'asc' },
-  }).catch(() => [])
-
-  // 2. Fetch the active category
-  const activeCategory = categoriesRaw.find((c) => c.slug === slug)
-
-  if (!activeCategory) {
-    notFound()
-  }
-
-  // 3. Fetch products in the active category
   let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' }
 
   if (sort === 'price-asc') {
@@ -44,16 +28,32 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     orderBy = { discount: 'desc' }
   }
 
-  const productsRaw = await prisma.product.findMany({
-    where: {
-      categoryId: activeCategory.id,
-      isAvailable: true,
-    },
-    orderBy,
-    include: {
-      category: true,
-    },
-  }).catch(() => [])
+  // 1. Fetch categories and category products in parallel
+  const [categoriesRaw, productsRaw] = await Promise.all([
+    prisma.category.findMany({
+      where: {
+        slug: { not: 'cafe' },
+      },
+      orderBy: { sortOrder: 'asc' },
+    }).catch(() => []),
+    prisma.product.findMany({
+      where: {
+        category: { slug },
+        isAvailable: true,
+      },
+      orderBy,
+      include: {
+        category: true,
+      },
+    }).catch(() => [])
+  ])
+
+  // 2. Fetch the active category from the pre-loaded category pool
+  const activeCategory = categoriesRaw.find((c) => c.slug === slug)
+
+  if (!activeCategory) {
+    notFound()
+  }
 
   // Map database categories and products to UI models
   const categories: Category[] = categoriesRaw.map((c) => ({

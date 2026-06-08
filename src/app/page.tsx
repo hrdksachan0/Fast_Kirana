@@ -18,112 +18,13 @@ export const revalidate = 60
 export default async function Home() {
   let promoBanners: any[] = []
   let categoriesRaw: any[] = []
-  let topPicksRaw: any[] = []
+  let trendingOrderItems: any[] = []
   let flashDealsRaw: any[] = []
   let bestSellersRaw: any[] = []
+  let suggestionsRaw: any[] = []
+  let topPicksRaw: any[] = []
 
-  // Fetch active banners from database
-  try {
-    promoBanners = await prisma.promoBanner.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-    })
-  } catch (error) {
-    console.warn('Database connection error in home page: failed to fetch promo banners')
-  }
-
-  // 1. Fetch categories
-  try {
-    categoriesRaw = await prisma.category.findMany({
-      orderBy: { sortOrder: 'asc' },
-    })
-  } catch (error) {
-    console.warn('Database connection error in home page: failed to fetch categories')
-  }
-
-  // 2. Fetch Trending Items (automatically calculated based on order history quantities, fallback to 'popular' tags)
-  try {
-    const trendingOrderItems = await prisma.orderItem.groupBy({
-      by: ['productId'],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: 'desc',
-        },
-      },
-      take: 12,
-    })
-
-    const trendingProductIds = trendingOrderItems.map((item) => item.productId)
-
-    if (trendingProductIds.length > 0) {
-      const orderHistoryProducts = await prisma.product.findMany({
-        where: {
-          id: { in: trendingProductIds },
-          isAvailable: true,
-        },
-        include: { category: true },
-      })
-      // Sort in order of sales popularity
-      topPicksRaw = orderHistoryProducts.sort(
-        (a, b) => trendingProductIds.indexOf(a.id) - trendingProductIds.indexOf(b.id)
-      )
-    }
-  } catch (error) {
-    console.warn('Database connection error in home page: failed to calculate dynamic trending items')
-  }
-
-  // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
-  if (topPicksRaw.length < 6) {
-    const existingIds = topPicksRaw.map((p) => p.id)
-    try {
-      const popularProducts = await prisma.product.findMany({
-        where: {
-          isAvailable: true,
-          tags: { has: 'popular' },
-          id: { notIn: existingIds },
-        },
-        take: 12 - topPicksRaw.length,
-        include: { category: true },
-      })
-      topPicksRaw = [...topPicksRaw, ...popularProducts]
-    } catch (error) {
-      console.warn('Database connection error in home page: failed to fetch popular fallback products')
-    }
-  }
-
-  // 3. Fetch Flash Deals (Discount > 10%)
-  try {
-    flashDealsRaw = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-        discount: { gt: 10 },
-      },
-      orderBy: { discount: 'desc' },
-      take: 10,
-      include: { category: true },
-    })
-  } catch (error) {
-    console.warn('Database connection error in home page: failed to fetch flash deals')
-  }
-
-  // 4. Fetch Best Sellers
-  try {
-    bestSellersRaw = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 12,
-      include: { category: true },
-    })
-  } catch (error) {
-    console.warn('Database connection error in home page: failed to fetch best sellers')
-  }
-
-  // 5. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
+  // 1. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
   const istOffset = 5.5 * 60 * 60 * 1000
   const serverTime = new Date()
   const istTime = new Date(serverTime.getTime() + (serverTime.getTimezoneOffset() * 60000) + istOffset)
@@ -173,20 +74,110 @@ export default async function Home() {
     }
   }
 
-  // Fetch all matching suggestion items
-  let suggestionsRaw: any[] = []
+  // 2. Fetch independent data pools in parallel to eliminate database sequential waterfall latency
   try {
-    suggestionsRaw = await prisma.product.findMany({
-      where: suggestionWhereClause,
-      include: { category: true },
-    })
+    const [
+      bannersRes,
+      categoriesRes,
+      trendingRes,
+      flashRes,
+      sellersRes,
+      suggestionsRes,
+    ] = await Promise.all([
+      prisma.promoBanner.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      }).catch((err) => { console.warn('Failed to fetch promo banners:', err); return []; }),
+      prisma.category.findMany({
+        orderBy: { sortOrder: 'asc' },
+      }).catch((err) => { console.warn('Failed to fetch categories:', err); return []; }),
+      prisma.orderItem.groupBy({
+        by: ['productId'],
+        _sum: {
+          quantity: true,
+        },
+        orderBy: {
+          _sum: {
+            quantity: 'desc',
+          },
+        },
+        take: 12,
+      }).catch((err) => { console.warn('Failed to fetch trending order items:', err); return []; }),
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          discount: { gt: 10 },
+        },
+        orderBy: { discount: 'desc' },
+        take: 10,
+        include: { category: true },
+      }).catch((err) => { console.warn('Failed to fetch flash deals:', err); return []; }),
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        include: { category: true },
+      }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
+      prisma.product.findMany({
+        where: suggestionWhereClause,
+        include: { category: true },
+      }).catch((err) => { console.warn('Failed to fetch time suggestions:', err); return []; }),
+    ])
+
+    promoBanners = bannersRes
+    categoriesRaw = categoriesRes
+    trendingOrderItems = trendingRes
+    flashDealsRaw = flashRes
+    bestSellersRaw = sellersRes
+    suggestionsRaw = suggestionsRes
   } catch (error) {
-    console.warn('Database connection error in home page: failed to fetch suggestion items')
+    console.error('Failed to execute parallel queries on home page:', error)
   }
 
-  // Sort: Put products matching explicitly desired smart tags (like 'late-night' for late-night hour) at the very front
+  // 3. Process dynamic trending items (sequential query because it requires the mapped product IDs)
+  const trendingProductIds = trendingOrderItems.map((item) => item.productId)
+  if (trendingProductIds.length > 0) {
+    try {
+      const orderHistoryProducts = await prisma.product.findMany({
+        where: {
+          id: { in: trendingProductIds },
+          isAvailable: true,
+        },
+        include: { category: true },
+      })
+      // Sort in order of sales popularity
+      topPicksRaw = orderHistoryProducts.sort(
+        (a, b) => trendingProductIds.indexOf(a.id) - trendingProductIds.indexOf(b.id)
+      )
+    } catch (error) {
+      console.warn('Database error in home page: failed to load dynamic trending product list', error)
+    }
+  }
+
+  // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
+  if (topPicksRaw.length < 6) {
+    const existingIds = topPicksRaw.map((p) => p.id)
+    try {
+      const popularProducts = await prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          tags: { has: 'popular' },
+          id: { notIn: existingIds },
+        },
+        take: 12 - topPicksRaw.length,
+        include: { category: true },
+      })
+      topPicksRaw = [...topPicksRaw, ...popularProducts]
+    } catch (error) {
+      console.warn('Database error in home page: failed to fetch popular fallback products', error)
+    }
+  }
+
+  // Sort suggestions: Put products matching preferred tag first
   const preferredTag = currentHour >= 20 || currentHour < 6 ? 'late-night' : (currentHour >= 6 && currentHour < 11 ? 'breakfast' : '')
-  if (preferredTag) {
+  if (preferredTag && suggestionsRaw.length > 0) {
     suggestionsRaw.sort((a: any, b: any) => {
       const aPref = a.tags.includes(preferredTag) ? 1 : 0
       const bPref = b.tags.includes(preferredTag) ? 1 : 0
