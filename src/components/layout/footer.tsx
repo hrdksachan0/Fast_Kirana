@@ -20,7 +20,7 @@ export function Footer() {
   }, [])
 
   return (
-    <footer className="bg-text-primary text-white mt-2 md:mt-4 pb-[80px] md:pb-8">
+    <footer className="bg-text-primary text-white mt-0 md:mt-0 pb-[80px] md:pb-8">
       {/* Social proof strip */}
       <div className="bg-accent/10 border-b border-accent/20">
         <div className="mx-auto max-w-7xl px-4 py-3 text-center">

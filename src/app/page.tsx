@@ -225,7 +225,7 @@ export default async function Home() {
   const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
 
   return (
-    <div className="container mx-auto px-4 py-3 space-y-1.5 md:space-y-8 max-w-7xl">
+    <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />
 

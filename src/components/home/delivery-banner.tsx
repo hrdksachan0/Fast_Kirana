@@ -4,7 +4,7 @@ import { Truck, Sparkles, ShieldCheck, Store } from 'lucide-react'
 
 export function DeliveryBanner() {
   return (
-    <section className="py-3 md:py-6 my-1 md:my-2 px-1">
+    <section className="py-3 md:py-6 mt-1 md:mt-2 mb-0 px-1">
       {/* Value Props Card */}
       <div className="glass rounded-2xl border border-primary/10 shadow-card overflow-hidden">
         {/* Tagline */}
