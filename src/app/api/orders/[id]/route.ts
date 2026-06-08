@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sendPushNotification } from '@/lib/push-notification'
 
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
@@ -207,6 +208,28 @@ export async function PATCH(
       await prisma.$executeRaw`
         UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE id = ${id}
       `
+    }
+
+    // Trigger PWA Push Notification for customer
+    try {
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'Confirmed by Store 🏪',
+        PACKED: 'Packed & Ready to Go 📦',
+        SHIPPED: 'Out for Delivery 🚴',
+        DELIVERED: 'Delivered Successfully 🎉',
+        CANCELLED: 'Cancelled ❌',
+      }
+      
+      const statusTitle = `Order Update: ${statusLabels[status] || status}`
+      const statusBody = `Your FastKirana order #${id.slice(-6).toUpperCase()} is now ${statusLabels[status] || status}.`
+      
+      sendPushNotification(existingOrder.userId, {
+        title: statusTitle,
+        body: statusBody,
+        data: { orderId: id }
+      }).catch(err => console.error('Background sendPushNotification error:', err))
+    } catch (pushErr) {
+      console.error('Failed to dispatch push notification:', pushErr)
     }
 
     // Return updated order

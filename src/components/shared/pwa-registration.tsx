@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Download, X, Share } from 'lucide-react'
+import { useCartStore } from '@/stores/cart-store'
+import { cn } from '@/lib/utils'
 
 export function PWARegistration() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
@@ -81,10 +83,15 @@ export function PWARegistration() {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
+  const hasCartItems = useCartStore((s) => s.items.length > 0)
+
   if (!showBanner) return null
 
   return (
-    <div className="fixed bottom-[72px] left-4 right-4 z-[999] md:hidden animate-slide-in-bottom">
+    <div className={cn(
+      "fixed left-4 right-4 z-[999] md:hidden animate-slide-in-bottom",
+      hasCartItems ? "bottom-[114px]" : "bottom-[72px]"
+    )}>
       <div className="bg-card border border-border/80 p-3.5 rounded-2xl shadow-elevated glass flex flex-col gap-2 relative">
         
         {/* Banner content */}
@@ -99,7 +106,7 @@ export function PWARegistration() {
             <div className="flex-1 min-w-0">
               <h4 className="text-xs font-black text-text-primary tracking-tight">Install FastKirana App</h4>
               <p className="text-[10px] font-bold text-text-secondary truncate mt-0.5">
-                Get 10-min delivery & a smoother app experience.
+                Get fast delivery & a smoother app experience.
               </p>
             </div>
 
