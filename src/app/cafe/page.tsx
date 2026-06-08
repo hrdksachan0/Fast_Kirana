@@ -204,7 +204,7 @@ export default async function CafePage() {
         {/* Background Glowing Ambient Orb */}
         <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-amber-500/10 blur-[60px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-xs min-[480px]:max-w-md md:max-w-lg space-y-3">
+        <div className="relative z-10 max-w-[60%] sm:max-w-md md:max-w-lg space-y-3">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-black tracking-wider uppercase text-amber-300">
             <Flame className="h-3 w-3 text-amber-400 fill-amber-400 animate-pulse-gentle" />
             Freshly Prepared & Hot
@@ -212,7 +212,7 @@ export default async function CafePage() {
           <h1 className="text-2xl md:text-4.5xl font-black leading-tight tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent">
             FastKirana Cafe
           </h1>
-          <p className="text-xs md:text-sm text-white/80 leading-relaxed font-semibold max-w-sm md:max-w-md">
+          <p className="text-[10px] sm:text-xs md:text-sm text-white/80 leading-relaxed font-semibold">
             Steaming hot tea, fresh filter coffee, and delicious hot bites prepared fresh and delivered warm straight to your doorstep!
           </p>
           <div className="flex items-center gap-3 pt-1 text-[10px] md:text-xs font-bold text-white/90">

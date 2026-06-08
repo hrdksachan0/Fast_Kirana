@@ -187,7 +187,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Right Side: Add to Cart Actions */}
-        <div className="relative h-6 min-[375px]:h-7 sm:h-9 w-[52px] min-[375px]:w-[60px] sm:w-20 shrink-0 flex-shrink-0">
+        <div className="relative h-8 sm:h-9 w-[64px] min-[375px]:w-[72px] sm:w-20 shrink-0 flex-shrink-0">
           <AnimatePresence mode="wait">
             {quantity === 0 ? (
               <motion.div
@@ -201,7 +201,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Button
                   onClick={handleAdd}
                   disabled={product.stock <= 0 || isStoreClosed}
-                  className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[9px] sm:text-xs font-black hover:bg-[#2e7d32] hover:text-white rounded-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black hover:bg-[#2e7d32] hover:text-white rounded-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {product.stock <= 0 ? (
                     'Out'
@@ -210,7 +210,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   ) : (
                     <>
                       ADD
-                      <Plus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
+                      <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
                     </>
                   )}
                 </Button>

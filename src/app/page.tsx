@@ -267,9 +267,6 @@ export default async function Home() {
         products={topPicks}
       />
 
-      {/* Value Proposition Grid */}
-      <DeliveryBanner />
-
       {/* Best Sellers Grid */}
       <section className="py-2.5 md:py-6">
         <h2 className="text-lg md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
@@ -284,6 +281,9 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      {/* Value Proposition Grid */}
+      <DeliveryBanner />
     </div>
   )
 }

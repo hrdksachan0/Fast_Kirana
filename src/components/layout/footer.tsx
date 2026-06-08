@@ -87,9 +87,9 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold mb-4 text-gray-300 uppercase tracking-wider">Account</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/account" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Profile</Link></li>
-              <li><Link href="/account/orders" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Orders</Link></li>
-              <li><Link href="/account/addresses" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Saved Addresses</Link></li>
+              <li><Link href="/account?tab=profile" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Profile</Link></li>
+              <li><Link href="/account?tab=orders" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Orders</Link></li>
+              <li><Link href="/account?tab=addresses" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Saved Addresses</Link></li>
               <li><Link href="/cart" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Cart</Link></li>
             </ul>
           </div>

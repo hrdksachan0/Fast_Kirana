@@ -8,9 +8,10 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
 import { LogOut, MapPin, User, Package } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { BuyAgainSection } from '@/components/home/buy-again-section'
+import { useSearchParams } from 'next/navigation'
 
 interface AccountDashboardProps {
   user: {
@@ -25,6 +26,22 @@ interface AccountDashboardProps {
 
 export function AccountDashboard({ user, addresses: initialAddresses, orders }: AccountDashboardProps) {
   const [addresses, setAddresses] = useState(initialAddresses)
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState('orders')
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && (tab === 'orders' || tab === 'addresses' || tab === 'profile')) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', value)
+    window.history.pushState(null, '', url.toString())
+  }
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -107,7 +124,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders }: 
       </div>
 
       {/* Tabs Layout */}
-      <Tabs defaultValue="orders" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-xl mb-6">
           <TabsTrigger value="orders" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
             <Package className="h-3.5 w-3.5" />
