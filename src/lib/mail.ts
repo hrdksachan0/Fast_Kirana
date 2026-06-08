@@ -11,8 +11,9 @@ export async function sendOtpEmail(email: string, otp: string) {
 
   if (resend) {
     try {
+      const fromEmail = process.env.EMAIL_FROM || 'FastKirana <onboarding@resend.dev>'
       await resend.emails.send({
-        from: 'FastKirana <onboarding@resend.dev>',
+        from: fromEmail,
         to: email,
         subject: `${otp} is your FastKirana verification code`,
         html: `
