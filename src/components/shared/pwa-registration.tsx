@@ -98,8 +98,8 @@ export function PWARegistration() {
         {!showIOSInstructions ? (
           <div className="flex items-center gap-3">
             {/* App Icon */}
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shrink-0 font-black shadow-inner shadow-black/10 text-base">
-              FK
+            <div className="relative h-10 w-10 rounded-xl overflow-hidden shrink-0 border border-border shadow-sm">
+              <img src="/icons/icon-192.png" alt="FastKirana Logo" className="object-cover h-full w-full" />
             </div>
             
             {/* Text details */}
