@@ -14,8 +14,6 @@ import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
 import Script from 'next/script'
-import { TopProgressBar } from '@/components/shared/top-progress-bar'
-import { Suspense } from 'react'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -64,9 +62,6 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
-              <Suspense fallback={null}>
-                <TopProgressBar />
-              </Suspense>
               {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
               <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
                 <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />

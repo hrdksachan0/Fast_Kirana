@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useCartStore } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { usePathname } from 'next/navigation'
@@ -12,6 +12,7 @@ import { Logo } from '@/components/layout/logo'
 import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/providers/theme-provider'
+import { TopProgressBar } from '@/components/shared/top-progress-bar'
 
 const SEARCH_PLACEHOLDERS = [
   'Search "milk"',
@@ -266,6 +267,9 @@ export function Navbar() {
             )}
           </div>
         )}
+        <Suspense fallback={null}>
+          <TopProgressBar />
+        </Suspense>
       </nav>
 
       {isMobileMenuOpen && (
