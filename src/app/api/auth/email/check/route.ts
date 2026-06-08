@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { authLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const limited = authLimiter.check(request)
+  if (limited) return limited
+
   try {
     const { email } = await request.json()
 
@@ -11,17 +15,35 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Query database to see if the user exists and has a complete name and phone
+    // Query database to check user existence, role, and password status
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
-      select: { name: true, phone: true }
+      select: { name: true, phone: true, role: true, passwordHash: true }
     })
 
-    const needsProfileSetup = !user || !user.name || !user.phone
+    if (!user) {
+      // New user — treat as customer, needs OTP flow
+      return NextResponse.json({
+        success: true,
+        exists: false,
+        isWorker: false,
+        hasPassword: false,
+        needsProfileSetup: true,
+        role: 'USER',
+      })
+    }
+
+    const isWorker = user.role !== 'USER'
+    const hasPassword = !!user.passwordHash
+    const needsProfileSetup = !user.name || !user.phone
 
     return NextResponse.json({
       success: true,
-      needsProfileSetup
+      exists: true,
+      isWorker,
+      hasPassword,
+      needsProfileSetup,
+      role: user.role,
     })
   } catch (error: any) {
     console.error('Email Check API error:', error)

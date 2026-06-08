@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendOtpEmail } from '@/lib/mail'
+import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const limited = otpLimiter.check(request)
+  if (limited) return limited
+
   try {
     const { email } = await request.json()
 

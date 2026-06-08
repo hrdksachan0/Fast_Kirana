@@ -334,6 +334,9 @@ export function AdminDashboard({
   // States for Users
   const [users, setUsers] = useState(initialUsers)
   const [updatingUserRoleId, setUpdatingUserRoleId] = useState<string | null>(null)
+  const [settingPasswordUserId, setSettingPasswordUserId] = useState<string | null>(null)
+  const [passwordInput, setPasswordInput] = useState('')
+  const [savingPasswordId, setSavingPasswordId] = useState<string | null>(null)
 
   // States for Reviews
   const [reviews, setReviews] = useState(initialReviews)
@@ -458,6 +461,33 @@ export function AdminDashboard({
       toast.error('Error updating user role')
     } finally {
       setUpdatingUserRoleId(null)
+    }
+  }
+
+  const handleSetPassword = async (userId: string) => {
+    if (!passwordInput || passwordInput.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    setSavingPasswordId(userId)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password: passwordInput }),
+      })
+      if (res.ok) {
+        toast.success('Password set successfully! Worker can now login.')
+        setSettingPasswordUserId(null)
+        setPasswordInput('')
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to set password')
+      }
+    } catch (err) {
+      toast.error('Error setting password')
+    } finally {
+      setSavingPasswordId(null)
     }
   }
 
@@ -1938,6 +1968,7 @@ export function AdminDashboard({
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Phone</th>
                   <th className="py-3 px-4 text-center">Role</th>
+                  <th className="py-3 px-4 text-center">Password</th>
                   <th className="py-3 px-4 text-center">Orders Placed</th>
                   <th className="py-3 px-4 text-right">Joined Date</th>
                 </tr>
@@ -1968,6 +1999,48 @@ export function AdminDashboard({
                         <option value="DELIVERY">Delivery Rider</option>
                         <option value="ADMIN">Admin</option>
                       </select>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {u.role !== 'USER' ? (
+                        settingPasswordUserId === u.id ? (
+                          <div className="flex items-center gap-1.5 justify-center">
+                            <input
+                              type="password"
+                              placeholder="Min 6 chars"
+                              value={passwordInput}
+                              onChange={(e) => setPasswordInput(e.target.value)}
+                              className="w-24 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleSetPassword(u.id)}
+                              disabled={savingPasswordId === u.id}
+                              className="p-1 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
+                            >
+                              {savingPasswordId === u.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => { setSettingPasswordUserId(null); setPasswordInput('') }}
+                              className="p-1 bg-muted text-text-secondary rounded-md hover:bg-muted/80 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setSettingPasswordUserId(u.id); setPasswordInput('') }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                          >
+                            Set Password
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-[10px] text-text-muted">OTP only</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className="font-bold bg-muted px-2 py-0.5 rounded border text-[10px]">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import bcrypt from 'bcryptjs'
 
 export async function GET() {
   const session = await auth()
@@ -58,5 +59,36 @@ export async function PATCH(request: Request) {
   } catch (error: any) {
     console.error('Failed to update user role:', error)
     return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  const session = await auth()
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { userId, password } = await request.json()
+
+    if (!userId || !password) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    })
+
+    return NextResponse.json({ success: true, message: 'Password updated successfully' })
+  } catch (error: any) {
+    console.error('Failed to set worker password:', error)
+    return NextResponse.json({ error: 'Failed to set password' }, { status: 500 })
   }
 }

@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
+import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const limited = apiWriteLimiter.check(request)
+  if (limited) return limited
+
   const session = await auth()
   const userId = session?.user?.id
   if (!userId) {
@@ -333,7 +337,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const limited = apiReadLimiter.check(request)
+  if (limited) return limited
+
   const session = await auth()
   const userId = session?.user?.id
   if (!userId) {

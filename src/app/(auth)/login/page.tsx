@@ -9,6 +9,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, ShoppingBag, ArrowLeft, Mail, KeyRound, User, Phone } from 'lucide-react'
 
+const getRoleRedirect = (role: string, callbackUrl: string) => {
+  switch (role) {
+    case 'ADMIN': return '/admin'
+    case 'CHEF': return '/cafe-kitchen'
+    case 'PICKER': return '/picker'
+    case 'DELIVERY': return '/delivery'
+    default: return callbackUrl || '/'
+  }
+}
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -26,6 +36,12 @@ function LoginForm() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   
+  // Role-based state from /api/auth/email/check
+  const [isWorker, setIsWorker] = useState(false)
+  const [hasPassword, setHasPassword] = useState(true)
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false)
+  const [userRole, setUserRole] = useState<string>('')
+
   // Test mode helper
   const [testOtp, setTestOtp] = useState<string | null>(null)
 
@@ -55,7 +71,8 @@ function LoginForm() {
     return errs
   }
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  // Step 1: Check email type via API
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const emailErr = validateEmail(email)
     if (emailErr) {
@@ -63,9 +80,73 @@ function LoginForm() {
       return
     }
     setErrors({})
-    setStep('PASSWORD')
+    setIsLoading(true)
+
+    try {
+      const res = await fetch('/api/auth/email/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to check email')
+        return
+      }
+
+      // Store role info from response
+      setIsWorker(data.isWorker ?? false)
+      setHasPassword(data.hasPassword ?? false)
+      setNeedsProfileSetup(data.needsProfileSetup ?? false)
+      setUserRole(data.role ?? '')
+
+      if (data.isWorker) {
+        // Worker flow → password step
+        if (!data.hasPassword) {
+          // Worker has no password set yet
+          toast.error('Your admin hasn\'t set your password yet. Please contact your admin.')
+          return
+        }
+        setStep('PASSWORD')
+      } else {
+        // Customer flow → auto-send OTP and go to OTP step
+        await sendOtp()
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
+  // Send OTP helper (used for customer flow)
+  const sendOtp = async () => {
+    try {
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to send OTP code')
+      } else {
+        toast.success(`Verification code sent to ${email}`)
+        if (data.otp) {
+          setTestOtp(data.otp)
+        }
+        setStep('OTP')
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    }
+  }
+
+  // Step 2a: Worker password login
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!password) {
@@ -86,43 +167,18 @@ function LoginForm() {
         toast.error('Invalid password. Please try again.')
       } else {
         toast.success('Successfully logged in!')
-        router.push(callbackUrl)
+        const redirect = getRoleRedirect(userRole, callbackUrl)
+        router.push(redirect)
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast.error('Authentication failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const triggerOtpFlow = async () => {
-    setIsLoading(true)
-    try {
-      const res = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to send OTP code')
-      } else {
-        toast.success(`Verification code sent to ${email}`)
-        if (data.otp) {
-          setTestOtp(data.otp)
-        }
-        setStep('OTP')
-      }
-    } catch (error) {
-      toast.error('Something went wrong. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Step 2b: Customer OTP verification
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     const otpErr = validateOtp(otp)
@@ -137,7 +193,7 @@ function LoginForm() {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email: email.toLowerCase().trim(), otp }),
       })
 
       const data = await res.json()
@@ -147,18 +203,21 @@ function LoginForm() {
       } else {
         if (data.needsProfileSetup) {
           toast.info('New account detected! Please enter your name and phone to continue.')
+          setNeedsProfileSetup(true)
           setStep('PROFILE')
         } else {
+          // Existing customer — sign in directly
           await triggerNextAuthSignIn()
         }
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to verify OTP. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Step 3: Save profile and login (new customers only)
   const handleSaveProfileAndLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const profileErrs = validateProfile()
@@ -171,15 +230,16 @@ function LoginForm() {
 
     try {
       await triggerNextAuthSignIn(name, phone)
-    } catch (error) {
+    } catch {
       toast.error('Failed to complete login. Please try again.')
       setIsLoading(false)
     }
   }
 
+  // NextAuth OTP sign-in (customers)
   const triggerNextAuthSignIn = async (userName?: string, userPhone?: string) => {
     const res = await signIn('otp', {
-      email,
+      email: email.toLowerCase().trim(),
       otp,
       name: userName || '',
       phone: userPhone || '',
@@ -191,8 +251,18 @@ function LoginForm() {
       setIsLoading(false)
     } else {
       toast.success('Successfully logged in!')
-      router.push(callbackUrl)
+      router.push(callbackUrl || '/')
       router.refresh()
+    }
+  }
+
+  // Resend OTP for customer flow
+  const handleResendOtp = async () => {
+    setIsLoading(true)
+    try {
+      await sendOtp()
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -200,10 +270,25 @@ function LoginForm() {
     setIsGoogleLoading(true)
     try {
       await signIn('google', { callbackUrl })
-    } catch (error) {
+    } catch {
       toast.error('Failed to log in with Google')
       setIsGoogleLoading(false)
     }
+  }
+
+  // Reset to email step
+  const goBackToEmail = () => {
+    setStep('EMAIL')
+    setPassword('')
+    setOtp('')
+    setTestOtp(null)
+    setName('')
+    setPhone('')
+    setErrors({})
+    setIsWorker(false)
+    setHasPassword(true)
+    setNeedsProfileSetup(false)
+    setUserRole('')
   }
 
   return (
@@ -276,7 +361,14 @@ function LoginForm() {
               className="w-full h-12 bg-gradient-to-r from-primary to-primary-light text-white font-black rounded-xl hover:scale-[1.01] active:scale-95 transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-1.5"
               disabled={isLoading}
             >
-              Continue
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                'Continue'
+              )}
             </Button>
 
             <div className="relative flex items-center justify-center text-xs uppercase my-3 sm:my-4">
@@ -305,7 +397,7 @@ function LoginForm() {
           </form>
         )}
 
-        {/* STEP 2: ENTER PASSWORD */}
+        {/* STEP 2a: WORKER PASSWORD LOGIN */}
         {step === 'PASSWORD' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
@@ -350,15 +442,7 @@ function LoginForm() {
             <div className="flex flex-col gap-2.5 mt-2">
               <button
                 type="button"
-                onClick={() => triggerOtpFlow()}
-                className="text-xs font-black text-accent dark:text-emerald-400 hover:underline cursor-pointer text-center"
-                disabled={isLoading}
-              >
-                Send OTP code to email instead
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep('EMAIL')}
+                onClick={goBackToEmail}
                 className="text-xs font-bold text-text-muted hover:underline cursor-pointer text-center"
                 disabled={isLoading}
               >
@@ -368,7 +452,7 @@ function LoginForm() {
           </form>
         )}
 
-        {/* STEP 2: ENTER OTP */}
+        {/* STEP 2b: CUSTOMER OTP VERIFICATION */}
         {step === 'OTP' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
@@ -388,6 +472,7 @@ function LoginForm() {
                   className="pl-11 h-12 tracking-[0.6em] text-center font-black text-lg focus:tracking-[0.6em] rounded-xl border-border bg-white/50 dark:bg-black/20 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all placeholder:text-text-muted/40 placeholder:tracking-normal"
                   disabled={isLoading}
                   required
+                  autoFocus
                 />
               </div>
               {errors.otp && (
@@ -399,11 +484,7 @@ function LoginForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setStep('EMAIL')
-                  setOtp('')
-                  setTestOtp(null)
-                }}
+                onClick={goBackToEmail}
                 className="flex-1 h-12 border-border bg-white/40 dark:bg-black/10 hover:bg-white/60 dark:hover:bg-black/20 text-xs font-black rounded-xl hover:scale-[1.01] active:scale-95 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
                 disabled={isLoading}
               >
@@ -425,10 +506,19 @@ function LoginForm() {
                 )}
               </Button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              className="w-full text-xs font-black text-accent dark:text-emerald-400 hover:underline cursor-pointer text-center mt-1"
+              disabled={isLoading}
+            >
+              Resend OTP code
+            </button>
           </form>
         )}
 
-        {/* STEP 3: CONFIGURE PROFILE */}
+        {/* STEP 3: CONFIGURE PROFILE (new customers only) */}
         {step === 'PROFILE' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
@@ -448,6 +538,7 @@ function LoginForm() {
                     className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                     disabled={isLoading}
                     required
+                    autoFocus
                   />
                 </div>
                 {errors.name && (

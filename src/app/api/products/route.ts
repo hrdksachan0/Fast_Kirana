@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
+import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const limited = apiReadLimiter.check(request)
+  if (limited) return limited
+
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
@@ -169,7 +173,10 @@ function getFuzzyScore(query: string, target: string): number {
   return totalScore / qWords.length
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const limited = apiWriteLimiter.check(request)
+  if (limited) return limited
+
   const session = await auth()
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
