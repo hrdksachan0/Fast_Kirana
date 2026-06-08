@@ -52,8 +52,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var saved = localStorage.getItem('theme');
-                  var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  document.documentElement.classList.add(saved || system);
+                  document.documentElement.classList.add(saved || 'light');
                 } catch (e) {}
               })();
             `,
