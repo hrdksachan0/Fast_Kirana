@@ -81,6 +81,8 @@ export function AdminDashboard({
   const [orders, setOrders] = useState(initialOrders)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [isChimeMuted, setIsChimeMuted] = useState(false)
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL')
+  const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
 
@@ -1153,14 +1155,84 @@ export function AdminDashboard({
           transition={{ duration: 0.25, ease: 'easeInOut' }}
           className="w-full"
         >
-          {activeTab === 'orders' && (
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-extrabold text-text-primary text-base">Store Orders</h3>
-            <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold">
-              Showing recent {orders.length} orders
-            </span>
-          </div>
+          {activeTab === 'orders' && (() => {
+            const filteredOrders = orders.filter((o) => {
+              const matchesFilter = orderStatusFilter === 'ALL' || o.status === orderStatusFilter
+              const matchesSearch = 
+                orderSearchQuery.trim() === '' || 
+                o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
+                (o.userName && o.userName.toLowerCase().includes(orderSearchQuery.toLowerCase())) || 
+                (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase()))
+              return matchesFilter && matchesSearch
+            })
+            const activeOrdersCount = orders.filter(o => o.status === 'PENDING' || o.status === 'CONFIRMED').length
+
+            return (
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-extrabold text-text-primary text-base">Store Orders</h3>
+                  <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold">
+                    Showing {filteredOrders.length} of {orders.length} orders
+                  </span>
+                </div>
+
+                {/* Direct Load Alert Banner inside the Orders Card */}
+                {activeOrdersCount >= 10 && (
+                  <div className="mb-5 p-4 rounded-xl border border-rose-500/20 bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-rose-500/10 text-xs animate-glow-pulse">
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-sm">🔥</span>
+                      <div>
+                        <h4 className="font-extrabold text-rose-500">Peak Load Alert: {activeOrdersCount} Active Orders</h4>
+                        <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
+                          Staff allocation is recommended to maintain the 10-minute delivery SLA. 
+                          Go to the <button onClick={() => setActiveTab('users')} className="text-primary hover:underline font-extrabold cursor-pointer">Customers tab</button> to assign idle staff to **Picker (Grocery)** or **Chef (Cafe Kitchen)** roles.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filters and Search Row */}
+                <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-4">
+                  <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
+                    {[
+                      { key: 'ALL', label: 'All', color: 'bg-muted' },
+                      { key: 'PENDING', label: 'Placed (New)', color: 'bg-amber-500/10 text-amber-600 border border-amber-500/20' },
+                      { key: 'CONFIRMED', label: 'Confirmed', color: 'bg-blue-500/10 text-blue-600 border border-blue-500/20' },
+                      { key: 'PACKED', label: 'Packed', color: 'bg-[#00b140]/10 text-[#00b140] border border-[#00b140]/20' },
+                      { key: 'SHIPPED', label: 'On the Way', color: 'bg-purple-500/10 text-purple-600 border border-purple-500/20' },
+                      { key: 'DELIVERED', label: 'Delivered', color: 'bg-zinc-500/10 text-zinc-600 border border-zinc-500/20' },
+                      { key: 'CANCELLED', label: 'Cancelled', color: 'bg-rose-500/10 text-rose-600 border border-rose-500/20' },
+                    ].map((pill) => {
+                      const count = pill.key === 'ALL' ? orders.length : orders.filter(o => o.status === pill.key).length
+                      const isActive = orderStatusFilter === pill.key
+                      return (
+                        <button
+                          key={pill.key}
+                          type="button"
+                          onClick={() => setOrderStatusFilter(pill.key)}
+                          className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer border ${
+                            isActive 
+                              ? 'bg-primary text-white border-primary shadow-sm' 
+                              : 'bg-card border-border hover:bg-muted text-text-secondary'
+                          }`}
+                        >
+                          {pill.label} ({count})
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search orders..."
+                      value={orderSearchQuery}
+                      onChange={(e) => setOrderSearchQuery(e.target.value)}
+                      className="pl-9 pr-4 py-2 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -1175,14 +1247,14 @@ export function AdminDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 font-semibold">
-                {orders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-text-secondary">
-                      No orders placed yet.
+                    <td colSpan={6} className="text-center py-10 text-text-secondary text-[11px] font-bold">
+                      No matching orders found.
                     </td>
                   </tr>
                 ) : (
-                  orders.map((o) => (
+                  filteredOrders.map((o) => (
                     <tr key={o.id} className="hover:bg-muted/30">
                       <td className="py-3 px-4 font-mono font-bold text-[10px]">{o.id}</td>
                       <td className="py-3 px-4">
@@ -1244,7 +1316,8 @@ export function AdminDashboard({
             </table>
           </div>
         </div>
-      )}
+      )
+    })()}
 
       {/* ---------------------------------------------------- */}
       {/* PRODUCTS & INVENTORY TAB */}
@@ -1890,6 +1963,8 @@ export function AdminDashboard({
                         className="bg-muted px-2 py-1 rounded-lg border text-[11px] font-bold text-text-primary focus:outline-none cursor-pointer"
                       >
                         <option value="USER">Customer (USER)</option>
+                        <option value="PICKER">Grocery Picker</option>
+                        <option value="CHEF">Cafe Chef</option>
                         <option value="DELIVERY">Delivery Rider</option>
                         <option value="ADMIN">Admin</option>
                       </select>
