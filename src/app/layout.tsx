@@ -14,6 +14,7 @@ import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
 import Script from 'next/script'
+import NextTopLoader from 'nextjs-toploader'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -61,6 +62,17 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
+              <NextTopLoader
+                color="#e20a22"
+                initialPosition={0.08}
+                crawlSpeed={200}
+                height={3}
+                crawl={true}
+                showSpinner={false}
+                easing="ease"
+                speed={200}
+                shadow="0 0 10px #e20a22,0 0 5px #e20a22"
+              />
               {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
               <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
                 <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
