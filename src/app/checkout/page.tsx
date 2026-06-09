@@ -242,33 +242,7 @@ export default function CheckoutPage() {
     loadAddresses()
   }, [])
 
-  // Trigger focus return listener when waiting for app redirection
-  useEffect(() => {
-    if (!isWaitingForIntentReturn) return
 
-    const handleFocus = () => {
-      // User returned from UPI app! Clear listeners and trigger payment verification
-      setIsWaitingForIntentReturn(false)
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      
-      handleSimulatedPayment('QR_SUCCESS')
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        handleFocus()
-      }
-    }
-
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [isWaitingForIntentReturn])
 
   // Create New Address
   const handleSaveAddress = async (e: React.FormEvent) => {
@@ -382,7 +356,7 @@ export default function CheckoutPage() {
 
   // Launch standard universal UPI deep link intent URI
   const handleUpiIntentPay = () => {
-    const upiLink = `upi://pay?pa=fastkirana@upi&pn=FastKirana&am=${grandTotal.toFixed(2)}&cu=INR&tn=FastKirana%20Order`
+    const upiLink = `upi://pay?pa=iamuv26@ptyes&pn=FastKirana&am=${grandTotal.toFixed(2)}&cu=INR&tn=FastKirana%20Order`
     
     // Set waiting state and attempt redirect
     setIsWaitingForIntentReturn(true)
@@ -1165,21 +1139,32 @@ export default function CheckoutPage() {
                                 <span>Waiting for payment in UPI app...</span>
                               </div>
                               <p className="text-[10px] font-medium text-blue-500 leading-relaxed max-w-[240px]">
-                                Once payment is completed in your app, return to this tab. We will automatically detect your return and verify the payment.
+                                Once payment is completed in your app, return to this tab to confirm.
                               </p>
                             </div>
 
-                            <Button
-                              onClick={() => handleSimulatedPayment('QR_SUCCESS')}
-                              className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
-                              disabled={isPlacingOrder}
-                            >
-                              {isPlacingOrder ? (
-                                <Loader2 className="h-4 w-4 animate-spin mx-auto text-white" />
-                              ) : (
-                                "✓ Confirm Payment Manually"
-                              )}
-                            </Button>
+                            <div className="w-full space-y-2.5">
+                              <Button
+                                onClick={() => handleSimulatedPayment('QR_SUCCESS')}
+                                className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md hover:scale-[1.02] active:scale-98 transition-all cursor-pointer flex items-center justify-center"
+                                disabled={isPlacingOrder}
+                              >
+                                {isPlacingOrder ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                                ) : (
+                                  "✓ Yes, I have paid successfully"
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={() => setIsWaitingForIntentReturn(false)}
+                                variant="outline"
+                                className="w-full border-zinc-200 dark:border-zinc-800 text-text-secondary font-bold rounded-2xl h-11 transition-all cursor-pointer flex items-center justify-center bg-transparent"
+                                disabled={isPlacingOrder}
+                              >
+                                ✕ No, payment failed / Go Back
+                              </Button>
+                            </div>
                           </>
                         )}
                       </div>

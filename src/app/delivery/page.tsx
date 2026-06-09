@@ -634,7 +634,7 @@ export default function DeliveryDashboard() {
           const order = orders.find((o) => o.id === upiQrOrderId)
           if (!order) return null
           
-          const upiUrl = `upi://pay?pa=fastkirana@upi&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.id.slice(0, 8)}`
+          const upiUrl = `upi://pay?pa=iamuv26@ptyes&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.id.slice(0, 8)}`
           const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`
 
           return (
@@ -671,7 +671,7 @@ export default function DeliveryDashboard() {
 
                 <div className="text-center space-y-1">
                   <p className="text-[10px] font-bold text-text-muted">
-                    Payee Handle: <span className="font-extrabold text-text-primary">fastkirana@upi</span>
+                    Payee Handle: <span className="font-extrabold text-text-primary">iamuv26@ptyes</span>
                   </p>
                   <p className="text-[9px] text-text-muted/80">
                     Accepts GPay, PhonePe, Paytm, BHIM and all banking apps
