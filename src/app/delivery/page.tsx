@@ -397,12 +397,13 @@ export default function DeliveryDashboard() {
           triggerHaptic('medium')
         }
         toast.success(`Saved locally! Status will sync when online.`)
+        return true
       } catch (err) {
         toast.error('Failed to save offline status update')
+        return false
       } finally {
         setUpdatingId(null)
       }
-      return
     }
 
     try {
@@ -421,11 +422,14 @@ export default function DeliveryDashboard() {
         }
         toast.success(`Order updated successfully!`)
         fetchOrders(true)
+        return true
       } else {
         toast.error('Failed to update order')
+        return false
       }
     } catch (err) {
       toast.error('Error updating order state')
+      return false
     } finally {
       setUpdatingId(null)
     }
@@ -500,17 +504,19 @@ export default function DeliveryDashboard() {
     setCapturingPhotoSubmitting(true)
     try {
       const coords = await getCurrentCoords()
-      await handleUpdateStatus(capturingOrderId, 'DELIVERED', {
+      const success = await handleUpdateStatus(capturingOrderId, 'DELIVERED', {
         deliveryPhoto: photoBase64,
         deliveryLat: coords?.lat || null,
         deliveryLng: coords?.lng || null,
       })
-      toast.success('📸 Delivery confirmed with photo proof!', {
-        description: coords 
-          ? `Photo proof and GPS coordinates saved for order #${capturingOrderId.slice(0, 8)}…`
-          : `Photo proof saved for order #${capturingOrderId.slice(0, 8)}… (GPS not available)`,
-        duration: 4000,
-      })
+      if (success) {
+        toast.success('📸 Delivery confirmed with photo proof!', {
+          description: coords 
+            ? `Photo proof and GPS coordinates saved for order #${capturingOrderId.slice(0, 8)}…`
+            : `Photo proof saved for order #${capturingOrderId.slice(0, 8)}… (GPS not available)`,
+          duration: 4000,
+        })
+      }
     } catch (err) {
       toast.error('Failed to save delivery proof')
     } finally {
