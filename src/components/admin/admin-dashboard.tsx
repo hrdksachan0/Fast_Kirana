@@ -1273,7 +1273,8 @@ export function AdminDashboard({
                       <button
                         onClick={() => {
                           setActiveTab('orders')
-                          setSearchQuery(order.id)
+                          setOrderStatusFilter('ALL')
+                          setOrderSearchQuery(order.id)
                         }}
                         className="rounded-lg bg-card p-1 text-text-primary shadow-sm hover:bg-muted transition-colors border border-border/40"
                         title="View order"
