@@ -87,7 +87,17 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(paytmParams)
     });
 
-    const result = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let result: any = {};
+    if (contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const text = await response.text();
+      console.warn('Paytm Staging API offline (non-JSON response):', text);
+      return NextResponse.json({
+        error: `Paytm Staging API is currently offline (Returned: ${text.slice(0, 80)})`
+      }, { status: 502 });
+    }
 
     if (result.body && result.body.resultInfo && result.body.resultInfo.resultStatus === 'S') {
       return NextResponse.json({
