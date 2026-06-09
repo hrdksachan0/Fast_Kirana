@@ -11,12 +11,21 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
   if (simple) {
     return (
       <svg
-        viewBox="25 10 100 100"
+        viewBox="0 0 140 120"
         className={`h-9 w-auto shrink-0 ${className}`}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
+        {/* Left speed lines */}
+        <rect x="8" y="44" width="22" height="6.5" rx="3.25" fill="#e20a22" />
+        <rect x="0.5" y="58" width="29.5" height="6.5" rx="3.25" fill="#e20a22" />
+        <rect x="8" y="72" width="22" height="6.5" rx="3.25" fill="#e20a22" />
+        <circle cx="2" cy="61.25" r="3" fill="#e20a22" />
+
+        {/* Main red container square */}
         <rect x="25" y="10" width="100" height="100" rx="28" fill="#e20a22" />
+
+        {/* Clean bold italic sans-serif block F in white */}
         <path
           d="M 62 32 H 98 L 95 46 H 75.5 L 73.4 56 H 89 L 86.5 68 H 71 L 66.8 88 H 50.2 Z"
           fill="white"
