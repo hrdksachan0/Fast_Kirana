@@ -45,7 +45,20 @@ export function CartStickyBar() {
     return () => clearInterval(interval)
   }, [])
 
-  if (items.length === 0 || isCartOpen) return null
+  const pathname = usePathname()
+
+  // Suppress sticky cart bar on checkout, tracking, login, and worker consoles to prevent overlay clutter
+  const isIgnoredPage = !pathname ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/order/') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/picker') ||
+    pathname.startsWith('/cafe-kitchen') ||
+    pathname.startsWith('/delivery')
+
+  if (items.length === 0 || isCartOpen || isIgnoredPage) return null
 
   const subtotal = getSubtotal()
   const savings = getSavings()

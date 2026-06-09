@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, X, TrendingUp, History, Loader2, Plus, Minus } from 'lucide-react'
+import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff } from 'lucide-react'
 import { CATEGORIES } from '@/lib/constants'
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { ProductImage } from '@/components/product/product-image'
-import { isCafeProduct } from '@/lib/utils'
+import { isCafeProduct, cn } from '@/lib/utils'
 import { Product } from '@/types'
+import { triggerHaptic } from '@/lib/haptic'
+import { toast } from 'sonner'
 
 interface SearchOverlayProps {
   open: boolean
@@ -46,6 +48,66 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [suggestions, setSuggestions] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
+
+  const toggleVoiceSearch = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+      setIsListening(false)
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      toast.error('Voice search is not supported on this browser.')
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognitionRef.current = recognition
+    recognition.continuous = false
+    recognition.lang = 'en-IN'
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      triggerHaptic('light')
+      toast.info('Listening... Speak now!', { id: 'voice-search-status' })
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error)
+      setIsListening(false)
+      triggerHaptic('warning')
+      toast.error('Voice search error. Please try again.', { id: 'voice-search-status' })
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.onresult = (event: any) => {
+      const resultText = event.results[0][0].transcript
+      setQuery(resultText)
+      triggerHaptic('medium')
+      saveSearchTerm(resultText)
+      toast.success(`Searching for: "${resultText}"`, { id: 'voice-search-status' })
+      handleSearch(resultText)
+    }
+
+    recognition.start()
+  }
+
+  // Cleanup mic on overlay close
+  useEffect(() => {
+    if (!open && recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+    }
+  }, [open])
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -217,11 +279,27 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search for groceries, brands..."
-                  className="w-full pl-10 pr-10 py-3 bg-muted/50 border border-border rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all font-semibold"
+                  className="w-full pl-10 pr-12 py-3 bg-muted/50 border border-border rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all font-semibold"
                 />
-                {loading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
-                )}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={toggleVoiceSearch}
+                      className={cn(
+                        "h-7 w-7 rounded-lg flex items-center justify-center transition-all cursor-pointer",
+                        isListening
+                          ? "bg-red-500/10 text-red-500 animate-pulse-gentle"
+                          : "text-text-muted hover:bg-muted-foreground/10 hover:text-text-primary"
+                      )}
+                      title="Voice Search"
+                    >
+                      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </button>
+                  )}
+                </div>
               </form>
               <button
                 onClick={onClose}

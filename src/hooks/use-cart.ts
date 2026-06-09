@@ -6,9 +6,44 @@ import { toast } from 'sonner'
 import { isCafeProduct } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 import { playCartPop } from '@/lib/audio'
+import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
 
 export function useCart() {
   const store = useCartStore()
+
+  const checkFreeDeliveryUnlock = (action: () => void) => {
+    const prevItems = [...store.items]
+    const getCategorySubtotal = (itemsList: typeof store.items, checkCafe: boolean) => 
+      itemsList.filter((item) => isCafeProduct(item.product) === checkCafe)
+               .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+
+    const prevGrocerySub = getCategorySubtotal(prevItems, false)
+    const prevCafeSub = getCategorySubtotal(prevItems, true)
+
+    action()
+
+    const newItems = useCartStore.getState().items
+    const newGrocerySub = getCategorySubtotal(newItems, false)
+    const newCafeSub = getCategorySubtotal(newItems, true)
+
+    if (prevGrocerySub < FREE_DELIVERY_THRESHOLD && newGrocerySub >= FREE_DELIVERY_THRESHOLD) {
+      setTimeout(() => {
+        triggerHaptic('success')
+        toast.success('🎉 FREE Grocery delivery unlocked!', {
+          id: 'free-delivery-unlocked-grocery',
+        })
+      }, 300)
+    }
+
+    if (prevCafeSub < 200 && newCafeSub >= 200) {
+      setTimeout(() => {
+        triggerHaptic('success')
+        toast.success('🎉 FREE Cafe delivery unlocked!', {
+          id: 'free-delivery-unlocked-cafe',
+        })
+      }, 300)
+    }
+  }
 
   const addItem = (product: CartProduct) => {
     const { groceryMartOpen, cafeOpen } = useUIStore.getState()
@@ -30,7 +65,9 @@ export function useCart() {
       return
     }
 
-    store.addItem(product)
+    checkFreeDeliveryUnlock(() => {
+      store.addItem(product)
+    })
     playCartPop()
     triggerHaptic('light')
     toast.success(`${product.name} added to cart`, {
@@ -64,7 +101,9 @@ export function useCart() {
       }
     }
 
-    store.updateQuantity(productId, quantity)
+    checkFreeDeliveryUnlock(() => {
+      store.updateQuantity(productId, quantity)
+    })
     if (quantity > currentQty) {
       playCartPop()
     }
@@ -86,7 +125,9 @@ export function useCart() {
   }
 
   const removeItem = (productId: string, name: string) => {
-    store.removeItem(productId)
+    checkFreeDeliveryUnlock(() => {
+      store.removeItem(productId)
+    })
     triggerHaptic('medium')
     toast.success(`${name} removed from cart`, {
       id: `cart-remove-${productId}`,

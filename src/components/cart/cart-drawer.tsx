@@ -29,6 +29,16 @@ export function CartDrawer() {
 
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [showBillDetails, setShowBillDetails] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -153,18 +163,40 @@ export function CartDrawer() {
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  if (!isOpen) return null
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={() => setCartOpen(false)}
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={() => setCartOpen(false)}
+          />
 
-      {/* Drawer */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full sm:w-[420px] bg-white dark:bg-zinc-950 shadow-2xl animate-slide-in-right flex flex-col">
+          {/* Drawer */}
+          <motion.div
+            initial={isMobile ? { y: '100%', x: 0 } : { x: '100%', y: 0 }}
+            animate={{ y: 0, x: 0 }}
+            exit={isMobile ? { y: '100%', x: 0 } : { x: '100%', y: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+            drag={isMobile ? "y" : false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.1, bottom: 0.8 }}
+            onDragEnd={(e, info) => {
+              if (isMobile && info.offset.y > 150) {
+                setCartOpen(false)
+              }
+            }}
+            className="fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[85vh] sm:h-full w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50"
+          >
+            {/* Drag handle for mobile */}
+            <div className="flex justify-center py-2.5 sm:hidden cursor-grab active:cursor-grabbing shrink-0">
+              <div className="w-12 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+            </div>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 px-5 py-4 shrink-0">
           <div className="flex items-center gap-2">
@@ -415,7 +447,9 @@ export function CartDrawer() {
             </div>
           </>
         )}
-      </div>
-    </>
+      </motion.div>
+      </>
+    )}
+    </AnimatePresence>
   )
 }
