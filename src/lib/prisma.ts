@@ -29,7 +29,12 @@ function createPrismaClient() {
     }
   }
 
-  const pool = new Pool({ connectionString })
+  const pool = new Pool({
+    connectionString,
+    max: 3, // Restrict connection pool size per worker to prevent database connection exhaustion during Next.js parallel builds
+    idleTimeoutMillis: 10000, // close idle connections quickly
+    connectionTimeoutMillis: 5000 // wait up to 5 seconds to establish connection
+  })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
