@@ -237,9 +237,10 @@ export default function CafeKitchenDashboard() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchOrders()
+      const silent = !!activeOrder
+      fetchOrders(silent)
     }
-  }, [status, fetchOrders])
+  }, [status, fetchOrders, activeOrder])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -400,7 +401,7 @@ export default function CafeKitchenDashboard() {
   // --- Computed UI values ---
   const totalItemsToPrepare = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0)
 
-  if (status === 'loading' || isLoading) {
+  if (status === 'loading' || (isLoading && !activeOrder)) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center bg-background">
         <motion.div 

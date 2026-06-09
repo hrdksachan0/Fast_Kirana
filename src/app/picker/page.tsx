@@ -338,9 +338,10 @@ export default function PickerDashboard() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchOrders()
+      const silent = !!activeOrder || isMultiPickingMode
+      fetchOrders(silent)
     }
-  }, [status, fetchOrders])
+  }, [status, fetchOrders, activeOrder, isMultiPickingMode])
 
   // Automatically focus scan input on picking screen
   useEffect(() => {
@@ -807,7 +808,7 @@ export default function PickerDashboard() {
   // Computed stats
   const totalItemsToPick = orders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0)
 
-  if (status === 'loading' || isLoading) {
+  if (status === 'loading' || (isLoading && !activeOrder && !isMultiPickingMode)) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <motion.div
