@@ -15,6 +15,13 @@ interface CafeStorefrontProps {
   initialProducts: any[]
 }
 
+// Veg Icon matching Swiggy/Indian restaurant standards
+const VegIcon = () => (
+  <span className="inline-flex items-center justify-center border-2 border-emerald-600 p-[2px] h-3.5 w-3.5 shrink-0 rounded-[3px] bg-white" title="Veg">
+    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+  </span>
+)
+
 export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
   const { items: cartItems, addItem, updateQuantity, getItemQuantity } = useCart()
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -27,8 +34,9 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
     items: any[]
   } | null>(null)
 
-  // Quick qty adjustment popover state (for cards that are customizable and already in the cart)
-  const [activeQtyPopover, setActiveQtyPopover] = useState<string | null>(null)
+  // Swiggy drawer selection states
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [qtyToConfirm, setQtyToConfirm] = useState<number>(1)
 
   // Map products to categories
   const mappedProducts = useMemo(() => {
@@ -89,7 +97,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
   const bakery = nonGroupedProducts.filter(p => ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(p.slug) || p.category?.slug === 'bakery-biscuits')
   const chilled = nonGroupedProducts.filter(p => ['coca-cola', 'sprite', 'red-bull-energy'].includes(p.slug))
 
-  // Catch-all: products in cafe category/tags that don't appear in any group above
   const groupedIds = new Set([
     ...hotBrews, ...hotBites, ...chinese, ...italianPasta, ...bombayBites,
     ...riceDishes, ...shakes, ...mocktails, ...coldCoffee,
@@ -99,25 +106,24 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
 
   // Open Frankie customization drawer
   const openFrankieCustomizer = () => {
-    setSelectedGroup({
-      id: 'frankie-rolls',
-      name: 'Frankie Rolls',
-      description: 'Choose from our freshly prepared Veg, Paneer, Cheese, or Paneer Kathi Frankie Rolls wrapped in soft flaky paratha.',
-      items: frankieGroupItems
-    })
-    setActiveQtyPopover(null)
+    if (frankieGroupItems.length > 0) {
+      setSelectedItem(frankieGroupItems[0]) // Default to Veg Frankie
+      setQtyToConfirm(1)
+      setSelectedGroup({
+        id: 'frankie-rolls',
+        name: 'Customize Frankie Roll',
+        description: 'Choose your favorite roll variant below. Prepared fresh with soft paratha bread.',
+        items: frankieGroupItems
+      })
+    }
   }
 
-  // Handle main Frankie Roll card ADD click
-  const handleMainFrankieAdd = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (totalFrankieQtyInCart > 0) {
-      // Toggle the quick options list popover
-      setActiveQtyPopover(activeQtyPopover === 'frankie-rolls' ? null : 'frankie-rolls')
-    } else {
-      openFrankieCustomizer()
-    }
+  // Handle adding the customized selection to cart
+  const handleAddToCartConfirm = () => {
+    if (!selectedItem) return
+    const currentQtyInCart = getItemQuantity(selectedItem.id)
+    updateQuantity(selectedItem.id, selectedItem.name, currentQtyInCart + qtyToConfirm)
+    setSelectedGroup(null)
   }
 
   return (
@@ -172,13 +178,13 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl">
-            {/* The single Combined/Customizable Frankie Roll Card */}
+            {/* The single Combined/Customizable Frankie Roll Card - Swiggy Style */}
             <div className="group relative flex flex-row sm:flex-col justify-between overflow-hidden rounded-2xl border border-rose-500/20 bg-card p-3 shadow-md transition-all duration-300 md:hover:shadow-lg md:hover:border-rose-500/40">
               <div className="absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-2.5 py-0.5 text-[9px] font-black text-white shadow-sm uppercase tracking-wider select-none">
                 Customizable
               </div>
 
-              {/* Left Side (Mobile) / Top Side (Desktop): Image */}
+              {/* Image */}
               <div className="relative aspect-square w-24 sm:w-full overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
                 <img
                   src={frankieGroupItems[0]?.imageUrl || '/products/veg-frankie-roll.png'}
@@ -187,106 +193,50 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
                 />
               </div>
 
-              {/* Right Side (Mobile) / Bottom Side (Desktop): Product Info & Action */}
+              {/* Product Info & Action */}
               <div className="flex flex-col flex-grow pl-3 sm:pl-0 sm:pt-3 justify-between">
                 <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-text-primary group-hover:text-primary transition-colors">
-                    Frankie Roll (Customizable)
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <VegIcon />
+                    <h3 className="text-sm sm:text-base font-extrabold text-text-primary group-hover:text-primary transition-colors">
+                      Frankie Roll
+                    </h3>
+                  </div>
                   <p className="text-xs text-text-secondary line-clamp-2 mt-1">
-                    Choose from Veg, Paneer, Cheese, Paneer Cheese, or Kathi Roll options.
+                    Choose your flavor! Freshly prepared rolls loaded with Paneer, Cheese, Veggies & tangy mint sauces.
                   </p>
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <span className="text-xs font-semibold text-text-muted">Options:</span>
-                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[10px] font-bold text-text-primary">Veg</span>
-                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[10px] font-bold text-text-primary">Paneer</span>
-                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[10px] font-bold text-text-primary">Cheese</span>
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[9px] font-bold text-text-muted">Veg</span>
+                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[9px] font-bold text-text-muted">Paneer</span>
+                    <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[9px] font-bold text-text-muted">Cheese</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mt-4 gap-2 pt-2 border-t border-border/40">
                   <div className="flex flex-col">
-                    <span className="text-xs text-text-muted font-semibold">Starts at</span>
-                    <span className="text-base font-black text-text-primary">₹59</span>
+                    <span className="text-[10px] text-text-muted font-bold uppercase">Price</span>
+                    <span className="text-sm sm:text-base font-black text-text-primary">From ₹59</span>
                   </div>
 
-                  <div className="relative">
-                    {/* Add / Qty button */}
+                  <div>
                     {totalFrankieQtyInCart === 0 ? (
                       <Button
-                        onClick={handleMainFrankieAdd}
+                        onClick={openFrankieCustomizer}
                         disabled={!cafeOpen}
-                        className="border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-xs font-black px-4 py-2 rounded-lg md:hover:bg-[#2e7d32] md:hover:text-white flex items-center gap-1 shadow-sm cursor-pointer"
+                        className="border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-xs font-black px-4 py-2 rounded-lg md:hover:bg-[#2e7d32] md:hover:text-white flex items-center gap-0.5 shadow-sm cursor-pointer"
                       >
                         ADD
                         <Plus className="h-3 w-3 stroke-[3]" />
                       </Button>
                     ) : (
-                      <div className="flex items-center rounded-lg bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-sm overflow-hidden h-9">
-                        <button
-                          onClick={handleMainFrankieAdd}
-                          className="px-3 flex h-full items-center justify-center hover:bg-black/10 transition-all text-xs font-black cursor-pointer gap-1"
-                        >
-                          <span>{totalFrankieQtyInCart} added</span>
-                          <span className="text-[10px] text-emerald-200">(Customize)</span>
-                        </button>
-                      </div>
+                      <Button
+                        onClick={openFrankieCustomizer}
+                        className="bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white text-xs font-black px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <span>{totalFrankieQtyInCart} in Cart</span>
+                        <span className="text-[10px] text-emerald-200 bg-black/10 px-1 py-0.5 rounded">ADD +</span>
+                      </Button>
                     )}
-
-                    {/* Quick quantity selector popover */}
-                    <AnimatePresence>
-                      {activeQtyPopover === 'frankie-rolls' && (
-                        <>
-                          {/* Overlay to close popover */}
-                          <div 
-                            className="fixed inset-0 z-30" 
-                            onClick={() => setActiveQtyPopover(null)} 
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute bottom-11 right-0 z-40 w-64 bg-card border border-border rounded-xl p-3 shadow-xl space-y-2.5"
-                          >
-                            <h4 className="text-xs font-black text-text-primary border-b border-border/50 pb-1.5">
-                              Customizations in Cart
-                            </h4>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {frankieGroupItems.map(item => {
-                                const qty = getItemQuantity(item.id)
-                                if (qty === 0) return null
-                                return (
-                                  <div key={item.id} className="flex items-center justify-between text-xs">
-                                    <span className="font-semibold text-text-primary truncate max-w-[120px]">{item.name.replace(" Frankie Roll", "").replace(" Roll", "")}</span>
-                                    <div className="flex items-center gap-1.5 bg-muted rounded-md px-1.5 py-0.5 font-bold">
-                                      <button 
-                                        onClick={() => updateQuantity(item.id, item.name, qty - 1)}
-                                        className="text-text-secondary hover:text-primary p-0.5"
-                                      >
-                                        <Minus className="h-3 w-3 stroke-[3]" />
-                                      </button>
-                                      <span className="w-3 text-center text-[10px]">{qty}</span>
-                                      <button 
-                                        onClick={() => updateQuantity(item.id, item.name, qty + 1)}
-                                        className="text-text-secondary hover:text-primary p-0.5"
-                                      >
-                                        <Plus className="h-3 w-3 stroke-[3]" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                            <Button 
-                              onClick={openFrankieCustomizer}
-                              className="w-full text-[10px] font-bold py-1.5 h-auto bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
-                            >
-                              Add New Customization
-                            </Button>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
                   </div>
                 </div>
               </div>
@@ -550,9 +500,9 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col mx-auto max-w-lg"
+              className="fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col mx-auto max-w-lg"
             >
-              {/* Drawer Handle / Drag Indicator */}
+              {/* Drawer Handle */}
               <div className="w-12 h-1.5 bg-muted/60 rounded-full mx-auto my-3 shrink-0" />
 
               {/* Drawer Header */}
@@ -560,7 +510,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
                 <div>
                   <h3 className="text-lg font-black text-text-primary flex items-center gap-2">
                     {selectedGroup.name}
-                    <span className="text-xs px-2 py-0.5 bg-rose-500/10 text-rose-500 rounded-full font-bold">Customize</span>
                   </h3>
                   <p className="text-xs text-text-secondary mt-1">
                     {selectedGroup.description}
@@ -574,107 +523,104 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
                 </button>
               </div>
 
-              {/* Drawer Content: List of Options / Variants */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                {selectedGroup.items.map((item) => {
-                  const qty = getItemQuantity(item.id)
-                  const savings = item.mrp - item.price
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 rounded-xl border border-border/60 hover:border-primary/20 bg-muted/20 hover:bg-muted/40 transition-all gap-4"
-                    >
-                      {/* Left: Info */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          {item.tags?.includes('popular') && (
-                            <span className="text-[10px] font-black text-amber-500 flex items-center gap-0.5">
-                              ⭐ Popular
-                            </span>
-                          )}
-                          {item.discount > 0 && (
-                            <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded">
-                              {item.discount}% OFF
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="text-sm font-black text-text-primary truncate mt-0.5">
-                          {item.name}
-                        </h4>
-                        <p className="text-xs text-text-secondary truncate mt-0.5">
-                          {item.unit}
-                        </p>
-                        
-                        {/* Price & Savings */}
-                        <div className="flex items-baseline gap-2 mt-1.5 leading-none">
-                          <span className="text-sm font-black text-text-primary">
-                            ₹{item.price}
-                          </span>
-                          {item.mrp > item.price && (
-                            <span className="text-xs text-text-muted line-through font-bold">
-                              ₹{item.mrp}
-                            </span>
-                          )}
-                          {savings > 0 && (
-                            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                              Save ₹{savings}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: Quantity Selector */}
-                      <div className="shrink-0 flex items-center justify-center">
-                        {qty === 0 ? (
-                          <Button
-                            onClick={() => addItem(item)}
-                            disabled={item.stock <= 0 || !cafeOpen}
-                            className="border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-xs font-black px-4 py-1.5 h-8 rounded-lg md:hover:bg-[#2e7d32] md:hover:text-white flex items-center gap-0.5 shadow-sm"
-                          >
-                            ADD
-                            <Plus className="h-3 w-3 stroke-[3]" />
-                          </Button>
-                        ) : (
-                          <div className="flex items-center rounded-lg bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-sm overflow-hidden h-8 w-24 justify-between">
-                            <button
-                              onClick={() => updateQuantity(item.id, item.name, qty - 1)}
-                              className="w-8 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
-                            >
-                              <Minus className="h-3 w-3 stroke-[3]" />
-                            </button>
-                            <span className="flex-1 text-center text-xs font-black select-none">
-                              {qty}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.name, qty + 1)}
-                              disabled={qty >= item.stock}
-                              className="w-8 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
-                            >
-                              <Plus className="h-3 w-3 stroke-[3]" />
-                            </button>
+              {/* Option List: Swiggy style Radio Select */}
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div className="mb-4">
+                  <span className="text-xs font-black uppercase text-text-muted tracking-wider">Choose Variant</span>
+                  <span className="text-[10px] text-rose-500 font-bold ml-2">(Required)</span>
+                </div>
+                
+                <div className="space-y-2.5">
+                  {selectedGroup.items.map((item) => {
+                    const isSelected = selectedItem?.id === item.id
+                    const savings = item.mrp - item.price
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => setSelectedItem(item)}
+                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          isSelected 
+                            ? 'border-emerald-600 bg-emerald-500/5 dark:bg-emerald-500/[0.02]' 
+                            : 'border-border/60 bg-muted/20 hover:border-border'
+                        }`}
+                      >
+                        {/* Radio Option Labels */}
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          {/* Custom Swiggy style radio circle */}
+                          <div className={`mt-0.5 h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-emerald-600 text-emerald-600' : 'border-text-muted'
+                          }`}>
+                            {isSelected && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
                           </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <VegIcon />
+                              <h4 className="text-sm font-black text-text-primary truncate">
+                                {item.name}
+                              </h4>
+                            </div>
+                            <p className="text-[11px] text-text-secondary mt-0.5">
+                              {item.unit} • {item.description}
+                            </p>
+                            
+                            {/* Price */}
+                            <div className="flex items-baseline gap-2 mt-1 leading-none">
+                              <span className="text-xs font-black text-text-primary">
+                                ₹{item.price}
+                              </span>
+                              {item.mrp > item.price && (
+                                <span className="text-[10px] text-text-muted line-through font-bold">
+                                  ₹{item.mrp}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Discount Badge */}
+                        {item.discount > 0 && (
+                          <span className="shrink-0 text-[8.5px] font-black text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded">
+                            {item.discount}% OFF
+                          </span>
                         )}
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
 
-              {/* Drawer Footer: Total cost & Done */}
+              {/* Drawer Footer: Swiggy style Add Button and Qty selector */}
               <div className="p-5 border-t border-border bg-muted/30 flex items-center justify-between gap-4 shrink-0">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider">Total Added</span>
-                  <span className="text-lg font-black text-text-primary">
-                    {totalFrankieQtyInCart} roll{totalFrankieQtyInCart !== 1 ? 's' : ''}
+                {/* Quantity selector inside drawer footer */}
+                <div className="flex items-center rounded-xl bg-gradient-to-b from-white to-muted dark:from-zinc-900 dark:to-zinc-800 border border-border shadow-sm overflow-hidden h-10 w-28 justify-between shrink-0">
+                  <button
+                    onClick={() => setQtyToConfirm(prev => Math.max(1, prev - 1))}
+                    className="w-9 flex h-full items-center justify-center hover:bg-black/5 active:scale-90 transition-all text-text-primary cursor-pointer"
+                  >
+                    <Minus className="h-3.5 w-3.5 stroke-[3]" />
+                  </button>
+                  <span className="flex-1 text-center text-sm font-black select-none text-text-primary">
+                    {qtyToConfirm}
                   </span>
+                  <button
+                    onClick={() => setQtyToConfirm(prev => prev + 1)}
+                    disabled={selectedItem && qtyToConfirm >= selectedItem.stock}
+                    className="w-9 flex h-full items-center justify-center hover:bg-black/5 active:scale-90 transition-all text-text-primary cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                  </button>
                 </div>
+
+                {/* Add to Cart button */}
                 <Button
-                  onClick={() => setSelectedGroup(null)}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs px-6 py-2.5 h-10 rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                  onClick={handleAddToCartConfirm}
+                  disabled={!selectedItem || selectedItem.stock <= 0 || !cafeOpen}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs h-10 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <ShoppingBag className="h-4 w-4" />
-                  View Cart / Done
+                  Add to Cart • ₹{selectedItem ? (selectedItem.price * qtyToConfirm) : 0}
                 </Button>
               </div>
             </motion.div>
