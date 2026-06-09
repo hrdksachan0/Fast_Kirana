@@ -24,6 +24,11 @@ export function useCart() {
       toast.error(`Grocery Mart is temporarily closed. Cannot add ${product.name}.`)
       return
     }
+    if (product.stock <= 0) {
+      triggerHaptic('warning')
+      toast.error(`Sorry, ${product.name} is out of stock!`)
+      return
+    }
 
     store.addItem(product)
     playCartPop()
@@ -40,6 +45,11 @@ export function useCart() {
       const { groceryMartOpen, cafeOpen } = useUIStore.getState()
       const item = store.items.find((i) => i.product.id === productId)
       if (item) {
+        if (quantity > item.product.stock) {
+          triggerHaptic('warning')
+          toast.error(`Cannot add more. Only ${item.product.stock} units available in stock.`)
+          return
+        }
         const isCafe = isCafeProduct(item.product)
         if (isCafe && !cafeOpen) {
           triggerHaptic('warning')

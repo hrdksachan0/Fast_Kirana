@@ -685,6 +685,28 @@ export function AdminDashboard({
     }
   }
 
+  const handleToggleProductAvailability = async (productId: string, currentAvailable: boolean) => {
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isAvailable: !currentAvailable,
+        }),
+      })
+
+      if (res.ok) {
+        const updated = await res.json()
+        setProducts(products.map((p) => (p.id === productId ? updated : p)))
+        toast.success(`Product "${updated.name}" ${!currentAvailable ? 'enabled' : 'disabled'} successfully!`)
+      } else {
+        toast.error('Failed to update product availability')
+      }
+    } catch (err) {
+      toast.error('Error updating product status')
+    }
+  }
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newProduct.name || !newProduct.categoryId || !newProduct.price || !newProduct.mrp || !newProduct.unit) {
@@ -1838,13 +1860,18 @@ export function AdminDashboard({
 
                           {/* Status */}
                           <td className="py-3 px-4 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                              p.isAvailable 
-                                ? 'bg-accent/15 text-accent border border-accent/20' 
-                                : 'bg-muted text-text-muted border border-border'
-                            }`}>
-                              {p.isAvailable ? 'Active' : 'Disabled'}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductAvailability(p.id, p.isAvailable)}
+                              className={`px-2.5 py-0.5 rounded-full text-[9px] font-black transition-all border cursor-pointer hover:scale-105 active:scale-95 ${
+                                p.isAvailable 
+                                  ? 'bg-accent/15 text-accent border-accent/30 hover:bg-accent/25' 
+                                  : 'bg-muted text-text-muted border-border hover:bg-muted/80'
+                              }`}
+                              title={p.isAvailable ? "Click to Disable Product" : "Click to Enable Product"}
+                            >
+                              {p.isAvailable ? 'Active ✓' : 'Disabled ✗'}
+                            </button>
                           </td>
 
                           {/* Actions */}

@@ -204,6 +204,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             </div>
 
+            {/* Low stock warning banner */}
+            {product.stock > 0 && product.stock < 15 && (
+              <div className="flex items-center gap-2 border border-rose-500/20 bg-rose-500/5 p-3 rounded-xl text-xs font-black text-rose-500 animate-pulse-gentle">
+                ⚠️ Only {product.stock} units left in stock! Order soon.
+              </div>
+            )}
+
             {/* Interactive Add to Cart button */}
             <div className="pt-2">
               <ProductDetailActions product={product} />
