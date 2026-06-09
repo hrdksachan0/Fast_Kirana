@@ -767,7 +767,7 @@ export function AdminDashboard({
   }
 
   const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product? If it has order history, it will be soft-disabled instead.')) {
+    if (!confirm('⚠️ Are you sure you want to PERMANENTLY delete this product? This action cannot be undone.')) {
       return
     }
 
@@ -777,18 +777,11 @@ export function AdminDashboard({
       })
 
       if (res.ok) {
-        const data = await res.json()
-        if (data.product) {
-          // Soft delete case (availability set to false)
-          setProducts(products.map((p) => (p.id === productId ? data.product : p)))
-          toast.success('Product soft-deleted (made unavailable) due to sales history.')
-        } else {
-          // Hard delete case
-          setProducts(products.filter((p) => p.id !== productId))
-          toast.success('Product deleted successfully.')
-        }
+        setProducts(products.filter((p) => p.id !== productId))
+        toast.success('Product permanently deleted.')
       } else {
-        toast.error('Failed to delete product')
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete product')
       }
     } catch (err) {
       toast.error('Error deleting product')

@@ -18,8 +18,12 @@ export async function POST(request: NextRequest) {
   try {
     const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null } = await request.json()
 
-    if (!addressId || !paymentMethod || !items || items.length === 0) {
+    if (!paymentMethod || !items || items.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    if (deliveryMethod !== 'PICKUP' && !addressId) {
+      return NextResponse.json({ error: 'Delivery address is required' }, { status: 400 })
     }
 
     // 1. Resolve address
@@ -75,8 +79,6 @@ export async function POST(request: NextRequest) {
       if (!p) return false
       if (p.category?.slug === 'cafe') return true
       if (p.tags?.includes('cafe')) return true
-      const cafeSlugs = ['special-masala-chai', 'hot-filter-coffee', 'fresh-samosa-2pcs', 'veg-grilled-sandwich', 'veg-momos-6pcs']
-      if (cafeSlugs.includes(p.slug)) return true
       return false
     }
 

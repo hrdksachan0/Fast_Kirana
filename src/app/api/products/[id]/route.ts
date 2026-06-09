@@ -140,28 +140,37 @@ export async function DELETE(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Check if product is in any order items
-    const orderItemCount = await prisma.orderItem.count({
+    // Disconnect order items so order history is preserved (name, price, qty stay intact)
+    await prisma.orderItem.updateMany({
+      where: { productId: product.id },
+      data: { productId: null as any },
+    })
+
+    // Delete related product images
+    await prisma.productImage.deleteMany({
       where: { productId: product.id },
     })
 
-    if (orderItemCount > 0) {
-      // Soft delete by making it unavailable
-      const updated = await prisma.product.update({
-        where: { id: product.id },
-        data: { isAvailable: false },
+    // Delete related reviews
+    await prisma.review.deleteMany({
+      where: { productId: product.id },
+    })
+
+    // Delete related cart items if any
+    try {
+      await prisma.cartItem.deleteMany({
+        where: { productId: product.id },
       })
-      return NextResponse.json({
-        message: 'Product is associated with existing orders. Soft deleted by disabling it.',
-        product: updated,
-      })
+    } catch (e) {
+      // CartItem model may not exist, ignore
     }
 
+    // Permanently delete the product
     await prisma.product.delete({
       where: { id: product.id },
     })
 
-    return NextResponse.json({ message: 'Product deleted successfully' })
+    return NextResponse.json({ message: 'Product permanently deleted' })
   } catch (error: any) {
     console.error('Failed to delete product:', error)
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })

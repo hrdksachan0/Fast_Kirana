@@ -100,7 +100,6 @@ export default async function CafePage() {
         OR: [
           { categoryId: cafeCategory?.id || 'non-existent' },
           { tags: { has: 'cafe' } },
-          { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
         ],
         isAvailable: true,
       },
@@ -148,7 +147,6 @@ export default async function CafePage() {
           OR: [
             { categoryId: cafeCategory.id },
             { tags: { has: 'cafe' } },
-            { slug: { in: ['croissant-butter', 'muffin-chocolate', 'nescafe-classic', 'tata-tea-gold', 'maggi-noodles', 'lays-classic-salted', 'coca-cola', 'sprite', 'red-bull-energy'] } }
           ],
           isAvailable: true,
         },
@@ -160,10 +158,14 @@ export default async function CafePage() {
   }
 
   // Group products into custom categories for layout
-  const hotBrews = dbCafeProducts.filter(p => p.tags.includes('hot-beverage') || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))
-  const hotBites = dbCafeProducts.filter(p => p.tags.includes('hot-bite') || ['maggi-noodles'].includes(p.slug))
+  const hotBrews = dbCafeProducts.filter(p => p.tags?.includes('hot-beverage') || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))
+  const hotBites = dbCafeProducts.filter(p => p.tags?.includes('hot-bite') || ['maggi-noodles'].includes(p.slug))
   const bakery = dbCafeProducts.filter(p => ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(p.slug) || p.category?.slug === 'bakery-biscuits')
   const chilled = dbCafeProducts.filter(p => ['coca-cola', 'sprite', 'red-bull-energy'].includes(p.slug))
+
+  // Catch-all: products in cafe category/tags that don't appear in any group above
+  const groupedIds = new Set([...hotBrews, ...hotBites, ...bakery, ...chilled].map(p => p.id))
+  const moreItems = dbCafeProducts.filter(p => !groupedIds.has(p.id))
 
   // Safe mapping helper
   const mapProduct = (p: any) => ({
@@ -297,6 +299,24 @@ export default async function CafePage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
             {chilled.map(p => (
+              <ProductCard key={p.id} product={mapProduct(p)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Section 5: More from Cafe (catch-all for new products) */}
+      {moreItems.length > 0 && (
+        <section className="space-y-2.5 md:space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xl">🍽️</span>
+            <div>
+              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More from Cafe</h2>
+              <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
+            {moreItems.map(p => (
               <ProductCard key={p.id} product={mapProduct(p)} />
             ))}
           </div>

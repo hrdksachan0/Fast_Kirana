@@ -148,6 +148,7 @@ export async function PATCH(
         })
         
         for (const item of orderItems) {
+          if (!item.productId) continue // Product was deleted, skip stock deduction
           const product = await prisma.product.findUnique({
             where: { id: item.productId },
             select: { stock: true, name: true }

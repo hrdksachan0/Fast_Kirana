@@ -311,7 +311,7 @@ export default function CheckoutPage() {
         return
       }
 
-      const finalAddressId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+      const finalAddressId = deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : (selectedAddressId || (addresses.length > 0 ? addresses[0].id : ''))
       
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -392,7 +392,7 @@ export default function CheckoutPage() {
         return
       }
 
-      const finalAddressId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+      const finalAddressId = deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : (selectedAddressId || (addresses.length > 0 ? addresses[0].id : ''))
       
       // 2. Create the order in the database with PENDING payment status
       const orderRes = await fetch('/api/orders', {
