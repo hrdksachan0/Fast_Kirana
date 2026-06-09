@@ -315,7 +315,7 @@ function LoginForm() {
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
-            {step === 'EMAIL' && 'Log in or sign up to shop groceries delivered in 8 mins'}
+            {step === 'EMAIL' && 'Log in or sign up to shop groceries with fast delivery'}
             {step === 'PASSWORD' && `Enter password for ${email}`}
             {step === 'OTP' && `We sent a 6-digit OTP code to ${email}`}
             {step === 'PROFILE' && 'Enter your name and phone number to finish setup'}

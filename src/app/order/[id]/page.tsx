@@ -113,7 +113,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <div className="absolute inset-y-0 left-0 bg-accent w-[20%] animate-progress-glow rounded-full" />
           </div>
           <p className="text-[10px] text-accent font-extrabold animate-pulse-gentle flex items-center justify-center gap-1 pt-1">
-            ⚡ 8-minute delivery active! Estimated arrival in 8 mins
+            ⚡ Fast delivery active! Estimated arrival soon
           </p>
         </div>
 
