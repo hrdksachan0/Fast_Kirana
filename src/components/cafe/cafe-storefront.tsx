@@ -83,26 +83,213 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
     return frankieGroupItems.reduce((sum, item) => sum + getItemQuantity(item.id), 0)
   }, [frankieGroupItems, getItemQuantity])
 
-  // Cafe categories grouping
-  const hotBrews = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['hot-beverage', 'tea', 'coffee'].includes(t.toLowerCase())) || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))
-  const hotBites = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['hot-bite', 'snacks'].includes(t.toLowerCase())) || ['maggi-noodles'].includes(p.slug))
-  const chinese = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['chinese', 'chinese-cuisine', 'chinese cuisine'].includes(t.toLowerCase())))
-  const italianPasta = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['italian-pasta', 'italian-pastas', 'italian pasta\'s', 'pasta'].includes(t.toLowerCase())))
-  const bombayBites = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'].includes(t.toLowerCase())))
-  const riceDishes = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['rice-dishes', 'rice dishes', 'rice-dish', 'rice dish', 'biryani', 'pulav'].includes(t.toLowerCase())))
-  const shakes = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['shakes', 'shake', 'milkshake', 'milkshakes'].includes(t.toLowerCase())))
-  const mocktails = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['mocktails', 'mocktail', 'coolers', 'cooler'].includes(t.toLowerCase())))
-  const coldCoffee = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['cold-coffee', 'cold coffee', 'iced coffee', 'iced-coffee'].includes(t.toLowerCase())))
-  const southIndian = nonGroupedProducts.filter(p => p.tags?.some((t: string) => ['south-indian', 'south indian'].includes(t.toLowerCase())))
-  const bakery = nonGroupedProducts.filter(p => ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(p.slug) || p.category?.slug === 'bakery-biscuits')
-  const chilled = nonGroupedProducts.filter(p => ['coca-cola', 'sprite', 'red-bull-energy'].includes(p.slug))
+  // Dynamic grouping logic to discover categories from product tags
+  const categorySections = useMemo(() => {
+    // Helper tags to exclude from generating separate section categories
+    const excludeTags = new Set([
+      'cafe', 'popular', 'veg', 'paneer', 'cheese', 'kathi-roll', 'spicy', 'protein', 
+      'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
+      'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
+      'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
+      'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
+      'shaving', 'men', 'herbal', 'hair', 'oil', 'cleaning', 'detergent', 'toilet', 
+      'floor', 'mosquito', 'freshener', 'glass', 'wrapping', 'cookies', 'light', 
+      'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
+    ])
 
-  const groupedIds = new Set([
-    ...hotBrews, ...hotBites, ...chinese, ...italianPasta, ...bombayBites,
-    ...riceDishes, ...shakes, ...mocktails, ...coldCoffee,
-    ...southIndian, ...bakery, ...chilled
-  ].map(p => p.id))
-  const moreItems = nonGroupedProducts.filter(p => !groupedIds.has(p.id))
+    // Predefined main categories with details
+    const PREDEFINED_CATEGORIES = [
+      {
+        tag: 'hot-beverage',
+        matchTags: ['hot-beverage', 'tea', 'coffee'],
+        title: 'Steaming Hot Brews',
+        emoji: '☕',
+        description: 'Chai, coffee, and fresh brewing mixes',
+      },
+      {
+        tag: 'hot-bite',
+        matchTags: ['hot-bite', 'snacks'],
+        title: 'Quick Bites & Snacks',
+        emoji: '🥟',
+        description: 'Samosas, Momos, and warm treats',
+      },
+      {
+        tag: 'sandwiches',
+        matchTags: ['sandwiches', 'sandwich'],
+        title: 'Gourmet Sandwiches',
+        emoji: '🥪',
+        description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies',
+      },
+      {
+        tag: 'chinese',
+        matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine'],
+        title: 'Chinese Cuisine',
+        emoji: '🥡',
+        description: 'Momos, noodles, fried dishes & sauces',
+      },
+      {
+        tag: 'italian-pasta',
+        matchTags: ['italian-pasta', 'italian-pastas', 'italian pasta\'s', 'pasta'],
+        title: "Italian Pasta's",
+        emoji: '🍝',
+        description: 'Fresh penne tossed in aromatic red & white sauces',
+      },
+      {
+        tag: 'bombay-bites',
+        matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'],
+        title: 'Bombay Bites',
+        emoji: '🥪',
+        description: 'Vada Pav, special Bombay Masala Toast, and street snacks',
+      },
+      {
+        tag: 'rice-dishes',
+        matchTags: ['rice-dishes', 'rice dishes', 'rice-dish', 'rice dish', 'biryani', 'pulav'],
+        title: 'Rice Dishes',
+        emoji: '🍚',
+        description: 'Flavourful biryani, fried rice, and combos',
+      },
+      {
+        tag: 'shakes',
+        matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes'],
+        title: 'Thick Shakes',
+        emoji: '🥤',
+        description: 'Creamy strawberry, chocolate, and Oreo shakes',
+      },
+      {
+        tag: 'mocktails',
+        matchTags: ['mocktails', 'mocktail', 'coolers', 'cooler'],
+        title: 'Refreshing Mocktails',
+        emoji: '🍹',
+        description: 'Iced coolers, Virgin Mojito, and summer drinks',
+      },
+      {
+        tag: 'cold-coffee',
+        matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'iced-coffee'],
+        title: 'Chilled Cold Coffee',
+        emoji: '🧋',
+        description: 'Classic cold brews, hazelnut cold coffee & iced sips',
+      },
+      {
+        tag: 'south-indian',
+        matchTags: ['south-indian', 'south indian'],
+        title: 'South Indian Favorites',
+        emoji: '🍛',
+        description: 'Dosa, Idli, Vada, Uttapam & more',
+      },
+      {
+        tag: 'bakery',
+        matchTags: ['bakery', 'bakery-biscuits'],
+        title: 'Bakery & Sweet Cravings',
+        emoji: '🥐',
+        description: 'Freshly baked croissants, muffins, and sweet nibbles',
+      },
+      {
+        tag: 'chilled',
+        matchTags: ['chilled', 'cold-drink'],
+        title: 'Chilled Sips & Sodas',
+        emoji: '🥤',
+        description: 'Carbonated soft drinks and cold energy boosts',
+      }
+    ]
+
+    // Group products by predefined categories first
+    const sectionsMap = new Map<string, any>()
+    PREDEFINED_CATEGORIES.forEach(cat => {
+      sectionsMap.set(cat.tag, {
+        tag: cat.tag,
+        title: cat.title,
+        emoji: cat.emoji,
+        description: cat.description,
+        products: [],
+        matchedIds: new Set<string>()
+      })
+    })
+
+    const assignedProductIds = new Set<string>()
+
+    nonGroupedProducts.forEach(product => {
+      for (const cat of PREDEFINED_CATEGORIES) {
+        const hasMatch = product.tags?.some((t: string) => 
+          cat.matchTags.includes(t.toLowerCase())
+        ) || (cat.tag === 'hot-beverage' && ['nescafe-classic', 'tata-tea-gold'].includes(product.slug))
+          || (cat.tag === 'hot-bite' && ['maggi-noodles'].includes(product.slug))
+          || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(product.slug))
+          || (cat.tag === 'chilled' && ['coca-cola', 'sprite', 'red-bull-energy'].includes(product.slug))
+
+        if (hasMatch) {
+          const sec = sectionsMap.get(cat.tag)
+          if (sec && !sec.matchedIds.has(product.id)) {
+            sec.products.push(product)
+            sec.matchedIds.add(product.id)
+            assignedProductIds.add(product.id)
+          }
+        }
+      }
+    })
+
+    // Now, scan for any product tags that do not belong to the predefined categories
+    // and are not excluded, to dynamically create sections for "manually added new tags"!
+    const dynamicTagsMap = new Map<string, any[]>()
+    nonGroupedProducts.forEach(product => {
+      if (assignedProductIds.has(product.id)) return // Already in a predefined category
+
+      product.tags?.forEach((t: string) => {
+        const lowerTag = t.toLowerCase()
+        if (excludeTags.has(lowerTag)) return
+
+        if (!dynamicTagsMap.has(lowerTag)) {
+          dynamicTagsMap.set(lowerTag, [])
+        }
+        dynamicTagsMap.get(lowerTag)?.push(product)
+      })
+    })
+
+    // Convert dynamic tags to category sections
+    const dynamicSections: any[] = []
+    dynamicTagsMap.forEach((products, tag) => {
+      // Clean up tag string for header title (e.g. "waffles-and-crepes" -> "Waffles And Crepes")
+      const title = tag
+        .split(/[-_ ]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+
+      dynamicSections.push({
+        tag,
+        title,
+        emoji: '✨', // Default emoji for manually added new tags
+        description: `Fresh items tagged under ${title}`,
+        products
+      })
+    })
+
+    // Merge predefined sections (only those that have products) and dynamic sections
+    const finalSections: any[] = []
+    PREDEFINED_CATEGORIES.forEach(cat => {
+      const sec = sectionsMap.get(cat.tag)
+      if (sec && sec.products.length > 0) {
+        finalSections.push({
+          tag: sec.tag,
+          title: sec.title,
+          emoji: sec.emoji,
+          description: sec.description,
+          products: sec.products
+        })
+      }
+    })
+
+    // Add dynamic sections at the end
+    finalSections.push(...dynamicSections)
+
+    // Helper to find any leftovers
+    const allGroupedIds = new Set<string>()
+    finalSections.forEach(sec => sec.products.forEach((p: any) => allGroupedIds.add(p.id)))
+    const moreItems = nonGroupedProducts.filter(p => !allGroupedIds.has(p.id))
+
+    return {
+      sections: finalSections,
+      moreItems
+    }
+  }, [nonGroupedProducts])
 
   // Open Frankie customization drawer
   const openFrankieCustomizer = () => {
@@ -245,226 +432,26 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
         </section>
       )}
 
-      {/* -------------------- Other Standard Sections -------------------- */}
-
-      {/* Steaming Hot Brews */}
-      {hotBrews.length > 0 && (
-        <section className="space-y-4">
+      {/* -------------------- Dynamically Generated Cafe Category Sections -------------------- */}
+      {categorySections.sections.map((section) => (
+        <section key={section.tag} className="space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">☕</span>
+            <span className="text-xl">{section.emoji}</span>
             <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Steaming Hot Brews</h2>
-              <p className="text-xs text-text-secondary">Chai, coffee, and fresh brewing mixes</p>
+              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">{section.title}</h2>
+              <p className="text-xs text-text-secondary">{section.description}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {hotBrews.map(p => (
+            {section.products.map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
-      )}
-
-      {/* Quick Bites & Snacks */}
-      {hotBites.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥟</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Quick Bites & Snacks</h2>
-              <p className="text-xs text-text-secondary">Samosas, Momos, and warm treats</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {hotBites.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Chinese Cuisine */}
-      {chinese.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥡</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chinese Cuisine</h2>
-              <p className="text-xs text-text-secondary">Momos, noodles, fried dishes & sauces</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {chinese.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Italian Pasta's */}
-      {italianPasta.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍝</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Italian Pasta's</h2>
-              <p className="text-xs text-text-secondary">Fresh penne tossed in aromatic red & white sauces</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {italianPasta.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Bombay Bites */}
-      {bombayBites.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥪</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Bombay Bites</h2>
-              <p className="text-xs text-text-secondary">Vada Pav, special Bombay Masala Toast, and street snacks</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {bombayBites.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Rice Dishes */}
-      {riceDishes.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍚</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Rice Dishes</h2>
-              <p className="text-xs text-text-secondary">Flavourful biryani, fried rice, and combos</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {riceDishes.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Shakes */}
-      {shakes.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥤</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Thick Shakes</h2>
-              <p className="text-xs text-text-secondary">Creamy strawberry, chocolate, and Oreo shakes</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {shakes.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Mocktails */}
-      {mocktails.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍹</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Refreshing Mocktails</h2>
-              <p className="text-xs text-text-secondary">Iced coolers, Virgin Mojito, and summer drinks</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {mocktails.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Cold Coffee */}
-      {coldCoffee.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🧋</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chilled Cold Coffee</h2>
-              <p className="text-xs text-text-secondary">Classic cold brews, hazelnut cold coffee & iced sips</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {coldCoffee.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* South Indian */}
-      {southIndian.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍛</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">South Indian Favorites</h2>
-              <p className="text-xs text-text-secondary">Dosa, Idli, Vada, Uttapam & more</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {southIndian.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Bakery & Desserts */}
-      {bakery.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥐</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Bakery & Sweet Cravings</h2>
-              <p className="text-xs text-text-secondary">Freshly baked croissants, muffins, and sweet nibbles</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {bakery.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Chilled Sodas */}
-      {chilled.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥤</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chilled Sips & Sodas</h2>
-              <p className="text-xs text-text-secondary">Carbonated soft drinks and cold energy boosts</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {chilled.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      )}
+      ))}
 
       {/* Catch-all More from Cafe */}
-      {moreItems.length > 0 && (
+      {categorySections.moreItems.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🍽️</span>
@@ -474,7 +461,7 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {moreItems.map(p => (
+            {categorySections.moreItems.map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
