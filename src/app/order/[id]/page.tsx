@@ -102,18 +102,19 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         <p className="text-xs text-text-secondary mt-1">Thank you for shopping. Your order has been registered.</p>
         
         {/* Animated Delivery Timeline */}
-        <div className="w-full max-w-md mt-6 pt-5 border-t border-border/40 dark:border-zinc-800/40 space-y-3">
-          <div className="flex justify-between items-center text-[10px] font-extrabold text-text-secondary uppercase tracking-wider px-1">
-            <span className="text-accent font-black">Placed</span>
-            <span>Packing</span>
-            <span>On the Way</span>
-            <span>Delivered</span>
+        <div className="mt-6 w-full max-w-xs space-y-2.5">
+          <div className="flex justify-between text-[10px] text-text-muted font-bold px-1">
+            <span>Placed</span>
+            <span>Processing</span>
+            <span>{order.deliveryMethod === 'PICKUP' ? 'Picked Up' : 'Delivered'}</span>
           </div>
           <div className="relative h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
             <div className="absolute inset-y-0 left-0 bg-accent w-[20%] animate-progress-glow rounded-full" />
           </div>
           <p className="text-[10px] text-accent font-extrabold animate-pulse-gentle flex items-center justify-center gap-1 pt-1">
-            ⚡ Fast delivery active! Estimated arrival soon
+            {order.deliveryMethod === 'PICKUP' 
+              ? '🏪 Store pickup selected! Ready within 10-15 mins.' 
+              : '⚡ Fast delivery active! Estimated arrival soon'}
           </p>
         </div>
 
@@ -122,7 +123,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             href={`/order/${order.id}/track`}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-6 py-3 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
           >
-            Track Delivery Live
+            {order.deliveryMethod === 'PICKUP' ? 'Track Pickup Status' : 'Track Delivery Live'}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
@@ -140,7 +141,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
             <Clock className="h-4 w-4 text-primary" />
-            Delivery Schedule
+            {order.deliveryMethod === 'PICKUP' ? 'Pickup Schedule' : 'Delivery Schedule'}
           </h2>
           <div className="text-xs font-semibold text-text-primary space-y-2">
             <div className="flex justify-between">
@@ -148,11 +149,11 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
               <span className="text-accent font-bold">
                 {isScheduled && order.estimatedDelivery
                   ? `${new Date(order.estimatedDelivery).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
-                  : 'Fast Delivery'}
+                  : order.deliveryMethod === 'PICKUP' ? 'Instant Pickup' : 'Fast Delivery'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-secondary">Delivery Date</span>
+              <span className="text-text-secondary">{order.deliveryMethod === 'PICKUP' ? 'Pickup Date' : 'Delivery Date'}</span>
               <span>
                 {new Date(order.createdAt).toLocaleDateString('en-IN', {
                   day: 'numeric',
@@ -172,7 +173,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
             <MapPin className="h-4 w-4 text-primary" />
-            Delivery Destination
+            {order.deliveryMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Destination'}
           </h2>
           <div className="text-xs flex flex-col justify-between h-[calc(100%-2rem)]">
             <div>
@@ -210,7 +211,11 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-semibold">
               <div>
                 <p className="text-text-primary font-black text-sm">{order.shopName}</p>
-                <p className="text-text-secondary mt-1">Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and instant delivery.</p>
+                <p className="text-text-secondary mt-1">
+                  {order.deliveryMethod === 'PICKUP'
+                    ? 'Your order is packed and ready for pickup at our local FastKirana Ghatampur Hub.'
+                    : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and instant delivery.'}
+                </p>
               </div>
               {order.shopPhone && (
                 <a
@@ -225,24 +230,20 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         )}
       </div>
 
-      {/* Bill summary receipt details */}
+      {/* Reciept Summary */}
       <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
         <h2 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
-          Receipt Details
+          Receipt Sum
         </h2>
-        <div className="divide-y divide-border/40">
+        <div className="text-xs font-semibold text-text-secondary space-y-2.5">
           {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0 text-xs font-semibold">
-              <div className="max-w-[70%]">
-                <span className="font-bold text-text-primary">{item.name}</span>
-                <p className="text-[10px] text-text-secondary mt-0.5">Quantity: {item.quantity} × {formatPrice(item.price)}</p>
-              </div>
-              <span className="font-bold text-text-primary">{formatPrice(item.price * item.quantity)}</span>
+            <div key={item.id} className="flex justify-between">
+              <span>
+                {item.name} × {item.quantity}
+              </span>
+              <span>{formatPrice(item.price * item.quantity)}</span>
             </div>
           ))}
-        </div>
-
-        <div className="border-t border-border/40 pt-4 text-xs font-semibold space-y-2">
           <div className="flex justify-between">
             <span className="text-text-secondary">Subtotal</span>
             <span>{formatPrice(order.subtotal)}</span>
@@ -262,7 +263,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <span>{formatPrice(order.taxes)}</span>
           </div>
           <div className="flex justify-between text-base font-black text-text-primary border-t border-border/40 pt-3 mt-3">
-            <span>Amount Paid ({order.paymentMethod})</span>
+            <span>Amount Paid ({order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'COP' : 'COD') : order.paymentMethod})</span>
             <span className="text-primary">{formatPrice(order.total)}</span>
           </div>
         </div>

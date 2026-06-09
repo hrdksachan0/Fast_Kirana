@@ -3,14 +3,18 @@
 import { useEffect, useRef } from 'react'
 import { playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
+import { useCart } from '@/hooks/use-cart'
 
 export function OrderSuccessEffects() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { clearCart } = useCart()
 
   useEffect(() => {
     // Play success chime & haptics instantly
     playSuccessChime()
     triggerHaptic('success')
+    clearCart()
+
 
     const canvas = canvasRef.current
     if (!canvas) return

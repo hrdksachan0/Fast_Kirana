@@ -16,13 +16,37 @@ interface LastOrder {
   address?: { area: string; city: string }
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDING: { label: 'Pending', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  PACKED: { label: 'Packed', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-  SHIPPED: { label: 'Out for Delivery', color: 'bg-primary/10 text-primary border-primary/20' },
-  DELIVERED: { label: 'Delivered', color: 'bg-accent/10 text-accent border-accent/20' },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-500/10 text-red-600 border-red-500/20' },
+const STATUS_CONFIG: Record<string, { label: string; color: string; iconClass: string }> = {
+  PENDING: { 
+    label: 'Pending', 
+    color: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    iconClass: 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+  },
+  CONFIRMED: { 
+    label: 'Confirmed', 
+    color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    iconClass: 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+  },
+  PACKED: { 
+    label: 'Packed', 
+    color: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    iconClass: 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
+  },
+  SHIPPED: { 
+    label: 'Out for Delivery', 
+    color: 'bg-primary/10 text-primary border-primary/20',
+    iconClass: 'bg-primary/10 text-primary border border-primary/20'
+  },
+  DELIVERED: { 
+    label: 'Delivered', 
+    color: 'bg-accent/10 text-accent border-accent/20',
+    iconClass: 'bg-accent/10 text-accent border border-accent/20'
+  },
+  CANCELLED: { 
+    label: 'Cancelled', 
+    color: 'bg-red-500/10 text-red-600 border-red-500/20',
+    iconClass: 'bg-red-500/10 text-red-600 border border-red-500/20'
+  },
 }
 
 const statusIconMap: Record<string, React.ComponentType<any>> = {
@@ -95,7 +119,7 @@ export function LastOrderBanner() {
 
         <div className="flex items-center gap-3.5">
           {/* Icon */}
-          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${isActive ? 'bg-primary/10 text-primary' : 'bg-muted/60 text-text-secondary'}`}>
+          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${isActive ? config.iconClass : 'bg-muted/60 text-text-secondary border border-border/40'}`}>
             {(() => {
               const IconComp = statusIconMap[lastOrder.status] || Clock
               return <IconComp className="h-5 w-5 stroke-[1.5]" />

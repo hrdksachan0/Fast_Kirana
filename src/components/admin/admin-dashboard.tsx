@@ -1139,7 +1139,6 @@ export function AdminDashboard({
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
-    { key: 'settings', label: 'Store Settings', icon: Settings },
   ]
 
   return (
@@ -2875,12 +2874,6 @@ export function AdminDashboard({
       {activeTab === 'banners' && (
         <div className="animate-fade-in">
           <AdminBanners />
-        </div>
-      )}
-
-      {activeTab === 'settings' && (
-        <div className="animate-fade-in">
-          <AdminSettings />
         </div>
       )}
         </motion.div>

@@ -68,14 +68,6 @@ interface OrderTrackerProps {
   initialOrder: Order
 }
 
-const statusSteps = [
-  { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
-  { status: 'CONFIRMED', label: 'Confirmed', desc: 'Store has accepted your order.', icon: CheckCircle2 },
-  { status: 'PACKED', label: 'Packing Items', desc: 'Packing fresh items at our dark store.', icon: Package },
-  { status: 'SHIPPED', label: 'Out for Delivery', desc: 'Rider is carrying your order.', icon: Truck },
-  { status: 'DELIVERED', label: 'Delivered', desc: 'Groceries delivered to your door!', icon: Check },
-]
-
 export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const router = useRouter()
   const [order, setOrder] = useState<Order>(initialOrder)
@@ -83,6 +75,20 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const [packingStep, setPackingStep] = useState(0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
+
+  const statusSteps = order.deliveryMethod === 'PICKUP' ? [
+    { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
+    { status: 'CONFIRMED', label: 'Confirmed', desc: 'Store has accepted your order.', icon: CheckCircle2 },
+    { status: 'PACKED', label: 'Packing Items', desc: 'Packing fresh items at our store.', icon: Package },
+    { status: 'SHIPPED', label: 'Ready for Pickup', desc: 'Your order is ready to be picked up!', icon: Store },
+    { status: 'DELIVERED', label: 'Picked Up', desc: 'Order has been successfully picked up!', icon: Check },
+  ] : [
+    { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
+    { status: 'CONFIRMED', label: 'Confirmed', desc: 'Store has accepted your order.', icon: CheckCircle2 },
+    { status: 'PACKED', label: 'Packing Items', desc: 'Packing fresh items at our dark store.', icon: Package },
+    { status: 'SHIPPED', label: 'Out for Delivery', desc: 'Rider is carrying your order.', icon: Truck },
+    { status: 'DELIVERED', label: 'Delivered', desc: 'Groceries delivered to your door!', icon: Check },
+  ]
 
   // Fetch store coordinates from settings on mount
   useEffect(() => {
@@ -632,7 +638,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
       <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3">
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
-          Delivery Destination
+          {order.deliveryMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Destination'}
         </h3>
         <div className="text-xs space-y-3">
           <p className="text-text-secondary leading-relaxed font-semibold">

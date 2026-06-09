@@ -222,9 +222,6 @@ export default async function AdminPage() {
           <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
           <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Manage store status, pricing, inventory and customers.</p>
         </div>
-        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-text-secondary border">
-          <Settings className="h-5 w-5 animate-spin-slow" />
-        </div>
       </div>
 
       {/* Grid of Stats Cards */}

@@ -192,7 +192,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Build payment settings
-    const paymentStatus = paymentMethod === 'COD' ? PaymentStatus.PENDING : PaymentStatus.PAID
+    // All orders start as PENDING payment status on creation; online payments are marked PAID upon gateway callback.
+    const paymentStatus = PaymentStatus.PENDING
+
 
     // Calculate scheduled delivery time
     const now = new Date()

@@ -169,16 +169,7 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
   const [scheduledSlot, setScheduledSlot] = useState<string>('INSTANT')
 
-  // SafePay Modal state
-  const [showSafePayModal, setShowSafePayModal] = useState(false)
-  const [safePayUpiApp, setSafePayUpiApp] = useState<'PHONEPE' | 'GPAY' | 'PAYTM'>('PHONEPE')
-  const [safePayMethod, setSafePayMethod] = useState<'INTENT' | 'QR' | 'UPI_ID'>('INTENT')
-  const [upiId, setUpiId] = useState('')
-  const [isVerifyingUpi, setIsVerifyingUpi] = useState(false)
-  const [isUpiVerified, setIsUpiVerified] = useState(false)
-  const [paymentSuccess, setPaymentSuccess] = useState(false)
-  const [paymentError, setPaymentError] = useState<string | null>(null)
-  const [isWaitingForIntentReturn, setIsWaitingForIntentReturn] = useState(false)
+
 
   const isB2BMode = useUIStore((s) => s.isB2BMode)
   const shopName = useUIStore((s) => s.shopName)
@@ -354,105 +345,142 @@ export default function CheckoutPage() {
     }
   }
 
-  // Launch standard universal UPI deep link intent URI
-  const handleUpiIntentPay = () => {
-    const upiLink = `upi://pay?pa=iamuv26@ptyes&pn=FastKirana&am=${grandTotal.toFixed(2)}&cu=INR&tn=FastKirana%20Order`
-    
-    // Set waiting state and attempt redirect
-    setIsWaitingForIntentReturn(true)
-    setPaymentError(null)
-    window.location.href = upiLink
+  // Helper function to load Paytm script dynamically
+  const loadPaytmScript = (mid: string, env: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const host = env === 'prod' ? 'securegw.paytm.in' : 'securegw-stage.paytm.in'
+      const scriptUrl = `https://${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`
+      
+      const existingScript = document.getElementById('paytm-checkout-script')
+      if (existingScript) {
+        resolve(true)
+        return
+      }
+      
+      const script = document.createElement('script')
+      script.type = 'text/javascript'
+      script.src = scriptUrl
+      script.id = 'paytm-checkout-script'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
   }
 
-  // Verify UPI ID format and simulate lookup
-  const handleVerifyUpiId = () => {
-    if (!upiId || !upiId.includes('@')) {
-      setPaymentError('Invalid UPI ID format. E.g. name@upi')
-      toast.error('Please enter a valid UPI ID (e.g. name@upi)')
-      return
-    }
-    
-    setPaymentError(null)
-    setIsVerifyingUpi(true)
-    setTimeout(() => {
-      setIsVerifyingUpi(false)
-      setIsUpiVerified(true)
-      toast.success('UPI ID verified successfully!')
-    }, 1500)
-  }
-
-  // Simulate payment clearing and place the order
-  const handleSimulatedPayment = async (type: 'QR_SUCCESS' | 'UPI_ID_SUCCESS') => {
+  // Handle Paytm Payment Gateway Checkout
+  const handlePaytmCheckout = async () => {
     setIsPlacingOrder(true)
-    setPaymentError(null)
-    
-    // Simulate payment clearing latency
-    setTimeout(async () => {
-      try {
-        // Fetch settings to check store status
-        const settingsRes = await fetch('/api/settings')
-        const settings = await settingsRes.json()
-        
-        const hasGrocery = items.some((item) => !isCafeProduct(item.product))
-        const hasCafe = items.some((item) => isCafeProduct(item.product))
-        
-        if (hasGrocery && settings.grocery_mart_open === 'false') {
-          triggerHaptic('warning')
-          setPaymentError('Grocery Mart is temporarily closed. Cannot complete checkout.')
-          toast.error('Grocery Mart is temporarily closed. Please remove grocery items.')
-          setIsPlacingOrder(false)
-          return
-        }
-        
-        if (hasCafe && settings.cafe_open === 'false') {
-          triggerHaptic('warning')
-          setPaymentError('FastKirana Cafe is temporarily closed. Cannot complete checkout.')
-          toast.error('FastKirana Cafe is temporarily closed. Please remove cafe items.')
-          setIsPlacingOrder(false)
-          return
-        }
+    try {
+      // 1. Fetch settings to check store status
+      const settingsRes = await fetch('/api/settings')
+      const settings = await settingsRes.json()
+      
+      const hasGrocery = items.some((item) => !isCafeProduct(item.product))
+      const hasCafe = items.some((item) => isCafeProduct(item.product))
+      
+      if (hasGrocery && settings.grocery_mart_open === 'false') {
+        triggerHaptic('warning')
+        toast.error('Grocery Mart is temporarily closed. Cannot complete checkout.')
+        setIsPlacingOrder(false)
+        return
+      }
+      
+      if (hasCafe && settings.cafe_open === 'false') {
+        triggerHaptic('warning')
+        toast.error('FastKirana Cafe is temporarily closed. Cannot complete checkout.')
+        setIsPlacingOrder(false)
+        return
+      }
 
-        const finalAddressId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
-        
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            addressId: finalAddressId,
-            paymentMethod: 'UPI',
-            items,
-            deliveryMethod,
-            isB2B: isB2BMode,
-            scheduledSlot,
-            shopName: isB2BMode ? shopName : 'FastKirana Dark Store',
-            shopPhone: isB2BMode ? shopPhone : '+91 70544 70303',
-          }),
+      const finalAddressId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+      
+      // 2. Create the order in the database with PENDING payment status
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          addressId: finalAddressId,
+          paymentMethod: 'UPI',
+          items,
+          deliveryMethod,
+          isB2B: isB2BMode,
+          scheduledSlot,
+          shopName: isB2BMode ? shopName : 'FastKirana Dark Store',
+          shopPhone: isB2BMode ? shopPhone : '+91 70544 70303',
+        }),
+      })
+
+      const orderData = await orderRes.json()
+
+      if (!orderRes.ok) {
+        toast.error(orderData.error || 'Failed to place order')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      // 3. Initiate Paytm transaction to get txnToken
+      const initiateRes = await fetch('/api/payment/paytm/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderData.id }),
+      })
+
+      const initiateData = await initiateRes.json()
+
+      if (!initiateRes.ok) {
+        toast.error(initiateData.error || 'Failed to initiate Paytm transaction')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      // 4. Load Paytm CheckoutJS script dynamically
+      const scriptLoaded = await loadPaytmScript(initiateData.mid, initiateData.env)
+      if (!scriptLoaded) {
+        toast.error('Failed to load Paytm Checkout SDK')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      // 5. Initialize and invoke CheckoutJS
+      const config = {
+        root: "",
+        flow: "DEFAULT",
+        data: {
+          orderId: initiateData.orderId,
+          token: initiateData.txnToken,
+          tokenType: "TXN_TOKEN",
+          amount: initiateData.amount
+        },
+        handler: {
+          notifyMerchant: (eventName: string, response: any) => {
+            console.log("Paytm event:", eventName, response)
+            if (eventName === 'MERCHANT_CLOSE') {
+              setIsPlacingOrder(false)
+              toast.info('Payment window closed. You can retry from your orders page or select COD.')
+            }
+          }
+        }
+      }
+
+      const paytmWindow = (window as any).Paytm
+      if (paytmWindow && paytmWindow.CheckoutJS) {
+        paytmWindow.CheckoutJS.init(config).then(() => {
+          paytmWindow.CheckoutJS.invoke()
+        }).catch((err: any) => {
+          console.error('Paytm CheckoutJS init error:', err)
+          toast.error('Failed to initialize Paytm payment overlay')
+          setIsPlacingOrder(false)
         })
-
-        const data = await res.json()
-
-        if (res.ok) {
-          triggerHaptic('success')
-          setPaymentSuccess(true)
-          toast.success('Payment Received!')
-          
-          setTimeout(() => {
-            clearCart()
-            setShowSafePayModal(false)
-            setPaymentSuccess(false)
-            setUpiId('')
-            setIsUpiVerified(false)
-            router.push(`/order/${data.id}`)
-          }, 2000)
-        } else {
-          setPaymentError(data.error || 'Failed to complete transaction')
-          setIsPlacingOrder(false)
-        }
-      } catch (err) {
-        setPaymentError('Connection error. Please try again.')
+      } else {
+        toast.error('Paytm SDK is not available')
         setIsPlacingOrder(false)
       }
-    }, 1500)
+
+    } catch (err) {
+      console.error('Paytm checkout exception:', err)
+      toast.error('An unexpected error occurred. Please try again.')
+      setIsPlacingOrder(false)
+    }
   }
 
   const handlePlaceOrderClick = () => {
@@ -463,7 +491,7 @@ export default function CheckoutPage() {
     }
 
     if (paymentMethod === 'UPI') {
-      setShowSafePayModal(true)
+      handlePaytmCheckout()
     } else {
       handlePlaceOrder()
     }
@@ -820,7 +848,7 @@ export default function CheckoutPage() {
               {/* Delivery Scheduling */}
               <div className="border-t border-border/40 pt-5 space-y-3">
                 <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
-                  <span>📅</span> Choose Delivery Schedule
+                  <span>📅</span> {deliveryMethod === 'PICKUP' ? 'Choose Pickup Schedule' : 'Choose Delivery Schedule'}
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-3">
@@ -834,8 +862,10 @@ export default function CheckoutPage() {
                         : "border-border hover:border-primary/20 text-text-secondary bg-muted/20"
                     )}
                   >
-                    <span className="text-sm">⚡ Instant Delivery</span>
-                    <span className="text-[10px] text-text-muted">Deliver within 10-15 mins</span>
+                    <span className="text-sm">{deliveryMethod === 'PICKUP' ? '⚡ Instant Pickup' : '⚡ Instant Delivery'}</span>
+                    <span className="text-[10px] text-text-muted">
+                      {deliveryMethod === 'PICKUP' ? 'Ready within 10-15 mins' : 'Deliver within 10-15 mins'}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -851,8 +881,10 @@ export default function CheckoutPage() {
                         : "border-border hover:border-primary/20 text-text-secondary bg-muted/20"
                     )}
                   >
-                    <span className="text-sm">🕒 Schedule for Later</span>
-                    <span className="text-[10px] text-text-muted">Choose your preferred time slot</span>
+                    <span className="text-sm">{deliveryMethod === 'PICKUP' ? '🕒 Schedule Pickup for Later' : '🕒 Schedule for Later'}</span>
+                    <span className="text-[10px] text-text-muted">
+                      {deliveryMethod === 'PICKUP' ? 'Choose your preferred pickup time slot' : 'Choose your preferred time slot'}
+                    </span>
                   </button>
                 </div>
 
@@ -923,8 +955,12 @@ export default function CheckoutPage() {
                     className="cursor-pointer"
                   />
                   <div>
-                    <h4 className="text-sm font-bold text-text-primary">Cash on Delivery (COD)</h4>
-                    <p className="text-[10px] text-text-secondary mt-0.5">Pay in cash or UPI at the door</p>
+                    <h4 className="text-sm font-bold text-text-primary">
+                      {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
+                    </h4>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      {deliveryMethod === 'PICKUP' ? 'Pay in cash or UPI at the store' : 'Pay in cash or UPI at the door'}
+                    </p>
                   </div>
                 </div>
 
@@ -978,346 +1014,6 @@ export default function CheckoutPage() {
                     `Place Order (₹${grandTotal.toFixed(0)})`
                   )}
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Simulated UPI Payment Gateway Modal */}
-          {showSafePayModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-              <style>{`
-                @keyframes scan {
-                  0% { top: 0%; }
-                  50% { top: 100%; }
-                  100% { top: 0%; }
-                }
-                .scanner-line {
-                  animation: scan 2s linear infinite;
-                }
-              `}</style>
-              <div className="relative bg-white dark:bg-zinc-950 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-hidden max-h-[90vh] flex flex-col">
-                {/* Brand Top Bar */}
-                <div className={cn(
-                  "px-6 py-4 text-white transition-all duration-300 flex items-center justify-between shrink-0",
-                  safePayUpiApp === 'PHONEPE' ? "bg-[#5f259f]" :
-                  safePayUpiApp === 'GPAY' ? "bg-[#1a73e8]" : "bg-[#00b9f5]"
-                )}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🛡️</span>
-                    <div>
-                      <h3 className="font-extrabold text-sm tracking-wide">FastKirana SafePay</h3>
-                      <p className="text-[10px] opacity-80 font-medium">100% Secure Simulated UPI Gateway</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setShowSafePayModal(false)
-                      setPaymentSuccess(false)
-                      setPaymentError(null)
-                    }}
-                    className="text-white/80 hover:text-white text-xs bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full font-bold transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-
-                {/* Payment details strip */}
-                <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800/40 px-6 py-3.5 flex justify-between items-center text-xs font-semibold shrink-0">
-                  <div className="text-text-secondary">Amount to Pay</div>
-                  <div className="text-sm font-black text-primary">₹{grandTotal.toFixed(0)}</div>
-                </div>
-
-                {/* Scrollable Container */}
-                <div className="overflow-y-auto flex-1">
-                  {!paymentSuccess ? (
-                    <div className="p-6 space-y-6">
-                    {/* UPI App Tabs selector */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">Select UPI App</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: 'PHONEPE' as const, label: 'PhonePe', icon: '🟣' },
-                          { id: 'GPAY' as const, label: 'GPay', icon: '🔵' },
-                          { id: 'PAYTM' as const, label: 'Paytm UPI', icon: '💠' },
-                        ].map((app) => (
-                          <button
-                            key={app.id}
-                            type="button"
-                            onClick={() => {
-                              setSafePayUpiApp(app.id)
-                              setPaymentError(null)
-                            }}
-                            className={cn(
-                              "flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all text-xs font-black cursor-pointer",
-                              safePayUpiApp === app.id
-                                ? (app.id === 'PHONEPE' ? 'border-[#5f259f] text-[#5f259f] bg-[#5f259f]/5' : app.id === 'GPAY' ? 'border-[#1a73e8] text-[#1a73e8] bg-[#1a73e8]/5' : 'border-[#00b9f5] text-[#00b9f5] bg-[#00b9f5]/5')
-                                : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 hover:bg-zinc-50 text-text-secondary bg-white/5"
-                            )}
-                          >
-                            <span className="text-base mb-1">{app.icon}</span>
-                            {app.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Payment Method Selector (Pay via App vs QR vs UPI ID) */}
-                    <div className="flex border border-zinc-100 dark:border-zinc-800 rounded-xl overflow-hidden p-1 bg-zinc-50/50 dark:bg-zinc-900/40">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSafePayMethod('INTENT')
-                          setPaymentError(null)
-                        }}
-                        className={cn(
-                          "flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer",
-                          safePayMethod === 'INTENT' ? "bg-white dark:bg-zinc-800 text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
-                        )}
-                      >
-                        <Smartphone className="h-3.5 w-3.5" />
-                        Pay via App
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSafePayMethod('QR')
-                          setPaymentError(null)
-                        }}
-                        className={cn(
-                          "flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer",
-                          safePayMethod === 'QR' ? "bg-white dark:bg-zinc-800 text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
-                        )}
-                      >
-                        <QrCode className="h-3.5 w-3.5" />
-                        Scan QR
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSafePayMethod('UPI_ID')
-                          setPaymentError(null)
-                        }}
-                        className={cn(
-                          "flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer",
-                          safePayMethod === 'UPI_ID' ? "bg-white dark:bg-zinc-800 text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
-                        )}
-                      >
-                        <span className="text-[10px]">👤</span>
-                        UPI ID
-                      </button>
-                    </div>
-
-                    {/* Tab Contents */}
-                    {safePayMethod === 'INTENT' ? (
-                      /* Pay via UPI App Redirect View */
-                      <div className="flex flex-col items-center justify-center py-4 space-y-4 text-center">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/5 text-primary text-2xl animate-pulse-gentle">
-                          📱
-                        </div>
-                        
-                        {!isWaitingForIntentReturn ? (
-                          <>
-                            <div className="space-y-1">
-                              <h4 className="text-xs font-bold text-text-primary">Pay via UPI App</h4>
-                              <p className="text-[10px] text-text-secondary max-w-[265px] leading-normal mx-auto font-medium">
-                                Click below to launch your default UPI app (PhonePe, GPay, Paytm) and complete payment of <strong>₹{grandTotal.toFixed(0)}</strong>.
-                              </p>
-                            </div>
-                            
-                            <Button
-                              onClick={handleUpiIntentPay}
-                              className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md hover:scale-[1.02] active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                            >
-                              ⚡ Pay via UPI App
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <div className="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-950/20 p-4 text-center text-xs font-bold text-blue-600 dark:text-blue-400 flex flex-col items-center gap-2 animate-slide-up w-full">
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                                <span>Waiting for payment in UPI app...</span>
-                              </div>
-                              <p className="text-[10px] font-medium text-blue-500 leading-relaxed max-w-[240px]">
-                                Once payment is completed in your app, return to this tab to confirm.
-                              </p>
-                            </div>
-
-                            <div className="w-full space-y-2.5">
-                              <Button
-                                onClick={() => handleSimulatedPayment('QR_SUCCESS')}
-                                className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md hover:scale-[1.02] active:scale-98 transition-all cursor-pointer flex items-center justify-center"
-                                disabled={isPlacingOrder}
-                              >
-                                {isPlacingOrder ? (
-                                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                                ) : (
-                                  "✓ Yes, I have paid successfully"
-                                )}
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={() => setIsWaitingForIntentReturn(false)}
-                                variant="outline"
-                                className="w-full border-zinc-200 dark:border-zinc-800 text-text-secondary font-bold rounded-2xl h-11 transition-all cursor-pointer flex items-center justify-center bg-transparent"
-                                disabled={isPlacingOrder}
-                              >
-                                ✕ No, payment failed / Go Back
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ) : safePayMethod === 'QR' ? (
-                      /* QR Code Simulator View */
-                      <div className="flex flex-col items-center justify-center py-4 space-y-4">
-                        <div className="relative border-4 border-zinc-100 dark:border-zinc-800 p-4 rounded-3xl bg-white overflow-hidden shadow-inner flex items-center justify-center w-48 h-48">
-                          {/* SVG Mock QR Code */}
-                          <svg className="w-full h-full text-zinc-800" viewBox="0 0 100 100">
-                            <rect x="0" y="0" width="25" height="25" fill="currentColor"/>
-                            <rect x="5" y="5" width="15" height="15" fill="white"/>
-                            <rect x="9" y="9" width="7" height="7" fill="currentColor"/>
-                            
-                            <rect x="75" y="0" width="25" height="25" fill="currentColor"/>
-                            <rect x="75" y="5" width="15" height="15" fill="white"/>
-                            <rect x="79" y="9" width="7" height="7" fill="currentColor"/>
-
-                            <rect x="0" y="75" width="25" height="25" fill="currentColor"/>
-                            <rect x="5" y="75" width="15" height="15" fill="white"/>
-                            <rect x="9" y="79" width="7" height="7" fill="currentColor"/>
-
-                            <rect x="35" y="10" width="10" height="5" fill="currentColor"/>
-                            <rect x="50" y="20" width="15" height="10" fill="currentColor"/>
-                            <rect x="40" y="40" width="20" height="20" fill="currentColor"/>
-                            <rect x="70" y="45" width="10" height="15" fill="currentColor"/>
-                            <rect x="20" y="55" width="15" height="5" fill="currentColor"/>
-                            <rect x="10" y="40" width="5" height="10" fill="currentColor"/>
-                            <rect x="80" y="80" width="15" height="15" fill="currentColor"/>
-                            <rect x="45" y="80" width="15" height="10" fill="currentColor"/>
-                            <rect x="80" y="65" width="5" height="10" fill="currentColor"/>
-                          </svg>
-                          {/* Scanner laser line animation */}
-                          <div className="absolute left-0 right-0 h-1 bg-primary/80 dark:bg-primary shadow-[0_0_8px_rgba(46,125,50,0.8)] scanner-line pointer-events-none" />
-                        </div>
-                        <p className="text-[10px] text-text-muted text-center max-w-xs font-semibold leading-relaxed">
-                          Scan this QR code using your {safePayUpiApp === 'PHONEPE' ? 'PhonePe' : safePayUpiApp === 'GPAY' ? 'Google Pay' : 'Paytm'} app to pay.
-                        </p>
-                        
-                        <Button
-                          onClick={() => handleSimulatedPayment('QR_SUCCESS')}
-                          className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
-                          disabled={isPlacingOrder}
-                        >
-                          {isPlacingOrder ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Processing Payment...
-                            </>
-                          ) : (
-                            "✓ Simulate Scan Success"
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      /* UPI ID View */
-                      <div className="space-y-4 py-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="upi-id-input" className="text-xs font-bold text-text-primary">
-                            Enter UPI ID / VPA
-                          </Label>
-                          <div className="relative">
-                            <Input
-                              id="upi-id-input"
-                              placeholder="e.g. name@upi or cellno@ybl"
-                              value={upiId}
-                              onChange={(e) => {
-                                setUpiId(e.target.value)
-                                setIsUpiVerified(false)
-                                setPaymentError(null)
-                              }}
-                              className="text-xs font-semibold pr-20"
-                              disabled={isVerifyingUpi || isPlacingOrder}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleVerifyUpiId}
-                              disabled={!upiId || isVerifyingUpi || isUpiVerified || isPlacingOrder}
-                              className={cn(
-                                "absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-lg transition-all cursor-pointer",
-                                isUpiVerified 
-                                  ? "bg-green-50 text-green-600 border border-green-200"
-                                  : "bg-primary/10 hover:bg-primary text-primary hover:text-white"
-                              )}
-                            >
-                              {isVerifyingUpi ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : isUpiVerified ? (
-                                "Verified ✓"
-                              ) : (
-                                "Verify"
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        {isUpiVerified && (
-                          <div className="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-950/20 p-3.5 text-center text-xs font-bold text-blue-600 dark:text-blue-400 flex flex-col items-center gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                              <span>Payment request sent to {upiId}</span>
-                            </div>
-                            <span className="text-[10px] font-medium text-blue-500">Please approve the payment request in your UPI app.</span>
-                          </div>
-                        )}
-
-                        {paymentError && (
-                          <div className="rounded-xl border border-red-100 bg-red-50 text-xs font-bold text-red-600 p-3 flex items-center gap-2">
-                            <span>❌</span>
-                            <span>{paymentError}</span>
-                          </div>
-                        )}
-
-                        <Button
-                          onClick={() => handleSimulatedPayment('UPI_ID_SUCCESS')}
-                          className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold rounded-2xl h-11 shadow-md cursor-pointer"
-                          disabled={!isUpiVerified || isPlacingOrder}
-                        >
-                          {isPlacingOrder ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Completing Order...
-                            </>
-                          ) : (
-                            "Approve & Pay ₹" + grandTotal.toFixed(0)
-                          )}
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Secure gateway trust footer */}
-                    <div className="flex justify-center items-center gap-1.5 text-[10px] text-text-muted font-semibold pt-2 border-t border-zinc-100 dark:border-zinc-800/40">
-                      <span>🔒</span> Secured by FastKirana SafePay Gateway
-                    </div>
-                  </div>
-                ) : (
-                  /* Success Screen */
-                  <div className="p-8 flex flex-col items-center justify-center text-center space-y-5">
-                    <div className="w-16 h-16 bg-[#2e7d32] text-white rounded-full flex items-center justify-center text-3xl font-black shadow-lg border-4 border-green-100">
-                      ✓
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-text-primary">Payment Successful!</h3>
-                      <p className="text-xs text-[#2e7d32] font-black mt-1">₹{grandTotal.toFixed(0)} debited successfully</p>
-                      <p className="text-[10px] text-text-muted mt-3 max-w-[240px] leading-relaxed mx-auto font-medium">
-                        Generating your order and linking with Rider dispatch queue...
-                      </p>
-                    </div>
-                    <div className="w-full max-w-[200px] py-1">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
-                    </div>
-                  </div>
-                )}
-                </div>
               </div>
             </div>
           )}
