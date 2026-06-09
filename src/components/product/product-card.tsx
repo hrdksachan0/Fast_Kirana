@@ -17,7 +17,7 @@ interface ProductCardProps {
 import { isCafeProduct } from '@/lib/utils'
 
 export function ProductCard({ product }: ProductCardProps) {
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
+
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const { getItemQuantity, addItem, updateQuantity } = useCart()
@@ -153,36 +153,23 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="flex items-end justify-between gap-1 mt-1 w-full min-w-0">
         {/* Left Side: Pricing & Savings */}
         <div className="flex flex-col min-w-0 flex-1">
-          {isB2BMode ? (
-            <div className="flex flex-col">
-              <span className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary leading-tight">
-                ₹{(product.price * 0.9).toFixed(0)}
+          <div className="flex items-baseline gap-1 flex-wrap leading-none">
+            <span className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary">
+              ₹{product.price}
+            </span>
+            {product.mrp > product.price && (
+              <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-bold">
+                ₹{product.mrp}
               </span>
-              <span className="text-[7px] text-primary font-black uppercase tracking-wider">
-                Wholesale
-              </span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline gap-1 flex-wrap leading-none">
-                <span className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary">
-                  ₹{product.price}
-                </span>
-                {product.mrp > product.price && (
-                  <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-bold">
-                    ₹{product.mrp}
-                  </span>
-                )}
-              </div>
-              {savings > 0 && (
-                <span 
-                  className="text-[7.5px] min-[375px]:text-[8px] font-black text-[#2e7d32] dark:text-emerald-400 mt-0.5 block truncate tracking-tight leading-none"
-                  title={`Save ₹${savings}`}
-                >
-                  Save ₹{savings}
-                </span>
-              )}
-            </>
+            )}
+          </div>
+          {savings > 0 && (
+            <span 
+              className="text-[7.5px] min-[375px]:text-[8px] font-black text-[#2e7d32] dark:text-emerald-400 mt-0.5 block truncate tracking-tight leading-none"
+              title={`Save ₹${savings}`}
+            >
+              Save ₹{savings}
+            </span>
           )}
         </div>
 

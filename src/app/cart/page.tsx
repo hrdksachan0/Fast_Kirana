@@ -77,7 +77,6 @@ export default function CartPage() {
     toast.success('Coupon removed')
   }
 
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
   const promoDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
 
   const groceryItems = items.filter(item => !isCafeProduct(item.product))
@@ -86,8 +85,8 @@ export default function CartPage() {
   const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const cafeSubtotal = cafeItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
 
-  const groceryB2BDiscount = isB2BMode ? grocerySubtotal * 0.1 : 0
-  const cafeB2BDiscount = isB2BMode ? cafeSubtotal * 0.1 : 0
+  const groceryB2BDiscount = 0
+  const cafeB2BDiscount = 0
 
   const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
@@ -96,8 +95,8 @@ export default function CartPage() {
   const groceryDiscount = subtotal > 0 ? (grocerySubtotal / subtotal) * promoDiscount : 0
   const cafeDiscount = subtotal > 0 ? (cafeSubtotal / subtotal) * promoDiscount : 0
 
-  const groceryDeliveryFee = isB2BMode ? 0 : (groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
-  const cafeDeliveryFee = isB2BMode ? 0 : (cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
+  const groceryDeliveryFee = groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
+  const cafeDeliveryFee = cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0
 
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
   const taxes = (groceryAdjustedSubtotal - groceryDiscount) * TAX_RATE + (cafeAdjustedSubtotal - cafeDiscount) * TAX_RATE
@@ -222,7 +221,7 @@ export default function CartPage() {
               </div>
 
               {/* Free delivery indicator progress bar */}
-              {groceryItems.length > 0 && !isB2BMode && (
+              {groceryItems.length > 0 && (
                 <>
                   {groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? (
                     <div className="rounded-xl bg-accent/5 border border-accent/20 p-3.5 mb-2">
@@ -267,7 +266,7 @@ export default function CartPage() {
               </div>
 
               {/* Free delivery indicator progress bar for cafe */}
-              {cafeItems.length > 0 && !isB2BMode && (
+              {cafeItems.length > 0 && (
                 <>
                   {cafeAdjustedSubtotal < 200 ? (
                     <div className="rounded-xl bg-rose-50 border border-rose-100 p-3.5 mb-2">
@@ -367,12 +366,7 @@ export default function CartPage() {
                 </div>
               )}
 
-              {isB2BMode && b2bDiscount > 0 && (
-                <div className="flex justify-between text-primary font-bold">
-                  <span>B2B Wholesale Discount (10%)</span>
-                  <span>-₹{b2bDiscount.toFixed(0)}</span>
-                </div>
-              )}
+
 
               {appliedCoupon && (
                 <div className="flex justify-between text-accent font-bold">

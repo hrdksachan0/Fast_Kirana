@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '@/hooks/use-cart'
-import { useUIStore } from '@/stores/ui-store'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -171,15 +171,13 @@ export default function CheckoutPage() {
 
 
 
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
-  const shopName = useUIStore((s) => s.shopName)
-  const shopPhone = useUIStore((s) => s.shopPhone)
+
 
   // Calculations for checkout items
   const subtotal = getSubtotal()
   const mrpTotal = getMrpTotal()
   const savings = getSavings()
-  const b2bDiscount = isB2BMode ? subtotal * 0.1 : 0
+  const b2bDiscount = 0
   const adjustedSubtotal = subtotal - b2bDiscount
   const discount = savings + b2bDiscount
   
@@ -191,9 +189,9 @@ export default function CheckoutPage() {
   const grocerySubtotal = groceryCartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const groceryMrpSubtotal = groceryCartItems.reduce((sum, item) => sum + item.product.mrp * item.quantity, 0)
   const grocerySavings = groceryMrpSubtotal - grocerySubtotal
-  const groceryB2BDiscount = isB2BMode ? grocerySubtotal * 0.1 : 0
+  const groceryB2BDiscount = 0
   const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
-  const groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2BMode) ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
+  const groceryDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
   const groceryTaxes = groceryAdjustedSubtotal * TAX_RATE
   const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes
 
@@ -201,9 +199,9 @@ export default function CheckoutPage() {
   const cafeSubtotal = cafeCartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const cafeMrpSubtotal = cafeCartItems.reduce((sum, item) => sum + item.product.mrp * item.quantity, 0)
   const cafeSavings = cafeMrpSubtotal - cafeSubtotal
-  const cafeB2BDiscount = isB2BMode ? cafeSubtotal * 0.1 : 0
+  const cafeB2BDiscount = 0
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
-  const cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2BMode) ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
+  const cafeDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
   const cafeTaxes = cafeAdjustedSubtotal * TAX_RATE
   const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes
 
@@ -321,10 +319,10 @@ export default function CheckoutPage() {
           paymentMethod,
           items,
           deliveryMethod,
-          isB2B: isB2BMode,
+          isB2B: false,
           scheduledSlot,
-          shopName: isB2BMode ? shopName : 'FastKirana Dark Store',
-          shopPhone: isB2BMode ? shopPhone : '+91 70544 70303',
+          shopName: 'FastKirana Dark Store',
+          shopPhone: '+91 70544 70303',
         }),
       })
 
@@ -403,10 +401,10 @@ export default function CheckoutPage() {
           paymentMethod: 'UPI',
           items,
           deliveryMethod,
-          isB2B: isB2BMode,
+          isB2B: false,
           scheduledSlot,
-          shopName: isB2BMode ? shopName : 'FastKirana Dark Store',
-          shopPhone: isB2BMode ? shopPhone : '+91 70544 70303',
+          shopName: 'FastKirana Dark Store',
+          shopPhone: '+91 70544 70303',
         }),
       })
 
@@ -558,8 +556,7 @@ export default function CheckoutPage() {
           <div>
             <span className="text-[10px] uppercase font-bold text-text-secondary block">Grand Total</span>
             <span className="text-sm font-black text-primary">
-              ₹{grandTotal.toFixed(0)} 
-              {isB2BMode && <span className="text-[9px] text-primary ml-1 font-bold">(10% Wholesale Off)</span>}
+              ₹{grandTotal.toFixed(0)}
             </span>
           </div>
           <div className="text-[10px] text-accent font-bold bg-accent/10 px-2.5 py-1 rounded">
@@ -1021,12 +1018,7 @@ export default function CheckoutPage() {
 
         {/* Right Column: Mini Bill Summary (Persistent) */}
         <div className="bg-white/80 backdrop-blur-md border border-white/60 p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-fit space-y-5">
-          {isB2BMode && (
-            <div className="rounded-xl bg-primary/10 border border-primary/20 p-3 text-center text-xs font-black text-primary animate-pulse-gentle flex flex-col gap-1">
-              <span>🏢 B2B WHOLESALE ACTIVE</span>
-              <span className="text-[10px] font-semibold text-primary/80">Flat 10% Wholesale discount applied</span>
-            </div>
-          )}
+
           
           <h3 className="text-sm font-black text-text-primary border-b border-border/40 pb-2 flex items-center gap-1.5">
             <span>🧾</span> Order Calculation

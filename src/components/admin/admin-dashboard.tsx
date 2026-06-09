@@ -1707,7 +1707,7 @@ export function AdminDashboard({
                 </div>
 
                 <div className="md:col-span-3 flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-border/40">
-                  <span className="text-[10px] font-extrabold text-text-secondary block w-full">Quick Rows / Smart Features</span>
+                  <span className="text-[10px] font-extrabold text-text-secondary block w-full">Quick Tags / Smart Features</span>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -1715,16 +1715,52 @@ export function AdminDashboard({
                       onChange={(e) => toggleTag('new', 'popular', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Trending (Popular)</span>
+                    <span>🔥 Trending (Popular)</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
-                      onChange={(e) => toggleTag('new', 'late-night', e.target.checked)}
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')}
+                      onChange={(e) => toggleTag('new', 'cafe', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Late Night Craving</span>
+                    <span>☕ Cafe Item</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-beverage')}
+                      onChange={(e) => toggleTag('new', 'hot-beverage', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>☕ Hot Beverage</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-bite')}
+                      onChange={(e) => toggleTag('new', 'hot-bite', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥟 Hot Bite / Snack</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('chinese')}
+                      onChange={(e) => toggleTag('new', 'chinese', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥡 Chinese</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('south-indian')}
+                      onChange={(e) => toggleTag('new', 'south-indian', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🍛 South Indian</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
@@ -1733,7 +1769,52 @@ export function AdminDashboard({
                       onChange={(e) => toggleTag('new', 'breakfast', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Breakfast Essential</span>
+                    <span>🍳 Breakfast Essential</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('snacks')}
+                      onChange={(e) => toggleTag('new', 'snacks', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🍿 Snacks</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('dairy')}
+                      onChange={(e) => toggleTag('new', 'dairy', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥛 Dairy</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('staples')}
+                      onChange={(e) => toggleTag('new', 'staples', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🌾 Staples</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('beverages')}
+                      onChange={(e) => toggleTag('new', 'beverages', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥤 Beverages</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
+                      onChange={(e) => toggleTag('new', 'late-night', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🌙 Late Night Craving</span>
                   </label>
                 </div>      
               </div>
@@ -3045,7 +3126,7 @@ export function AdminDashboard({
                 </div>
 
                 <div className="md:col-span-2 flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-border/40">
-                  <span className="text-[10px] font-extrabold text-text-secondary block w-full">Quick Rows / Smart Features</span>
+                  <span className="text-[10px] font-extrabold text-text-secondary block w-full">Quick Tags / Smart Features</span>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -3053,16 +3134,52 @@ export function AdminDashboard({
                       onChange={(e) => toggleTag('edit', 'popular', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Trending (Popular)</span>
+                    <span>🔥 Trending (Popular)</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
-                      onChange={(e) => toggleTag('edit', 'late-night', e.target.checked)}
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')}
+                      onChange={(e) => toggleTag('edit', 'cafe', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Late Night Craving</span>
+                    <span>☕ Cafe Item</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-beverage')}
+                      onChange={(e) => toggleTag('edit', 'hot-beverage', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>☕ Hot Beverage</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-bite')}
+                      onChange={(e) => toggleTag('edit', 'hot-bite', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥟 Hot Bite / Snack</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('chinese')}
+                      onChange={(e) => toggleTag('edit', 'chinese', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥡 Chinese</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('south-indian')}
+                      onChange={(e) => toggleTag('edit', 'south-indian', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🍛 South Indian</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                     <input
@@ -3071,7 +3188,52 @@ export function AdminDashboard({
                       onChange={(e) => toggleTag('edit', 'breakfast', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
-                    <span>Mark as Breakfast Essential</span>
+                    <span>🍳 Breakfast Essential</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('snacks')}
+                      onChange={(e) => toggleTag('edit', 'snacks', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🍿 Snacks</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('dairy')}
+                      onChange={(e) => toggleTag('edit', 'dairy', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥛 Dairy</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('staples')}
+                      onChange={(e) => toggleTag('edit', 'staples', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🌾 Staples</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('beverages')}
+                      onChange={(e) => toggleTag('edit', 'beverages', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🥤 Beverages</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
+                      onChange={(e) => toggleTag('edit', 'late-night', e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <span>🌙 Late Night Craving</span>
                   </label>
                 </div>
               </div>

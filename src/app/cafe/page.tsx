@@ -19,9 +19,15 @@ export default async function CafePage() {
         data: {
           name: 'FastKirana Cafe',
           slug: 'cafe',
-          imageUrl: '☕',
+          imageUrl: '/cafe_category.png',
           sortOrder: 0,
         }
+      })
+    } else if (cafeCategory.imageUrl === '☕') {
+      // Update existing cafe category with proper image
+      cafeCategory = await prisma.category.update({
+        where: { id: cafeCategory.id },
+        data: { imageUrl: '/cafe_category.png' }
       })
     }
   } catch (e) {
@@ -160,11 +166,13 @@ export default async function CafePage() {
   // Group products into custom categories for layout
   const hotBrews = dbCafeProducts.filter(p => p.tags?.includes('hot-beverage') || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))
   const hotBites = dbCafeProducts.filter(p => p.tags?.includes('hot-bite') || ['maggi-noodles'].includes(p.slug))
+  const chinese = dbCafeProducts.filter(p => p.tags?.includes('chinese'))
+  const southIndian = dbCafeProducts.filter(p => p.tags?.includes('south-indian'))
   const bakery = dbCafeProducts.filter(p => ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(p.slug) || p.category?.slug === 'bakery-biscuits')
   const chilled = dbCafeProducts.filter(p => ['coca-cola', 'sprite', 'red-bull-energy'].includes(p.slug))
 
   // Catch-all: products in cafe category/tags that don't appear in any group above
-  const groupedIds = new Set([...hotBrews, ...hotBites, ...bakery, ...chilled].map(p => p.id))
+  const groupedIds = new Set([...hotBrews, ...hotBites, ...chinese, ...southIndian, ...bakery, ...chilled].map(p => p.id))
   const moreItems = dbCafeProducts.filter(p => !groupedIds.has(p.id))
 
   // Safe mapping helper
@@ -268,8 +276,43 @@ export default async function CafePage() {
           </div>
         </section>
       )}
+      {/* Section 3: Chinese */}
+      {chinese.length > 0 && (
+        <section className="space-y-2.5 md:space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xl">🥡</span>
+            <div>
+              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chinese Specials</h2>
+              <p className="text-xs text-text-secondary">Momos, Noodles, Manchurian & more</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
+            {chinese.map(p => (
+              <ProductCard key={p.id} product={mapProduct(p)} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Section 3: Bakery & Desserts */}
+      {/* Section 4: South Indian */}
+      {southIndian.length > 0 && (
+        <section className="space-y-2.5 md:space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xl">🍛</span>
+            <div>
+              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">South Indian Favorites</h2>
+              <p className="text-xs text-text-secondary">Dosa, Idli, Vada, Uttapam & more</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
+            {southIndian.map(p => (
+              <ProductCard key={p.id} product={mapProduct(p)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Section 5: Bakery & Desserts */}
       {bakery.length > 0 && (
         <section className="space-y-2.5 md:space-y-4">
           <div className="flex items-center gap-2 px-1">

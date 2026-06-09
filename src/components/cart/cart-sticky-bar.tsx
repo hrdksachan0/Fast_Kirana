@@ -21,7 +21,7 @@ export function CartStickyBar() {
   const getSubtotal = useCartStore((s) => s.getSubtotal)
   const getSavings = useCartStore((s) => s.getSavings)
   const totalItems = useCartStore((s) => s.getTotalItems())
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
+
   const toggleCart = useUIStore((s) => s.toggleCart)
   const isCartOpen = useUIStore((s) => s.isCartOpen)
   const [eta, setEta] = useState(getDeliveryETA)
@@ -50,8 +50,7 @@ export function CartStickyBar() {
   const subtotal = getSubtotal()
   const savings = getSavings()
   
-  const b2bDiscount = isB2BMode ? subtotal * 0.1 : 0
-  const total = subtotal - b2bDiscount
+  const total = subtotal
   const needsForFreeDelivery = FREE_DELIVERY_THRESHOLD - subtotal
   const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
@@ -59,7 +58,7 @@ export function CartStickyBar() {
   return (
     <div className="fixed bottom-[56px] left-0 right-0 z-30 bg-[#f4fbf7] dark:bg-zinc-950 border-t border-[#e2f0e7] dark:border-zinc-800/30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] md:hidden animate-slide-up">
       {/* Integrated delivery progress bar at top edge */}
-      {!isB2BMode && !hasFreeDelivery && (
+      {!hasFreeDelivery && (
         <div className="w-full h-0.5 bg-[#e2f0e7] dark:bg-zinc-800/30">
           <div
             className="h-full bg-[#00b140] transition-all duration-500"
@@ -84,11 +83,11 @@ export function CartStickyBar() {
             <span className="text-[11px] font-black text-zinc-800 dark:text-zinc-100 leading-tight">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
             </span>
-            {savings > 0 && !isB2BMode ? (
+            {savings > 0 ? (
               <span className="text-[9px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
                 You save {formatPrice(savings)} on this order
               </span>
-            ) : !isB2BMode && !hasFreeDelivery ? (
+            ) : !hasFreeDelivery ? (
               <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">
                 Add {formatPrice(needsForFreeDelivery)} for free delivery
               </span>

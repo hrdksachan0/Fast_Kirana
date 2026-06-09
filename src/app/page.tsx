@@ -137,7 +137,7 @@ export default async function Home() {
   }
 
   // 3. Process dynamic trending items (sequential query because it requires the mapped product IDs)
-  const trendingProductIds = trendingOrderItems.map((item) => item.productId)
+  const trendingProductIds = trendingOrderItems.map((item) => item.productId).filter((id): id is string => id !== null)
   if (trendingProductIds.length > 0) {
     try {
       const orderHistoryProducts = await prisma.product.findMany({

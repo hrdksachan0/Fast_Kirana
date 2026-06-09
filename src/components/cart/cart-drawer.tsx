@@ -1,6 +1,6 @@
 'use client'
 
-import { X, ShoppingBag, Minus, Plus, ArrowRight, Building2, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
 import { formatPrice } from '@/lib/utils'
@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export function CartDrawer() {
   const isOpen = useUIStore((s) => s.isCartOpen)
   const setCartOpen = useUIStore((s) => s.setCartOpen)
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
+
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   
@@ -57,16 +57,11 @@ export function CartDrawer() {
   const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const cafeSubtotal = cafeItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
 
-  const groceryB2BDiscount = isB2BMode ? grocerySubtotal * 0.1 : 0
-  const cafeB2BDiscount = isB2BMode ? cafeSubtotal * 0.1 : 0
+  const groceryAdjustedSubtotal = grocerySubtotal
+  const cafeAdjustedSubtotal = cafeSubtotal
 
-  const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
-  const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
-  const b2bDiscount = groceryB2BDiscount + cafeB2BDiscount
-  const adjustedSubtotal = subtotal - b2bDiscount
-
-  const groceryDeliveryFee = isB2BMode ? 0 : (groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
-  const cafeDeliveryFee = isB2BMode ? 0 : (cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
+  const groceryDeliveryFee = groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
+  const cafeDeliveryFee = cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
 
   const total = groceryAdjustedSubtotal + cafeAdjustedSubtotal + deliveryFee
@@ -206,78 +201,56 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Free delivery or B2B progress */}
-              {isB2BMode ? (
-                subtotal < 1000 ? (
-                  <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
-                    <p className="text-xs text-primary font-extrabold">
-                      🏢 B2B Wholesale: Add {formatPrice(1000 - subtotal)} more to qualify!
-                    </p>
-                    <div className="mt-2 h-1.5 rounded-full bg-primary/10 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-500"
-                        style={{ width: `${Math.min((subtotal / 1000) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl bg-accent/10 border border-accent/20 p-3.5 text-center">
-                    <p className="text-xs text-accent font-black">
-                      🎉 B2B Wholesale Met! 10% Bulk Discount Applied!
-                    </p>
-                  </div>
-                )
-              ) : (
-                <div className="space-y-2.5">
-                  {groceryItems.length > 0 && (
-                    <>
-                      {groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? (
-                        <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
-                          <p className="text-xs text-primary font-extrabold">
-                            📦 Add {formatPrice(FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal)} more of groceries for FREE delivery
-                          </p>
-                          <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-primary to-rose-455 transition-all duration-500"
-                              style={{ width: `${Math.min((groceryAdjustedSubtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
-                            />
-                          </div>
+              {/* Free delivery progress */}
+              <div className="space-y-2.5">
+                {groceryItems.length > 0 && (
+                  <>
+                    {groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? (
+                      <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
+                        <p className="text-xs text-primary font-extrabold">
+                          📦 Add {formatPrice(FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal)} more of groceries for FREE delivery
+                        </p>
+                        <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-primary to-rose-455 transition-all duration-500"
+                            style={{ width: `${Math.min((groceryAdjustedSubtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                          />
                         </div>
-                      ) : (
-                        <div className="rounded-2xl bg-accent/10 border border-accent/20 p-2.5 text-center">
-                          <p className="text-xs text-accent font-black">
-                            🎉 FREE Grocery delivery unlocked!
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-accent/10 border border-accent/20 p-2.5 text-center">
+                        <p className="text-xs text-accent font-black">
+                          🎉 FREE Grocery delivery unlocked!
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
 
-                  {cafeItems.length > 0 && (
-                    <>
-                      {cafeAdjustedSubtotal < 200 ? (
-                        <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3.5">
-                          <p className="text-xs text-rose-700 font-extrabold">
-                            ☕ Add {formatPrice(200 - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Else ₹25 applies)
-                          </p>
-                          <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                              style={{ width: `${Math.min((cafeAdjustedSubtotal / 200) * 100, 100)}%` }}
-                            />
-                          </div>
+                {cafeItems.length > 0 && (
+                  <>
+                    {cafeAdjustedSubtotal < 200 ? (
+                      <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3.5">
+                        <p className="text-xs text-rose-700 font-extrabold">
+                          ☕ Add {formatPrice(200 - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Else ₹25 applies)
+                        </p>
+                        <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-rose-500 transition-all duration-500"
+                            style={{ width: `${Math.min((cafeAdjustedSubtotal / 200) * 100, 100)}%` }}
+                          />
                         </div>
-                      ) : (
-                        <div className="rounded-2xl bg-rose-100/50 border border-rose-200 p-2.5 text-center">
-                          <p className="text-xs text-rose-700 font-black">
-                            🎉 FREE Cafe delivery unlocked!
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-rose-100/50 border border-rose-200 p-2.5 text-center">
+                        <p className="text-xs text-rose-700 font-black">
+                          🎉 FREE Cafe delivery unlocked!
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Grocery Items Section */}
               {groceryItems.length > 0 && (
@@ -314,7 +287,7 @@ export function CartDrawer() {
               )}
 
               {/* Smart Add-on Suggestions */}
-              {!isB2BMode && subtotal < FREE_DELIVERY_THRESHOLD && recommendations.length > 0 && (
+              {subtotal < FREE_DELIVERY_THRESHOLD && recommendations.length > 0 && (
                 <div className="mt-6 border-t border-zinc-100 dark:border-zinc-900 pt-4 space-y-3 pb-4">
                   <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 px-1">
                     <span>💡</span> Add items to unlock FREE Delivery
@@ -379,12 +352,7 @@ export function CartDrawer() {
               {/* Expandable Bill details */}
               {showBillDetails && (
                 <div className="mb-4 space-y-2 border-b border-zinc-100 dark:border-zinc-900 pb-3.5 animate-slide-down">
-                  {isB2BMode && subtotal >= 1000 && (
-                    <div className="flex items-center justify-between text-xs text-primary font-bold">
-                      <span>B2B Discount (10%)</span>
-                      <span>-{formatPrice(b2bDiscount)}</span>
-                    </div>
-                  )}
+
                   <div className="flex justify-between text-xs text-zinc-500 font-bold">
                     <span>Items Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
@@ -399,7 +367,7 @@ export function CartDrawer() {
               )}
 
               {/* Savings reminder badge */}
-              {savings > 0 && !isB2BMode && (
+              {savings > 0 && (
                 <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 px-3.5 py-2 mb-3.5 animate-pulse-gentle">
                   <span className="text-xs font-extrabold text-[#00b140] flex items-center gap-1.5 leading-none">
                     🎉 You are saving {formatPrice(savings)} on this order!
@@ -432,13 +400,6 @@ export function CartDrawer() {
                       className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
                     >
                       Closed Items <ArrowRight size={16} />
-                    </button>
-                  ) : isB2BMode && subtotal < 1000 ? (
-                    <button
-                      disabled
-                      className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
-                    >
-                      Min. ₹1,000 Required <ArrowRight size={16} />
                     </button>
                   ) : (
                     <Link

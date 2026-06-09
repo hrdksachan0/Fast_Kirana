@@ -49,7 +49,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
+
   const { getItemQuantity, addItem, updateQuantity } = useCart()
 
   // Load recent searches from localStorage
@@ -282,25 +282,17 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                 
                                 {/* Pricing */}
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  {isB2BMode ? (
-                                    <span className="text-xs font-black text-text-primary">
-                                      ₹{(product.price * 0.9).toFixed(0)}
-                                    </span>
-                                  ) : (
+                                  <span className="text-xs sm:text-sm font-black text-text-primary">
+                                    ₹{product.price}
+                                  </span>
+                                  {product.mrp > product.price && (
                                     <>
-                                      <span className="text-xs sm:text-sm font-black text-text-primary">
-                                        ₹{product.price}
+                                      <span className="text-[10px] text-text-muted line-through font-bold">
+                                        ₹{product.mrp}
                                       </span>
-                                      {product.mrp > product.price && (
-                                        <>
-                                          <span className="text-[10px] text-text-muted line-through font-bold">
-                                            ₹{product.mrp}
-                                          </span>
-                                          <span className="bg-[#fff1ed] text-[#ff6f3b] text-[8px] font-black px-1.5 py-0.5 rounded">
-                                            {product.discount}% OFF
-                                          </span>
-                                        </>
-                                      )}
+                                      <span className="bg-[#fff1ed] text-[#ff6f3b] text-[8px] font-black px-1.5 py-0.5 rounded">
+                                        {product.discount}% OFF
+                                      </span>
                                     </>
                                   )}
                                 </div>

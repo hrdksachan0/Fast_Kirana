@@ -14,7 +14,7 @@ import {
   Clock,
   Navigation,
   MapPin,
-  Building2,
+
   Store,
   Camera,
   Home,
@@ -344,11 +344,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
         {/* Fulfillment & Order Details Badge Row */}
         <div className="flex flex-wrap gap-2">
-          {order.isB2B && (
-            <span className="text-[10px] font-black text-blue-800 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 shrink-0" /> B2B Wholesale Order
-            </span>
-          )}
+
           {order.deliveryMethod === 'PICKUP' ? (
             <span className="text-[10px] font-black text-purple-800 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
               <Store className="h-3.5 w-3.5 shrink-0" /> Self-Pickup (Take Away)

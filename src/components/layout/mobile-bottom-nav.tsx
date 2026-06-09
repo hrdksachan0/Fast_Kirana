@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Building2, CircleUser, LayoutGrid } from 'lucide-react'
+import { Home, Search, CircleUser, LayoutGrid } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
 import { cn } from '@/lib/utils'
 
 export function MobileBottomNav() {
   const pathname = usePathname()
-  const isB2BMode = useUIStore((s) => s.isB2BMode)
 
   // Navigation Items with modern symbols
   const navItems = [
@@ -24,19 +23,12 @@ export function MobileBottomNav() {
       href: '/search',
       active: pathname === '/search',
     },
-    isB2BMode
-      ? {
-          label: 'Wholesale',
-          icon: Building2,
-          href: '/wholesale',
-          active: pathname === '/wholesale',
-        }
-      : {
-          label: 'Categories',
-          icon: LayoutGrid, // Modern category layout symbol
-          href: '/category/fruits-vegetables',
-          active: pathname.startsWith('/category'),
-        },
+    {
+      label: 'Categories',
+      icon: LayoutGrid,
+      href: '/category/fruits-vegetables',
+      active: pathname.startsWith('/category'),
+    },
     {
       label: 'Account',
       icon: CircleUser, // Modern circular user symbol

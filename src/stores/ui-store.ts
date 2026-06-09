@@ -12,7 +12,6 @@ interface UIState {
   isLocationPickerOpen: boolean
   selectedLocation: string
   userCoords: UserCoords | null
-  isB2BMode: boolean
   shopName: string
   shopPhone: string
   groceryMartOpen: boolean
@@ -25,8 +24,6 @@ interface UIState {
   setLocationPickerOpen: (open: boolean) => void
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
-  setB2BMode: (mode: boolean) => void
-  toggleB2BMode: () => void
   setShopDetails: (name: string, phone: string) => void
   setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, radius: number) => void
   hydrateLocation: () => void
@@ -39,7 +36,6 @@ export const useUIStore = create<UIState>((set) => ({
   isLocationPickerOpen: false,
   selectedLocation: 'Select Location',
   userCoords: null,
-  isB2BMode: false,
   shopName: '',
   shopPhone: '',
   groceryMartOpen: true,
@@ -63,8 +59,6 @@ export const useUIStore = create<UIState>((set) => ({
     }
     set({ userCoords: coords })
   },
-  setB2BMode: () => {},
-  toggleB2BMode: () => {},
   setShopDetails: (name, phone) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('fk-shop-name', name)
@@ -82,7 +76,6 @@ export const useUIStore = create<UIState>((set) => ({
       const savedShopName = localStorage.getItem('fk-shop-name')
       const savedShopPhone = localStorage.getItem('fk-shop-phone')
       if (saved) set({ selectedLocation: saved })
-      set({ isB2BMode: false }) // Permanently disabled
       if (savedShopName) set({ shopName: savedShopName })
       if (savedShopPhone) set({ shopPhone: savedShopPhone })
       if (savedCoords) {

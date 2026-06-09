@@ -12,10 +12,6 @@ export const proxy = auth((req) => {
   const isAuthRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/signup'
   const isAdminRoute = nextUrl.pathname.startsWith('/admin')
 
-  // Redirect B2B wholesale route away since B2B is disabled as of now
-  if (nextUrl.pathname.startsWith('/wholesale')) {
-    return NextResponse.redirect(new URL('/', nextUrl))
-  }
 
   // Allow API auth routes to go through
   if (isApiAuthRoute) return NextResponse.next()
