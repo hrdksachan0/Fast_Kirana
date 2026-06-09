@@ -18,6 +18,7 @@ import {
   Check, 
   X,
   TrendingUp,
+  Zap,
   AlertCircle,
   Star,
   Ticket,
@@ -64,7 +65,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops'
 
 export function AdminDashboard({
   initialOrders,
@@ -337,6 +338,132 @@ export function AdminDashboard({
   const [settingPasswordUserId, setSettingPasswordUserId] = useState<string | null>(null)
   const [passwordInput, setPasswordInput] = useState('')
   const [savingPasswordId, setSavingPasswordId] = useState<string | null>(null)
+
+  // States for Pagination
+  const [orderPage, setOrderPage] = useState(1)
+  const [orderTotal, setOrderTotal] = useState(stats.orderCount || initialOrders.length)
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
+
+  const [productPage, setProductPage] = useState(1)
+  const [productTotal, setProductTotal] = useState(initialProducts.length)
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+
+  const [userPage, setUserPage] = useState(1)
+  const [userTotal, setUserTotal] = useState(stats.userCount || initialUsers.length)
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState('ALL')
+
+  // Pagination page resets
+  useEffect(() => {
+    setOrderPage(1)
+  }, [orderStatusFilter, orderSearchQuery])
+
+  useEffect(() => {
+    setProductPage(1)
+  }, [selectedCategoryFilter, searchQuery])
+
+  useEffect(() => {
+    setUserPage(1)
+  }, [userSearch, userRoleFilter])
+
+  // Fetch paginated/filtered orders
+  useEffect(() => {
+    let active = true
+    const fetchOrders = async () => {
+      setIsLoadingOrders(true)
+      try {
+        const res = await fetch(`/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(orderSearchQuery)}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          setOrders(data.orders)
+          setOrderTotal(data.total)
+        }
+      } catch (err) {
+        console.error('Failed to fetch orders:', err)
+      } finally {
+        if (active) setIsLoadingOrders(false)
+      }
+    }
+    fetchOrders()
+    return () => { active = false }
+  }, [orderPage, orderStatusFilter, orderSearchQuery])
+
+  // Fetch paginated/filtered products
+  useEffect(() => {
+    let active = true
+    const fetchProducts = async () => {
+      setIsLoadingProducts(true)
+      try {
+        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          setProducts(data.products)
+          setProductTotal(data.total)
+        }
+      } catch (err) {
+        console.error('Failed to fetch products:', err)
+      } finally {
+        if (active) setIsLoadingProducts(false)
+      }
+    }
+    fetchProducts()
+    return () => { active = false }
+  }, [productPage, selectedCategoryFilter, searchQuery])
+
+  // Fetch paginated/filtered users
+  useEffect(() => {
+    let active = true
+    const fetchUsers = async () => {
+      setIsLoadingUsers(true)
+      try {
+        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          setUsers(data.users)
+          setUserTotal(data.total)
+        }
+      } catch (err) {
+        console.error('Failed to fetch users:', err)
+      } finally {
+        if (active) setIsLoadingUsers(false)
+      }
+    }
+    fetchUsers()
+    return () => { active = false }
+  }, [userPage, userSearch, userRoleFilter])
+
+  // Render pagination controls helper
+  const renderPagination = (currentPage: number, totalItems: number, itemsPerPage: number, onPageChange: (p: number) => void) => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage)
+    if (totalPages <= 1) return null
+
+    return (
+      <div className="flex justify-between items-center mt-5 border-t border-border/40 pt-4 bg-card">
+        <span className="text-[10px] font-bold text-text-secondary">
+          Showing page {currentPage} of {totalPages} ({totalItems} items)
+        </span>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 text-[10px] font-black rounded-lg border bg-card hover:bg-muted text-text-secondary disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed select-none transition-colors"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 text-[10px] font-black rounded-lg border bg-card hover:bg-muted text-text-secondary disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed select-none transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // States for Reviews
   const [reviews, setReviews] = useState(initialReviews)
@@ -1000,14 +1127,15 @@ export function AdminDashboard({
 
   const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { key: 'liveops', label: 'Live Ops Tracker', icon: Zap },
     { key: 'alerts', label: 'Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
     { key: 'reports', label: 'Reports', icon: FileText },
-    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orders.length },
-    { key: 'products', label: 'Products', icon: Package, count: products.length },
+    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
+    { key: 'products', label: 'Products', icon: Package, count: productTotal },
     { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
-    { key: 'users', label: 'Customers', icon: Users, count: users.length },
+    { key: 'users', label: 'Customers', icon: Users, count: userTotal },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
@@ -1345,6 +1473,7 @@ export function AdminDashboard({
               </tbody>
             </table>
           </div>
+          {renderPagination(orderPage, orderTotal, 10, setOrderPage)}
         </div>
       )
     })()}
@@ -1743,6 +1872,7 @@ export function AdminDashboard({
                 </tbody>
               </table>
             </div>
+            {renderPagination(productPage, productTotal, 10, setProductPage)}
           </div>
 
         </div>
@@ -1953,10 +2083,36 @@ export function AdminDashboard({
       {/* ---------------------------------------------------- */}
       {activeTab === 'users' && (
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-5 border-b border-border/40 pb-4">
             <div>
               <h3 className="font-extrabold text-text-primary text-base">Customer Accounts</h3>
               <p className="text-[10px] text-text-secondary mt-0.5">Access user profiles and check transaction frequencies.</p>
+            </div>
+            
+            {/* Search and Filters */}
+            <div className="flex gap-2 w-full md:w-auto flex-1 justify-end max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search customers by name, email, phone..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                />
+              </div>
+              <select
+                value={userRoleFilter}
+                onChange={(e) => setUserRoleFilter(e.target.value)}
+                className="px-3 py-1.5 text-[10px] rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">All Roles</option>
+                <option value="USER">Customers</option>
+                <option value="PICKER">Pickers</option>
+                <option value="CHEF">Chefs</option>
+                <option value="DELIVERY">Riders</option>
+                <option value="ADMIN">Admins</option>
+              </select>
             </div>
           </div>
 
@@ -2059,6 +2215,7 @@ export function AdminDashboard({
               </tbody>
             </table>
           </div>
+          {renderPagination(userPage, userTotal, 10, setUserPage)}
         </div>
       )}
 
@@ -2531,6 +2688,113 @@ export function AdminDashboard({
 
         </div>
       )}
+
+      {activeTab === 'liveops' && (() => {
+        const pickTimeOrders = orders.filter(o => o.confirmedAt && o.packedAt && o.shopName !== 'FastKirana Cafe Kitchen')
+        const prepTimeOrders = orders.filter(o => o.confirmedAt && o.packedAt && o.shopName === 'FastKirana Cafe Kitchen')
+        const deliveryTimeOrders = orders.filter(o => o.shippedAt && o.deliveredAt)
+
+        const avgPickTime = pickTimeOrders.length > 0 
+          ? Math.round(pickTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0) / pickTimeOrders.length / 60000)
+          : 0
+        const avgPrepTime = prepTimeOrders.length > 0 
+          ? Math.round(prepTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0) / prepTimeOrders.length / 60000)
+          : 0
+        const avgDeliveryTime = deliveryTimeOrders.length > 0 
+          ? Math.round(deliveryTimeOrders.reduce((sum, o) => sum + (new Date(o.deliveredAt).getTime() - new Date(o.shippedAt).getTime()), 0) / deliveryTimeOrders.length / 60000)
+          : 0
+
+        const pendingCount = orders.filter(o => o.status === 'PENDING').length
+        const confirmedCount = orders.filter(o => o.status === 'CONFIRMED').length
+        const packedCount = orders.filter(o => o.status === 'PACKED').length
+        const shippedCount = orders.filter(o => o.status === 'SHIPPED').length
+        const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length
+
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: 'Placed (New)', count: pendingCount, color: 'border-blue-500/30 text-blue-600 bg-blue-500/5' },
+                { label: 'In Picking/Prep', count: confirmedCount, color: 'border-amber-500/30 text-amber-600 bg-amber-500/5' },
+                { label: 'Packed & Ready', count: packedCount, color: 'border-emerald-500/30 text-emerald-600 bg-emerald-500/5' },
+                { label: 'Out for Delivery', count: shippedCount, color: 'border-purple-500/30 text-purple-600 bg-purple-500/5' },
+                { label: 'Delivered', count: deliveredCount, color: 'border-zinc-500/30 text-zinc-600 bg-zinc-500/5' },
+              ].map(stat => (
+                <div key={stat.label} className={`border rounded-2xl p-4 shadow-sm text-center ${stat.color} bg-card`}>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85 block">{stat.label}</span>
+                  <span className="text-xl md:text-2xl font-black mt-1 block">{stat.count}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-extrabold text-sm text-text-primary">Avg Picking Speed</h4>
+                  <ShoppingBag className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-text-primary">{avgPickTime || '—'}</span>
+                  <span className="text-xs font-bold text-text-secondary">minutes</span>
+                </div>
+                <p className="text-[10px] text-text-secondary font-medium">Avg duration between picker confirming order & packing it</p>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-extrabold text-sm text-text-primary">Avg Cafe Prep Speed</h4>
+                  <Utensils className="h-4 w-4 text-orange-500" />
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-text-primary">{avgPrepTime || '—'}</span>
+                  <span className="text-xs font-bold text-text-secondary">minutes</span>
+                </div>
+                <p className="text-[10px] text-text-secondary font-medium">Avg preparation time for cafe food items</p>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-extrabold text-sm text-text-primary">Avg Rider Dispatch Time</h4>
+                  <Clock className="h-4 w-4 text-rose-500" />
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-text-primary">{avgDeliveryTime || '—'}</span>
+                  <span className="text-xs font-bold text-text-secondary">minutes</span>
+                </div>
+                <p className="text-[10px] text-text-secondary font-medium">Avg transit duration from store pickup to customer doorstep</p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <h4 className="font-extrabold text-sm text-text-primary mb-3">SLA Alert Stream</h4>
+              {delayedOrders.length === 0 ? (
+                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within the 10-minute SLA.</p>
+              ) : (
+                <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                  {delayedOrders.map(order => {
+                    const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
+                    const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
+                    const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
+                    return (
+                      <div key={order.id} className="flex justify-between items-center p-3 rounded-xl border border-rose-500/10 bg-rose-500/5 text-xs">
+                        <div>
+                          <p className="font-bold text-rose-600">Order #{order.id.slice(0, 8)}</p>
+                          <p className="text-[10px] text-text-secondary mt-0.5 font-medium">
+                            Status: <span className="font-bold uppercase">{order.status}</span> • Customer: {order.userName || order.userEmail}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 font-black text-rose-700 animate-pulse">
+                          {delayMin}m delay
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {activeTab === 'analytics' && (
         <div className="animate-fade-in">

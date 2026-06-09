@@ -101,6 +101,8 @@ model User {
   orders    Order[]
   reviews   Review[]
   deliveryOrders Order[]   @relation("DeliveryOrders")
+  pickerOrders   Order[]   @relation("PickerOrders")
+  chefOrders     Order[]   @relation("ChefOrders")
   pushSubscriptions PushSubscription[]
 
   @@map("users")
@@ -234,6 +236,11 @@ model Order {
   shopPhone         String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  confirmedAt       DateTime?
+  packedAt          DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  notes             String?
 
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
@@ -241,6 +248,10 @@ model Order {
   
   deliveryUserId String?
   deliveryUser   User?      @relation("DeliveryOrders", fields: [deliveryUserId], references: [id])
+  assignedPickerId String?
+  assignedPicker   User?      @relation("PickerOrders", fields: [assignedPickerId], references: [id])
+  assignedChefId   String?
+  assignedChef     User?      @relation("ChefOrders", fields: [assignedChefId], references: [id])
 
   @@index([userId])
   @@index([status])

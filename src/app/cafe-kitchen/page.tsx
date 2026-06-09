@@ -27,6 +27,8 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ProductImage } from '@/components/product/product-image'
+import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface OrderItem {
   id: string
@@ -90,6 +92,17 @@ function formatElapsed(createdAt: string | Date): string {
   return `${hrs}h ${mins % 60}m ago`
 }
 
+function getSlaClass(createdAt: string | Date, status: string): string {
+  if (status !== 'PENDING') return 'text-gray-400 font-semibold'
+  const created = new Date(createdAt)
+  const now = new Date()
+  const diffMs = now.getTime() - created.getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins >= 10) return 'text-rose-500 font-black animate-pulse'
+  if (mins >= 5) return 'text-amber-500 font-black animate-pulse'
+  return 'text-gray-400 font-semibold'
+}
+
 // Stagger animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -149,7 +162,7 @@ export default function CafeKitchenDashboard() {
     }
   }, [status, session, router])
 
-  const fetchOrders = async (silent = false) => {
+  const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
     
@@ -178,13 +191,55 @@ export default function CafeKitchenDashboard() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [activeOrder])
+
+  // Connect to SSE for real-time order notifications
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    
+    let eventSource: EventSource | null = null
+    
+    const connectSSE = () => {
+      eventSource = new EventSource('/api/sse/orders')
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order' || data.type === 'status-change') {
+            // Instant refresh of orders list
+            fetchOrders(true)
+            
+            // Urgent sound if new cafe order
+            if (data.type === 'new-order' && data.shopName === 'FastKirana Cafe Kitchen') {
+              playNotificationChime()
+              triggerHaptic()
+            }
+          }
+        } catch (err) {
+          console.error('SSE parse error:', err)
+        }
+      }
+      
+      eventSource.onerror = (err) => {
+        eventSource?.close()
+        setTimeout(connectSSE, 5000)
+      }
+    }
+    
+    connectSSE()
+    
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [status, fetchOrders])
 
   useEffect(() => {
     if (status === 'authenticated') {
       fetchOrders()
     }
-  }, [status])
+  }, [status, fetchOrders])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -937,7 +992,7 @@ export default function CafeKitchenDashboard() {
                         }`} />
                         {order.status === 'CONFIRMED' ? 'Preparing' : 'New'}
                       </span>
-                      <span className="text-[9px] text-text-muted font-semibold flex items-center gap-1">
+                      <span className={`text-[9px] flex items-center gap-1 ${getSlaClass(order.createdAt, order.status)}`}>
                         <Clock className="h-2.5 w-2.5" />
                         {formatElapsed(order.createdAt)}
                       </span>

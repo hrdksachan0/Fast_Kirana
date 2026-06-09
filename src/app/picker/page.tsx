@@ -122,10 +122,21 @@ function timeAgo(date: string | Date): string {
   const diffSec = Math.floor(diffMs / 1000)
   if (diffSec < 60) return `${diffSec}s ago`
   const diffMin = Math.floor(diffSec / 60)
-  if (diffMin < 60) return `${diffMin} min ago`
+  if (diffMin < 60) return `${diffMin}m ago`
   const diffHr = Math.floor(diffMin / 60)
   if (diffHr < 24) return `${diffHr}h ago`
   return `${Math.floor(diffHr / 24)}d ago`
+}
+
+function getSlaClass(date: string | Date, status: string): string {
+  if (status !== 'PENDING') return 'text-gray-400 font-semibold'
+  const now = new Date()
+  const then = new Date(date)
+  const diffMs = now.getTime() - then.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin >= 10) return 'text-rose-500 font-black animate-pulse'
+  if (diffMin >= 5) return 'text-amber-500 font-black animate-pulse'
+  return 'text-gray-400 font-semibold'
 }
 
 // --- Circular progress component ---
@@ -251,7 +262,7 @@ export default function PickerDashboard() {
     }
   }, [status, session, router])
 
-  const fetchOrders = async (silent = false) => {
+  const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
     
@@ -281,13 +292,55 @@ export default function PickerDashboard() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [activeOrder])
+
+  // Connect to SSE for real-time order notifications
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    
+    let eventSource: EventSource | null = null
+    
+    const connectSSE = () => {
+      eventSource = new EventSource('/api/sse/orders')
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order' || data.type === 'status-change') {
+            // Instant refresh of orders list
+            fetchOrders(true)
+            
+            // Urgent sound if new grocery order
+            if (data.type === 'new-order' && (data.shopName === null || data.shopName !== 'FastKirana Cafe Kitchen')) {
+              playNotificationChime()
+              triggerHaptic()
+            }
+          }
+        } catch (err) {
+          console.error('SSE parse error:', err)
+        }
+      }
+      
+      eventSource.onerror = (err) => {
+        eventSource?.close()
+        setTimeout(connectSSE, 5000)
+      }
+    }
+    
+    connectSSE()
+    
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [status, fetchOrders])
 
   useEffect(() => {
     if (status === 'authenticated') {
       fetchOrders()
     }
-  }, [status])
+  }, [status, fetchOrders])
 
   // Automatically focus scan input on picking screen
   useEffect(() => {
@@ -1516,7 +1569,7 @@ export default function PickerDashboard() {
                           }`}>
                             {order.status === 'CONFIRMED' ? 'In Progress' : 'Ready'}
                           </span>
-                          <span className="text-[9px] font-semibold text-gray-400 flex items-center gap-0.5">
+                          <span className={`text-[9px] flex items-center gap-0.5 ${getSlaClass(order.createdAt, order.status)}`}>
                             <Clock className="h-2.5 w-2.5" />
                             {timeAgo(order.createdAt)}
                           </span>

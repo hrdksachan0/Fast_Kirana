@@ -16,13 +16,16 @@ export async function GET() {
              o."paymentMethod"::text as "paymentMethod",
              o."paymentStatus"::text as "paymentStatus",
              o."estimatedDelivery", o."createdAt",
-             o."shopName"
+             o."shopName", o."deliveryUserId", o.notes,
+             o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
       FROM orders o
       WHERE o."deliveryMethod" = 'DELIVERY'
         AND (
           (o.status = 'PACKED' AND o."deliveryUserId" IS NULL)
           OR
           (o.status = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
+          OR
+          (o.status = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND o."updatedAt" >= CURRENT_DATE)
         )
       ORDER BY o."createdAt" DESC
     `

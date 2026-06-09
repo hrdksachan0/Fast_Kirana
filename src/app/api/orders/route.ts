@@ -329,6 +329,23 @@ export async function POST(request: NextRequest) {
       return results
     })
 
+    // Emit real-time SSE event for each newly created order
+    try {
+      const { sseEmitter } = require('@/lib/sse-emitter')
+      for (const order of createdOrders) {
+        sseEmitter.emit('order', {
+          type: 'new-order',
+          orderId: order.id,
+          shopName: order.shopName,
+          status: order.status,
+          total: order.total,
+          createdAt: order.createdAt,
+        })
+      }
+    } catch (sseErr) {
+      console.error('Failed to emit SSE for new orders:', sseErr)
+    }
+
     const mainOrder = createdOrders.find((o) => o.shopName !== 'FastKirana Cafe Kitchen') || createdOrders[0]
     return NextResponse.json(mainOrder)
   } catch (error: any) {

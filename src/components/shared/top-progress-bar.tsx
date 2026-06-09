@@ -127,10 +127,10 @@ export function TopProgressBar() {
 
   return (
     <div 
-      className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-primary z-[51] transition-all duration-300 ease-out pointer-events-none"
+      className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-rose-500 to-orange-400 z-[9999] transition-all duration-300 ease-out pointer-events-none"
       style={{ 
         width: `${progress}%`,
-        boxShadow: '0 0 6px #e20a22, 0 0 2px #e20a22'
+        boxShadow: '0 0 8px #e20a22, 0 0 3px #f43f5e'
       }}
     />
   )

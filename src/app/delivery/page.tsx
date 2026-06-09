@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
@@ -82,6 +82,59 @@ const itemVariants = {
   exit: { opacity: 0, y: -12, scale: 0.96, transition: { duration: 0.22 } },
 } as const
 
+function optimizeRoute(ordersList: any[]) {
+  if (ordersList.length <= 1) return ordersList
+
+  const storeLat = 26.155
+  const storeLng = 80.175
+
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+
+  const unvisited = [...ordersList]
+  const optimized: any[] = []
+  let currentLat = storeLat
+  let currentLng = storeLng
+
+  while (unvisited.length > 0) {
+    let bestIndex = 0
+    let minDistance = Infinity
+
+    for (let i = 0; i < unvisited.length; i++) {
+      const addr = unvisited[i].address
+      const addrLat = addr?.lat ?? storeLat
+      const addrLng = addr?.lng ?? storeLng
+      const dist = getDistance(currentLat, currentLng, addrLat, addrLng)
+      
+      let score = dist
+      if (unvisited[i].paymentMethod === 'COD') score -= 0.5
+      const elapsedMins = (new Date().getTime() - new Date(unvisited[i].createdAt).getTime()) / (60 * 1000)
+      score -= elapsedMins * 0.05
+
+      if (score < minDistance) {
+        minDistance = score
+        bestIndex = i
+      }
+    }
+
+    const nextOrder = unvisited.splice(bestIndex, 1)[0]
+    optimized.push(nextOrder)
+    currentLat = nextOrder.address?.lat ?? currentLat
+    currentLng = nextOrder.address?.lng ?? currentLng
+  }
+
+  return optimized
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT — all business logic unchanged
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -102,6 +155,10 @@ export default function DeliveryDashboard() {
   // UI-only state
   const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(30)
 
+  // Offline support states
+  const [isOffline, setIsOffline] = useState(false)
+  const [offlineQueue, setOfflineQueue] = useState<any[]>([])
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/delivery')
@@ -112,27 +169,163 @@ export default function DeliveryDashboard() {
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
     
+    // Check local storage fallback first if offline
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      try {
+        const cached = localStorage.getItem('delivery_orders_cache')
+        if (cached) {
+          setOrders(JSON.parse(cached))
+          toast.info('Viewing cached offline data')
+        }
+      } catch (err) {
+        console.error('Failed to load cached delivery orders:', err)
+      } finally {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
+      return
+    }
+
     try {
       const res = await fetch('/api/delivery/orders')
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
+        
+        // Cache to local storage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('delivery_orders_cache', JSON.stringify(data))
+        }
       } else {
         toast.error('Failed to fetch delivery orders')
       }
     } catch (err) {
-      toast.error('Error fetching delivery queue')
+      // Fetch failed - try loading cached copy
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('delivery_orders_cache')
+        if (cached) {
+          setOrders(JSON.parse(cached))
+          toast.warning('Network error. Loaded cached offline data.')
+        }
+      }
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [])
 
+  // Monitor connection status
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    setIsOffline(!navigator.onLine)
+    
+    const goOnline = () => {
+      setIsOffline(false)
+      toast.success('You are back online! Syncing local delivery updates...')
+    }
+    const goOffline = () => {
+      setIsOffline(true)
+      toast.warning('You are offline. Deliveries will be saved locally.')
+    }
+    
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, [])
+
+  // Sync offline updates when back online
+  useEffect(() => {
+    if (isOffline) return
+
+    const syncOfflineUpdates = async () => {
+      const savedQueue = JSON.parse(localStorage.getItem('offline_delivery_updates') || '[]')
+      if (savedQueue.length === 0) return
+
+      toast.loading(`Syncing ${savedQueue.length} offline updates to server...`, { id: 'offline-sync' })
+      let successCount = 0
+
+      for (const item of savedQueue) {
+        try {
+          const res = await fetch(`/api/orders/${item.orderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: item.newStatus, ...item.extraData }),
+          })
+          if (res.ok) {
+            successCount++
+          }
+        } catch (err) {
+          console.error('Failed to sync offline order update:', item.orderId, err)
+        }
+      }
+
+      localStorage.setItem('offline_delivery_updates', '[]')
+      setOfflineQueue([])
+      
+      toast.dismiss('offline-sync')
+      if (successCount === savedQueue.length) {
+        toast.success('Successfully synced all offline delivery status updates!')
+      } else if (successCount > 0) {
+        toast.warning(`Synced ${successCount} of ${savedQueue.length} updates. Some failed.`)
+      }
+      fetchOrders(true)
+    }
+
+    syncOfflineUpdates()
+  }, [isOffline, fetchOrders])
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetchOrders()
     }
   }, [status, fetchOrders])
+
+  // Connect to SSE for real-time order notifications
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    
+    let eventSource: EventSource | null = null
+    
+    const connectSSE = () => {
+      eventSource = new EventSource('/api/sse/orders')
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order' || data.type === 'status-change') {
+            // Instant refresh of orders list
+            fetchOrders(true)
+            
+            // Audio sound if order became PACKED (ready for rider pickup)
+            if (data.type === 'status-change' && data.status === 'PACKED') {
+              playNotificationChime()
+              triggerHaptic('success')
+            }
+          }
+        } catch (err) {
+          console.error('SSE parse error:', err)
+        }
+      }
+      
+      eventSource.onerror = (err) => {
+        eventSource?.close()
+        setTimeout(connectSSE, 5000)
+      }
+    }
+    
+    connectSSE()
+    
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [status, fetchOrders])
+
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -168,6 +361,50 @@ export default function DeliveryDashboard() {
 
   const handleUpdateStatus = async (orderId: string, newStatus: string, extraData: any = {}) => {
     setUpdatingId(orderId)
+
+    // Handle offline status updates
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      try {
+        const savedQueue = JSON.parse(localStorage.getItem('offline_delivery_updates') || '[]')
+        savedQueue.push({ orderId, newStatus, extraData, timestamp: new Date().getTime() })
+        localStorage.setItem('offline_delivery_updates', JSON.stringify(savedQueue))
+        setOfflineQueue(savedQueue)
+
+        // Update local state immediately
+        const updatedOrders = orders.map((o) => {
+          if (o.id === orderId) {
+            const up: any = { ...o, status: newStatus }
+            if (newStatus === 'SHIPPED') {
+              up.deliveryUserId = session?.user?.id
+              up.shippedAt = new Date().toISOString()
+            } else if (newStatus === 'DELIVERED') {
+              up.deliveryPhoto = extraData.deliveryPhoto || null
+              up.deliveryLat = extraData.deliveryLat || null
+              up.deliveryLng = extraData.deliveryLng || null
+              up.deliveredAt = new Date().toISOString()
+            }
+            return up
+          }
+          return o
+        })
+        setOrders(updatedOrders)
+        localStorage.setItem('delivery_orders_cache', JSON.stringify(updatedOrders))
+
+        if (newStatus === 'DELIVERED') {
+          playSuccessChime()
+          triggerHaptic('success')
+        } else {
+          triggerHaptic('medium')
+        }
+        toast.success(`Saved locally! Status will sync when online.`)
+      } catch (err) {
+        toast.error('Failed to save offline status update')
+      } finally {
+        setUpdatingId(null)
+      }
+      return
+    }
+
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
@@ -183,7 +420,6 @@ export default function DeliveryDashboard() {
           triggerHaptic('medium')
         }
         toast.success(`Order updated successfully!`)
-        // Refresh local orders list
         fetchOrders(true)
       } else {
         toast.error('Failed to update order')
@@ -216,8 +452,9 @@ export default function DeliveryDashboard() {
     })
   }
 
-  // Group orders
-  const outForDeliveryOrders = orders.filter((o) => o.status === 'SHIPPED')
+  // Group orders with route optimization for out-for-delivery orders
+  const rawOutForDelivery = useMemo(() => orders.filter((o) => o.status === 'SHIPPED'), [orders])
+  const outForDeliveryOrders = useMemo(() => optimizeRoute(rawOutForDelivery), [rawOutForDelivery])
   const pendingOrders = orders.filter((o) => o.status === 'PACKED')
   const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED')
 
@@ -481,7 +718,14 @@ export default function DeliveryDashboard() {
               </motion.div>
             </div>
             <div>
-              <h1 className="text-sm font-black text-white tracking-tight">Rider Console</h1>
+              <h1 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+                Rider Console
+                {isOffline && (
+                  <span className="px-1.5 py-0.5 rounded bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider animate-pulse">
+                    Offline
+                  </span>
+                )}
+              </h1>
               <p className="text-[10px] text-white/70 mt-0.5">
                 {session?.user?.name || 'Delivery Boy'}
               </p>
@@ -499,6 +743,13 @@ export default function DeliveryDashboard() {
             </button>
           </div>
         </div>
+
+        {offlineQueue.length > 0 && (
+          <div className="mt-3 bg-amber-500/25 border border-amber-500/40 rounded-xl p-2.5 text-[9px] font-bold text-amber-100 flex items-center justify-between animate-fade-in">
+            <span>⚠️ {offlineQueue.length} unsynced offline updates</span>
+            <span className="animate-pulse">Waiting for network...</span>
+          </div>
+        )}
 
         {/* Auto-refresh progress bar */}
         <div className="mt-3 h-0.5 rounded-full bg-white/10 overflow-hidden">
@@ -667,7 +918,12 @@ export default function DeliveryDashboard() {
                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                         </span>
                         <div>
-                          <span className="text-[10px] font-bold text-text-muted block">Active Order</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-text-muted">Active Order</span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[8px] font-black uppercase tracking-wider border border-emerald-500/20">
+                              Stop #{idx + 1}
+                            </span>
+                          </div>
                           <span className="text-xs font-mono font-bold text-text-primary">{order.id}</span>
                         </div>
                       </div>

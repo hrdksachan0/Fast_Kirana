@@ -107,7 +107,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", status::text as status FROM orders WHERE id = ${id} LIMIT 1
+      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName" FROM orders WHERE id = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -119,6 +119,25 @@ export async function PATCH(
     // Riders and admins can edit order status. Customers can only view or cancel.
     if (existingOrder.userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'DELIVERY' && session.user.role !== 'PICKER' && session.user.role !== 'CHEF') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Claim checks / locking mechanisms
+    if (status === 'CONFIRMED') {
+      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen') {
+        if (existingOrder.assignedChefId && existingOrder.assignedChefId !== session.user.id) {
+          return NextResponse.json({ error: 'Order is already claimed by another chef' }, { status: 409 })
+        }
+      } else {
+        if (existingOrder.assignedPickerId && existingOrder.assignedPickerId !== session.user.id) {
+          return NextResponse.json({ error: 'Order is already claimed by another picker' }, { status: 409 })
+        }
+      }
+    }
+
+    if (status === 'SHIPPED') {
+      if (existingOrder.deliveryUserId && existingOrder.deliveryUserId !== session.user.id) {
+        return NextResponse.json({ error: 'Order is already claimed by another delivery rider' }, { status: 409 })
+      }
     }
 
     // Deduct stock if order is being PACKED (picked) and was not PACKED previously
@@ -193,6 +212,7 @@ export async function PATCH(
             "deliveryPhoto" = ${finalDeliveryPhoto}, 
             "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
             "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
+            "deliveredAt" = NOW(),
             "updatedAt" = NOW() 
         WHERE id = ${id}
       `
@@ -201,9 +221,38 @@ export async function PATCH(
         UPDATE orders 
         SET status = ${status}::"OrderStatus", 
             "deliveryUserId" = ${session.user.id},
+            "shippedAt" = NOW(),
             "updatedAt" = NOW() 
         WHERE id = ${id}
       `
+    } else if (status === 'PACKED') {
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET status = ${status}::"OrderStatus", 
+            "packedAt" = NOW(),
+            "updatedAt" = NOW() 
+        WHERE id = ${id}
+      `
+    } else if (status === 'CONFIRMED') {
+      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen') {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "assignedChefId" = ${session.user.id},
+              "confirmedAt" = NOW(),
+              "updatedAt" = NOW() 
+          WHERE id = ${id}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "assignedPickerId" = ${session.user.id},
+              "confirmedAt" = NOW(),
+              "updatedAt" = NOW() 
+          WHERE id = ${id}
+        `
+      }
     } else {
       await prisma.$executeRaw`
         UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE id = ${id}
@@ -234,9 +283,24 @@ export async function PATCH(
 
     // Return updated order
     const updated: any[] = await prisma.$queryRaw`
-      SELECT id, status::text as status, total, "createdAt", "updatedAt", "deliveryPhoto", "deliveryLat", "deliveryLng"
+      SELECT id, status::text as status, total, "createdAt", "updatedAt", "deliveryPhoto", "deliveryLat", "deliveryLng",
+             "assignedPickerId", "assignedChefId", "deliveryUserId",
+             "confirmedAt", "packedAt", "shippedAt", "deliveredAt"
       FROM orders WHERE id = ${id} LIMIT 1
     `
+
+    // Emit real-time SSE event for the updated order status
+    try {
+      const { sseEmitter } = require('@/lib/sse-emitter')
+      sseEmitter.emit('order', {
+        type: 'status-change',
+        orderId: id,
+        status: updated[0].status,
+        order: updated[0],
+      })
+    } catch (sseErr) {
+      console.error('Failed to emit SSE order update:', sseErr)
+    }
 
     return NextResponse.json(updated[0])
   } catch (error) {

@@ -30,7 +30,8 @@ export async function GET(request: Request) {
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-               o."shopName"
+               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
           AND o."shopName" = 'FastKirana Cafe Kitchen'
@@ -44,7 +45,8 @@ export async function GET(request: Request) {
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-               o."shopName"
+               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
           AND (o."shopName" IS NULL OR o."shopName" != 'FastKirana Cafe Kitchen')
@@ -53,10 +55,16 @@ export async function GET(request: Request) {
     }
 
     const orderIds = orders.map(o => o.id)
-    const userIds = [...new Set(orders.map(o => o.userId))]
+    const pickerIds = orders.map(o => o.assignedPickerId).filter(Boolean)
+    const chefIds = orders.map(o => o.assignedChefId).filter(Boolean)
+    const userIds = [...new Set([...orders.map(o => o.userId), ...pickerIds, ...chefIds])]
     const addressIds = [...new Set(orders.map(o => o.addressId))]
 
-    const [allItems, allUsers, allAddresses] = await Promise.all([
+    // Batch all potential companions to avoid N+1 query
+    const minTime = orders.length > 0 ? new Date(Math.min(...orders.map(o => new Date(o.createdAt).getTime())) - 5000) : null
+    const maxTime = orders.length > 0 ? new Date(Math.max(...orders.map(o => new Date(o.createdAt).getTime())) + 5000) : null
+
+    const [allItems, allUsers, allAddresses, allPotentialCompanions] = await Promise.all([
       orderIds.length > 0
         ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
         : [],
@@ -68,57 +76,68 @@ export async function GET(request: Request) {
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds } } })
         : [],
-    ])
-
-    const result = await Promise.all(
-      orders.map(async (o) => {
-        const orderItems = allItems.filter(item => item.orderId === o.id)
-        const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', phone: null }
-        const address = allAddresses.find(a => a.id === o.addressId)
-
-        // Find companion order (same user, different order id, same time window)
-        const fiveSecondsAgo = new Date(new Date(o.createdAt).getTime() - 5000)
-        const fiveSecondsAfter = new Date(new Date(o.createdAt).getTime() + 5000)
-
-        const companion = await prisma.order.findFirst({
-          where: {
-            userId: o.userId,
-            id: { not: o.id },
-            createdAt: {
-              gte: fiveSecondsAgo,
-              lte: fiveSecondsAfter,
-            },
-          },
-          select: {
-            id: true,
-            status: true,
-            shopName: true,
-            items: {
-              select: {
-                id: true,
-                name: true,
-                quantity: true,
+      (orders.length > 0 && minTime && maxTime)
+        ? prisma.order.findMany({
+            where: {
+              userId: { in: userIds },
+              createdAt: {
+                gte: minTime,
+                lte: maxTime,
               },
             },
-          },
-        })
+            select: {
+              id: true,
+              userId: true,
+              status: true,
+              shopName: true,
+              createdAt: true,
+              items: {
+                select: {
+                  id: true,
+                  name: true,
+                  quantity: true,
+                },
+              },
+            },
+          })
+        : [],
+    ])
 
-        return {
-          ...o,
-          items: orderItems,
-          user,
-          address,
-          companionOrder: companion
-            ? {
-                id: companion.id,
-                status: companion.status,
-                shopName: companion.shopName,
-                items: companion.items,
-              }
-            : null,
-        }
-      })
-    )
+    const result = orders.map((o) => {
+      const orderItems = allItems.filter(item => item.orderId === o.id)
+      const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', phone: null }
+      const assignedPicker = o.assignedPickerId ? allUsers.find(u => u.id === o.assignedPickerId) : null
+      const assignedChef = o.assignedChefId ? allUsers.find(u => u.id === o.assignedChefId) : null
+      const address = allAddresses.find(a => a.id === o.addressId)
+
+      // Find companion order from pre-fetched list
+      const fiveSecondsAgo = new Date(new Date(o.createdAt).getTime() - 5000).getTime()
+      const fiveSecondsAfter = new Date(new Date(o.createdAt).getTime() + 5000).getTime()
+
+      const companion = allPotentialCompanions.find(c => 
+        c.userId === o.userId &&
+        c.id !== o.id &&
+        new Date(c.createdAt).getTime() >= fiveSecondsAgo &&
+        new Date(c.createdAt).getTime() <= fiveSecondsAfter
+      )
+
+      return {
+        ...o,
+        items: orderItems,
+        user,
+        assignedPicker,
+        assignedChef,
+        address,
+        companionOrder: companion
+          ? {
+              id: companion.id,
+              status: companion.status,
+              shopName: companion.shopName,
+              items: companion.items,
+            }
+          : null,
+      }
+    })
 
     return NextResponse.json(result)
   } catch (error: any) {
