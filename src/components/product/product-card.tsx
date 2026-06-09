@@ -80,7 +80,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const savings = product.mrp - product.price
 
   return (
-    <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] hover:border-primary/25 hover:-translate-y-1.5 hover:scale-[1.01]">
+    <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] hover:border-primary/25 md:hover:-translate-y-1.5 md:hover:scale-[1.01] active:scale-[0.98] md:active:scale-[1.01]">
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
@@ -120,7 +120,7 @@ export function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             categorySlug={categorySlug}
             isBestseller={product.tags?.includes('popular')}
-            className="h-full w-full object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain p-1 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
           />
 
           {/* Bestseller Tag */}

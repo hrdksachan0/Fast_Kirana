@@ -178,9 +178,23 @@ export function ProductImage({
         ref={imgRef}
         src={currentSrc!}
         alt={alt}
-        className={`${className} dark-blend-image`}
+        className={className}
         onError={handleError}
       />
+    )
+  }
+
+  // Handle Emoji strings directly
+  if (currentSrc && currentSrc.length <= 5 && !isValidUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-transparent p-4">
+        <span className="text-4xl sm:text-5xl lg:text-6xl filter drop-shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 select-none">{currentSrc}</span>
+        {!isBestseller && (
+          <span className="text-[9px] font-bold text-text-secondary bg-muted px-2 py-0.5 rounded-full mt-2">
+            FastKirana
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -189,7 +203,7 @@ export function ProductImage({
 
   return (
     <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-transparent p-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/5 text-primary shadow-inner">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/5 text-primary shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 group-active:scale-95">
         <IconComp className="h-6 w-6 stroke-[1.5]" />
       </div>
       {!isBestseller && (
