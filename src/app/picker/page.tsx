@@ -223,18 +223,32 @@ export default function PickerDashboard() {
 
   const prevOrdersCountRef = useRef<number | null>(null)
 
-  // Audio alert when new orders arrive in the picker queue
+  // Audio alert and repeating chime when pending orders are in the queue
   useEffect(() => {
     if (status !== 'authenticated') return
-    if (prevOrdersCountRef.current !== null && orders.length > prevOrdersCountRef.current) {
-      playNotificationChime()
-      triggerHaptic('success')
-      toast.info('New order arrived in queue!', {
-        id: 'new-order-alert',
-        icon: '🔔',
-      })
-    }
-    prevOrdersCountRef.current = orders.length
+
+    const pendingOrders = orders.filter(o => o.status === 'PENDING')
+    if (pendingOrders.length === 0) return
+
+    // Play chime immediately on new pending orders
+    playNotificationChime()
+    triggerHaptic('success')
+    toast.info('New pending order(s) in queue!', {
+      id: 'new-order-alert',
+      icon: '🛎️',
+    })
+
+    // Repeat alarm chime every 5 seconds until they are accepted (status becomes CONFIRMED)
+    const intervalId = setInterval(() => {
+      const currentPending = orders.filter(o => o.status === 'PENDING')
+      if (currentPending.length > 0) {
+        playNotificationChime()
+      } else {
+        clearInterval(intervalId)
+      }
+    }, 5000)
+
+    return () => clearInterval(intervalId)
   }, [orders, status])
 
   // Auto-refresh every 30 seconds with progress indicator

@@ -249,6 +249,34 @@ export default function CafeKitchenDashboard() {
     return () => clearInterval(interval)
   }, [status, activeOrder])
 
+  // Audio alert and repeating chime when pending orders are in the queue
+  useEffect(() => {
+    if (status !== 'authenticated') return
+
+    const pendingOrders = orders.filter(o => o.status === 'PENDING')
+    if (pendingOrders.length === 0) return
+
+    // Play chime immediately on new pending orders
+    playNotificationChime()
+    triggerHaptic('success')
+    toast.info('New pending order(s) in queue!', {
+      id: 'new-order-alert',
+      icon: '🛎️',
+    })
+
+    // Repeat alarm chime every 5 seconds until they are accepted (status becomes CONFIRMED)
+    const intervalId = setInterval(() => {
+      const currentPending = orders.filter(o => o.status === 'PENDING')
+      if (currentPending.length > 0) {
+        playNotificationChime()
+      } else {
+        clearInterval(intervalId)
+      }
+    }, 5000)
+
+    return () => clearInterval(intervalId)
+  }, [orders, status])
+
   useEffect(() => {
     if (activeOrder && scanInputRef.current) {
       scanInputRef.current.focus()

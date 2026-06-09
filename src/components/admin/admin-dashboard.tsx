@@ -179,9 +179,48 @@ export function AdminDashboard({
     }
   }
 
-  // Live polling for admin orders (every 30 seconds)
+  // Web Audio API new order chime synthesizer
+  const playNewOrderChime = () => {
+    if (isChimeMuted) return
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioContextClass) return
+      const ctx = new AudioContextClass()
+      const now = ctx.currentTime
+
+      // Ding (High note)
+      const osc1 = ctx.createOscillator()
+      const gain1 = ctx.createGain()
+      osc1.type = 'triangle'
+      osc1.frequency.setValueAtTime(880, now) // A5
+      gain1.gain.setValueAtTime(0, now)
+      gain1.gain.linearRampToValueAtTime(0.15, now + 0.05)
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
+      osc1.connect(gain1)
+      gain1.connect(ctx.destination)
+      osc1.start(now)
+      osc1.stop(now + 0.4)
+
+      // Dong (Slightly lower note)
+      const osc2 = ctx.createOscillator()
+      const gain2 = ctx.createGain()
+      osc2.type = 'triangle'
+      osc2.frequency.setValueAtTime(659.25, now + 0.15) // E5
+      gain2.gain.setValueAtTime(0, now)
+      gain2.gain.setValueAtTime(0.15, now + 0.15)
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6)
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+      osc2.start(now + 0.15)
+      osc2.stop(now + 0.6)
+    } catch (err) {
+      console.warn('AudioContext failed to play new order chime:', err)
+    }
+  }
+
+  // Real-time EventSource listener for new orders and live updates
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchOrdersList = async () => {
       try {
         const res = await fetch('/api/orders?all=true')
         if (res.ok) {
@@ -193,9 +232,37 @@ export function AdminDashboard({
       }
     }
 
-    const interval = setInterval(fetchOrders, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    const sse = new EventSource('/api/sse/orders')
+
+    sse.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'new-order') {
+          console.log('SSE: New order received:', data.orderId)
+          toast.success(`🛎️ New Order Received: #${data.orderId.slice(0, 8)}`)
+          playNewOrderChime()
+          fetchOrdersList() // Refresh orders list instantly
+        } else if (data.type === 'status-change') {
+          console.log('SSE: Order status changed:', data.orderId, data.status)
+          fetchOrdersList() // Refresh list on any status change
+        }
+      } catch (err) {
+        console.error('Failed to parse SSE message:', err)
+      }
+    }
+
+    sse.onerror = (err) => {
+      console.error('SSE connection error. Retrying...', err)
+    }
+
+    // Fallback polling every 30 seconds
+    const interval = setInterval(fetchOrdersList, 30000)
+
+    return () => {
+      sse.close()
+      clearInterval(interval)
+    }
+  }, [isChimeMuted])
 
   // Warning chime manager
   useEffect(() => {
