@@ -273,28 +273,36 @@ export function Navbar() {
       </nav>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
           <div
-            className="absolute left-0 top-0 w-72 h-full bg-white shadow-xl p-4 space-y-2"
+            className="absolute left-0 top-0 w-72 h-full bg-white dark:bg-zinc-950 border-r border-zinc-100 dark:border-zinc-900/50 shadow-xl p-4 space-y-2"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => { setLocationPickerOpen(true); setIsMobileMenuOpen(false) }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 hover:bg-zinc-100 transition-colors"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors cursor-pointer"
             >
               <MapPin size={18} className="text-primary" />
               <div className="text-left">
-                <p className="text-xs text-zinc-500">Deliver to</p>
-                <p className="text-sm font-medium">{selectedLocation}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Deliver to</p>
+                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{selectedLocation}</p>
               </div>
             </button>
-            <Link href="/account" className="flex w-full items-center gap-3 rounded-xl px-3 py-3 hover:bg-zinc-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-              <User size={18} className="text-zinc-600" />
-              <span className="text-sm font-medium">My Account</span>
+            <Link 
+              href="/account" 
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors" 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <User size={18} className="text-zinc-500 dark:text-zinc-400" />
+              <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Account</span>
             </Link>
-            <Link href="/account/orders" className="flex w-full items-center gap-3 rounded-xl px-3 py-3 hover:bg-zinc-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-              <ShoppingBag size={18} className="text-zinc-600" />
-              <span className="text-sm font-medium">My Orders</span>
+            <Link 
+              href="/account/orders" 
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors" 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <ShoppingBag size={18} className="text-zinc-500 dark:text-zinc-400" />
+              <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Orders</span>
             </Link>
           </div>
         </div>

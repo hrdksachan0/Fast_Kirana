@@ -92,7 +92,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 
           <div className="flex items-center gap-2.5 md:gap-5 pt-0">
             {/* Shop Now pill button */}
-            <span className="inline-flex items-center gap-1 bg-[#e20a22] hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+            <span className="inline-flex items-center gap-1 bg-[#e20a22] md:hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
               Shop Now <span className="font-sans">→</span>
             </span>
 
@@ -169,7 +169,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         </div>
       ) : (
         /* Interactive Premium Visual Badge */
-        <div className="relative z-10 flex items-center justify-center h-14 w-14 sm:h-20 sm:w-20 md:h-36 md:w-36 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-500 mr-1 md:mr-6 flex-shrink-0">
+        <div className="relative z-10 flex items-center justify-center h-14 w-14 sm:h-20 sm:w-20 md:h-36 md:w-36 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden md:group-hover:scale-105 transition-transform duration-500 mr-1 md:mr-6 flex-shrink-0">
           {/* Glow effect */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
           

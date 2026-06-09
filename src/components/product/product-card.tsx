@@ -80,7 +80,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const savings = product.mrp - product.price
 
   return (
-    <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] hover:border-primary/25 md:hover:-translate-y-1.5 md:hover:scale-[1.01] active:scale-[0.98] md:active:scale-[1.01]">
+    <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 md:hover:-translate-y-1.5 md:hover:scale-[1.01] active:scale-[0.98] md:active:scale-[1.01]">
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
@@ -134,7 +134,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Product Info */}
         <div className="flex flex-col flex-grow">
           {/* Name */}
-          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px] mb-0.5">
+          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px] mb-0.5">
             {product.name}
           </h3>
           {/* Unit */}
@@ -188,7 +188,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Button
                   onClick={handleAdd}
                   disabled={product.stock <= 0 || isStoreClosed}
-                  className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black hover:bg-[#2e7d32] hover:text-white rounded-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black md:hover:bg-[#2e7d32] md:hover:text-white rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {product.stock <= 0 ? (
                     'Out'

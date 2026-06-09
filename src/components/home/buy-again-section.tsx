@@ -175,9 +175,9 @@ export function BuyAgainSection() {
               key={item.id}
               className="w-[120px] flex-shrink-0 snap-start group"
             >
-              <div className="flex flex-col items-center bg-card rounded-xl border border-border/60 p-3 h-full shadow-sm hover:shadow-card-hover hover:border-primary/20 transition-all duration-300">
+              <div className="flex flex-col items-center bg-card rounded-xl border border-border/60 p-3 h-full shadow-sm md:hover:shadow-card-hover md:hover:border-primary/20 transition-all duration-300">
                 {/* Icon circle */}
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/5 text-primary mb-2 group-hover:scale-110 transition-transform duration-300">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/5 text-primary mb-2 md:group-hover:scale-110 transition-transform duration-300">
                   {(() => {
                     const IconComponent = iconMap[item.categorySlug] || ShoppingBag
                     return <IconComponent className="h-5 w-5 text-primary" />
@@ -211,7 +211,7 @@ export function BuyAgainSection() {
                 {/* Quick ADD button */}
                 <button
                   onClick={() => handleAddToCart(item)}
-                  className="w-full flex items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg border border-accent bg-accent/5 text-accent text-xs font-bold hover:bg-accent hover:text-white active:scale-95 transition-all duration-200"
+                  className="w-full flex items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg border border-accent bg-accent/5 text-accent text-xs font-bold md:hover:bg-accent md:hover:text-white active:scale-95 transition-all duration-200"
                 >
                   ADD
                   <Plus className="h-3 w-3" />

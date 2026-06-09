@@ -451,7 +451,6 @@ export default function CheckoutPage() {
         },
         handler: {
           notifyMerchant: (eventName: string, response: any) => {
-            console.log("Paytm event:", eventName, response)
             if (eventName === 'MERCHANT_CLOSE') {
               setIsPlacingOrder(false)
               toast.info('Payment window closed. You can retry from your orders page or select COD.')
@@ -1017,7 +1016,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Right Column: Mini Bill Summary (Persistent) */}
-        <div className="bg-white/80 backdrop-blur-md border border-white/60 p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-fit space-y-5">
+        <div className="bg-white/80 dark:bg-zinc-900/85 backdrop-blur-md border border-white/60 dark:border-zinc-800/60 p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-fit space-y-5">
 
           
           <h3 className="text-sm font-black text-text-primary border-b border-border/40 pb-2 flex items-center gap-1.5">
@@ -1063,7 +1062,7 @@ export default function CheckoutPage() {
           {/* Cafe Bill Section */}
           {cafeCartItems.length > 0 && (
             <div className="space-y-2.5 pt-1">
-              <div className="flex items-center justify-between text-xs font-black text-rose-600 bg-rose-50 px-2 py-1 rounded">
+              <div className="flex items-center justify-between text-xs font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 px-2 py-1 rounded">
                 <span>☕ Cafe Bill</span>
                 <span>{cafeCartItems.length} items</span>
               </div>

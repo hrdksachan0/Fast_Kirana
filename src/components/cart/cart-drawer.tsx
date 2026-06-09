@@ -230,11 +230,11 @@ export function CartDrawer() {
                 {cafeItems.length > 0 && (
                   <>
                     {cafeAdjustedSubtotal < 200 ? (
-                      <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3.5">
-                        <p className="text-xs text-rose-700 font-extrabold">
+                      <div className="rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-3.5">
+                        <p className="text-xs text-rose-700 dark:text-rose-300 font-extrabold">
                           ☕ Add {formatPrice(200 - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Else ₹25 applies)
                         </p>
-                        <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 overflow-hidden">
+                        <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 dark:bg-rose-900/40 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-rose-500 transition-all duration-500"
                             style={{ width: `${Math.min((cafeAdjustedSubtotal / 200) * 100, 100)}%` }}
@@ -242,8 +242,8 @@ export function CartDrawer() {
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-2xl bg-rose-100/50 border border-rose-200 p-2.5 text-center">
-                        <p className="text-xs text-rose-700 font-black">
+                      <div className="rounded-2xl bg-rose-100/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/30 p-2.5 text-center">
+                        <p className="text-xs text-rose-700 dark:text-rose-300 font-black">
                           🎉 FREE Cafe delivery unlocked!
                         </p>
                       </div>
