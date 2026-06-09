@@ -1,7 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { ProductCard } from '@/components/product/product-card'
-import Link from 'next/link'
-import { ChevronRight, Flame } from 'lucide-react'
+import { CafeStorefront } from '@/components/cafe/cafe-storefront'
 
 // Revalidate page every 30 seconds to keep quantities synced
 export const revalidate = 30
@@ -84,6 +82,218 @@ export default async function CafePage() {
       stock: 60,
       tags: ['cafe', 'hot-bite', 'breakfast', 'snacks'],
     },
+    // Frankie Rolls (from user's screenshot)
+    {
+      name: 'Veg Frankie Roll',
+      slug: 'veg-frankie-roll',
+      description: 'Golden-wrapped crispy roll with vegetable patty, fresh onions, spices and green mint chutney.',
+      imageUrl: '🌯',
+      mrp: 66,
+      price: 59,
+      discount: 11,
+      unit: '1 Roll',
+      stock: 100,
+      tags: ['cafe', 'frankie-rolls', 'veg', 'popular'],
+    },
+    {
+      name: 'Paneer Frankie Roll',
+      slug: 'paneer-frankie-roll',
+      description: 'Scrumptious roll stuffed with spiced paneer cubes, crisp veggies, onions and green chutney.',
+      imageUrl: '🌯',
+      mrp: 76,
+      price: 69,
+      discount: 9,
+      unit: '1 Roll',
+      stock: 100,
+      tags: ['cafe', 'frankie-rolls', 'paneer'],
+    },
+    {
+      name: 'Cheese Frankie Roll',
+      slug: 'cheese-frankie-roll',
+      description: 'Delicious hot roll loaded with melted cheese, vegetable patty, and tangy sauces.',
+      imageUrl: '🌯',
+      mrp: 86,
+      price: 79,
+      discount: 8,
+      unit: '1 Roll',
+      stock: 100,
+      tags: ['cafe', 'frankie-rolls', 'cheese'],
+    },
+    {
+      name: 'Paneer Cheese Frankie Roll',
+      slug: 'paneer-cheese-frankie-roll',
+      description: 'Perfect combination of soft paneer cubes and melted cheese, cooked with spices and wrapped in a fresh paratha.',
+      imageUrl: '🌯',
+      mrp: 92,
+      price: 92,
+      discount: 0,
+      unit: '1 Roll',
+      stock: 100,
+      tags: ['cafe', 'frankie-rolls', 'paneer-cheese'],
+    },
+    {
+      name: 'Paneer Kathi Roll',
+      slug: 'paneer-kathi-roll',
+      description: 'Classic Kolkata street-style kathi roll filled with marinated spiced paneer tandoori masala and crunchy onions.',
+      imageUrl: '🌯',
+      mrp: 96,
+      price: 89,
+      discount: 7,
+      unit: '1 Roll',
+      stock: 100,
+      tags: ['cafe', 'frankie-rolls', 'kathi-roll'],
+    },
+    // Cold Coffee
+    {
+      name: 'Classic Cold Coffee',
+      slug: 'classic-cold-coffee',
+      description: 'Creamy and sweet chilled milk blended with rich coffee and ice cream.',
+      imageUrl: '🧋',
+      mrp: 89,
+      price: 79,
+      discount: 11,
+      unit: '1 cup (250 ml)',
+      stock: 80,
+      tags: ['cafe', 'cold-coffee', 'popular'],
+    },
+    {
+      name: 'Hazelnut Cold Coffee',
+      slug: 'hazelnut-cold-coffee',
+      description: 'Creamy cold coffee infused with rich aromatic hazelnut syrup.',
+      imageUrl: '🧋',
+      mrp: 99,
+      price: 89,
+      discount: 10,
+      unit: '1 cup (250 ml)',
+      stock: 80,
+      tags: ['cafe', 'cold-coffee'],
+    },
+    // Mocktails
+    {
+      name: 'Virgin Mojito',
+      slug: 'virgin-mojito',
+      description: 'Refreshing carbonated cooler made with fresh mint leaves, lime juice, and simple syrup.',
+      imageUrl: '🍹',
+      mrp: 79,
+      price: 69,
+      discount: 12,
+      unit: '1 glass (250 ml)',
+      stock: 85,
+      tags: ['cafe', 'mocktails', 'popular'],
+    },
+    {
+      name: 'Blue Lagoon Cooler',
+      slug: 'blue-lagoon-cooler',
+      description: 'Vibrant blue citrus cooler blended with lemonade and carbonated club soda.',
+      imageUrl: '🍹',
+      mrp: 89,
+      price: 79,
+      discount: 11,
+      unit: '1 glass (250 ml)',
+      stock: 85,
+      tags: ['cafe', 'mocktails'],
+    },
+    // Shakes
+    {
+      name: 'Chocolate Oreo Shake',
+      slug: 'chocolate-oreo-shake',
+      description: 'Thick creamy milkshake blended with vanilla ice cream, cocoa, and Oreo biscuit crumbles.',
+      imageUrl: '🥤',
+      mrp: 119,
+      price: 99,
+      discount: 16,
+      unit: '1 cup (300 ml)',
+      stock: 75,
+      tags: ['cafe', 'shakes', 'popular'],
+    },
+    {
+      name: 'Strawberry Shake',
+      slug: 'strawberry-shake',
+      description: 'Creamy thick shake blended with delicious sweet strawberries and fresh milk.',
+      imageUrl: '🥤',
+      mrp: 99,
+      price: 89,
+      discount: 10,
+      unit: '1 cup (300 ml)',
+      stock: 75,
+      tags: ['cafe', 'shakes'],
+    },
+    // Pasta
+    {
+      name: 'Penne Arrabbiata (Red Sauce Pasta)',
+      slug: 'penne-arrabbiata',
+      description: 'Freshly cooked penne pasta tossed in a spicy garlic, tomato, and red chilli pepper sauce.',
+      imageUrl: '🍝',
+      mrp: 149,
+      price: 129,
+      discount: 13,
+      unit: '1 plate',
+      stock: 60,
+      tags: ['cafe', 'italian-pasta', 'popular'],
+    },
+    {
+      name: 'White Sauce Alfredo Pasta',
+      slug: 'white-sauce-alfredo-pasta',
+      description: 'Rich penne pasta tossed in a creamy, buttery white cheese sauce with herbs.',
+      imageUrl: '🍝',
+      mrp: 159,
+      price: 139,
+      discount: 12,
+      unit: '1 plate',
+      stock: 60,
+      tags: ['cafe', 'italian-pasta'],
+    },
+    // Rice Dishes
+    {
+      name: 'Veg Fried Rice',
+      slug: 'veg-fried-rice',
+      description: 'Aromatic basmati rice stir-fried in a wok with fresh vegetables, garlic, and soy sauce.',
+      imageUrl: '🍚',
+      mrp: 129,
+      price: 109,
+      discount: 15,
+      unit: '1 plate',
+      stock: 70,
+      tags: ['cafe', 'rice-dishes'],
+    },
+    {
+      name: 'Paneer Biryani',
+      slug: 'paneer-biryani',
+      description: 'Slow-cooked aromatic basmati rice layered with spiced paneer cubes, caramelized onions, and saffron.',
+      imageUrl: '🍚',
+      mrp: 169,
+      price: 149,
+      discount: 11,
+      unit: '1 plate',
+      stock: 70,
+      tags: ['cafe', 'rice-dishes', 'popular'],
+    },
+    // Bombay Bites
+    {
+      name: 'Bombay Vada Pav (2 pcs)',
+      slug: 'bombay-vada-pav',
+      description: 'Classic Mumbai street food! Deep-fried potato dumpling placed inside a sliced pav bread with spicy chutneys.',
+      imageUrl: '🥪',
+      mrp: 59,
+      price: 49,
+      discount: 16,
+      unit: '1 plate (2 pavs)',
+      stock: 120,
+      tags: ['cafe', 'bombay-bites', 'popular'],
+    },
+    {
+      name: 'Bombay Masala Toast',
+      slug: 'bombay-masala-toast',
+      description: 'Grilled sandwich stuffed with spiced mashed potato filling, cucumber, onions, tomatoes, and spicy coriander chutney.',
+      imageUrl: '🥪',
+      mrp: 69,
+      price: 59,
+      discount: 14,
+      unit: '1 pc',
+      stock: 100,
+      tags: ['cafe', 'bombay-bites'],
+    },
+    // Chinese Cuisine
     {
       name: 'Veg Momos (6 pcs)',
       slug: 'veg-momos-6pcs',
@@ -93,12 +303,24 @@ export default async function CafePage() {
       price: 69,
       discount: 13,
       unit: '1 plate (6 pcs)',
-      stock: 60,
-      tags: ['cafe', 'hot-bite', 'snacks', 'popular'],
+      stock: 90,
+      tags: ['cafe', 'chinese', 'popular'],
+    },
+    {
+      name: 'Chilli Garlic Noodles',
+      slug: 'chilli-garlic-noodles',
+      description: 'Stir-fried noodles cooked with lots of fresh garlic, red chillies, and assorted crunchy vegetables.',
+      imageUrl: '🍜',
+      mrp: 139,
+      price: 119,
+      discount: 14,
+      unit: '1 plate',
+      stock: 80,
+      tags: ['cafe', 'chinese'],
     }
   ]
 
-  // 1. Fetch all products under Cafe category or tagged with 'cafe'
+  // 2. Fetch all products under Cafe category or tagged with 'cafe'
   let dbCafeProducts: any[] = []
   try {
     dbCafeProducts = await prisma.product.findMany({
@@ -115,256 +337,62 @@ export default async function CafePage() {
     console.warn('Database connection error in cafe page: failed to fetch cafe products')
   }
 
-  // 2. Self-healing seeding: Only executes if no cafe products are found in the database
-  if (dbCafeProducts.length === 0 && cafeCategory) {
-    console.info('Cafe products database empty, running dynamic self-healing seed...')
+  // 3. Self-healing seeding: Ensure all new categories and products exist in the database individually
+  if (cafeCategory) {
+    let seededNewProduct = false
     for (const item of hotCafeProducts) {
-      try {
-        const existing = await prisma.product.findUnique({
-          where: { slug: item.slug }
-        })
-        if (!existing) {
-          await prisma.product.create({
-            data: {
-              name: item.name,
-              slug: item.slug,
-              description: item.description,
-              imageUrl: item.imageUrl,
-              categoryId: cafeCategory.id,
-              mrp: item.mrp,
-              price: item.price,
-              discount: item.discount,
-              unit: item.unit,
-              stock: item.stock,
-              isAvailable: true,
-              tags: item.tags,
-            }
+      const exists = dbCafeProducts.some(p => p.slug === item.slug)
+      if (!exists) {
+        try {
+          const existing = await prisma.product.findUnique({
+            where: { slug: item.slug }
           })
+          if (!existing) {
+            console.info(`Seeding missing cafe product: ${item.name}`)
+            await prisma.product.create({
+              data: {
+                name: item.name,
+                slug: item.slug,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                categoryId: cafeCategory.id,
+                mrp: item.mrp,
+                price: item.price,
+                discount: item.discount,
+                unit: item.unit,
+                stock: item.stock,
+                isAvailable: true,
+                tags: item.tags,
+              }
+            })
+            seededNewProduct = true
+          }
+        } catch (err) {
+          console.warn(`Database connection error in cafe page: failed to dynamically seed cafe product ${item.slug}`, err)
         }
-      } catch (err) {
-        console.warn('Database connection error in cafe page: failed to dynamically seed cafe product', err)
       }
     }
 
-    // Re-fetch after seeding
-    try {
-      dbCafeProducts = await prisma.product.findMany({
-        where: {
-          OR: [
-            { categoryId: cafeCategory.id },
-            { tags: { has: 'cafe' } },
-          ],
-          isAvailable: true,
-        },
-        include: { category: true }
-      })
-    } catch (e) {
-      console.warn('Database connection error in cafe page: failed to fetch cafe products after seeding')
+    // Re-fetch after seeding if we seeded anything new
+    if (seededNewProduct) {
+      try {
+        dbCafeProducts = await prisma.product.findMany({
+          where: {
+            OR: [
+              { categoryId: cafeCategory.id },
+              { tags: { has: 'cafe' } },
+            ],
+            isAvailable: true,
+          },
+          include: { category: true }
+        })
+      } catch (e) {
+        console.warn('Database connection error in cafe page: failed to fetch cafe products after seeding')
+      }
     }
   }
 
-  // Group products into custom categories for layout
-  const hotBrews = dbCafeProducts.filter(p => p.tags?.includes('hot-beverage') || ['nescafe-classic', 'tata-tea-gold'].includes(p.slug))
-  const hotBites = dbCafeProducts.filter(p => p.tags?.includes('hot-bite') || ['maggi-noodles'].includes(p.slug))
-  const chinese = dbCafeProducts.filter(p => p.tags?.includes('chinese'))
-  const southIndian = dbCafeProducts.filter(p => p.tags?.includes('south-indian'))
-  const bakery = dbCafeProducts.filter(p => ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(p.slug) || p.category?.slug === 'bakery-biscuits')
-  const chilled = dbCafeProducts.filter(p => ['coca-cola', 'sprite', 'red-bull-energy'].includes(p.slug))
-
-  // Catch-all: products in cafe category/tags that don't appear in any group above
-  const groupedIds = new Set([...hotBrews, ...hotBites, ...chinese, ...southIndian, ...bakery, ...chilled].map(p => p.id))
-  const moreItems = dbCafeProducts.filter(p => !groupedIds.has(p.id))
-
-  // Safe mapping helper
-  const mapProduct = (p: any) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    description: p.description,
-    imageUrl: p.imageUrl,
-    categoryId: p.categoryId,
-    mrp: p.mrp,
-    price: p.price,
-    discount: p.discount,
-    unit: p.unit,
-    stock: p.stock,
-    isAvailable: p.isAvailable,
-    tags: p.tags,
-    category: p.category ? {
-      id: p.category.id,
-      name: p.category.name,
-      slug: p.category.slug,
-      imageUrl: p.category.imageUrl,
-      parentId: p.category.parentId,
-      sortOrder: p.category.sortOrder,
-    } : undefined
-  })
-
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-3.5 md:space-y-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
-        <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
-        <ChevronRight size={14} className="text-text-muted" />
-        <span className="font-bold text-rose-600">FastKirana Cafe ☕</span>
-      </nav>
-
-      {/* Hero Cafe Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2c1810] via-[#1a0c07] to-[#0f0502] p-6 md:p-10 text-white shadow-[0_8px_32px_rgba(35,21,16,0.25)] border border-[#48281d] dark:border-[#22100a]">
-        {/* Background Glowing Ambient Orb */}
-        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-amber-500/10 blur-[60px] pointer-events-none" />
-
-        <div className="relative z-10 max-w-[60%] sm:max-w-md md:max-w-lg space-y-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-black tracking-wider uppercase text-amber-300">
-            <Flame className="h-3 w-3 text-amber-400 fill-amber-400 animate-pulse-gentle" />
-            Freshly Prepared & Hot
-          </span>
-          <h1 className="text-2xl md:text-4.5xl font-black leading-tight tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent">
-            FastKirana Cafe
-          </h1>
-          <p className="text-[10px] sm:text-xs md:text-sm text-white/80 leading-relaxed font-semibold">
-            Steaming hot tea, fresh filter coffee, and delicious hot bites prepared fresh and delivered warm straight to your doorstep!
-          </p>
-          <div className="flex items-center gap-3 pt-1 text-[10px] md:text-xs font-bold text-white/90">
-            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">⚡ Fast Delivery</span>
-            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">🔥 Served Steaming Hot</span>
-          </div>
-        </div>
-        
-        {/* Right side: Premium Cafe Specials Food Image */}
-        <div className="absolute right-4 md:right-10 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
-          <img
-            src="/cafe_banner.png"
-            alt="Steaming Hot Tea & Café Specials"
-            className="object-contain max-h-[120px] md:max-h-[190px] w-auto h-auto drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-float"
-          />
-        </div>
-      </div>
-
-      {/* Section 1: Hot Brews */}
-      {hotBrews.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">☕</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Steaming Hot Brews</h2>
-              <p className="text-xs text-text-secondary">Chai, coffee, and fresh brewing mixes</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {hotBrews.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 2: Hot Bites */}
-      {hotBites.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥟</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Quick Bites & Snacks</h2>
-              <p className="text-xs text-text-secondary">Samosas, Momos, and warm treats</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {hotBites.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-      {/* Section 3: Chinese */}
-      {chinese.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥡</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chinese Specials</h2>
-              <p className="text-xs text-text-secondary">Momos, Noodles, Manchurian & more</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {chinese.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 4: South Indian */}
-      {southIndian.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍛</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">South Indian Favorites</h2>
-              <p className="text-xs text-text-secondary">Dosa, Idli, Vada, Uttapam & more</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {southIndian.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 5: Bakery & Desserts */}
-      {bakery.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥐</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Bakery & Sweet Cravings</h2>
-              <p className="text-xs text-text-secondary">Freshly baked croissants, muffins, and sweet nibbles</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {bakery.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 4: Chilled Sodas */}
-      {chilled.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🥤</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">Chilled Sips & Sodas</h2>
-              <p className="text-xs text-text-secondary">Carbonated soft drinks and cold energy boosts</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {chilled.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 5: More from Cafe (catch-all for new products) */}
-      {moreItems.length > 0 && (
-        <section className="space-y-2.5 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-xl">🍽️</span>
-            <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More from Cafe</h2>
-              <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {moreItems.map(p => (
-              <ProductCard key={p.id} product={mapProduct(p)} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
+    <CafeStorefront initialProducts={dbCafeProducts} />
   )
 }
