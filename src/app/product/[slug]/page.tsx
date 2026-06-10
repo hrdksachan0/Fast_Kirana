@@ -6,6 +6,7 @@ import { ProductScrollSection } from '@/components/product/product-scroll-sectio
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Star, Truck, ShieldCheck, Heart, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
+import { ProductStockBanner } from '@/components/product/product-stock-banner'
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   'fruits-vegetables': Salad,
@@ -208,11 +209,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {/* Low stock warning banner */}
-            {product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && product.stock > 0 && product.stock < 15 && (
-              <div className="flex items-center gap-2 border border-rose-500/20 bg-rose-500/5 p-3 rounded-xl text-xs font-black text-rose-500 animate-pulse-gentle">
-                ⚠️ Only {product.stock} units left in stock! Order soon.
-              </div>
-            )}
+            <ProductStockBanner
+              productId={product.id}
+              initialStock={product.stock}
+              categorySlug={product.category?.slug}
+              tags={product.tags}
+            />
 
             {/* Interactive Add to Cart button */}
             <div className="pt-2">

@@ -8,6 +8,8 @@ import { useUIStore } from '@/stores/ui-store'
 import { isCafeProduct } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { triggerHaptic } from '@/lib/haptic'
+import { useLiveStock } from '@/components/providers/live-stock-provider'
+import { useMemo } from 'react'
 
 interface ProductDetailActionsProps {
   product: Product
@@ -23,18 +25,29 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const isCafe = isCafeProduct(product)
   const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
 
-  const cartProduct = {
+  const liveState = useLiveStock(product.id)
+  const resolvedStock = liveState !== null ? liveState.stock : product.stock
+  const resolvedPrice = liveState !== null ? liveState.price : product.price
+  const resolvedMrp = liveState !== null ? liveState.mrp : product.mrp
+  
+  const resolvedDiscount = useMemo(() => {
+    if (liveState === null) return product.discount
+    if (resolvedMrp <= resolvedPrice) return 0
+    return Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
+  }, [liveState, resolvedMrp, resolvedPrice, product.discount])
+
+  const cartProduct = useMemo(() => ({
     id: product.id,
     name: product.name,
     slug: product.slug,
     imageUrl: product.imageUrl,
-    mrp: product.mrp,
-    price: product.price,
-    discount: product.discount,
+    mrp: resolvedMrp,
+    price: resolvedPrice,
+    discount: resolvedDiscount,
     unit: product.unit,
-    stock: product.stock,
+    stock: resolvedStock,
     category: product.category,
-  }
+  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
 
   const handleAdd = () => {
     addItem(cartProduct)
@@ -54,10 +67,10 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
         {quantity === 0 ? (
           <Button
             onClick={handleAdd}
-            disabled={product.stock <= 0 || isStoreClosed}
+            disabled={resolvedStock <= 0 || isStoreClosed}
             className="w-full sm:w-auto h-12 px-8 bg-accent text-white font-extrabold hover:bg-accent-dark rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {product.stock <= 0 ? (
+            {resolvedStock <= 0 ? (
               'Out of Stock'
             ) : isStoreClosed ? (
               isCafe ? 'Cafe Closed' : 'Mart Closed'
@@ -80,7 +93,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             <span className="text-base select-none">{quantity}</span>
             <button
               onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-              disabled={quantity >= product.stock || isStoreClosed}
+              disabled={quantity >= resolvedStock || isStoreClosed}
               className="flex-grow h-full flex items-center justify-center rounded-r-xl hover:bg-accent-dark active:scale-90 transition-colors disabled:opacity-50 cursor-pointer"
               aria-label="Increase quantity"
             >
@@ -90,7 +103,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
         )}
       </div>
 
-      {product.stock > 0 && !isStoreClosed && (
+      {resolvedStock > 0 && !isStoreClosed && (
         <Button
           onClick={handleExpressBuy}
           className="h-12 px-8 bg-[#e20a22] hover:bg-[#c8081c] text-white font-black rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 text-base cursor-pointer"

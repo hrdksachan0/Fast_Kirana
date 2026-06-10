@@ -14,27 +14,51 @@ export async function GET(request: Request) {
   const categoryId = searchParams.get('categoryId')
   const search = searchParams.get('search')
   const lowStock = searchParams.get('lowStock') === 'true'
+  const type = searchParams.get('type')
   
   const skip = (page - 1) * limit
 
   try {
     const where: any = {}
+    const andClauses: any[] = []
 
-    if (categoryId && categoryId !== 'ALL') {
-      where.categoryId = categoryId
+    if (categoryId && categoryId !== 'ALL' && categoryId !== 'undefined' && categoryId !== 'null') {
+      andClauses.push({ categoryId })
     }
 
     if (lowStock) {
-      where.stock = { lt: 15 }
+      andClauses.push({ stock: { lt: 15 } })
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { slug: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { tags: { has: search } },
-      ]
+      andClauses.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { slug: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { tags: { has: search } },
+        ]
+      })
+    }
+
+    if (type === 'cafe') {
+      andClauses.push({
+        OR: [
+          { category: { slug: 'cafe' } },
+          { tags: { has: 'cafe' } }
+        ]
+      })
+    } else if (type === 'grocery') {
+      andClauses.push({
+        category: { slug: { not: 'cafe' } }
+      })
+      andClauses.push({
+        NOT: { tags: { has: 'cafe' } }
+      })
+    }
+
+    if (andClauses.length > 0) {
+      where.AND = andClauses
     }
 
     const [productsRaw, total] = await Promise.all([

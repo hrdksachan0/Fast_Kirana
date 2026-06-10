@@ -515,7 +515,7 @@ export function AdminDashboard({
 
   useEffect(() => {
     setProductPage(1)
-  }, [selectedCategoryFilter, searchQuery])
+  }, [selectedCategoryFilter, searchQuery, selectedTypeFilter])
 
   useEffect(() => {
     setUserPage(1)
@@ -549,7 +549,7 @@ export function AdminDashboard({
     const fetchProducts = async () => {
       setIsLoadingProducts(true)
       try {
-        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}`)
+        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}&type=${selectedTypeFilter}`)
         if (res.ok && active) {
           const data = await res.json()
           setProducts(data.products)
@@ -563,7 +563,7 @@ export function AdminDashboard({
     }
     fetchProducts()
     return () => { active = false }
-  }, [productPage, selectedCategoryFilter, searchQuery])
+  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter])
 
   // Fetch paginated/filtered users
   useEffect(() => {
