@@ -21,6 +21,7 @@ export async function GET() {
           where: {
             stock: 0,
             isAvailable: true,
+            category: { slug: { not: 'cafe' } },
           },
           select: {
             id: true,
@@ -53,6 +54,7 @@ export async function GET() {
           WHERE stock > 0
             AND stock <= "minStock"
             AND "isAvailable" = true
+            AND "categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
         `,
 
         // 3. EXPIRING_SOON: expiryDate is not null AND expiryDate <= 7 days from now AND expiryDate > now
@@ -250,7 +252,11 @@ export async function POST() {
     const [outOfStockProducts, lowStockProducts, expiringSoonProducts, expiredProducts] =
       await Promise.all([
         prisma.product.findMany({
-          where: { stock: 0, isAvailable: true },
+          where: {
+            stock: 0,
+            isAvailable: true,
+            category: { slug: { not: 'cafe' } },
+          },
           select: { id: true, name: true, stock: true },
         }),
 
@@ -260,6 +266,7 @@ export async function POST() {
           WHERE stock > 0
             AND stock <= "minStock"
             AND "isAvailable" = true
+            AND "categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
         `,
 
         prisma.product.findMany({

@@ -846,10 +846,10 @@ export function AdminDashboard({
           mrp: parseFloat(productEditForm.mrp) || 0,
           price: parseFloat(productEditForm.price) || 0,
           unit: productEditForm.unit,
-          stock: parseInt(productEditForm.stock) || 0,
+          stock: isEditProductCafe ? 99999 : (parseInt(productEditForm.stock) || 0),
+          minStock: isEditProductCafe ? 0 : (parseInt(productEditForm.minStock) || 10),
           isAvailable: productEditForm.isAvailable,
           tags: tagsArray,
-          minStock: parseInt(productEditForm.minStock) || 10,
           expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
           costPrice: parseFloat(productEditForm.costPrice) || 0,
         }),
@@ -914,8 +914,8 @@ export function AdminDashboard({
           ...newProduct,
           mrp: parseFloat(newProduct.mrp),
           price: parseFloat(newProduct.price),
-          stock: parseInt(newProduct.stock) || 0,
-          minStock: parseInt(newProduct.minStock) || 10,
+          stock: isNewProductCafe ? 99999 : (parseInt(newProduct.stock) || 0),
+          minStock: isNewProductCafe ? 0 : (parseInt(newProduct.minStock) || 10),
           expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
           costPrice: parseFloat(newProduct.costPrice) || 0,
           tags: tagsArray,
@@ -1884,17 +1884,19 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 50"
-                    value={newProduct.stock}
-                    onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                {!isNewProductCafe && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 50"
+                      value={newProduct.stock}
+                      onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
 
                 <div className="md:col-span-2">
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Description</label>
@@ -1947,16 +1949,18 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 10"
-                    value={newProduct.minStock}
-                    onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                {!isNewProductCafe && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 10"
+                      value={newProduct.minStock}
+                      onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Cost Price (INR)</label>
                   <input
@@ -2321,16 +2325,20 @@ export function AdminDashboard({
 
                           {/* Stock */}
                           <td className="py-3 px-4">
-                            <div className="flex items-center gap-1">
-                              <span className={`font-bold ${isLowStock ? 'text-discount font-extrabold' : 'text-text-primary'}`}>
-                                {p.stock}
-                              </span>
-                              {isLowStock && (
-                                <span title="Low stock warning">
-                                  <AlertCircle className="h-3.5 w-3.5 text-discount" />
+                            {p.category?.slug === 'cafe' ? (
+                              <span className="text-text-muted font-normal italic">N/A (Unlimited)</span>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <span className={`font-bold ${isLowStock ? 'text-discount font-extrabold' : 'text-text-primary'}`}>
+                                  {p.stock}
                                 </span>
-                              )}
-                            </div>
+                                {isLowStock && (
+                                  <span title="Low stock warning">
+                                    <AlertCircle className="h-3.5 w-3.5 text-discount" />
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* Status */}
@@ -3507,16 +3515,18 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
-                  <input
-                    type="number"
-                    required
-                    value={productEditForm.stock}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, stock: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                {!isEditProductCafe && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
+                    <input
+                      type="number"
+                      required
+                      value={productEditForm.stock}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, stock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
                   <input
@@ -3576,15 +3586,17 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
-                  <input
-                    type="number"
-                    value={productEditForm.minStock}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, minStock: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                {!isEditProductCafe && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
+                    <input
+                      type="number"
+                      value={productEditForm.minStock}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, minStock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Cost Price (INR)</label>
                   <input

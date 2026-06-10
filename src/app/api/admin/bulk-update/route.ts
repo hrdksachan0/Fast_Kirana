@@ -107,6 +107,11 @@ export async function POST(request: NextRequest) {
         stock: true,
         minStock: true,
         isAvailable: true,
+        category: {
+          select: {
+            slug: true,
+          },
+        },
       },
     })
 
@@ -127,6 +132,11 @@ export async function POST(request: NextRequest) {
 
     // Compute changes for each product
     for (const product of products) {
+      const isCafe = (product as any).category?.slug === 'cafe'
+      if (isCafe && (updateType === 'STOCK' || updateType === 'MIN_STOCK')) {
+        // Skip bulk stock and min stock alert changes for Cafe products to preserve 99999/0 status
+        continue
+      }
       if (updateType === 'PRICE') {
         const oldValue = product.price
         const newValue = round2(computeNewValue(oldValue, mode, value))

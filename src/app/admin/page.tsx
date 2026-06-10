@@ -42,6 +42,7 @@ export default async function AdminPage() {
         where: {
           stock: { lt: 15 },
           isAvailable: true,
+          category: { slug: { not: 'cafe' } },
         },
       }),
       prisma.order.aggregate({

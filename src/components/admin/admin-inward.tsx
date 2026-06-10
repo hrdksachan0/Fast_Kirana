@@ -28,6 +28,7 @@ interface Product {
   imageUrl: string | null
   category: {
     name: string
+    slug: string
   }
 }
 
@@ -99,8 +100,9 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return []
     return products.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) || 
-      p.category.name.toLowerCase().includes(search.toLowerCase())
+      (p.name.toLowerCase().includes(search.toLowerCase()) || 
+      p.category.name.toLowerCase().includes(search.toLowerCase())) &&
+      p.category.slug !== 'cafe'
     ).slice(0, 5) // Show top 5 matches
   }, [search, products])
 
