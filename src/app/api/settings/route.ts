@@ -11,6 +11,9 @@ const DEFAULT_SETTINGS = {
   delivery_radius: '5',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
+  avg_delivery_time: '8 min',
+  delivered_today: '1,231+',
+  fresh_stock_loaded: '2 hrs ago',
 }
 
 export async function GET() {

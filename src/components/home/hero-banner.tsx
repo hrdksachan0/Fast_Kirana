@@ -69,7 +69,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 
   if (currentBanner.type === 'express-delivery') {
     return (
-      <div className="absolute inset-0 flex items-center justify-between p-3 sm:p-5 md:p-6 lg:p-8 bg-[#fdf0f1] text-[#2d2d2d] overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-between p-3 sm:p-6 md:p-10 lg:p-12 bg-[#fdf0f1] text-[#2d2d2d] overflow-hidden">
         {/* Floating background decorations */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full bg-white/40 blur-md" />
@@ -77,40 +77,43 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         </div>
 
         {/* Left Column Content */}
-        <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-0.5 min-[375px]:space-y-1 md:space-y-1 text-left flex flex-col justify-center h-full">
+        <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-1 min-[375px]:space-y-1.5 md:space-y-3.5 text-left flex flex-col justify-center h-full">
           <div>
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-black text-[#e20a22] uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-xs md:text-sm font-black text-[#e20a22] uppercase tracking-wider block">
               Fast Delivery in
             </span>
-            <h2 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-[#e20a22] tracking-tight leading-tight select-none">
+            <h2 className="text-sm min-[375px]:text-base sm:text-2xl md:text-4xl lg:text-[42px] font-black text-[#e20a22] tracking-tight leading-tight select-none">
               Ghatampur
             </h2>
           </div>
-          <p className="text-[9px] min-[375px]:text-[9.5px] sm:text-xs text-[#4d4d4d] font-bold max-w-md line-clamp-1 leading-relaxed">
+          <p className="text-[9px] min-[375px]:text-[9.5px] sm:text-xs md:text-sm text-[#4d4d4d] font-bold max-w-md line-clamp-1 md:line-clamp-none leading-relaxed">
             Milk, Fruits, Vegetables, Snacks & more
           </p>
 
-          <div className="flex items-center gap-2 md:gap-4 pt-0.5">
+          <div className="flex items-center gap-2.5 md:gap-5 pt-0">
             {/* Shop Now pill button */}
-            <span className="inline-flex items-center gap-1 bg-[#e20a22] md:hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[8px] min-[375px]:text-[8.5px] sm:text-[9px] md:text-[10px] shadow-md transition-all active:scale-95 cursor-pointer">
+            <span className="inline-flex items-center gap-1 bg-[#e20a22] md:hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
               Shop Now <span className="font-sans">→</span>
             </span>
 
             {/* Fast Delivery Circle Badge */}
             <div className="flex flex-col items-center select-none shrink-0">
-              <div className="flex flex-col items-center justify-center h-7 w-7 min-[375px]:h-8 min-[375px]:w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white border border-[#e20a22]/30 shadow-sm leading-none shrink-0">
-                <span className="text-[6.5px] min-[375px]:text-[7.5px] sm:text-[8px] md:text-[9px] font-black text-[#e20a22] uppercase">FAST</span>
+              <div className="flex flex-col items-center justify-center h-7 w-7 min-[375px]:h-8 min-[375px]:w-8 sm:h-11 sm:w-11 md:h-14 md:w-14 rounded-full bg-white border border-[#e20a22]/30 shadow-sm leading-none shrink-0">
+                <span className="text-[6.5px] min-[375px]:text-[7.5px] sm:text-[9px] md:text-xs font-black text-[#e20a22] uppercase">FAST</span>
               </div>
+              <span className="text-[5.5px] min-[375px]:text-[6px] sm:text-[7px] md:text-[9px] font-black text-zinc-500 mt-0.5 uppercase tracking-wider leading-none">
+                Delivery
+              </span>
             </div>
           </div>
         </div>
 
         {/* Right Column Visual Graphic */}
-        <div className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-2">
+        <div className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
           <img
             src="/grocery_bag_banner.png"
             alt="Grocery bag with fresh vegetables"
-            className="object-contain max-h-[105px] sm:max-h-[125px] md:max-h-[145px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2 animate-float"
+            className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2 animate-float"
           />
         </div>
       </div>
@@ -118,75 +121,76 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   }
 
   return (
-    <div className={`absolute inset-0 flex items-center justify-between p-3 md:p-6 text-white bg-gradient-to-br ${currentBanner.gradient}`}>
+    <div className={`absolute inset-0 flex items-center justify-between p-3 md:p-12 text-white bg-gradient-to-br ${currentBanner.gradient}`}>
       {/* Floating Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-2 right-[30%] h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/10 animate-float-slow" />
-        <div className="absolute bottom-3 right-[20%] h-6 w-6 md:h-8 md:w-8 rounded-full bg-white/10 animate-float-reverse" />
+        <div className="absolute top-2 right-[30%] h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/10 animate-float-slow" />
+        <div className="absolute bottom-3 right-[20%] h-6 w-6 md:h-10 md:w-10 rounded-full bg-white/10 animate-float-reverse" />
+        <div className="absolute top-[65%] left-[10%] h-5 w-5 md:h-8 md:w-8 rounded-full bg-white/5 animate-float" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-0.5 md:space-y-1 text-left">
+      <div className="relative z-10 max-w-[65%] md:max-w-[70%] space-y-1 md:space-y-4 text-left">
         {/* Promo Code or Express Badge with Glassmorphism */}
         {currentBanner.code ? (
-          <span className="inline-flex items-center gap-1 bg-white/20 border border-white/20 px-1.5 py-0.5 rounded-full text-[8px] md:text-[10px] font-black backdrop-blur-md shadow-sm">
-            <Gift className="h-2.5 w-2.5" />
+          <span className="inline-flex items-center gap-1 bg-white/20 border border-white/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[9px] md:text-xs font-black backdrop-blur-md shadow-sm">
+            <Gift className="h-3 w-3" />
             Code: {currentBanner.code}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 bg-white/25 border border-white/20 px-1.5 py-0.5 rounded-full text-[8px] md:text-[10px] font-black backdrop-blur-md shadow-sm">
-            <Zap className="h-2.5 w-2.5 text-amber-300 fill-amber-300 animate-bounce-subtle" />
+          <span className="inline-flex items-center gap-1.5 bg-white/25 border border-white/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[9px] md:text-xs font-black backdrop-blur-md shadow-sm">
+            <Zap className="h-3 w-3 text-amber-300 fill-amber-300 animate-bounce-subtle" />
             Fast Delivery
           </span>
         )}
 
-        <h2 className="text-xs sm:text-base md:text-xl font-black tracking-tight leading-tight drop-shadow-sm select-none">
+        <h2 className="text-sm sm:text-xl md:text-4xl font-black tracking-tight leading-tight drop-shadow-sm select-none">
           {currentBanner.title}
         </h2>
-        <p className="text-[8.5px] sm:text-[9.5px] md:text-xs text-white/90 font-bold max-w-md line-clamp-1 leading-relaxed">
+        <p className="text-[9.5px] sm:text-xs md:text-sm text-white/90 font-bold max-w-md line-clamp-1 md:line-clamp-none leading-relaxed">
           {currentBanner.description}
         </p>
 
         {/* Delivery ETA Display */}
-        <div className="inline-flex items-center gap-1 bg-white/25 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[8px] md:text-[9px] font-black mt-0.5">
-          <Zap className="h-2 w-2 text-amber-300 fill-amber-300" />
+        <div className="inline-flex items-center gap-1 bg-white/25 backdrop-blur-sm px-2 py-0.5 rounded-full text-[8px] md:text-xs font-black mt-1">
+          <Zap className="h-2.5 w-2.5 text-amber-300 fill-amber-300" />
           <span>Express Delivery</span>
         </div>
       </div>
 
       {/* Slide Visual Graphic/Badge */}
       {currentBanner.type === 'express-delivery' ? (
-        <div className="relative w-[32%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1">
+        <div className="relative w-[32%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
           <img
             src="/grocery_bag_banner.png"
             alt="Grocery bag with fresh vegetables"
-            className="object-contain max-h-[95px] sm:max-h-[115px] md:max-h-[135px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2 animate-float"
+            className="object-contain max-h-[95px] sm:max-h-[135px] md:max-h-[220px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2 animate-float"
           />
         </div>
       ) : (
         /* Interactive Premium Visual Badge */
-        <div className="relative z-10 flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 rounded-lg md:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden md:group-hover:scale-105 transition-transform duration-500 mr-1 md:mr-2 flex-shrink-0">
+        <div className="relative z-10 flex items-center justify-center h-14 w-14 sm:h-20 sm:w-20 md:h-36 md:w-36 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg overflow-hidden md:group-hover:scale-105 transition-transform duration-500 mr-1 md:mr-6 flex-shrink-0">
           {/* Glow effect */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
           
           {currentBanner.type === 'first-order' && (
             <div className="relative flex items-center justify-center w-full h-full">
-              <div className="absolute top-0.5 left-0.5 md:top-2 md:left-2 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
-                <Apple className="h-3 w-3 md:h-6 md:w-6 text-rose-100 fill-rose-600/20" />
+              <div className="absolute top-1 left-1 md:top-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+                <Apple className="h-4 w-4 md:h-9 md:w-9 text-rose-100 fill-rose-600/20" />
               </div>
-              <div className="absolute bottom-0.5 right-0.5 md:bottom-2 md:right-2 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
-                <Milk className="h-3 w-3 md:h-6 md:w-6 text-blue-100 fill-blue-600/20" />
+              <div className="absolute bottom-1 right-1 md:bottom-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+                <Milk className="h-4 w-4 md:h-9 md:w-9 text-blue-100 fill-blue-600/20" />
               </div>
             </div>
           )}
 
           {currentBanner.type === 'fresh' && (
             <div className="relative flex items-center justify-center w-full h-full">
-              <div className="absolute top-0.5 right-0.5 md:top-2 md:right-2 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
-                <Leaf className="h-3 w-3 md:h-6 md:w-6 text-emerald-100 fill-emerald-600/20" />
+              <div className="absolute top-1 right-1 md:top-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+                <Leaf className="h-4 w-4 md:h-9 md:w-9 text-emerald-100 fill-emerald-600/20" />
               </div>
-              <div className="absolute bottom-0.5 left-0.5 md:bottom-2 md:left-2 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
-                <Salad className="h-3 w-3 md:h-6 md:w-6 text-green-100 fill-green-600/20" />
+              <div className="absolute bottom-1 left-1 md:bottom-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+                <Salad className="h-4 w-4 md:h-9 md:w-9 text-green-100 fill-green-600/20" />
               </div>
             </div>
           )}
@@ -237,7 +241,7 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   if (!currentBanner) return null
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[130px] min-[375px]:h-[130px] sm:h-[145px] md:h-[165px] shadow-elevated select-none group">
+    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-elevated select-none group">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}

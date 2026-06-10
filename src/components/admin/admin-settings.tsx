@@ -17,6 +17,9 @@ export function AdminSettings() {
   const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
   const [storeLat, setStoreLat] = useState('26.1534185')
   const [storeLng, setStoreLng] = useState('80.1714024')
+  const [avgDeliveryTime, setAvgDeliveryTime] = useState('8 min')
+  const [deliveredToday, setDeliveredToday] = useState('1,231+')
+  const [freshStockLoaded, setFreshStockLoaded] = useState('2 hrs ago')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -41,6 +44,9 @@ export function AdminSettings() {
         if (data.cloudinary_upload_preset) setCloudinaryUploadPreset(data.cloudinary_upload_preset)
         if (data.store_lat) setStoreLat(data.store_lat)
         if (data.store_lng) setStoreLng(data.store_lng)
+        if (data.avg_delivery_time) setAvgDeliveryTime(data.avg_delivery_time)
+        if (data.delivered_today) setDeliveredToday(data.delivered_today)
+        if (data.fresh_stock_loaded) setFreshStockLoaded(data.fresh_stock_loaded)
       } catch (err: any) {
         console.error(err)
         toast.error('Could not fetch store settings')
@@ -78,6 +84,9 @@ export function AdminSettings() {
           cloudinary_upload_preset: cloudinaryUploadPreset.trim(),
           store_lat: storeLat.trim(),
           store_lng: storeLng.trim(),
+          avg_delivery_time: avgDeliveryTime.trim(),
+          delivered_today: deliveredToday.trim(),
+          fresh_stock_loaded: freshStockLoaded.trim(),
         }),
       })
 
@@ -255,6 +264,51 @@ export function AdminSettings() {
                       placeholder="e.g. 80.1688"
                       value={storeLng}
                       onChange={(e) => setStoreLng(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Speed Strip Ticker Configuration */}
+              <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2">
+                <h4 className="text-xs font-black text-text-primary mb-3">⚡ Live Speed Ticker Strip Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Avg Delivery Time */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Average Delivery Time *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 8 min"
+                      value={avgDeliveryTime}
+                      onChange={(e) => setAvgDeliveryTime(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Delivered Today */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Delivered Today Counter *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 1,231+"
+                      value={deliveredToday}
+                      onChange={(e) => setDeliveredToday(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Fresh Stock Loaded */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Fresh Stock Loaded Indicator *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 2 hrs ago"
+                      value={freshStockLoaded}
+                      onChange={(e) => setFreshStockLoaded(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                     />
                   </div>

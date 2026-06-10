@@ -11,21 +11,34 @@ interface SpeedStat {
 }
 
 export function SpeedStrip() {
-  const [ordersToday, setOrdersToday] = useState(1200)
+  const [avgDelivery, setAvgDelivery] = useState('8 min')
+  const [deliveredCount, setDeliveredCount] = useState('1,231+')
+  const [freshStock, setFreshStock] = useState('2 hrs ago')
+  const [happyFamilies, setHappyFamilies] = useState('5,000+')
 
-  // Simulate live-feeling order count that ticks up occasionally
   useEffect(() => {
-    const interval = setInterval(() => {
-      setOrdersToday((prev) => prev + Math.floor(Math.random() * 3) + 1)
-    }, 5000)
-    return () => clearInterval(interval)
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.avg_delivery_time) setAvgDelivery(data.avg_delivery_time)
+          if (data.delivered_today) setDeliveredCount(data.delivered_today)
+          if (data.fresh_stock_loaded) setFreshStock(data.fresh_stock_loaded)
+          if (data.happy_families) setHappyFamilies(data.happy_families)
+        }
+      } catch (err) {
+        console.error('Failed to load SpeedStrip settings:', err)
+      }
+    }
+    loadSettings()
   }, [])
 
   const stats: SpeedStat[] = [
-    { icon: Zap, iconColor: 'text-amber-500 fill-amber-500/10', label: 'Avg Delivery', value: '8 min' },
-    { icon: Package, iconColor: 'text-blue-500 fill-blue-500/10', label: 'Delivered Today', value: `${ordersToday.toLocaleString('en-IN')}+` },
-    { icon: Leaf, iconColor: 'text-emerald-500 fill-emerald-500/10', label: 'Fresh Stock Loaded', value: '2 hrs ago' },
-    { icon: Heart, iconColor: 'text-rose-500 fill-rose-500/10', label: 'Happy Families', value: '5,000+' },
+    { icon: Zap, iconColor: 'text-amber-500 fill-amber-500/10', label: 'Avg Delivery', value: avgDelivery },
+    { icon: Package, iconColor: 'text-blue-500 fill-blue-500/10', label: 'Delivered Today', value: deliveredCount },
+    { icon: Leaf, iconColor: 'text-emerald-500 fill-emerald-500/10', label: 'Fresh Stock Loaded', value: freshStock },
+    { icon: Heart, iconColor: 'text-rose-500 fill-rose-500/10', label: 'Happy Families', value: happyFamilies },
   ]
 
   return (
@@ -38,17 +51,17 @@ export function SpeedStrip() {
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
           </span>
           <Zap className="h-3 w-3 text-amber-500 fill-amber-500/10" />
-          <span className="text-[10px] font-black text-text-primary">8 min delivery</span>
+          <span className="text-[10px] font-black text-text-primary">{avgDelivery}</span>
         </div>
         <span className="h-3 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
         <div className="flex items-center gap-1.5">
           <Package className="h-3 w-3 text-blue-500 fill-blue-500/10" />
-          <span className="text-[10px] font-black text-text-primary">{ordersToday.toLocaleString('en-IN')}+ delivered</span>
+          <span className="text-[10px] font-black text-text-primary">{deliveredCount}</span>
         </div>
         <span className="h-3 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
         <div className="flex items-center gap-1.5">
           <Heart className="h-3 w-3 text-rose-500 fill-rose-500/10" />
-          <span className="text-[10px] font-black text-text-primary">5,000+ families</span>
+          <span className="text-[10px] font-black text-text-primary">{happyFamilies}</span>
         </div>
       </div>
 
