@@ -346,6 +346,12 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
         currentActive = 'more'
       }
 
+      // If we've scrolled to the very bottom of the page, highlight the last category
+      const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 12
+      if (isAtBottom && menuCategories.length > 0) {
+        currentActive = menuCategories[menuCategories.length - 1].tag
+      }
+
       if (currentActive) {
         setActiveCategory(currentActive)
       } else if (menuCategories.length > 0) {
@@ -358,6 +364,20 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [categorySections, menuCategories])
+
+  // Auto-scroll horizontal category bar to center active tag button
+  useEffect(() => {
+    if (activeCategory) {
+      const activeTabEl = document.getElementById(`category-tab-${activeCategory}`)
+      if (activeTabEl) {
+        activeTabEl.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center'
+        })
+      }
+    }
+  }, [activeCategory])
 
   // Smooth scroll handler
   const scrollToCategory = (tag: string) => {
@@ -446,6 +466,7 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
           return (
             <button
               key={cat.tag}
+              id={`category-tab-${cat.tag}`}
               onClick={() => scrollToCategory(cat.tag)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-black shrink-0 whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
                 isActive
