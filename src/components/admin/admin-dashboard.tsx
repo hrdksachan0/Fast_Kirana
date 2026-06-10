@@ -50,6 +50,23 @@ import { AdminInward } from './admin-inward'
 import { AdminBanners } from './admin-banners'
 import { AdminSettings } from './admin-settings'
 
+export const CAFE_MENU_SECTIONS = [
+  { value: 'hot-beverage', label: 'Steaming Hot Brews ☕' },
+  { value: 'hot-bite', label: 'Quick Bites & Snacks 🥟' },
+  { value: 'sandwiches', label: 'Gourmet Sandwiches 🥪' },
+  { value: 'frankie-rolls', label: 'Gourmet Frankie Rolls 🌯' },
+  { value: 'chinese', label: 'Chinese Cuisine 🥡' },
+  { value: 'italian-pasta', label: 'Italian Pasta 🍝' },
+  { value: 'bombay-bites', label: 'Bombay Bites 🥪' },
+  { value: 'rice-dishes', label: 'Rice Dishes 🍚' },
+  { value: 'shakes', label: 'Thick Shakes 🥤' },
+  { value: 'mocktails', label: 'Refreshing Mocktails 🍹' },
+  { value: 'cold-coffee', label: 'Chilled Cold Coffee 🧋' },
+  { value: 'south-indian', label: 'South Indian Favorites 🍛' },
+  { value: 'bakery', label: 'Bakery & Sweet Cravings 🥐' },
+  { value: 'chilled', label: 'Chilled Sips & Sodas 🥤' }
+]
+
 interface AdminDashboardProps {
   initialOrders: any[]
   initialProducts: any[]
@@ -381,6 +398,8 @@ export function AdminDashboard({
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
   const [editProductType, setEditProductType] = useState<'grocery' | 'cafe'>('grocery')
+  const [newCustomTag, setNewCustomTag] = useState('')
+  const [editCustomTag, setEditCustomTag] = useState('')
 
   const isNewProductCafe = newProductType === 'cafe'
   const isEditProductCafe = editProductType === 'cafe'
@@ -658,6 +677,34 @@ export function AdminDashboard({
       ...currentForm,
       tags: tagsList.join(', ')
     })
+  }
+
+  const handleCreateCustomTag = (form: 'new' | 'edit', tagText: string) => {
+    const cleanTag = tagText.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!cleanTag) return;
+    
+    const currentForm = form === 'new' ? newProduct : productEditForm
+    const setForm = form === 'new' ? setNewProduct : setProductEditForm
+    
+    let tagsList = currentForm.tags
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      
+    if (!tagsList.map(t => t.toLowerCase()).includes(cleanTag)) {
+      tagsList.push(cleanTag)
+    }
+    
+    setForm({
+      ...currentForm,
+      tags: tagsList.join(', ')
+    })
+    
+    if (form === 'new') {
+      setNewCustomTag('')
+    } else {
+      setEditCustomTag('')
+    }
   }
 
   const handleImageFileChange = (form: 'new' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1761,6 +1808,37 @@ export function AdminDashboard({
                   )}
                 </div>
 
+                {newProductType === 'cafe' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
+                    <select
+                      required
+                      value={CAFE_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.value))?.value || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.value);
+                        let cleanTags = newProduct.tags
+                          .split(',')
+                          .map(t => t.trim())
+                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
+                        
+                        if (val) {
+                          cleanTags.push(val);
+                        }
+                        setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/15 focus:outline-none focus:border-rose-500 font-extrabold text-rose-600 dark:text-rose-400 cursor-pointer"
+                    >
+                      <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
+                      {CAFE_MENU_SECTIONS.map((sec) => (
+                        <option key={sec.value} value={sec.value} className="text-text-primary font-semibold">
+                          {sec.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification *</label>
                   <input
@@ -2088,6 +2166,49 @@ export function AdminDashboard({
                         <span>🌙 Late Night Craving</span>
                       </label>
                     </>
+                  )}
+                </div>
+
+                {/* Custom Tag Creator */}
+                <div className="md:col-span-3 pt-3 border-t border-border/20 flex flex-col gap-2">
+                  <span className="text-[10px] font-extrabold text-text-secondary block">Custom Tags Creator</span>
+                  <div className="flex gap-2 max-w-sm">
+                    <input
+                      type="text"
+                      placeholder="Type custom tag (e.g. sugar-free, organic)"
+                      value={newCustomTag}
+                      onChange={(e) => setNewCustomTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateCustomTag('new', newCustomTag);
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCreateCustomTag('new', newCustomTag)}
+                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all"
+                    >
+                      Add Tag
+                    </button>
+                  </div>
+                  {newProduct.tags.trim() && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {newProduct.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                        <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold text-text-primary">
+                          <span>{tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleTag('new', tag, false)}
+                            className="text-text-muted hover:text-rose-500 font-extrabold text-[9px] ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -3323,6 +3444,37 @@ export function AdminDashboard({
                     </select>
                   )}
                 </div>
+
+                {editProductType === 'cafe' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
+                    <select
+                      required
+                      value={CAFE_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.value))?.value || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.value);
+                        let cleanTags = productEditForm.tags
+                          .split(',')
+                          .map(t => t.trim())
+                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
+                        
+                        if (val) {
+                          cleanTags.push(val);
+                        }
+                        setProductEditForm({ ...productEditForm, tags: cleanTags.join(', ') });
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/15 focus:outline-none focus:border-rose-500 font-extrabold text-rose-600 dark:text-rose-400 cursor-pointer"
+                    >
+                      <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
+                      {CAFE_MENU_SECTIONS.map((sec) => (
+                        <option key={sec.value} value={sec.value} className="text-text-primary font-semibold">
+                          {sec.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification *</label>
                   <input
@@ -3626,6 +3778,49 @@ export function AdminDashboard({
                         <span>🌙 Late Night Craving</span>
                       </label>
                     </>
+                  )}
+                </div>
+
+                {/* Custom Tag Creator */}
+                <div className="md:col-span-3 pt-3 border-t border-border/20 flex flex-col gap-2">
+                  <span className="text-[10px] font-extrabold text-text-secondary block">Custom Tags Creator</span>
+                  <div className="flex gap-2 max-w-sm">
+                    <input
+                      type="text"
+                      placeholder="Type custom tag (e.g. sugar-free, organic)"
+                      value={newCustomTag}
+                      onChange={(e) => setNewCustomTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateCustomTag('edit', newCustomTag);
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCreateCustomTag('edit', newCustomTag)}
+                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all"
+                    >
+                      Add Tag
+                    </button>
+                  </div>
+                  {productEditForm.tags.trim() && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                        <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold text-text-primary">
+                          <span>{tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleTag('edit', tag, false)}
+                            className="text-text-muted hover:text-rose-500 font-extrabold text-[9px] ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
