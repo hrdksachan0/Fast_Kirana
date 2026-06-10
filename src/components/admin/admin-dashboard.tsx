@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { formatPrice } from '@/lib/utils'
-import { ORDER_STATUS_LABELS } from '@/lib/constants'
+import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 import { toast } from 'sonner'
 import { 
   Loader2, 
@@ -50,23 +50,6 @@ import { AdminInward } from './admin-inward'
 import { AdminBanners } from './admin-banners'
 import { AdminSettings } from './admin-settings'
 
-export const CAFE_MENU_SECTIONS = [
-  { value: 'hot-beverage', label: 'Steaming Hot Brews ☕' },
-  { value: 'hot-bite', label: 'Quick Bites & Snacks 🥟' },
-  { value: 'sandwiches', label: 'Gourmet Sandwiches 🥪' },
-  { value: 'frankie-rolls', label: 'Gourmet Frankie Rolls 🌯' },
-  { value: 'chinese', label: 'Chinese Cuisine 🥡' },
-  { value: 'italian-pasta', label: 'Italian Pasta 🍝' },
-  { value: 'bombay-bites', label: 'Bombay Bites 🥪' },
-  { value: 'rice-dishes', label: 'Rice Dishes 🍚' },
-  { value: 'shakes', label: 'Thick Shakes 🥤' },
-  { value: 'mocktails', label: 'Refreshing Mocktails 🍹' },
-  { value: 'cold-coffee', label: 'Chilled Cold Coffee 🧋' },
-  { value: 'south-indian', label: 'South Indian Favorites 🍛' },
-  { value: 'bakery', label: 'Bakery & Sweet Cravings 🥐' },
-  { value: 'chilled', label: 'Chilled Sips & Sodas 🥤' }
-]
-
 interface AdminDashboardProps {
   initialOrders: any[]
   initialProducts: any[]
@@ -103,6 +86,22 @@ export function AdminDashboard({
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
+
+  // Parse cafe menu sections dynamically from database settings
+  const CAFE_MENU_SECTIONS = useMemo(() => {
+    const customSectionsStr = settingsMap['CAFE_MENU_SECTIONS']
+    if (customSectionsStr) {
+      try {
+        const parsed = JSON.parse(customSectionsStr)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      } catch (e) {
+        console.error('Error parsing CAFE_MENU_SECTIONS from settings:', e)
+      }
+    }
+    return DEFAULT_CAFE_MENU_SECTIONS
+  }, [settingsMap])
 
   // Fetch settings on mount to retrieve Cloudinary credentials
   useEffect(() => {
@@ -1343,6 +1342,7 @@ export function AdminDashboard({
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
+    { key: 'settings', label: 'Store Settings', icon: Settings },
   ]
 
   return (
@@ -3369,6 +3369,12 @@ export function AdminDashboard({
       {activeTab === 'banners' && (
         <div className="animate-fade-in">
           <AdminBanners />
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="animate-fade-in">
+          <AdminSettings />
         </div>
       )}
         </motion.div>
