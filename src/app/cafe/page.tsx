@@ -416,7 +416,20 @@ export default async function CafePage() {
     }
   }
 
+  // Load custom cafe menu sections if defined
+  let customMenuSections = null
+  try {
+    const setting = await prisma.storeSetting.findUnique({
+      where: { key: 'cafe_menu_sections' }
+    })
+    if (setting) {
+      customMenuSections = JSON.parse(setting.value)
+    }
+  } catch (e) {
+    console.warn('Failed to fetch/parse cafe menu sections:', e)
+  }
+
   return (
-    <CafeStorefront initialProducts={dbCafeProducts} />
+    <CafeStorefront initialProducts={dbCafeProducts} customSections={customMenuSections || undefined} />
   )
 }

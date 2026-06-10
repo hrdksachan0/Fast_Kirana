@@ -34,3 +34,112 @@ export const ORDER_STATUS_COLORS: Record<string, string> = {
   DELIVERED: 'bg-green-100 text-green-800',
   CANCELLED: 'bg-red-100 text-red-800',
 }
+
+export interface CafeMenuSection {
+  tag: string
+  matchTags: string[]
+  title: string
+  emoji: string
+  description: string
+}
+
+export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
+  {
+    tag: 'hot-beverage',
+    matchTags: ['hot-beverage', 'tea', 'coffee'],
+    title: 'Steaming Hot Brews',
+    emoji: '☕',
+    description: 'Chai, coffee, and fresh brewing mixes',
+  },
+  {
+    tag: 'hot-bite',
+    matchTags: ['hot-bite', 'snacks'],
+    title: 'Quick Bites & Snacks',
+    emoji: '🥟',
+    description: 'Samosas, Momos, and warm treats',
+  },
+  {
+    tag: 'sandwiches',
+    matchTags: ['sandwiches', 'sandwich'],
+    title: 'Gourmet Sandwiches',
+    emoji: '🥪',
+    description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies',
+  },
+  {
+    tag: 'frankie-rolls',
+    matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll'],
+    title: 'Gourmet Frankie Rolls',
+    emoji: '🌯',
+    description: 'Fresh rolls stuffed with paneer, cheese, and veg patties',
+  },
+  {
+    tag: 'chinese',
+    matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine'],
+    title: 'Chinese Cuisine',
+    emoji: '🥡',
+    description: 'Momos, noodles, fried dishes & sauces',
+  },
+  {
+    tag: 'italian-pasta',
+    matchTags: ['italian-pasta', 'italian-pastas', 'italian pasta\'s', 'pasta'],
+    title: "Italian Pasta's",
+    emoji: '🍝',
+    description: 'Fresh penne tossed in aromatic red & white sauces',
+  },
+  {
+    tag: 'bombay-bites',
+    matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'],
+    title: 'Bombay Bites',
+    emoji: '🥪',
+    description: 'Vada Pav, special Bombay Masala Toast, and street snacks',
+  },
+  {
+    tag: 'rice-dishes',
+    matchTags: ['rice-dishes', 'rice dishes', 'rice-dish', 'rice dish', 'biryani', 'pulav'],
+    title: 'Rice Dishes',
+    emoji: '🍚',
+    description: 'Flavourful biryani, fried rice, and combos',
+  },
+  {
+    tag: 'shakes',
+    matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes'],
+    title: 'Thick Shakes',
+    emoji: '🥤',
+    description: 'Creamy strawberry, chocolate, and Oreo shakes',
+  },
+  {
+    tag: 'mocktails',
+    matchTags: ['mocktails', 'mocktail', 'coolers', 'cooler'],
+    title: 'Refreshing Mocktails',
+    emoji: '🍹',
+    description: 'Iced coolers, Virgin Mojito, and summer drinks',
+  },
+  {
+    tag: 'cold-coffee',
+    matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'iced-coffee'],
+    title: 'Chilled Cold Coffee',
+    emoji: '🧋',
+    description: 'Classic cold brews, hazelnut cold coffee & iced sips',
+  },
+  {
+    tag: 'south-indian',
+    matchTags: ['south-indian', 'south indian'],
+    title: 'South Indian Favorites',
+    emoji: '🍛',
+    description: 'Dosa, Idli, Vada, Uttapam & more',
+  },
+  {
+    tag: 'bakery',
+    matchTags: ['bakery', 'bakery-biscuits'],
+    title: 'Bakery & Sweet Cravings',
+    emoji: '🥐',
+    description: 'Freshly baked croissants, muffins, and sweet nibbles',
+  },
+  {
+    tag: 'chilled',
+    matchTags: ['chilled', 'cold-drink'],
+    title: 'Chilled Sips & Sodas',
+    emoji: '🥤',
+    description: 'Carbonated soft drinks and cold energy boosts',
+  }
+]

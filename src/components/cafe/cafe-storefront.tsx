@@ -7,11 +7,14 @@ import { ProductCard } from '@/components/product/product-card'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
+
 interface CafeStorefrontProps {
   initialProducts: any[]
+  customSections?: CafeMenuSection[]
 }
 
-export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
+export function CafeStorefront({ initialProducts, customSections }: CafeStorefrontProps) {
   // Swiggy dynamic navigation states
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
@@ -57,106 +60,7 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
     ])
 
-    const PREDEFINED_CATEGORIES = [
-      {
-        tag: 'hot-beverage',
-        matchTags: ['hot-beverage', 'tea', 'coffee'],
-        title: 'Steaming Hot Brews',
-        emoji: '☕',
-        description: 'Chai, coffee, and fresh brewing mixes',
-      },
-      {
-        tag: 'hot-bite',
-        matchTags: ['hot-bite', 'snacks'],
-        title: 'Quick Bites & Snacks',
-        emoji: '🥟',
-        description: 'Samosas, Momos, and warm treats',
-      },
-      {
-        tag: 'sandwiches',
-        matchTags: ['sandwiches', 'sandwich'],
-        title: 'Gourmet Sandwiches',
-        emoji: '🥪',
-        description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies',
-      },
-      {
-        tag: 'frankie-rolls',
-        matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll'],
-        title: 'Gourmet Frankie Rolls',
-        emoji: '🌯',
-        description: 'Fresh rolls stuffed with paneer, cheese, and veg patties',
-      },
-      {
-        tag: 'chinese',
-        matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine'],
-        title: 'Chinese Cuisine',
-        emoji: '🥡',
-        description: 'Momos, noodles, fried dishes & sauces',
-      },
-      {
-        tag: 'italian-pasta',
-        matchTags: ['italian-pasta', 'italian-pastas', 'italian pasta\'s', 'pasta'],
-        title: "Italian Pasta's",
-        emoji: '🍝',
-        description: 'Fresh penne tossed in aromatic red & white sauces',
-      },
-      {
-        tag: 'bombay-bites',
-        matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'],
-        title: 'Bombay Bites',
-        emoji: '🥪',
-        description: 'Vada Pav, special Bombay Masala Toast, and street snacks',
-      },
-      {
-        tag: 'rice-dishes',
-        matchTags: ['rice-dishes', 'rice dishes', 'rice-dish', 'rice dish', 'biryani', 'pulav'],
-        title: 'Rice Dishes',
-        emoji: '🍚',
-        description: 'Flavourful biryani, fried rice, and combos',
-      },
-      {
-        tag: 'shakes',
-        matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes'],
-        title: 'Thick Shakes',
-        emoji: '🥤',
-        description: 'Creamy strawberry, chocolate, and Oreo shakes',
-      },
-      {
-        tag: 'mocktails',
-        matchTags: ['mocktails', 'mocktail', 'coolers', 'cooler'],
-        title: 'Refreshing Mocktails',
-        emoji: '🍹',
-        description: 'Iced coolers, Virgin Mojito, and summer drinks',
-      },
-      {
-        tag: 'cold-coffee',
-        matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'iced-coffee'],
-        title: 'Chilled Cold Coffee',
-        emoji: '🧋',
-        description: 'Classic cold brews, hazelnut cold coffee & iced sips',
-      },
-      {
-        tag: 'south-indian',
-        matchTags: ['south-indian', 'south indian'],
-        title: 'South Indian Favorites',
-        emoji: '🍛',
-        description: 'Dosa, Idli, Vada, Uttapam & more',
-      },
-      {
-        tag: 'bakery',
-        matchTags: ['bakery', 'bakery-biscuits'],
-        title: 'Bakery & Sweet Cravings',
-        emoji: '🥐',
-        description: 'Freshly baked croissants, muffins, and sweet nibbles',
-      },
-      {
-        tag: 'chilled',
-        matchTags: ['chilled', 'cold-drink'],
-        title: 'Chilled Sips & Sodas',
-        emoji: '🥤',
-        description: 'Carbonated soft drinks and cold energy boosts',
-      }
-    ]
+    const PREDEFINED_CATEGORIES = customSections || DEFAULT_CAFE_MENU_SECTIONS
 
     const sectionsMap = new Map<string, any>()
     PREDEFINED_CATEGORIES.forEach(cat => {
