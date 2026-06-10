@@ -89,7 +89,7 @@ export function AdminDashboard({
 
   // Parse cafe menu sections dynamically from database settings
   const CAFE_MENU_SECTIONS = useMemo(() => {
-    const customSectionsStr = settingsMap['CAFE_MENU_SECTIONS']
+    const customSectionsStr = settingsMap['cafe_menu_sections'] || settingsMap['CAFE_MENU_SECTIONS']
     if (customSectionsStr) {
       try {
         const parsed = JSON.parse(customSectionsStr)
@@ -1813,10 +1813,10 @@ export function AdminDashboard({
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
                     <select
                       required
-                      value={CAFE_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.value))?.value || ''}
+                      value={CAFE_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.value);
+                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.tag);
                         let cleanTags = newProduct.tags
                           .split(',')
                           .map(t => t.trim())
@@ -1831,8 +1831,8 @@ export function AdminDashboard({
                     >
                       <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
                       {CAFE_MENU_SECTIONS.map((sec) => (
-                        <option key={sec.value} value={sec.value} className="text-text-primary font-semibold">
-                          {sec.label}
+                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
+                          {sec.emoji} {sec.title}
                         </option>
                       ))}
                     </select>
@@ -3456,10 +3456,10 @@ export function AdminDashboard({
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
                     <select
                       required
-                      value={CAFE_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.value))?.value || ''}
+                      value={CAFE_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.value);
+                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.tag);
                         let cleanTags = productEditForm.tags
                           .split(',')
                           .map(t => t.trim())
@@ -3474,8 +3474,8 @@ export function AdminDashboard({
                     >
                       <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
                       {CAFE_MENU_SECTIONS.map((sec) => (
-                        <option key={sec.value} value={sec.value} className="text-text-primary font-semibold">
-                          {sec.label}
+                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
+                          {sec.emoji} {sec.title}
                         </option>
                       ))}
                     </select>
