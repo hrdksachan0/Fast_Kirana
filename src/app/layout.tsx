@@ -83,7 +83,7 @@ export default function RootLayout({
               <CartStickyBar />
               <CartDrawer />
               <CartFlyAnimation />
-              <Toaster position="bottom-center" richColors closeButton />
+              <Toaster position="bottom-center" richColors closeButton visibleToasts={1} />
               <PWARegistration />
             </ThemeProvider>
           </AuthProvider>
