@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Plus, Minus, Check, ChevronRight, Flame, ShoppingBag, X } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Plus, Minus, Check, ChevronRight, Flame, ShoppingBag, X, Menu as MenuIcon } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
@@ -37,6 +37,11 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
   // Swiggy drawer selection states
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [qtyToConfirm, setQtyToConfirm] = useState<number>(1)
+
+  // Swiggy dynamic navigation states
+  const [activeCategory, setActiveCategory] = useState<string>('')
+  const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
+  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
 
   // Map products to categories
   const mappedProducts = useMemo(() => {
@@ -85,7 +90,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
 
   // Dynamic grouping logic to discover categories from product tags
   const categorySections = useMemo(() => {
-    // Helper tags to exclude from generating separate section categories
     const excludeTags = new Set([
       'cafe', 'popular', 'veg', 'paneer', 'cheese', 'kathi-roll', 'spicy', 'protein', 
       'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
@@ -97,7 +101,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
     ])
 
-    // Predefined main categories with details
     const PREDEFINED_CATEGORIES = [
       {
         tag: 'hot-beverage',
@@ -192,7 +195,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       }
     ]
 
-    // Group products by predefined categories first
     const sectionsMap = new Map<string, any>()
     PREDEFINED_CATEGORIES.forEach(cat => {
       sectionsMap.set(cat.tag, {
@@ -227,11 +229,9 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       }
     })
 
-    // Now, scan for any product tags that do not belong to the predefined categories
-    // and are not excluded, to dynamically create sections for "manually added new tags"!
     const dynamicTagsMap = new Map<string, any[]>()
     nonGroupedProducts.forEach(product => {
-      if (assignedProductIds.has(product.id)) return // Already in a predefined category
+      if (assignedProductIds.has(product.id)) return
 
       product.tags?.forEach((t: string) => {
         const lowerTag = t.toLowerCase()
@@ -244,10 +244,8 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       })
     })
 
-    // Convert dynamic tags to category sections
     const dynamicSections: any[] = []
     dynamicTagsMap.forEach((products, tag) => {
-      // Clean up tag string for header title (e.g. "waffles-and-crepes" -> "Waffles And Crepes")
       const title = tag
         .split(/[-_ ]+/)
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -256,13 +254,12 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       dynamicSections.push({
         tag,
         title,
-        emoji: '✨', // Default emoji for manually added new tags
+        emoji: '✨',
         description: `Fresh items tagged under ${title}`,
         products
       })
     })
 
-    // Merge predefined sections (only those that have products) and dynamic sections
     const finalSections: any[] = []
     PREDEFINED_CATEGORIES.forEach(cat => {
       const sec = sectionsMap.get(cat.tag)
@@ -277,10 +274,8 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       }
     })
 
-    // Add dynamic sections at the end
     finalSections.push(...dynamicSections)
 
-    // Helper to find any leftovers
     const allGroupedIds = new Set<string>()
     finalSections.forEach(sec => sec.products.forEach((p: any) => allGroupedIds.add(p.id)))
     const moreItems = nonGroupedProducts.filter(p => !allGroupedIds.has(p.id))
@@ -290,6 +285,97 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
       moreItems
     }
   }, [nonGroupedProducts])
+
+  // Swiggy categories catalog list (combining grouped and dynamic ones)
+  const menuCategories = useMemo(() => {
+    const list = []
+    if (frankieGroupItems.length > 0) {
+      list.push({
+        tag: 'frankie-rolls',
+        title: 'Gourmet Frankie Rolls',
+        emoji: '🌯',
+        count: frankieGroupItems.length
+      })
+    }
+    categorySections.sections.forEach(sec => {
+      list.push({
+        tag: sec.tag,
+        title: sec.title,
+        emoji: sec.emoji,
+        count: sec.products.length
+      })
+    })
+    if (categorySections.moreItems.length > 0) {
+      list.push({
+        tag: 'more',
+        title: 'More Specials',
+        emoji: '🍽️',
+        count: categorySections.moreItems.length
+      })
+    }
+    return list
+  }, [frankieGroupItems, categorySections])
+
+  // Scroll tracker logic
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 160 // Header offset (navbar + sticky tabs)
+      
+      // Determine if floating menu button should appear (after scrolling past hero banner)
+      setShowFloatingMenuBtn(window.scrollY > 250)
+
+      let currentActive = ''
+
+      // Frankie Rolls
+      const frankieEl = document.getElementById('category-section-frankie-rolls')
+      if (frankieEl && scrollPosition >= frankieEl.offsetTop) {
+        currentActive = 'frankie-rolls'
+      }
+
+      // Dynamic tags sections
+      categorySections.sections.forEach(sec => {
+        const el = document.getElementById(`category-section-${sec.tag}`)
+        if (el && scrollPosition >= el.offsetTop) {
+          currentActive = sec.tag
+        }
+      })
+
+      // More specials section
+      const moreEl = document.getElementById('category-section-more')
+      if (moreEl && scrollPosition >= moreEl.offsetTop) {
+        currentActive = 'more'
+      }
+
+      if (currentActive) {
+        setActiveCategory(currentActive)
+      } else if (menuCategories.length > 0) {
+        setActiveCategory(menuCategories[0].tag)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    // Initialize active state on mount
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [categorySections, menuCategories])
+
+  // Smooth scroll handler
+  const scrollToCategory = (tag: string) => {
+    const el = document.getElementById(`category-section-${tag}`)
+    if (el) {
+      const headerOffset = 150 // Sum of fixed navbar + sticky categories bar
+      const elementPosition = el.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+      
+      setActiveCategory(tag)
+      setIsFloatingMenuOpen(false)
+    }
+  }
 
   // Open Frankie customization drawer
   const openFrankieCustomizer = () => {
@@ -314,7 +400,7 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6 md:space-y-10">
+    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6 md:space-y-8 relative">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
         <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
@@ -353,9 +439,35 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
         </div>
       </div>
 
+      {/* -------------------- STICKY CATEGORY NAVIGATION TAB BAR (Swiggy Style) -------------------- */}
+      <div className="sticky top-[96px] md:top-[80px] z-30 bg-background/95 backdrop-blur-md border-b border-border/80 py-2.5 -mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-none shadow-sm select-none transition-all duration-300">
+        {menuCategories.map((cat) => {
+          const isActive = activeCategory === cat.tag
+          return (
+            <button
+              key={cat.tag}
+              onClick={() => scrollToCategory(cat.tag)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black shrink-0 whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-500/10 border border-rose-500'
+                  : 'bg-muted/30 text-text-secondary border border-border/60 hover:bg-muted/60'
+              }`}
+            >
+              <span>{cat.emoji}</span>
+              <span>{cat.title}</span>
+              <span className={`text-[9px] px-1 py-0.5 rounded-full ${
+                isActive ? 'bg-white/20 text-white' : 'bg-muted-foreground/10 text-text-secondary'
+              }`}>
+                {cat.count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* -------------------- Grouped Customisable Frankie Rolls Section -------------------- */}
       {frankieGroupItems.length > 0 && (
-        <section className="space-y-4">
+        <section id="category-section-frankie-rolls" className="space-y-4 pt-4 scroll-mt-40">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🌯</span>
             <div>
@@ -365,7 +477,6 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl">
-            {/* The single Combined/Customizable Frankie Roll Card - Swiggy Style */}
             <div className="group relative flex flex-row sm:flex-col justify-between overflow-hidden rounded-2xl border border-rose-500/20 bg-card p-3 shadow-md transition-all duration-300 md:hover:shadow-lg md:hover:border-rose-500/40">
               <div className="absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-2.5 py-0.5 text-[9px] font-black text-white shadow-sm uppercase tracking-wider select-none">
                 Customizable
@@ -434,7 +545,7 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
 
       {/* -------------------- Dynamically Generated Cafe Category Sections -------------------- */}
       {categorySections.sections.map((section) => (
-        <section key={section.tag} className="space-y-4">
+        <section key={section.tag} id={`category-section-${section.tag}`} className="space-y-4 pt-4 scroll-mt-40">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">{section.emoji}</span>
             <div>
@@ -452,11 +563,11 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
 
       {/* Catch-all More from Cafe */}
       {categorySections.moreItems.length > 0 && (
-        <section className="space-y-4">
+        <section id="category-section-more" className="space-y-4 pt-4 scroll-mt-40">
           <div className="flex items-center gap-2 px-1">
             <span className="text-xl">🍽️</span>
             <div>
-              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More from Cafe</h2>
+              <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More Specials</h2>
               <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
             </div>
           </div>
@@ -467,6 +578,91 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
           </div>
         </section>
       )}
+
+      {/* -------------------- FLOATING MENU BUTTON (Swiggy Style) -------------------- */}
+      <AnimatePresence>
+        {showFloatingMenuBtn && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 30 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40"
+          >
+            <button
+              onClick={() => setIsFloatingMenuOpen(true)}
+              className="bg-zinc-900 dark:bg-zinc-800 border border-white/10 text-white font-extrabold text-xs px-4 py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all select-none cursor-pointer"
+            >
+              <MenuIcon className="h-4 w-4" />
+              <span>MENU</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FLOATING QUICK MENU DRAWER */}
+      <AnimatePresence>
+        {isFloatingMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs cursor-pointer"
+              onClick={() => setIsFloatingMenuOpen(false)}
+            />
+
+            {/* Menu Popup */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="fixed bottom-0 left-0 right-0 z-50 max-h-[60vh] bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col mx-auto max-w-sm"
+            >
+              {/* Drawer indicator */}
+              <div className="w-12 h-1.5 bg-muted/60 rounded-full mx-auto my-3 shrink-0" />
+
+              <div className="px-5 pb-3 border-b border-border/50 flex justify-between items-center shrink-0">
+                <span className="text-xs font-black uppercase text-text-muted tracking-wider">Jump to Section</span>
+                <button
+                  onClick={() => setIsFloatingMenuOpen(false)}
+                  className="p-1 rounded-full bg-muted/60 text-text-secondary hover:text-text-primary hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* List of categories */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+                {menuCategories.map((cat) => {
+                  const isActive = activeCategory === cat.tag
+                  return (
+                    <button
+                      key={cat.tag}
+                      onClick={() => scrollToCategory(cat.tag)}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-rose-500/10 text-rose-500 font-extrabold border border-rose-500/20'
+                          : 'hover:bg-muted/40 text-text-primary border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{cat.emoji}</span>
+                        <span className="text-sm font-bold">{cat.title}</span>
+                      </div>
+                      <span className="text-xs text-text-muted font-bold bg-muted px-2 py-0.5 rounded-full">
+                        {cat.count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* -------------------- Swiggy-style Drawer / Customization Bottom Sheet -------------------- */}
       <AnimatePresence>

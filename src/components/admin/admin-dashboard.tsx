@@ -1884,6 +1884,80 @@ export function AdminDashboard({
                     />
                     <span>🌙 Late Night Craving</span>
                   </label>
+                  
+                  {/* Cafe Specific Tags */}
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('sandwiches')}
+                      onChange={(e) => toggleTag('new', 'sandwiches', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥪 Cafe: Sandwiches</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('italian-pasta')}
+                      onChange={(e) => toggleTag('new', 'italian-pasta', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍝 Cafe: Italian Pasta</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('bombay-bites')}
+                      onChange={(e) => toggleTag('new', 'bombay-bites', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥪 Cafe: Bombay Bites</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('rice-dishes')}
+                      onChange={(e) => toggleTag('new', 'rice-dishes', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍚 Cafe: Rice Dishes</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('shakes')}
+                      onChange={(e) => toggleTag('new', 'shakes', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥤 Cafe: Shakes</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('mocktails')}
+                      onChange={(e) => toggleTag('new', 'mocktails', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍹 Cafe: Mocktails</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cold-coffee')}
+                      onChange={(e) => toggleTag('new', 'cold-coffee', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🧋 Cafe: Cold Coffee</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('frankie-rolls')}
+                      onChange={(e) => toggleTag('new', 'frankie-rolls', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🌯 Cafe: Frankie Rolls</span>
+                  </label>
                 </div>      
               </div>
 
@@ -3302,6 +3376,80 @@ export function AdminDashboard({
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
                     <span>🌙 Late Night Craving</span>
+                  </label>
+
+                  {/* Cafe Specific Tags */}
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('sandwiches')}
+                      onChange={(e) => toggleTag('edit', 'sandwiches', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥪 Cafe: Sandwiches</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('italian-pasta')}
+                      onChange={(e) => toggleTag('edit', 'italian-pasta', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍝 Cafe: Italian Pasta</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('bombay-bites')}
+                      onChange={(e) => toggleTag('edit', 'bombay-bites', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥪 Cafe: Bombay Bites</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('rice-dishes')}
+                      onChange={(e) => toggleTag('edit', 'rice-dishes', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍚 Cafe: Rice Dishes</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('shakes')}
+                      onChange={(e) => toggleTag('edit', 'shakes', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🥤 Cafe: Shakes</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('mocktails')}
+                      onChange={(e) => toggleTag('edit', 'mocktails', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🍹 Cafe: Mocktails</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('cold-coffee')}
+                      onChange={(e) => toggleTag('edit', 'cold-coffee', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🧋 Cafe: Cold Coffee</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('frankie-rolls')}
+                      onChange={(e) => toggleTag('edit', 'frankie-rolls', e.target.checked)}
+                      className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
+                    />
+                    <span>🌯 Cafe: Frankie Rolls</span>
                   </label>
                 </div>
               </div>
