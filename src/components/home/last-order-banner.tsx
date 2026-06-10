@@ -69,6 +69,34 @@ export function LastOrderBanner() {
     }
   }, [authStatus])
 
+  useEffect(() => {
+    if (!lastOrder) return
+    const isActive = !['DELIVERED', 'CANCELLED'].includes(lastOrder.status)
+    if (!isActive) return
+
+    const eventSource = new EventSource(`/api/orders/${lastOrder.id}/live`)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.status && data.status !== lastOrder.status) {
+          setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
+        }
+      } catch (err) {
+        console.error('Error parsing SSE event in last-order-banner:', err)
+      }
+    }
+
+    eventSource.onerror = (err) => {
+      console.error('EventSource connection error in last-order-banner:', err)
+      eventSource.close()
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [lastOrder?.id, lastOrder?.status])
+
   const fetchLastOrder = async () => {
     setIsLoading(true)
     try {

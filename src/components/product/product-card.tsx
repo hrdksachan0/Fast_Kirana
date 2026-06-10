@@ -155,7 +155,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
             {product.unit}
           </span>
-          {resolvedStock > 0 && resolvedStock < 15 && (
+          {resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
             <span className="text-[8px] min-[375px]:text-[9px] font-bold text-red-500 dark:text-red-400 mb-0.5">
               Only {resolvedStock} left!
             </span>

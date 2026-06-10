@@ -7,6 +7,7 @@ export const revalidate = 30
 export default async function CafePage() {
   // 1. Self-healing seeding for Cafe category & hot food products
   let cafeCategory = null
+  let isNewCategory = false
   try {
     cafeCategory = await prisma.category.findUnique({
       where: { slug: 'cafe' }
@@ -21,6 +22,7 @@ export default async function CafePage() {
           sortOrder: 0,
         }
       })
+      isNewCategory = true
     } else if (cafeCategory.imageUrl === '☕') {
       // Update existing cafe category with proper image
       cafeCategory = await prisma.category.update({
@@ -362,7 +364,8 @@ export default async function CafePage() {
   }
 
   // 3. Self-healing seeding: Ensure all new categories and products exist in the database individually
-  if (cafeCategory) {
+  // Only trigger seeding if the category was newly created (first-run setup)
+  if (cafeCategory && isNewCategory) {
     let seededNewProduct = false
     for (const item of hotCafeProducts) {
       const exists = dbCafeProducts.some(p => p.slug === item.slug)

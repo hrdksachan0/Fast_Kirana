@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     } = body as {
       categoryId?: string
       productIds?: string[]
-      updateType: 'PRICE' | 'STOCK' | 'AVAILABILITY'
+      updateType: 'PRICE' | 'STOCK' | 'AVAILABILITY' | 'MIN_STOCK'
       mode: 'FLAT_INCREASE' | 'FLAT_DECREASE' | 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'SET_VALUE'
       value: number
       preview?: boolean
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['PRICE', 'STOCK', 'AVAILABILITY'].includes(updateType)) {
+    if (!['PRICE', 'STOCK', 'AVAILABILITY', 'MIN_STOCK'].includes(updateType)) {
       return NextResponse.json(
-        { error: 'Invalid updateType. Must be PRICE, STOCK, or AVAILABILITY' },
+        { error: 'Invalid updateType. Must be PRICE, STOCK, AVAILABILITY, or MIN_STOCK' },
         { status: 400 },
       )
     }
@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
         price: true,
         mrp: true,
         stock: true,
+        minStock: true,
         isAvailable: true,
       },
     })
@@ -148,6 +149,16 @@ export async function POST(request: NextRequest) {
       } else if (updateType === 'AVAILABILITY') {
         const oldValue = product.isAvailable
         const newValue = value === 1
+        changes.push({
+          productId: product.id,
+          name: product.name,
+          oldValue,
+          newValue,
+        })
+      } else if (updateType === 'MIN_STOCK') {
+        const oldValue = product.minStock
+        const rawNew = computeNewValue(oldValue, mode, value)
+        const newValue = Math.max(0, Math.round(rawNew))
         changes.push({
           productId: product.id,
           name: product.name,
@@ -201,6 +212,11 @@ export async function POST(request: NextRequest) {
           await tx.product.update({
             where: { id: change.productId },
             data: { isAvailable: change.newValue as boolean },
+          })
+        } else if (updateType === 'MIN_STOCK') {
+          await tx.product.update({
+            where: { id: change.productId },
+            data: { minStock: change.newValue as number },
           })
         }
       }

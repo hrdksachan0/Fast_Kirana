@@ -59,7 +59,7 @@ interface AdminBulkUpdateProps {
 export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpdateProps) {
   // Bulk update parameters form
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL')
-  const [updateType, setUpdateType] = useState<'PRICE' | 'STOCK' | 'AVAILABILITY'>('PRICE')
+  const [updateType, setUpdateType] = useState<'PRICE' | 'STOCK' | 'AVAILABILITY' | 'MIN_STOCK'>('PRICE')
   const [mode, setMode] = useState<'FLAT_INCREASE' | 'FLAT_DECREASE' | 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'SET_VALUE'>('FLAT_INCREASE')
   const [value, setValue] = useState<string>('')
   
@@ -100,8 +100,8 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
     if (updateType === 'AVAILABILITY') {
       setMode('SET_VALUE')
       setValue('1') // default to Enable (1)
-    } else if (updateType === 'STOCK' && mode.includes('PERCENT')) {
-      // Stock typically uses flat values
+    } else if ((updateType === 'STOCK' || updateType === 'MIN_STOCK') && mode.includes('PERCENT')) {
+      // Stock/MinStock typically use flat values
       setMode('FLAT_INCREASE')
     }
   }, [updateType])
@@ -282,6 +282,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
                 >
                   <option value="PRICE">Price (Cost & Selling prices)</option>
                   <option value="STOCK">Stock level (Replenishment)</option>
+                  <option value="MIN_STOCK">Minimum Stock Alert Threshold (minStock)</option>
                   <option value="AVAILABILITY">Availability toggle</option>
                 </select>
               </div>
@@ -332,7 +333,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
                     required
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    placeholder={updateType === 'PRICE' ? 'e.g. 10 for 10% or ₹10' : 'e.g. 50 units'}
+                    placeholder={updateType === 'PRICE' ? 'e.g. 10 for 10% or ₹10' : updateType === 'MIN_STOCK' ? 'e.g. 10 units' : 'e.g. 50 units'}
                     className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary"
                   />
                 )}

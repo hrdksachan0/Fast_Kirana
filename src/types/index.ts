@@ -12,6 +12,7 @@ export interface Product {
   stock: number
   isAvailable: boolean
   tags: string[]
+  minStock?: number
   category?: Category
   images?: ProductImage[]
   reviews?: Review[]

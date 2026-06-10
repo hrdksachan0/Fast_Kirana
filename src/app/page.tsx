@@ -231,6 +231,7 @@ export default async function Home() {
     stock: p.stock,
     isAvailable: p.isAvailable,
     tags: p.tags,
+    minStock: p.minStock,
     category: p.category ? {
       id: p.category.id,
       name: p.category.name,
