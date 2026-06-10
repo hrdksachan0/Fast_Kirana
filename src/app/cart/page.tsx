@@ -131,13 +131,37 @@ export default function CartPage() {
 
 
 
+  const hasInventoryIssues = items.some(
+    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || !item.product.isAvailable
+  )
   const hasClosedGroceryItems = groceryItems.length > 0 && !groceryMartOpen
   const hasClosedCafeItems = cafeItems.length > 0 && !cafeOpen
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+
+  const handleAutoAdjust = () => {
+    let adjustedCount = 0
+    items.forEach((item) => {
+      if (!item.product.isAvailable || item.product.stock <= 0) {
+        removeItem(item.product.id, item.product.name)
+        adjustedCount++
+      } else if (item.quantity > item.product.stock) {
+        updateQuantity(item.product.id, item.product.name, item.product.stock)
+        adjustedCount++
+      }
+    })
+    if (adjustedCount > 0) {
+      toast.success(`Automatically adjusted ${adjustedCount} item(s) to match available stock!`, {
+        id: 'cart-auto-adjust-success',
+      })
+    }
+  }
 
   const renderItemRow = (item: typeof items[0]) => {
     const isCafe = isCafeProduct(item.product)
     const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+
+    const isOOS = item.product.stock <= 0 || !item.product.isAvailable
+    const isExceeded = item.quantity > item.product.stock && !isOOS
 
     return (
       <motion.div
@@ -149,53 +173,79 @@ export default function CartPage() {
         transition={{ duration: 0.15, ease: 'easeOut' }}
         className="overflow-hidden border-b border-border/40 last:border-0"
       >
-        <div className="flex items-center gap-2.5 min-[375px]:gap-4 py-3 min-[375px]:py-3.5">
-          <div className="relative w-14 h-14 min-[375px]:w-16 min-[375px]:h-16 rounded-xl border border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
-            <ProductImage
-              src={item.product.imageUrl}
-              alt={item.product.name}
-              categorySlug={item.product.category?.slug}
-              className="h-full w-full object-contain p-1"
-            />
-          </div>
+        <div className="flex flex-col w-full">
+          <div className="flex items-center gap-2.5 min-[375px]:gap-4 py-3 min-[375px]:py-3.5">
+            <div className="relative w-14 h-14 min-[375px]:w-16 min-[375px]:h-16 rounded-xl border border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+              <ProductImage
+                src={item.product.imageUrl}
+                alt={item.product.name}
+                categorySlug={item.product.category?.slug}
+                className="h-full w-full object-contain p-1"
+              />
+            </div>
 
-          <div className="flex-grow">
-            <h3 className="text-xs min-[375px]:text-sm font-bold text-text-primary line-clamp-1">{item.product.name}</h3>
-            <p className="text-xs text-text-secondary mt-0.5">{item.product.unit}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs min-[375px]:text-sm font-bold text-text-primary">₹{item.product.price}</span>
-              {item.product.mrp > item.product.price && (
-                <span className="text-xs text-text-muted line-through">₹{item.product.mrp}</span>
-              )}
+            <div className="flex-grow">
+              <h3 className="text-xs min-[375px]:text-sm font-bold text-text-primary line-clamp-1">{item.product.name}</h3>
+              <p className="text-xs text-text-secondary mt-0.5">{item.product.unit}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs min-[375px]:text-sm font-bold text-text-primary">₹{item.product.price}</span>
+                {item.product.mrp > item.product.price && (
+                  <span className="text-xs text-text-muted line-through">₹{item.product.mrp}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-3 shrink-0">
+              <button
+                onClick={() => removeItem(item.product.id, item.product.name)}
+                className="text-text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors"
+                aria-label="Delete item"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+
+              <div className="flex h-8 w-24 items-center justify-between rounded-lg bg-accent text-white font-bold shadow-sm">
+                <button
+                  onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
+                  className="flex h-full w-8 items-center justify-center hover:bg-accent-dark rounded-l-lg transition-colors"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-xs select-none">{item.quantity}</span>
+                <button
+                  onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
+                  disabled={isStoreClosed || item.quantity >= item.product.stock}
+                  className="flex h-full w-8 items-center justify-center hover:bg-accent-dark rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-3 shrink-0">
-            <button
-              onClick={() => removeItem(item.product.id, item.product.name)}
-              className="text-text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors"
-              aria-label="Delete item"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-
-            <div className="flex h-8 w-24 items-center justify-between rounded-lg bg-accent text-white font-bold shadow-sm">
-              <button
-                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
-                className="flex h-full w-8 items-center justify-center hover:bg-accent-dark rounded-l-lg transition-colors"
+          {/* Dynamic stock validation warnings inside the row */}
+          <AnimatePresence>
+            {isOOS && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="mb-3 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5"
               >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <span className="text-xs select-none">{item.quantity}</span>
-              <button
-                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-                disabled={isStoreClosed || item.quantity >= item.product.stock}
-                className="flex h-full w-8 items-center justify-center hover:bg-accent-dark rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                <span>❌</span> Out of stock — please remove this item to checkout.
+              </motion.div>
+            )}
+            {isExceeded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="mb-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5"
               >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+                <span>⚠️</span> Only {item.product.stock} units available in stock.
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     )
@@ -203,7 +253,17 @@ export default function CartPage() {
 
   return (
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
-      <h1 className="text-lg min-[375px]:text-xl md:text-2xl font-black text-text-primary mb-4 md:mb-6">Review Cart Items</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-6">
+        <h1 className="text-lg min-[375px]:text-xl md:text-2xl font-black text-text-primary">Review Cart Items</h1>
+        {hasInventoryIssues && (
+          <button
+            onClick={handleAutoAdjust}
+            className="text-xs font-bold text-accent bg-accent/10 hover:bg-accent hover:text-white px-3 py-1.5 rounded-xl border border-accent/20 transition-all flex items-center gap-1 cursor-pointer"
+          >
+            🪄 Auto-Adjust Cart Quantities
+          </button>
+        )}
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Left: Items list */}
@@ -393,7 +453,23 @@ export default function CartPage() {
               </div>
             </div>
 
-            {isCheckoutBlocked && (
+            {hasInventoryIssues && !hasClosedGroceryItems && !hasClosedCafeItems && (
+              <div className="rounded-2xl border border-red-200/40 bg-red-50/30 dark:bg-red-950/20 dark:border-red-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden animate-slide-down">
+                <span className="text-2xl mt-0.5 select-none shrink-0" role="img" aria-label="Stock Issues">
+                  ⚠️
+                </span>
+                <div className="space-y-1 min-w-0">
+                  <h5 className="text-xs font-black text-red-850 dark:text-red-300">
+                    Stock Verification Issues
+                  </h5>
+                  <p className="text-[10px] font-bold text-red-700/90 dark:text-red-450/90 leading-normal">
+                    Some items in your cart exceed available stock. Please adjust quantities or use the auto-adjust helper to proceed.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isCheckoutBlocked && (hasClosedGroceryItems || hasClosedCafeItems) && (
               <div className="rounded-2xl border border-amber-200/40 bg-amber-50/30 dark:bg-amber-950/20 dark:border-amber-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-1 pointer-events-none opacity-20 text-4xl animate-float">
                   {hasClosedCafeItems ? '☕' : '💤'}
@@ -427,8 +503,16 @@ export default function CartPage() {
               disabled={isCheckoutBlocked}
               className="w-full bg-accent text-white hover:bg-accent-dark h-12 font-bold rounded-xl text-sm flex items-center justify-center gap-2 pt-1 transition-all disabled:bg-muted disabled:text-text-muted disabled:cursor-not-allowed disabled:opacity-75"
             >
-              {isCheckoutBlocked ? 'Checkout Blocked (Store Closed)' : 'Confirm and Checkout'}
-              <ArrowRight className="h-4 w-4" />
+              {hasClosedGroceryItems || hasClosedCafeItems ? (
+                'Checkout Blocked (Store Closed)'
+              ) : hasInventoryIssues ? (
+                'Fix Stock Issues to Checkout'
+              ) : (
+                <>
+                  Confirm and Checkout
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </div>

@@ -76,9 +76,25 @@ export function CartDrawer() {
 
   const total = groceryAdjustedSubtotal + cafeAdjustedSubtotal + deliveryFee
 
+  const hasInventoryIssues = items.some(
+    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || !item.product.isAvailable
+  )
   const hasClosedGroceryItems = groceryItems.length > 0 && !groceryMartOpen
   const hasClosedCafeItems = cafeItems.length > 0 && !cafeOpen
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+
+  const handleAutoAdjust = () => {
+    let adjustedCount = 0
+    items.forEach((item) => {
+      if (!item.product.isAvailable || item.product.stock <= 0) {
+        removeItem(item.product.id, item.product.name)
+        adjustedCount++
+      } else if (item.quantity > item.product.stock) {
+        updateQuantity(item.product.id, item.product.name, item.product.stock)
+        adjustedCount++
+      }
+    })
+  }
 
   const renderItemRow = (item: typeof items[0]) => {
     const perItemSaving = item.product.mrp > item.product.price
@@ -125,6 +141,15 @@ export function CartDrawer() {
                 Save {formatPrice(perItemSaving)}
               </p>
             )}
+            {item.product.stock <= 0 || !item.product.isAvailable ? (
+              <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
+                <span>❌</span> Out of Stock
+              </p>
+            ) : item.quantity > item.product.stock ? (
+              <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+                <span>⚠️</span> Only {item.product.stock} available
+              </p>
+            ) : null}
           </div>
 
           {/* Quantity controller */}
@@ -141,7 +166,7 @@ export function CartDrawer() {
             </span>
             <button
               onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-              disabled={isStoreClosed}
+              disabled={isStoreClosed || item.quantity >= item.product.stock}
               className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               aria-label="Increase quantity"
             >
@@ -233,6 +258,14 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {hasInventoryIssues && (
+                <button
+                  onClick={handleAutoAdjust}
+                  className="w-full text-center text-[10px] font-black text-accent bg-accent/5 hover:bg-accent/10 border border-accent/20 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer mb-2 animate-slide-down"
+                >
+                  🪄 Auto-Adjust Out of Stock Items
+                </button>
+              )}
               {/* Free delivery progress */}
               <div className="space-y-2.5">
                 {groceryItems.length > 0 && (
@@ -431,7 +464,11 @@ export function CartDrawer() {
                       disabled
                       className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
                     >
-                      Closed Items <ArrowRight size={16} />
+                      {hasClosedGroceryItems || hasClosedCafeItems ? (
+                        <>Closed Items <ArrowRight size={16} /></>
+                      ) : (
+                        <>Fix Stock <ArrowRight size={16} /></>
+                      )}
                     </button>
                   ) : (
                     <Link

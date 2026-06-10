@@ -156,9 +156,15 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.unit}
           </span>
           {resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
-            <span className="text-[8px] min-[375px]:text-[9px] font-bold text-red-500 dark:text-red-400 mb-0.5">
+            <motion.span
+              key={resolvedStock}
+              initial={{ scale: 0.9, opacity: 0.7 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="text-[8px] min-[375px]:text-[9px] font-bold text-red-500 dark:text-red-400 mb-0.5 block"
+            >
               Only {resolvedStock} left!
-            </span>
+            </motion.span>
           )}
         </div>
       </Link>
@@ -168,9 +174,15 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Left Side: Pricing & Savings */}
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-baseline gap-1 flex-wrap leading-none">
-            <span className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary">
+            <motion.span
+              key={resolvedPrice}
+              initial={{ scale: 0.85, y: -2 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 12 }}
+              className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary block"
+            >
               ₹{resolvedPrice}
-            </span>
+            </motion.span>
             {resolvedMrp > resolvedPrice && (
               <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-bold">
                 ₹{resolvedMrp}
