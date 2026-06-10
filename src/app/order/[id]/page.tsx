@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { CheckCircle2, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
+import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
@@ -101,22 +102,12 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         <h1 className="text-2xl font-black text-text-primary tracking-tight">Order Placed Successfully!</h1>
         <p className="text-xs text-text-secondary mt-1">Thank you for shopping. Your order has been registered.</p>
         
-        {/* Animated Delivery Timeline */}
-        <div className="mt-6 w-full max-w-xs space-y-2.5">
-          <div className="flex justify-between text-[10px] text-text-muted font-bold px-1">
-            <span>Placed</span>
-            <span>Processing</span>
-            <span>{order.deliveryMethod === 'PICKUP' ? 'Picked Up' : 'Delivered'}</span>
-          </div>
-          <div className="relative h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-            <div className="absolute inset-y-0 left-0 bg-accent w-[20%] animate-progress-glow rounded-full" />
-          </div>
-          <p className="text-[10px] text-accent font-extrabold animate-pulse-gentle flex items-center justify-center gap-1 pt-1">
-            {order.deliveryMethod === 'PICKUP' 
-              ? '🏪 Store pickup selected! Ready within 10-15 mins.' 
-              : '⚡ Fast delivery active! Estimated arrival soon'}
-          </p>
-        </div>
+        {/* Animated Delivery Timeline (Client Component for live status updates) */}
+        <OrderConfirmationStatus
+          orderId={order.id}
+          initialStatus={order.status}
+          deliveryMethod={order.deliveryMethod}
+        />
 
         <div className="flex gap-3 mt-6 w-full sm:w-auto">
           <Link
