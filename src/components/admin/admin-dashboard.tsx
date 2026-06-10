@@ -57,6 +57,7 @@ interface AdminDashboardProps {
   initialUsers: any[]
   initialReviews: any[]
   initialCoupons: any[]
+  allProducts: any[]
   stats: {
     revenue: number
     orderCount: number
@@ -74,6 +75,7 @@ export function AdminDashboard({
   initialUsers,
   initialReviews,
   initialCoupons,
+  allProducts: initialAllProducts,
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
@@ -354,6 +356,7 @@ export function AdminDashboard({
 
   // States for Products
   const [products, setProducts] = useState(initialProducts)
+  const [allProducts, setAllProducts] = useState(initialAllProducts)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
   
@@ -855,6 +858,7 @@ export function AdminDashboard({
       if (res.ok) {
         const updated = await res.json()
         setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)))
+        setAllProducts(allProducts.map((p) => (p.id === editingProduct.id ? { ...p, ...updated } : p)))
         toast.success('Product updated successfully!')
         setEditingProduct(null)
       } else {
@@ -880,6 +884,7 @@ export function AdminDashboard({
       if (res.ok) {
         const updated = await res.json()
         setProducts(products.map((p) => (p.id === productId ? updated : p)))
+        setAllProducts(allProducts.map((p) => (p.id === productId ? { ...p, ...updated } : p)))
         toast.success(`Product "${updated.name}" ${!currentAvailable ? 'enabled' : 'disabled'} successfully!`)
       } else {
         toast.error('Failed to update product availability')
@@ -920,6 +925,7 @@ export function AdminDashboard({
       if (res.ok) {
         const created = await res.json()
         setProducts([created, ...products])
+        setAllProducts([created, ...allProducts])
         toast.success(`Product "${created.name}" created successfully!`)
         setShowAddProduct(false)
         setNewProduct({
@@ -960,6 +966,7 @@ export function AdminDashboard({
 
       if (res.ok) {
         setProducts(products.filter((p) => p.id !== productId))
+        setAllProducts(allProducts.filter((p) => p.id !== productId))
         toast.success('Product permanently deleted.')
       } else {
         const data = await res.json()
@@ -3293,7 +3300,7 @@ export function AdminDashboard({
       {activeTab === 'analytics' && (
         <div className="animate-fade-in">
           <AdminAnalytics
-            products={products}
+            products={allProducts}
             orders={orders}
             categories={categories}
             stats={{
@@ -3313,7 +3320,10 @@ export function AdminDashboard({
                 const res = await fetch('/api/products?limit=1000')
                 if (res.ok) {
                   const data = await res.json()
-                  if (data.products) setProducts(data.products)
+                  if (data.products) {
+                    setProducts(data.products)
+                    setAllProducts(data.products)
+                  }
                 }
               } catch (err) {
                 console.error(err)
@@ -3331,7 +3341,10 @@ export function AdminDashboard({
                 const res = await fetch('/api/products?limit=1000')
                 if (res.ok) {
                   const data = await res.json()
-                  if (data.products) setProducts(data.products)
+                  if (data.products) {
+                    setProducts(data.products)
+                    setAllProducts(data.products)
+                  }
                 }
               } catch (err) {
                 console.error(err)
@@ -3350,7 +3363,10 @@ export function AdminDashboard({
                 const res = await fetch('/api/products?limit=1000')
                 if (res.ok) {
                   const data = await res.json()
-                  if (data.products) setProducts(data.products)
+                  if (data.products) {
+                    setProducts(data.products)
+                    setAllProducts(data.products)
+                  }
                 }
               } catch (err) {
                 console.error(err)

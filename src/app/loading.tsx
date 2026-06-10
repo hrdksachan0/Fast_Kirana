@@ -3,21 +3,78 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { ShoppingBag, ShieldCheck, User, CreditCard, Coffee, Truck, Package, Search, Loader2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import {
+  HomepageSkeleton,
+  CategorySkeleton,
+  ProductDetailSkeleton,
+  SearchSkeleton,
+  CafeSkeleton,
+  CartSkeleton,
+  CheckoutSkeleton,
+  AccountSkeleton,
+  OrderDetailsSkeleton,
+  AdminSkeleton,
+  OperationalSkeleton,
+} from '@/components/shared/skeletons'
 
 export default function Loading() {
   const pathname = usePathname()
   const [visible, setVisible] = useState(false)
 
-  // Delay showing the loader by 250ms to prevent flickering on fast transitions
+  // Delay showing the loader by 50ms to prevent flickering on ultra-fast transitions
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 250)
+    const timer = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(timer)
   }, [])
 
   if (!visible) return null
 
-  // Determine path-aware text and icon
+  // 1. Full-page customized skeleton rendering based on path
+  if (pathname === '/' || pathname === '') {
+    return <HomepageSkeleton />
+  }
+  if (pathname.startsWith('/category/')) {
+    return <CategorySkeleton />
+  }
+  if (pathname.startsWith('/product/')) {
+    return <ProductDetailSkeleton />
+  }
+  if (pathname.startsWith('/search')) {
+    return <SearchSkeleton />
+  }
+  if (pathname.startsWith('/cafe-kitchen')) {
+    return <OperationalSkeleton title="Cafe Kitchen" />
+  }
+  if (pathname.startsWith('/cafe')) {
+    return <CafeSkeleton />
+  }
+  if (pathname.startsWith('/cart')) {
+    return <CartSkeleton />
+  }
+  if (pathname.startsWith('/checkout')) {
+    return <CheckoutSkeleton />
+  }
+  if (pathname.startsWith('/order/') && pathname.endsWith('/track')) {
+    return <OrderDetailsSkeleton />
+  }
+  if (pathname.startsWith('/order/')) {
+    return <OrderDetailsSkeleton />
+  }
+  if (pathname.startsWith('/account')) {
+    return <AccountSkeleton />
+  }
+  if (pathname.startsWith('/admin')) {
+    return <AdminSkeleton />
+  }
+  if (pathname.startsWith('/picker')) {
+    return <OperationalSkeleton title="Picker Dashboard" />
+  }
+  if (pathname.startsWith('/delivery')) {
+    return <OperationalSkeleton title="Delivery Rider" />
+  }
+
+  // 2. Fallback: Contextual path-aware toast spinner for minor/static pages (login, signup, setup-profile, etc.)
   let loadingText = 'Loading items...'
   let Icon = ShoppingBag
   let themeColor = 'text-primary border-primary/20 bg-primary/5'

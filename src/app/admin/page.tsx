@@ -32,6 +32,7 @@ export default async function AdminPage() {
   let reviewsRaw: any[] = []
   let couponsRaw: any[] = []
   let usersRaw: any[] = []
+  let allProductsRaw: any[] = []
 
   try {
     const results = await Promise.all([
@@ -95,7 +96,26 @@ export default async function AdminPage() {
         SELECT u.id, u.name, u.email, u.phone, u.role::text as role, u."createdAt",
                (SELECT COUNT(*)::int FROM orders o WHERE o."userId" = u.id) as order_count
         FROM users u ORDER BY u."createdAt" DESC LIMIT 10
-      `
+      `,
+      prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          mrp: true,
+          costPrice: true,
+          stock: true,
+          minStock: true,
+          isAvailable: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            }
+          }
+        }
+      })
     ])
 
     orderCount = results[0] as number
@@ -109,6 +129,7 @@ export default async function AdminPage() {
     reviewsRaw = results[7] as any[]
     couponsRaw = results[8] as any[]
     usersRaw = results[9] as any[]
+    allProductsRaw = results[10] as any[]
   } catch (error) {
     console.warn('Database connection error in admin page: using empty dashboard fallback')
   }
@@ -204,6 +225,22 @@ export default async function AdminPage() {
     createdAt: c.createdAt.toISOString(),
   }))
 
+  const allProducts = allProductsRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    mrp: p.mrp,
+    costPrice: p.costPrice ?? 0,
+    stock: p.stock,
+    minStock: p.minStock,
+    isAvailable: p.isAvailable,
+    category: {
+      id: p.category.id,
+      name: p.category.name,
+      slug: p.category.slug,
+    },
+  }))
+
   const statsList = [
     { label: 'Total Revenue', value: formatPrice(revenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
     { label: 'Total Orders', value: orderCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
@@ -254,6 +291,7 @@ export default async function AdminPage() {
         initialUsers={users}
         initialReviews={reviews}
         initialCoupons={coupons}
+        allProducts={allProducts}
         stats={{
           revenue,
           orderCount,

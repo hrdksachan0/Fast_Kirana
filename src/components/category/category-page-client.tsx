@@ -35,12 +35,13 @@ export function CategoryPageClient({
     // 1. Filter by search query
     let result = [...initialProducts]
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q)) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
+      const words = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
+      result = result.filter((p) =>
+        words.every((word) =>
+          p.name.toLowerCase().includes(word) ||
+          (p.description && p.description.toLowerCase().includes(word)) ||
+          p.tags.some((t) => t.toLowerCase().includes(word))
+        )
       )
     }
 

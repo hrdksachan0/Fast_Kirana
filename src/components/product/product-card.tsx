@@ -155,7 +155,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
             {product.unit}
           </span>
-          {resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
+          {product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
             <motion.span
               key={resolvedStock}
               initial={{ scale: 0.9, opacity: 0.7 }}

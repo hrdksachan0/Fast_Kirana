@@ -17,15 +17,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let products: Product[] = []
 
   if (query) {
+    const words = query.split(/\s+/).filter(Boolean)
+
     const productsRaw = await prisma.product.findMany({
       where: {
         isAvailable: true,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { tags: { hasSome: [query.toLowerCase()] } },
-          { category: { name: { contains: query, mode: 'insensitive' } } },
-        ],
+        AND: words.map((word) => ({
+          OR: [
+            { name: { contains: word, mode: 'insensitive' } },
+            { description: { contains: word, mode: 'insensitive' } },
+            { tags: { hasSome: [word.toLowerCase()] } },
+            { category: { name: { contains: word, mode: 'insensitive' } } },
+          ],
+        })),
       },
       include: {
         category: true,

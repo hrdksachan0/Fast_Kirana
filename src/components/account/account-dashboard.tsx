@@ -24,10 +24,46 @@ interface AccountDashboardProps {
   orders: any[]
 }
 
-export function AccountDashboard({ user, addresses: initialAddresses, orders }: AccountDashboardProps) {
+export function AccountDashboard({ user, addresses: initialAddresses, orders: initialOrders }: AccountDashboardProps) {
   const [addresses, setAddresses] = useState(initialAddresses)
+  const [orders, setOrders] = useState(initialOrders)
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('orders')
+
+  // Live order status updates via Server-Sent Events
+  useEffect(() => {
+    const activeOrders = orders.filter(
+      (ord) => !['DELIVERED', 'CANCELLED'].includes(ord.status)
+    )
+    if (activeOrders.length === 0) return
+
+    const eventSources = activeOrders.map((ord) => {
+      const es = new EventSource(`/api/orders/${ord.id}/live`)
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.status && data.status !== ord.status) {
+            setOrders((prevOrders) =>
+              prevOrders.map((o) =>
+                o.id === ord.id ? { ...o, status: data.status } : o
+              )
+            )
+          }
+        } catch (err) {
+          console.error('Error parsing SSE in AccountDashboard:', err)
+        }
+      }
+      es.onerror = (err) => {
+        console.error(`SSE error for order ${ord.id}:`, err)
+        es.close()
+      }
+      return { id: ord.id, es }
+    })
+
+    return () => {
+      eventSources.forEach(({ es }) => es.close())
+    }
+  }, [orders.map((o) => `${o.id}:${o.status}`).join(',')])
 
   useEffect(() => {
     const tab = searchParams.get('tab')
