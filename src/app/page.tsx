@@ -9,7 +9,6 @@ import { LastOrderBanner } from '@/components/home/last-order-banner'
 import { TimeSuggestions } from '@/components/home/time-suggestions'
 import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
-import { CafeSection } from '@/components/home/cafe-section'
 import { Category, Product } from '@/types'
 
 // Revalidate home page every 60 seconds to keep catalog fresh
@@ -75,9 +74,10 @@ export default async function Home() {
   }
 
   // Ensure Cafe items do not leak into general grocery suggestions
-  suggestionWhereClause.NOT = {
-    tags: { has: 'cafe' }
-  }
+  suggestionWhereClause.NOT = [
+    { tags: { has: 'cafe' } },
+    { category: { slug: 'cafe' } },
+  ]
 
   // 2. Fetch independent data pools in parallel to eliminate database sequential waterfall latency
   try {
@@ -112,9 +112,10 @@ export default async function Home() {
         where: {
           isAvailable: true,
           discount: { gt: 10 },
-          NOT: {
-            tags: { has: 'cafe' }
-          }
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ]
         },
         orderBy: { discount: 'desc' },
         take: 10,
@@ -123,9 +124,10 @@ export default async function Home() {
       prisma.product.findMany({
         where: {
           isAvailable: true,
-          NOT: {
-            tags: { has: 'cafe' }
-          }
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ]
         },
         orderBy: { createdAt: 'desc' },
         take: 12,
@@ -155,9 +157,10 @@ export default async function Home() {
         where: {
           id: { in: trendingProductIds },
           isAvailable: true,
-          NOT: {
-            tags: { has: 'cafe' }
-          }
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ]
         },
         include: { category: true },
       })
@@ -179,9 +182,10 @@ export default async function Home() {
           isAvailable: true,
           tags: { has: 'popular' },
           id: { notIn: existingIds },
-          NOT: {
-            tags: { has: 'cafe' }
-          }
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ]
         },
         take: 12 - topPicksRaw.length,
         include: { category: true },
@@ -254,9 +258,6 @@ export default async function Home() {
 
       {/* Your Last Order - Track active or reorder */}
       <LastOrderBanner />
-
-      {/* Café Section (Hot & Fresh South Indian / Chinese) */}
-      <CafeSection />
 
       {/* Flash Deals Row */}
       <ProductScrollSection

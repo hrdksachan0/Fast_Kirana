@@ -170,20 +170,6 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Desktop: Grid layout (8 columns) */}
       <div className="hidden md:grid grid-cols-8 gap-4 stagger-children">
-        {/* Cafe card */}
-        <Link
-          href="/cafe"
-          className="group relative flex flex-col items-center text-center p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1"
-        >
-          <span className="absolute -top-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-2 py-0.5 text-[8px] font-black text-white shadow-sm border border-orange-300/30 animate-pulse-gentle whitespace-nowrap">
-            ☕ HOT
-          </span>
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 mb-2 shadow-md transition-all duration-300 group-hover:scale-110 ring-2 ring-orange-300/40 group-hover:ring-orange-400 group-hover:shadow-[0_0_18px_rgba(244,63,94,0.45)] overflow-hidden">
-            <img src="/cafe_category.png" alt="Cafe" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-          </div>
-          <span className="text-xs font-black text-rose-600 dark:text-rose-400 group-hover:text-rose-700 transition-colors leading-tight line-clamp-2">Cafe</span>
-          <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold mt-0.5">Hot & Fresh</span>
-        </Link>
 
         {categories
           .filter((category) => category.slug !== 'cafe')

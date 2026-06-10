@@ -378,9 +378,71 @@ export function AdminDashboard({
     expiryDate: '',
     costPrice: '0',
   })
-  // Helper computed variables to check if a product is a Cafe Item
-  const isNewProductCafe = newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')
-  const isEditProductCafe = productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')
+  // Product type toggles: 'grocery' | 'cafe'
+  const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
+  const [editProductType, setEditProductType] = useState<'grocery' | 'cafe'>('grocery')
+
+  const isNewProductCafe = newProductType === 'cafe'
+  const isEditProductCafe = editProductType === 'cafe'
+
+  const handleNewProductTypeChange = (type: 'grocery' | 'cafe') => {
+    setNewProductType(type)
+    const cafeCategory = categories.find(c => c.slug === 'cafe' || c.name.toLowerCase().includes('cafe'))
+    
+    if (type === 'cafe') {
+      const cafeId = cafeCategory?.id || ''
+      let currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
+      if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
+        currentTags.push('cafe')
+      }
+      setNewProduct(prev => ({
+        ...prev,
+        categoryId: cafeId,
+        expiryDate: '',
+        tags: currentTags.join(', ')
+      }))
+    } else {
+      const firstGroceryId = categories.find(c => c.slug !== 'cafe')?.id || ''
+      const cafeSpecificTags = ['cafe', 'sandwiches', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'frankie-rolls']
+      const currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const filteredTags = currentTags.filter(t => !cafeSpecificTags.includes(t.toLowerCase()))
+      setNewProduct(prev => ({
+        ...prev,
+        categoryId: firstGroceryId,
+        tags: filteredTags.join(', ')
+      }))
+    }
+  }
+
+  const handleEditProductTypeChange = (type: 'grocery' | 'cafe') => {
+    setEditProductType(type)
+    const cafeCategory = categories.find(c => c.slug === 'cafe' || c.name.toLowerCase().includes('cafe'))
+    
+    if (type === 'cafe') {
+      const cafeId = cafeCategory?.id || ''
+      let currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+      if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
+        currentTags.push('cafe')
+      }
+      setProductEditForm(prev => ({
+        ...prev,
+        categoryId: cafeId,
+        expiryDate: '',
+        tags: currentTags.join(', ')
+      }))
+    } else {
+      const firstGroceryId = categories.find(c => c.slug !== 'cafe')?.id || ''
+      const cafeSpecificTags = ['cafe', 'sandwiches', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'frankie-rolls']
+      const currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const filteredTags = currentTags.filter(t => !cafeSpecificTags.includes(t.toLowerCase()))
+      setProductEditForm(prev => ({
+        ...prev,
+        categoryId: firstGroceryId,
+        tags: filteredTags.join(', ')
+      }))
+    }
+  }
+
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'grocery' | 'cafe'>('all')
 
   // States for Categories
@@ -694,6 +756,9 @@ export function AdminDashboard({
   // ----------------------------------------------------
   const startEditingProduct = (p: any) => {
     setEditingProduct(p)
+    const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
+                   categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
+    setEditProductType(isCafe ? 'cafe' : 'grocery')
     setProductEditForm({
       name: p.name || '',
       description: p.description || '',
@@ -1627,9 +1692,36 @@ export function AdminDashboard({
               onSubmit={handleCreateProduct}
               className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
             >
-              <div className="border-b border-border/60 pb-2">
-                <h4 className="font-extrabold text-text-primary text-sm">Add New Product Details</h4>
-                <p className="text-[10px] text-text-secondary mt-0.5">Define your inventory item specs, MRP and FastKirana pricing.</p>
+              <div className="border-b border-border/60 pb-2 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-extrabold text-text-primary text-sm">Add New Product Details</h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5">Define your inventory item specs, MRP and FastKirana pricing.</p>
+                </div>
+                {/* Product Type Selector Toggle */}
+                <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/30 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => handleNewProductTypeChange('grocery')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      newProductType === 'grocery'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    <span>🛒</span> Grocery Product
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNewProductTypeChange('cafe')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      newProductType === 'cafe'
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'text-text-secondary hover:text-rose-500'
+                    }`}
+                  >
+                    <span>☕</span> Café Item
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1647,18 +1739,26 @@ export function AdminDashboard({
 
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  <select
-                    required
-                    value={newProduct.categoryId}
-                    onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  {newProductType === 'cafe' ? (
+                    <div className="w-full px-3 py-2 text-xs rounded-xl border bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-1.5 h-[34px] select-none">
+                      <span>☕</span> FastKirana Cafe
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={newProduct.categoryId}
+                      onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                    >
+                      {categories
+                        .filter((c) => c.slug !== 'cafe')
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -1777,6 +1877,10 @@ export function AdminDashboard({
                   <input
                     type="number"
                     step="0.01"
+                    placeholder="e.g. 60"
+                    value={newProduct.costPrice}
+                    onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
 
@@ -3159,6 +3263,31 @@ export function AdminDashboard({
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {/* Product Type Selector Toggle */}
+            <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/30 w-fit">
+              <button
+                type="button"
+                onClick={() => handleEditProductTypeChange('grocery')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  editProductType === 'grocery'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <span>🛒</span> Grocery Product
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditProductTypeChange('cafe')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  editProductType === 'cafe'
+                    ? 'bg-rose-500 text-white shadow-sm'
+                    : 'text-text-secondary hover:text-rose-500'
+                }`}
+              >
+                <span>☕</span> Café Item
+              </button>
+            </div>
             <form onSubmit={saveProductChanges} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -3173,18 +3302,26 @@ export function AdminDashboard({
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  <select
-                    required
-                    value={productEditForm.categoryId}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  {editProductType === 'cafe' ? (
+                    <div className="w-full px-3 py-2 text-xs rounded-xl border bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-1.5 h-[34px] select-none">
+                      <span>☕</span> FastKirana Cafe
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={productEditForm.categoryId}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                    >
+                      {categories
+                        .filter((c) => c.slug !== 'cafe')
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification *</label>
