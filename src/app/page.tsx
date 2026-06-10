@@ -74,6 +74,11 @@ export default async function Home() {
     }
   }
 
+  // Ensure Cafe items do not leak into general grocery suggestions
+  suggestionWhereClause.NOT = {
+    tags: { has: 'cafe' }
+  }
+
   // 2. Fetch independent data pools in parallel to eliminate database sequential waterfall latency
   try {
     const [
@@ -107,6 +112,9 @@ export default async function Home() {
         where: {
           isAvailable: true,
           discount: { gt: 10 },
+          NOT: {
+            tags: { has: 'cafe' }
+          }
         },
         orderBy: { discount: 'desc' },
         take: 10,
@@ -115,6 +123,9 @@ export default async function Home() {
       prisma.product.findMany({
         where: {
           isAvailable: true,
+          NOT: {
+            tags: { has: 'cafe' }
+          }
         },
         orderBy: { createdAt: 'desc' },
         take: 12,
@@ -144,6 +155,9 @@ export default async function Home() {
         where: {
           id: { in: trendingProductIds },
           isAvailable: true,
+          NOT: {
+            tags: { has: 'cafe' }
+          }
         },
         include: { category: true },
       })
@@ -165,6 +179,9 @@ export default async function Home() {
           isAvailable: true,
           tags: { has: 'popular' },
           id: { notIn: existingIds },
+          NOT: {
+            tags: { has: 'cafe' }
+          }
         },
         take: 12 - topPicksRaw.length,
         include: { category: true },
