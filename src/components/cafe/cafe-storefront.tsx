@@ -365,9 +365,11 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [categorySections, menuCategories])
 
-  // Auto-scroll horizontal category bar to center active tag button
+  // Auto-scroll horizontal category bar to center active tag button (debounced by 150ms to prevent jittering when scrolling fast)
   useEffect(() => {
-    if (activeCategory) {
+    if (!activeCategory) return
+
+    const timeoutId = setTimeout(() => {
       const activeTabEl = document.getElementById(`category-tab-${activeCategory}`)
       if (activeTabEl) {
         activeTabEl.scrollIntoView({
@@ -376,7 +378,9 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
           inline: 'center'
         })
       }
-    }
+    }, 150)
+
+    return () => clearTimeout(timeoutId)
   }, [activeCategory])
 
   // Smooth scroll handler
@@ -428,33 +432,33 @@ export function CafeStorefront({ initialProducts }: CafeStorefrontProps) {
         <span className="font-bold text-rose-600">FastKirana Cafe ☕</span>
       </nav>
 
-      {/* Hero Cafe Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2c1810] via-[#1a0c07] to-[#0f0502] p-6 md:p-10 text-white shadow-[0_8px_32px_rgba(35,21,16,0.25)] border border-[#48281d] dark:border-[#22100a]">
-        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-amber-500/10 blur-[60px] pointer-events-none" />
-
-        <div className="relative z-10 max-w-[60%] sm:max-w-md md:max-w-lg space-y-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-black tracking-wider uppercase text-amber-300">
-            <Flame className="h-3 w-3 text-amber-400 fill-amber-400 animate-pulse-gentle" />
-            Freshly Prepared & Hot
-          </span>
-          <h1 className="text-2xl md:text-4.5xl font-black leading-tight tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent">
-            FastKirana Cafe
-          </h1>
-          <p className="text-[10px] sm:text-xs md:text-sm text-white/80 leading-relaxed font-semibold">
-            Steaming hot tea, fresh filter coffee, gourmet frankie rolls, cold shakes, and mocktails prepared fresh and delivered warm!
-          </p>
-          <div className="flex items-center gap-3 pt-1 text-[10px] md:text-xs font-bold text-white/90">
-            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">⚡ Fast Delivery</span>
-            <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">🔥 Served Fresh</span>
-          </div>
-        </div>
+      {/* Hero Cafe Banner (Consistent with landing page design) */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-4 md:p-8 flex items-center justify-between min-h-[130px] md:min-h-[165px] shadow-[0_8px_30px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c]">
+        {/* Background Decorative Glow */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/15 dark:bg-amber-500/10 blur-[50px] pointer-events-none animate-pulse-gentle" />
         
-        {/* Right side: Premium Cafe Specials Food Image */}
-        <div className="absolute right-4 md:right-10 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
+        {/* Left Content */}
+        <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1.5">
+              <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent font-black">Café</span>
+              <span className="text-base animate-float">☕</span>
+            </h1>
+          </div>
+          <span className="inline-flex text-[8px] md:text-[10px] font-black bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-full px-2.5 py-0.5 tracking-wider uppercase mb-1">
+            Freshly Prepared. Fast Delivered.
+          </span>
+          <p className="text-[10px] md:text-xs text-white/70 leading-snug font-semibold max-w-[320px]">
+            Coffee, Beverages, South Indian, Chinese & more from your favorite café.
+          </p>
+        </div>
+
+        {/* Right Content: Food Image */}
+        <div className="absolute right-4 md:right-8 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
           <img
             src="/cafe_banner.png"
-            alt="Steaming Hot Tea & Café Specials"
-            className="object-contain max-h-[120px] md:max-h-[190px] w-auto h-auto drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]"
+            alt="South Indian and Chinese Cafe Specials"
+            className="object-contain max-h-[110px] md:max-h-[145px] lg:max-h-[165px] w-auto h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
           />
         </div>
       </div>
