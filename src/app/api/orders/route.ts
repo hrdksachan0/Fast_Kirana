@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function POST(request: NextRequest) {
   const limited = apiWriteLimiter.check(request)
@@ -332,6 +333,21 @@ export async function POST(request: NextRequest) {
 
       return results
     })
+
+    // Invalidate storefront caches on-demand since stock levels changed
+    try {
+      const uniqueCategorySlugs = new Set(
+        dbProducts.map((p) => p.category?.slug).filter(Boolean)
+      )
+      // Revalidate main pages
+      revalidateStorefront()
+      // Revalidate affected categories
+      for (const catSlug of uniqueCategorySlugs) {
+        revalidateStorefront(catSlug)
+      }
+    } catch (revalErr) {
+      console.error('Failed to revalidate paths after order placement:', revalErr)
+    }
 
     // Emit real-time SSE event for each newly created order
     try {

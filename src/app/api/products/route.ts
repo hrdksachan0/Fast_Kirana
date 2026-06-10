@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(request: NextRequest) {
   const limited = apiReadLimiter.check(request)
@@ -232,6 +233,9 @@ export async function POST(request: NextRequest) {
         category: true,
       }
     })
+
+    // Invalidate storefront caches on-demand
+    revalidateStorefront(product.category?.slug)
 
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {

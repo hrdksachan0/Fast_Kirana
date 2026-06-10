@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 async function checkAdmin() {
   const session = await auth()
@@ -25,6 +26,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     await Promise.all(updates)
+
+    // Invalidate storefront settings cache
+    revalidateStorefront()
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

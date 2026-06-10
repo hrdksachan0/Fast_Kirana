@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(
   request: Request,
@@ -108,6 +109,9 @@ export async function PATCH(
       },
     })
 
+    // Invalidate storefront cache
+    revalidateStorefront(updatedProduct.category?.slug)
+
     return NextResponse.json(updatedProduct)
   } catch (error: any) {
     console.error('Failed to update product:', error)
@@ -133,6 +137,9 @@ export async function DELETE(
           { id },
           { slug: id },
         ],
+      },
+      include: {
+        category: true,
       },
     })
 
@@ -169,6 +176,9 @@ export async function DELETE(
     await prisma.product.delete({
       where: { id: product.id },
     })
+
+    // Invalidate storefront cache
+    revalidateStorefront(product.category?.slug)
 
     return NextResponse.json({ message: 'Product permanently deleted' })
   } catch (error: any) {

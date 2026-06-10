@@ -1,35 +1,19 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { ProductCard } from '@/components/product/product-card'
+import { CategoryPageClient } from '@/components/category/category-page-client'
 import { Category, Product } from '@/types'
-import { Prisma } from '@prisma/client'
-import { cn } from '@/lib/utils'
-import { ShoppingBag } from 'lucide-react'
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ sort?: string }>
 }
 
 export const revalidate = 60
 
-export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
+export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
-  const { sort } = await searchParams
 
-  let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' }
-
-  if (sort === 'price-asc') {
-    orderBy = { price: 'asc' }
-  } else if (sort === 'price-desc') {
-    orderBy = { price: 'desc' }
-  } else if (sort === 'discount-desc') {
-    orderBy = { discount: 'desc' }
-  }
-
-  // 1. Fetch categories and category products in parallel
-  const [categoriesRaw, productsRaw] = await Promise.all([
+  // 1. Fetch categories, category products, and active product counts in parallel
+  const [categoriesRaw, productsRaw, productCounts] = await Promise.all([
     prisma.category.findMany({
       where: {
         slug: { not: 'cafe' },
@@ -41,11 +25,18 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         category: { slug },
         isAvailable: true,
       },
-      orderBy,
+      orderBy: { createdAt: 'desc' }, // default sort by newest
       include: {
         category: true,
       },
-    }).catch(() => [])
+    }).catch(() => []),
+    prisma.product.groupBy({
+      by: ['categoryId'],
+      where: { isAvailable: true },
+      _count: {
+        id: true,
+      },
+    }).catch(() => []),
   ])
 
   // 2. Fetch the active category from the pre-loaded category pool
@@ -55,7 +46,13 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound()
   }
 
-  // Map database categories and products to UI models
+  // 3. Map product counts list to a lookup map
+  const countsMap: Record<string, number> = {}
+  productCounts.forEach((group) => {
+    countsMap[group.categoryId] = group._count.id
+  })
+
+  // 4. Map database categories and products to UI models
   const categories: Category[] = categoriesRaw.map((c) => ({
     id: c.id,
     name: c.name,
@@ -89,130 +86,19 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     },
   }))
 
-  const sortOptions = [
-    { label: 'Popularity', value: undefined },
-    { label: 'Price: Low to High', value: 'price-asc' },
-    { label: 'Price: High to Low', value: 'price-desc' },
-    { label: 'Big Discounts', value: 'discount-desc' },
-  ]
-
   return (
-    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row gap-6">
-        
-        {/* Desktop Left Sidebar: Categories Navigation */}
-        <aside className="hidden md:block w-64 flex-shrink-0 border border-border bg-card p-4 rounded-2xl h-fit sticky top-[96px] shadow-sm">
-          <h3 className="font-bold text-text-primary text-base mb-4 px-2">Categories</h3>
-          <div className="space-y-1.5">
-            {categories.map((cat) => {
-              const isActive = cat.slug === slug
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.slug}${sort ? `?sort=${sort}` : ''}`}
-                  className={cn(
-                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-semibold rounded-xl transition-all duration-200",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.02]"
-                      : "text-text-secondary hover:bg-muted hover:text-text-primary"
-                  )}
-                >
-                  <span className="text-xl" role="img" aria-label={cat.name}>
-                    {cat.imageUrl || '🛒'}
-                  </span>
-                  <span>{cat.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </aside>
-
-        {/* Right Section: Header and Product Grid */}
-        <main className="flex-grow space-y-6">
-          {/* Mobile Category Horizontal Scrollbar */}
-          <div className="md:hidden overflow-x-auto flex gap-2 pb-2 scrollbar-hide">
-            {categories.map((cat) => {
-              const isActive = cat.slug === slug
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.slug}${sort ? `?sort=${sort}` : ''}`}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border whitespace-nowrap flex-shrink-0 transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-text-secondary border-border hover:bg-muted"
-                  )}
-                >
-                  <span>{cat.imageUrl || '🛒'}</span>
-                  <span>{cat.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-
-          {/* Category Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl" role="img" aria-label={activeCategory.name}>
-                  {activeCategory.imageUrl || '🛒'}
-                </span>
-                <h1 className="text-lg md:text-2xl font-extrabold text-text-primary tracking-tight">
-                  {activeCategory.name}
-                </h1>
-              </div>
-              <p className="text-xs text-text-secondary mt-1">
-                Showing {products.length} products
-              </p>
-            </div>
-
-            {/* Sorting Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-text-secondary hidden sm:inline">Sort By:</span>
-              <div className="flex overflow-x-auto gap-1 bg-muted p-1 rounded-xl scrollbar-none w-full sm:w-auto">
-                {sortOptions.map((opt) => {
-                  const isActive = sort === opt.value
-                  return (
-                    <Link
-                      key={opt.label}
-                      href={`/category/${slug}${opt.value ? `?sort=${opt.value}` : ''}`}
-                      className={cn(
-                        "px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex-shrink-0",
-                        isActive
-                          ? "bg-card text-text-primary shadow-sm"
-                          : "text-text-secondary hover:text-text-primary"
-                      )}
-                    >
-                      {opt.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Products Catalog Grid */}
-          {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 border border-dashed border-border bg-card rounded-2xl text-center p-6 shadow-sm">
-              <div className="w-16 h-16 bg-muted/40 rounded-full flex items-center justify-center mx-auto text-muted-foreground mb-4">
-                <ShoppingBag className="h-8 w-8 animate-pulse-gentle" />
-              </div>
-              <h2 className="text-base font-bold text-text-primary">No products available</h2>
-              <p className="text-xs text-text-secondary mt-1">
-                We are currently restocking this category. Please check back in a few minutes!
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </main>
-
-      </div>
-    </div>
+    <CategoryPageClient
+      categories={categories}
+      initialProducts={products}
+      activeCategory={{
+        id: activeCategory.id,
+        name: activeCategory.name,
+        slug: activeCategory.slug,
+        imageUrl: activeCategory.imageUrl,
+        parentId: activeCategory.parentId,
+        sortOrder: activeCategory.sortOrder,
+      }}
+      countsMap={countsMap}
+    />
   )
 }
