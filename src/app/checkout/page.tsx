@@ -40,7 +40,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal } = useCart()
+  const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal, updateQuantity, updateCartProduct } = useCart()
 
   // Steps: 1 = Address, 2 = Review, 3 = Payment
   const [step, setStep] = useState(1)
@@ -65,6 +65,48 @@ export default function CheckoutPage() {
         }
       })
       .catch(err => console.error('Error fetching settings on checkout mount:', err))
+  }, [])
+
+  useEffect(() => {
+    async function validateCartOnCheckout() {
+      if (items.length === 0) return
+      try {
+        const res = await fetch('/api/products/validate-cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.hasChanges && data.updates.length > 0) {
+            data.updates.forEach((update: any) => {
+              if (update.type === 'OUT_OF_STOCK') {
+                updateCartProduct(update.productId, { isAvailable: false, stock: 0 })
+                toast.error(`"${update.name}" is out of stock and was removed from your cart.`, {
+                  id: `checkout-out-of-stock-${update.productId}`,
+                })
+              } else if (update.type === 'QUANTITY_CAP') {
+                updateQuantity(update.productId, update.name, update.newVal)
+                toast.warning(`Quantity for "${update.name}" was reduced to ${update.newVal} (max stock).`, {
+                  id: `checkout-qty-cap-${update.productId}`,
+                })
+              } else if (update.type === 'PRICE_UPDATE') {
+                updateCartProduct(update.productId, { price: update.newVal })
+                toast.info(`Price for "${update.name}" updated to ₹${update.newVal}.`, {
+                  id: `checkout-price-update-${update.productId}`,
+                })
+              } else if (update.type === 'MRP_UPDATE') {
+                updateCartProduct(update.productId, { mrp: update.newVal })
+              }
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Error validating cart on checkout mount:', err)
+      }
+    }
+
+    validateCartOnCheckout()
   }, [])
   const [isAddressesLoading, setIsAddressesLoading] = useState(true)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)

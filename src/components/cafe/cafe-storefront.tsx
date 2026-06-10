@@ -1,13 +1,226 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { ChevronRight, Menu as MenuIcon, X } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { ChevronRight, Menu as MenuIcon, X, Plus, Minus, Check } from 'lucide-react'
 import { Product } from '@/types'
 import { ProductCard } from '@/components/product/product-card'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useCart } from '@/hooks/use-cart'
+import { useUIStore } from '@/stores/ui-store'
+import { useLiveStock } from '@/components/providers/live-stock-provider'
+import { ProductImage } from '@/components/product/product-image'
+import { Button } from '@/components/ui/button'
 
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
+
+interface CafeProductRowProps {
+  product: any
+  cafeOpen: boolean
+}
+
+export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
+  const { getItemQuantity, addItem, updateQuantity } = useCart()
+  const quantity = getItemQuantity(product.id)
+  const [showAdded, setShowAdded] = useState(false)
+
+  const liveState = useLiveStock(product.id)
+  const resolvedStock = liveState !== null ? liveState.stock : product.stock
+  const resolvedPrice = liveState !== null ? liveState.price : product.price
+  const resolvedMrp = liveState !== null ? liveState.mrp : product.mrp
+  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : product.isAvailable
+
+  const resolvedDiscount = useMemo(() => {
+    if (liveState === null) return product.discount
+    if (resolvedMrp <= resolvedPrice) return 0
+    return Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
+  }, [liveState, resolvedMrp, resolvedPrice, product.discount])
+
+  const cartProduct = useMemo(() => ({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    imageUrl: product.imageUrl,
+    mrp: resolvedMrp,
+    price: resolvedPrice,
+    discount: resolvedDiscount,
+    unit: product.unit,
+    stock: resolvedStock,
+    category: product.category,
+  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
+
+  const handleAdd = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    addItem(cartProduct)
+    setShowAdded(true)
+    setTimeout(() => setShowAdded(false), 600)
+  }, [addItem, cartProduct])
+
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    updateQuantity(product.id, product.name, quantity + 1)
+  }
+
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    updateQuantity(product.id, product.name, quantity - 1)
+  }
+
+  const savings = resolvedMrp - resolvedPrice
+  const tagsLower = product.tags?.map((t: string) => t.toLowerCase()) || []
+  const isNonVeg = tagsLower.includes('nonveg') || tagsLower.includes('non-veg') || tagsLower.includes('chicken') || tagsLower.includes('egg')
+  const isBestseller = tagsLower.includes('popular')
+
+  return (
+    <div className="group relative flex items-start justify-between py-6 gap-4 border-b border-border/60 last:border-b-0">
+      <AnimatePresence>
+        {showAdded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/5 rounded-xl pointer-events-none"
+          >
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.6, opacity: 0 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2e7d32] text-white shadow-lg"
+            >
+              <Check className="h-4 w-4" strokeWidth={3} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 space-y-1.5 min-w-0 pr-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {isNonVeg ? (
+            <span className="flex items-center justify-center h-4 w-4 border border-[#8B4513] p-0.5 rounded-xs shrink-0" title="Non-Veg">
+              <span className="h-2 w-2 bg-[#8B4513] rotate-45 shrink-0" />
+            </span>
+          ) : (
+            <span className="flex items-center justify-center h-4 w-4 border border-[#2e7d32] p-0.5 rounded-xs shrink-0" title="Veg">
+              <span className="h-2 w-2 rounded-full bg-[#2e7d32] shrink-0" />
+            </span>
+          )}
+
+          {isBestseller && (
+            <span className="inline-flex items-center gap-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs">
+              ★ Bestseller
+            </span>
+          )}
+        </div>
+
+        <h3 className="text-sm sm:text-base font-extrabold text-text-primary leading-tight">
+          {product.name}
+        </h3>
+
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className="text-sm sm:text-base font-black text-text-primary">
+            ₹{resolvedPrice}
+          </span>
+          {resolvedMrp > resolvedPrice && (
+            <span className="text-xs text-text-muted line-through font-bold">
+              ₹{resolvedMrp}
+            </span>
+          )}
+          {resolvedDiscount > 0 && (
+            <span className="text-[10px] font-black text-[#2e7d32] dark:text-emerald-400">
+              {resolvedDiscount}% OFF
+            </span>
+          )}
+        </div>
+
+        <div className="text-[10px] font-bold text-text-muted">
+          {product.unit}
+        </div>
+
+        {product.description && (
+          <p className="text-xs text-text-secondary leading-relaxed font-semibold max-w-xl">
+            {product.description}
+          </p>
+        )}
+      </div>
+
+      <div className="relative flex flex-col items-center shrink-0 select-none">
+        <div className="relative h-24 w-24 sm:h-28 sm:w-28 overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] border border-border/40">
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            categorySlug={product.category?.slug || ''}
+            className="h-full w-full object-contain p-1"
+          />
+        </div>
+
+        <div className="absolute -bottom-2 h-7.5 w-[76px] sm:w-[84px] z-10 shrink-0">
+          <AnimatePresence mode="wait">
+            {quantity === 0 ? (
+              <motion.div
+                key="add-btn"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ duration: 0.15 }}
+                className="w-full h-full"
+              >
+                <Button
+                  onClick={handleAdd}
+                  disabled={resolvedStock <= 0 || !resolvedIsAvailable || !cafeOpen}
+                  className="w-full h-full border border-green-600 bg-white dark:bg-zinc-900 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black hover:bg-green-50 dark:hover:bg-zinc-800 rounded shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {resolvedStock <= 0 || !resolvedIsAvailable ? (
+                    'Out'
+                  ) : !cafeOpen ? (
+                    'Closed'
+                  ) : (
+                    <>
+                      ADD
+                      <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="qty-counter"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ duration: 0.15 }}
+                className="flex h-full w-full items-center justify-between rounded bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-md overflow-hidden transition-all duration-300"
+              >
+                <button
+                  onClick={handleDecrement}
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                </button>
+                <span className="w-5 sm:w-6 shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
+                  {quantity}
+                </span>
+                <button
+                  onClick={handleIncrement}
+                  disabled={quantity >= resolvedStock || !cafeOpen}
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="h-2.5 w-2.5 stroke-[3]" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface CafeStorefrontProps {
   initialProducts: any[]
@@ -15,6 +228,7 @@ interface CafeStorefrontProps {
 }
 
 export function CafeStorefront({ initialProducts, customSections }: CafeStorefrontProps) {
+  const cafeOpen = useUIStore((s) => s.cafeOpen)
   // Swiggy dynamic navigation states
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)

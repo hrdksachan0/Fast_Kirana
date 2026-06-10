@@ -11,6 +11,7 @@ export interface CartProduct {
   discount: number
   unit: string
   stock: number
+  isAvailable?: boolean
   category?: {
     id: string
     name: string
@@ -37,6 +38,7 @@ interface CartState {
   getSubtotal: () => number
   getMrpTotal: () => number
   getSavings: () => number
+  updateCartProduct: (productId: string, updates: Partial<CartProduct>) => void
 }
 
 export const useCartStore = create<CartState>()(
@@ -104,6 +106,29 @@ export const useCartStore = create<CartState>()(
       getSavings: () => {
         const state = get()
         return state.getMrpTotal() - state.getSubtotal()
+      },
+      updateCartProduct: (productId: string, updates: Partial<CartProduct>) => {
+        set((state) => ({
+          items: state.items
+            .map((item) => {
+              if (item.product.id !== productId) return item
+              const newProduct = { ...item.product, ...updates }
+              let newQty = item.quantity
+              if (updates.stock !== undefined && newQty > updates.stock) {
+                newQty = updates.stock
+              }
+              return {
+                product: newProduct,
+                quantity: newQty,
+              }
+            })
+            .filter((item) => {
+              if (item.product.id === productId) {
+                return item.quantity > 0 && updates.isAvailable !== false
+              }
+              return item.quantity > 0
+            }),
+        }))
       },
     }),
     {

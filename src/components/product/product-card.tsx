@@ -15,6 +15,7 @@ interface ProductCardProps {
 }
 
 import { isCafeProduct } from '@/lib/utils'
+import { useLiveStock } from '@/components/providers/live-stock-provider'
 
 export function ProductCard({ product }: ProductCardProps) {
 
@@ -43,18 +44,31 @@ export function ProductCard({ product }: ProductCardProps) {
   const categorySlug = product.category?.slug || ''
   const categoryEmoji = emojiMap[categorySlug] || '🛒'
 
+  const liveState = useLiveStock(product.id)
+  const resolvedStock = liveState !== null ? liveState.stock : product.stock
+  const resolvedPrice = liveState !== null ? liveState.price : product.price
+  const resolvedMrp = liveState !== null ? liveState.mrp : product.mrp
+  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : product.isAvailable
+
+  // Calculate discount dynamically if price/mrp changed
+  const resolvedDiscount = useMemo(() => {
+    if (liveState === null) return product.discount
+    if (resolvedMrp <= resolvedPrice) return 0
+    return Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
+  }, [liveState, resolvedMrp, resolvedPrice, product.discount])
+
   const cartProduct = useMemo(() => ({
     id: product.id,
     name: product.name,
     slug: product.slug,
     imageUrl: product.imageUrl,
-    mrp: product.mrp,
-    price: product.price,
-    discount: product.discount,
+    mrp: resolvedMrp,
+    price: resolvedPrice,
+    discount: resolvedDiscount,
     unit: product.unit,
-    stock: product.stock,
+    stock: resolvedStock,
     category: product.category,
-  }), [product])
+  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
 
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -77,7 +91,7 @@ export function ProductCard({ product }: ProductCardProps) {
     updateQuantity(product.id, product.name, quantity - 1)
   }
 
-  const savings = product.mrp - product.price
+  const savings = resolvedMrp - resolvedPrice
 
   return (
     <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 md:hover:-translate-y-1.5 md:hover:scale-[1.01] active:scale-[0.98] md:active:scale-[1.01]">
@@ -107,9 +121,9 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={`/product/${product.slug}`} className="flex flex-col flex-grow">
 
         {/* Discount Badge — top left */}
-        {product.discount > 0 && (
+        {resolvedDiscount > 0 && (
           <div className="absolute left-1 top-1 z-10 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff9800] dark:from-[#ff5722] dark:to-[#ff9800] px-1.5 py-0.5 text-[7px] min-[375px]:text-[8.5px] font-black text-white shadow-md whitespace-nowrap pointer-events-none select-none">
-            {product.discount}% OFF
+            {resolvedDiscount}% OFF
           </div>
         )}
 
@@ -141,9 +155,9 @@ export function ProductCard({ product }: ProductCardProps) {
           <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
             {product.unit}
           </span>
-          {product.stock > 0 && product.stock < 15 && (
+          {resolvedStock > 0 && resolvedStock < 15 && (
             <span className="text-[8px] min-[375px]:text-[9px] font-bold text-red-500 dark:text-red-400 mb-0.5">
-              Only {product.stock} left!
+              Only {resolvedStock} left!
             </span>
           )}
         </div>
@@ -155,11 +169,11 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-baseline gap-1 flex-wrap leading-none">
             <span className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary">
-              ₹{product.price}
+              ₹{resolvedPrice}
             </span>
-            {product.mrp > product.price && (
+            {resolvedMrp > resolvedPrice && (
               <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-bold">
-                ₹{product.mrp}
+                ₹{resolvedMrp}
               </span>
             )}
           </div>
@@ -187,10 +201,10 @@ export function ProductCard({ product }: ProductCardProps) {
               >
                 <Button
                   onClick={handleAdd}
-                  disabled={product.stock <= 0 || isStoreClosed}
+                  disabled={resolvedStock <= 0 || !resolvedIsAvailable || isStoreClosed}
                   className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black md:hover:bg-[#2e7d32] md:hover:text-white rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {product.stock <= 0 ? (
+                  {resolvedStock <= 0 || !resolvedIsAvailable ? (
                     'Out'
                   ) : isStoreClosed ? (
                     'Closed'
@@ -223,7 +237,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 </span>
                 <button
                   onClick={handleIncrement}
-                  disabled={quantity >= product.stock || isStoreClosed}
+                  disabled={quantity >= resolvedStock || isStoreClosed}
                   className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
                   aria-label="Increase quantity"
                 >

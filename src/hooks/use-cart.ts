@@ -145,5 +145,6 @@ export function useCart() {
     getSubtotal: store.getSubtotal,
     getMrpTotal: store.getMrpTotal,
     getSavings: store.getSavings,
+    updateCartProduct: store.updateCartProduct,
   }
 }

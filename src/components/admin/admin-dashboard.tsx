@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { formatPrice } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 import { toast } from 'sonner'
