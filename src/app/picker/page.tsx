@@ -77,6 +77,10 @@ interface Order {
   }
   items: OrderItem[]
   companionOrder?: CompanionOrder | null
+  assignedPickerId?: string | null
+  assignedChefId?: string | null
+  assignedPicker?: { name: string } | null
+  assignedChef?: { name: string } | null
 }
 
 const BIN_CONFIGS = [
@@ -215,6 +219,28 @@ export default function PickerDashboard() {
   const [pickedToday, setPickedToday] = useState(0)
   const [refreshProgress, setRefreshProgress] = useState(100) // 0-100, ticks down every second
 
+  // State refs for stable callback dependencies
+  const activeOrderRef = useRef<Order | null>(null)
+  const isMultiPickingModeRef = useRef(false)
+  const multiActiveOrdersRef = useRef<Order[]>([])
+  const updatingIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    activeOrderRef.current = activeOrder
+  }, [activeOrder])
+
+  useEffect(() => {
+    isMultiPickingModeRef.current = isMultiPickingMode
+  }, [isMultiPickingMode])
+
+  useEffect(() => {
+    multiActiveOrdersRef.current = multiActiveOrders
+  }, [multiActiveOrders])
+
+  useEffect(() => {
+    updatingIdRef.current = updatingId
+  }, [updatingId])
+
   // Real-time clock
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -287,15 +313,28 @@ export default function PickerDashboard() {
         setOrders(data)
         
         // If we have an active order, update its details from the list
-        if (activeOrder) {
-          const freshActive = data.find((o: Order) => o.id === activeOrder.id)
+        const currentActive = activeOrderRef.current
+        if (currentActive) {
+          const freshActive = data.find((o: Order) => o.id === currentActive.id)
           if (freshActive) {
             setActiveOrder(freshActive)
           } else {
-            // Active order is no longer in pending/confirmed queue (e.g. packed by someone else)
-            setActiveOrder(null)
-            setPickedItemIds({})
+            // Active order is no longer in pending/confirmed queue (e.g. packed by someone else or cancelled)
+            if (updatingIdRef.current !== currentActive.id) {
+              toast.error('Active order is no longer in the queue (it may have been cancelled or claimed by another user).')
+              setActiveOrder(null)
+              setPickedItemIds({})
+            }
           }
+        }
+
+        // If we have multi-active orders, update their details from the list
+        if (isMultiPickingModeRef.current && multiActiveOrdersRef.current.length > 0) {
+          const updatedMultiActive = multiActiveOrdersRef.current.map(mo => {
+            const fresh = data.find((o: Order) => o.id === mo.id)
+            return fresh || mo
+          })
+          setMultiActiveOrders(updatedMultiActive)
         }
       } else {
         toast.error('Failed to fetch picker orders')
@@ -306,7 +345,7 @@ export default function PickerDashboard() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [activeOrder])
+  }, [])
 
   // Connect to SSE for real-time order notifications
   useEffect(() => {
@@ -320,6 +359,79 @@ export default function PickerDashboard() {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          
+          if (data.type === 'status-change') {
+            const { orderId, status: newStatus } = data
+            
+            // Check if active order cancelled
+            const currentActive = activeOrderRef.current
+            if (currentActive && currentActive.id === orderId) {
+              if (newStatus === 'CANCELLED') {
+                toast.error('⚠️ The order you were picking has been CANCELLED by the customer!')
+                setActiveOrder(null)
+                setPickedItemIds({})
+              } else if (newStatus === 'PACKED' && updatingIdRef.current !== orderId) {
+                toast.info('⚠️ The active order has been packed by another picker.')
+                setActiveOrder(null)
+                setPickedItemIds({})
+              }
+            }
+            
+            // Check if any multi-active order cancelled
+            if (isMultiPickingModeRef.current && multiActiveOrdersRef.current.length > 0) {
+              const hasOrder = multiActiveOrdersRef.current.some(o => o.id === orderId)
+              if (hasOrder) {
+                if (newStatus === 'CANCELLED') {
+                  const cancelledOrder = multiActiveOrdersRef.current.find(o => o.id === orderId)
+                  toast.error(`⚠️ Order for ${cancelledOrder?.user?.name || 'customer'} has been CANCELLED!`)
+                  setMultiActiveOrders(prev => prev.filter(o => o.id !== orderId))
+                  setMultiPickedItemIds(prev => {
+                    const copy = { ...prev }
+                    delete copy[orderId]
+                    return copy
+                  })
+                } else if (newStatus === 'PACKED' && updatingIdRef.current !== orderId) {
+                  const packedOrder = multiActiveOrdersRef.current.find(o => o.id === orderId)
+                  toast.info(`⚠️ Order for ${packedOrder?.user?.name || 'customer'} was packed by another picker.`)
+                  setMultiActiveOrders(prev => prev.filter(o => o.id !== orderId))
+                  setMultiPickedItemIds(prev => {
+                    const copy = { ...prev }
+                    delete copy[orderId]
+                    return copy
+                  })
+                }
+              }
+            }
+
+            // Check if companion cafe order is ready
+            if (currentActive && currentActive.companionOrder && currentActive.companionOrder.id === orderId) {
+              if (newStatus === 'PACKED') {
+                playSuccessChime()
+                triggerHaptic('success')
+                toast.success(`☕ Cafe items are ready for ${currentActive.user.name}!`, {
+                  duration: 5000,
+                  icon: '☕'
+                })
+              }
+            }
+
+            // Check companion cafe order ready in multi-picking
+            if (isMultiPickingModeRef.current && multiActiveOrdersRef.current.length > 0) {
+              multiActiveOrdersRef.current.forEach(mo => {
+                if (mo.companionOrder && mo.companionOrder.id === orderId) {
+                  if (newStatus === 'PACKED') {
+                    playSuccessChime()
+                    triggerHaptic('success')
+                    toast.success(`☕ Cafe items ready for ${mo.user.name}!`, {
+                      duration: 5000,
+                      icon: '☕'
+                    })
+                  }
+                }
+              })
+            }
+          }
+
           if (data.type === 'new-order' || data.type === 'status-change') {
             // Instant refresh of orders list
             fetchOrders(true)
@@ -1533,113 +1645,130 @@ export default function PickerDashboard() {
                   <p className="text-xs font-bold text-gray-400">All caught up! No orders pending.</p>
                 </motion.div>
               ) : (
-                orders.map((order, idx) => (
-                  <motion.div
-                    key={order.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -50, scale: 0.95 }}
-                    className="relative overflow-hidden bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600" />
+                orders.map((order, idx) => {
+                  const isClaimedByOther = !!(order.status === 'CONFIRMED' && order.assignedPickerId && order.assignedPickerId !== session?.user?.id)
+                  return (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -50, scale: 0.95 }}
+                      className="relative overflow-hidden bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600" />
 
-                    <div className="p-4 sm:p-5 space-y-3 pl-5">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={selectedOrderIds.includes(order.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                if (selectedOrderIds.length >= 3) {
-                                  toast.error('Maximum of 3 orders can be picked together')
-                                  return
+                      <div className="p-4 sm:p-5 space-y-3 pl-5">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={selectedOrderIds.includes(order.id)}
+                              disabled={isClaimedByOther}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  if (selectedOrderIds.length >= 3) {
+                                    toast.error('Maximum of 3 orders can be picked together')
+                                    return
+                                  }
+                                  setSelectedOrderIds([...selectedOrderIds, order.id])
+                                } else {
+                                  setSelectedOrderIds(selectedOrderIds.filter(id => id !== order.id))
                                 }
-                                setSelectedOrderIds([...selectedOrderIds, order.id])
-                              } else {
-                                setSelectedOrderIds(selectedOrderIds.filter(id => id !== order.id))
-                              }
-                            }}
-                            className="h-4.5 w-4.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                              <h3 className="text-sm font-extrabold text-gray-800 truncate">{order.user.name}</h3>
+                              }}
+                              className="h-4.5 w-4.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                <h3 className="text-sm font-extrabold text-gray-800 truncate">{order.user.name}</h3>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[9px] font-mono font-bold text-gray-400">#{order.id.slice(0, 8)}</span>
+                                {order.companionOrder && (
+                                  <span className="bg-rose-100 text-rose-600 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">
+                                    ☕ cafe
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[9px] font-mono font-bold text-gray-400">#{order.id.slice(0, 8)}</span>
-                              {order.companionOrder && (
-                                <span className="bg-rose-100 text-rose-600 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">
-                                  ☕ cafe
-                                </span>
-                              )}
-                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            {isClaimedByOther ? (
+                              <span className="bg-rose-50 text-rose-600 border border-rose-200 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                                👤 Claimed by {order.assignedPicker?.name || 'Another Picker'}
+                              </span>
+                            ) : order.status === 'CONFIRMED' ? (
+                              <span className="bg-amber-50 text-amber-600 border border-amber-200 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                                👤 Claimed by Me
+                              </span>
+                            ) : (
+                              <span className="bg-blue-50 text-blue-600 border border-blue-200 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                                Ready
+                              </span>
+                            )}
+                            <span className={`text-[9px] flex items-center gap-0.5 ${getSlaClass(order.createdAt, order.status)}`}>
+                              <Clock className="h-2.5 w-2.5" />
+                              {timeAgo(order.createdAt)}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-1">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                            order.status === 'CONFIRMED' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200'
-                          }`}>
-                            {order.status === 'CONFIRMED' ? 'In Progress' : 'Ready'}
-                          </span>
-                          <span className={`text-[9px] flex items-center gap-0.5 ${getSlaClass(order.createdAt, order.status)}`}>
-                            <Clock className="h-2.5 w-2.5" />
-                            {timeAgo(order.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="bg-gray-50/80 rounded-xl border border-gray-100 overflow-hidden">
-                          {order.items.map((item, i) => (
-                            <div
-                              key={item.id}
-                              className={`flex justify-between items-center text-[11px] font-semibold text-gray-700 px-3 py-1.5 ${
-                                i % 2 === 1 ? 'bg-gray-100/50' : ''
-                              } ${i !== order.items.length - 1 ? 'border-b border-gray-100/80' : ''}`}
-                            >
-                              <span className="truncate mr-2">{item.name}</span>
-                              <span className="text-gray-400 font-bold shrink-0">×{item.quantity}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-2.5 border-t border-gray-100">
-                        <div>
-                          <span className="text-[9px] font-bold text-gray-400 block uppercase tracking-wider">Payment</span>
-                          <span className="text-xs font-extrabold text-gray-700">
-                            {order.paymentMethod === 'COD' ? 'COD (Cash)' : 'Prepaid ✓'}
-                          </span>
+                        <div className="space-y-1.5">
+                          <div className="bg-gray-50/80 rounded-xl border border-gray-100 overflow-hidden">
+                            {order.items.map((item, i) => (
+                              <div
+                                key={item.id}
+                                className={`flex justify-between items-center text-[11px] font-semibold text-gray-700 px-3 py-1.5 ${
+                                  i % 2 === 1 ? 'bg-gray-100/50' : ''
+                                } ${i !== order.items.length - 1 ? 'border-b border-gray-100/80' : ''}`}
+                              >
+                                <span className="truncate mr-2">{item.name}</span>
+                                <span className="text-gray-400 font-bold shrink-0">×{item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
 
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            if (order.status === 'CONFIRMED') {
-                              setActiveOrder(order)
-                              const initialPicked: Record<string, number> = {}
-                              order.items.forEach(item => {
-                                initialPicked[item.id] = 0
-                              })
-                              setPickedItemIds(initialPicked)
-                            } else {
-                              handleStartPicking(order)
-                            }
-                          }}
-                          disabled={updatingId === order.id}
-                          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer min-h-[44px] disabled:opacity-60"
-                        >
-                          <Zap className="h-3.5 w-3.5" />
-                          <span>{order.status === 'CONFIRMED' ? 'Continue' : 'Start'}</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </motion.button>
+                        <div className="flex justify-between items-center pt-2.5 border-t border-gray-100">
+                          <div>
+                            <span className="text-[9px] font-bold text-gray-400 block uppercase tracking-wider">Payment</span>
+                            <span className="text-xs font-extrabold text-gray-700">
+                              {order.paymentMethod === 'COD' ? 'COD (Cash)' : 'Prepaid ✓'}
+                            </span>
+                          </div>
+
+                          <motion.button
+                            whileTap={!isClaimedByOther ? { scale: 0.95 } : {}}
+                            onClick={() => {
+                              if (isClaimedByOther) return
+                              if (order.status === 'CONFIRMED') {
+                                setActiveOrder(order)
+                                const initialPicked: Record<string, number> = {}
+                                order.items.forEach(item => {
+                                  initialPicked[item.id] = 0
+                                })
+                                setPickedItemIds(initialPicked)
+                              } else {
+                                handleStartPicking(order)
+                              }
+                            }}
+                            disabled={updatingId === order.id || isClaimedByOther}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-extrabold rounded-xl transition-all shadow-md min-h-[44px] cursor-pointer ${
+                              isClaimedByOther
+                                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none'
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20'
+                            }`}
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            <span>{isClaimedByOther ? 'Claimed' : order.status === 'CONFIRMED' ? 'Continue' : 'Start'}</span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </motion.button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  )
+                })
               )}
             </AnimatePresence>
           </div>

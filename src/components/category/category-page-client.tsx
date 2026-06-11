@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { Category, Product } from '@/types'
@@ -22,6 +22,20 @@ export function CategoryPageClient({
 }: CategoryPageClientProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sort, setSort] = useState<string>('popularity')
+  const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'nonveg'>('all')
+  const [showPriceFilter, setShowPriceFilter] = useState(false)
+
+  const maxPriceOfCategory = useMemo(() => {
+    if (initialProducts.length === 0) return 1000
+    return Math.max(...initialProducts.map((p) => p.price))
+  }, [initialProducts])
+
+  const [maxPrice, setMaxPrice] = useState<number>(1000)
+
+  // Reset maxPrice when switching categories
+  useEffect(() => {
+    setMaxPrice(maxPriceOfCategory)
+  }, [maxPriceOfCategory])
 
   const sortOptions = [
     { label: 'Popularity', value: 'popularity' },
@@ -32,8 +46,9 @@ export function CategoryPageClient({
 
   // Filter and sort products in memory
   const processedProducts = useMemo(() => {
-    // 1. Filter by search query
     let result = [...initialProducts]
+
+    // 1. Filter by search query
     if (searchQuery.trim()) {
       const words = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
       result = result.filter((p) =>
@@ -45,20 +60,34 @@ export function CategoryPageClient({
       )
     }
 
-    // 2. Sort results
+    // 2. Filter by Veg/Non-Veg
+    if (vegFilter === 'veg') {
+      result = result.filter((p) => {
+        const tags = p.tags?.map((t) => t.toLowerCase()) || []
+        const isNonVeg = tags.includes('nonveg') || tags.includes('non-veg') || tags.includes('chicken') || tags.includes('egg') || tags.includes('mutton') || tags.includes('meat')
+        return !isNonVeg
+      })
+    } else if (vegFilter === 'nonveg') {
+      result = result.filter((p) => {
+        const tags = p.tags?.map((t) => t.toLowerCase()) || []
+        return tags.includes('nonveg') || tags.includes('non-veg') || tags.includes('chicken') || tags.includes('egg') || tags.includes('mutton') || tags.includes('meat')
+      })
+    }
+
+    // 3. Filter by Price Limit
+    result = result.filter((p) => p.price <= maxPrice)
+
+    // 4. Sort results
     if (sort === 'price-asc') {
       result.sort((a, b) => a.price - b.price)
     } else if (sort === 'price-desc') {
       result.sort((a, b) => b.price - a.price)
     } else if (sort === 'discount-desc') {
       result.sort((a, b) => b.discount - a.discount)
-    } else {
-      // 'popularity' / default: sort by database order (which is createdAt desc in our initial fetch)
-      // No extra action needed since result is pre-sorted by server
     }
 
     return result
-  }, [initialProducts, searchQuery, sort])
+  }, [initialProducts, searchQuery, vegFilter, maxPrice, sort])
 
   return (
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
@@ -176,24 +205,97 @@ export function CategoryPageClient({
             </div>
           </div>
 
-          {/* Search Bar inside Category */}
-          <div className="relative w-full max-w-md bg-card rounded-xl border border-border shadow-sm overflow-hidden group">
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-text-muted transition-colors group-focus-within:text-primary" />
-            <input
-              type="text"
-              placeholder={`Search in ${activeCategory.name}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent border-0 pl-10 pr-10 py-2.5 text-xs focus:outline-none focus:ring-0 font-semibold text-text-primary placeholder:text-text-muted"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 p-0.5 hover:bg-muted text-text-secondary hover:text-text-primary rounded-full transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+          {/* Search Bar and Dynamic Filters Row */}
+          <div className="space-y-3">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+              {/* Search Bar */}
+              <div className="relative flex-1 max-w-md bg-card rounded-xl border border-border shadow-sm overflow-hidden group">
+                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-text-muted transition-colors group-focus-within:text-primary" />
+                <input
+                  type="text"
+                  placeholder={`Search in ${activeCategory.name}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent border-0 pl-10 pr-10 py-3 text-xs focus:outline-none focus:ring-0 font-semibold text-text-primary placeholder:text-text-muted"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-3 p-0.5 hover:bg-muted text-text-secondary hover:text-text-primary rounded-full transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Dynamic Filter Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none select-none">
+                <button
+                  type="button"
+                  onClick={() => setVegFilter(vegFilter === 'veg' ? 'all' : 'veg')}
+                  className={cn(
+                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
+                    vegFilter === 'veg'
+                      ? 'bg-green-600/10 border-green-600/30 text-green-700 dark:text-green-400 font-extrabold shadow-sm'
+                      : 'bg-card border-border hover:bg-muted text-text-secondary'
+                  )}
+                >
+                  <span className="text-[13px]">🥦</span>
+                  <span>Veg Only</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVegFilter(vegFilter === 'nonveg' ? 'all' : 'nonveg')}
+                  className={cn(
+                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
+                    vegFilter === 'nonveg'
+                      ? 'bg-red-600/10 border-red-600/30 text-red-700 dark:text-red-400 font-extrabold shadow-sm'
+                      : 'bg-card border-border hover:bg-muted text-text-secondary'
+                  )}
+                >
+                  <span className="text-[13px]">🍗</span>
+                  <span>Non-Veg</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPriceFilter(!showPriceFilter)}
+                  className={cn(
+                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
+                    maxPrice < maxPriceOfCategory
+                      ? 'bg-primary/10 border-primary/30 text-primary font-extrabold shadow-sm'
+                      : 'bg-card border-border hover:bg-muted text-text-secondary'
+                  )}
+                >
+                  <span className="text-[10px] font-black">₹</span>
+                  <span>Under ₹{maxPrice}</span>
+                  <span className={cn('text-[9px] transition-transform duration-200', showPriceFilter ? 'rotate-180' : '')}>▼</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Price Limit Slider Panel */}
+            {showPriceFilter && (
+              <div className="bg-card border border-border/60 p-4 rounded-2xl shadow-sm space-y-3 max-w-xs animate-slide-down text-left">
+                <div className="flex justify-between text-[10px] font-black text-text-muted uppercase tracking-wider">
+                  <span>Min: ₹0</span>
+                  <span>Max: ₹{maxPriceOfCategory}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={maxPriceOfCategory}
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(Number(e.target.value))}
+                  className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between items-center text-xs font-bold pt-1 border-t border-border/30">
+                  <span className="text-text-muted">Show products up to:</span>
+                  <span className="text-primary font-extrabold">₹{maxPrice}</span>
+                </div>
+              </div>
             )}
           </div>
 
