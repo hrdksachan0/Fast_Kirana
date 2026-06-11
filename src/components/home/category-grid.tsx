@@ -180,7 +180,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             gradient: 'from-zinc-100/30 to-zinc-50/10',
             ring: 'group-hover:border-zinc-500/50',
           }
-          const itemCount = getItemCount(category.name)
+          const itemCount = category._count?.products ?? 0
           const IconComponent = iconMap[category.slug] || ShoppingBag
 
           return (

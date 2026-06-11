@@ -96,6 +96,11 @@ export default async function Home() {
       }).catch((err) => { console.warn('Failed to fetch promo banners:', err); return []; }),
       prisma.category.findMany({
         orderBy: { sortOrder: 'asc' },
+        include: {
+          _count: {
+            select: { products: true },
+          },
+        },
       }).catch((err) => { console.warn('Failed to fetch categories:', err); return []; }),
       prisma.orderItem.groupBy({
         by: ['productId'],
@@ -215,6 +220,7 @@ export default async function Home() {
     imageUrl: c.imageUrl,
     parentId: c.parentId,
     sortOrder: c.sortOrder,
+    _count: c._count,
   }))
 
   const mapProduct = (p: any): Product => ({
