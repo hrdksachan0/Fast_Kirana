@@ -20,23 +20,38 @@ import { useLiveStock } from '@/components/providers/live-stock-provider'
 export function ProductCard({ product }: ProductCardProps) {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
   
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
   const variantsList = hasVariants ? (product.variants as any[]) : []
-  const [selectedVariantName, setSelectedVariantName] = useState<string>(
-    hasVariants ? variantsList[0].name : ''
-  )
   
-  const activeVariant = useMemo(() => {
-    if (!hasVariants) return null
-    return variantsList.find((v) => v.name === selectedVariantName) || variantsList[0]
-  }, [hasVariants, variantsList, selectedVariantName])
+  // Calculate starting price for variant display
+  const startingPrice = useMemo(() => {
+    if (!hasVariants) return product.price
+    return Math.min(...variantsList.map((v) => v.price))
+  }, [hasVariants, variantsList, product.price])
 
-  const resolvedVariantName = activeVariant ? activeVariant.name : null
-  const resolvedId = resolvedVariantName ? `${product.id}_${resolvedVariantName}` : product.id
+  const startingMrp = useMemo(() => {
+    if (!hasVariants) return product.mrp
+    const startVar = variantsList.find(v => v.price === startingPrice)
+    return startVar ? startVar.mrp : product.mrp
+  }, [hasVariants, variantsList, startingPrice, product.mrp])
 
-  const { getItemQuantity, addItem, updateQuantity } = useCart()
-  const quantity = getItemQuantity(resolvedId)
+  const resolvedPrice = startingPrice
+  const resolvedMrp = startingMrp
+
+  // Cart operations
+  const { items, getItemQuantity, addItem, updateQuantity } = useCart()
+
+  // Calculate total quantity of all variants of this product in the cart
+  const totalQuantity = useMemo(() => {
+    if (!hasVariants) return getItemQuantity(product.id)
+    return items
+      .filter((item) => item.product.id === product.id || item.product.id.startsWith(`${product.id}_`))
+      .reduce((sum, item) => sum + item.quantity, 0)
+  }, [items, hasVariants, product.id, getItemQuantity])
+
+  const quantity = totalQuantity
   const [showAdded, setShowAdded] = useState(false)
   const imageRef = useRef<HTMLDivElement>(null)
 
@@ -58,11 +73,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const categorySlug = product.category?.slug || ''
   const categoryEmoji = emojiMap[categorySlug] || '🛒'
 
-  const liveState = useLiveStock(resolvedId)
-  const resolvedStock = liveState !== null ? liveState.stock : (activeVariant ? activeVariant.stock : product.stock)
-  const resolvedPrice = liveState !== null ? liveState.price : (activeVariant ? activeVariant.price : product.price)
-  const resolvedMrp = liveState !== null ? liveState.mrp : (activeVariant ? activeVariant.mrp : product.mrp)
-  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : product.isAvailable
+  // Total stock across all variants
+  const totalStock = useMemo(() => {
+    if (!hasVariants) return product.stock
+    return variantsList.reduce((sum, v) => sum + (v.stock || 0), 0)
+  }, [hasVariants, variantsList, product.stock])
+
+  const resolvedStock = totalStock
+  const resolvedIsAvailable = product.isAvailable
 
   // Calculate discount dynamically if price/mrp changed
   const resolvedDiscount = useMemo(() => {
@@ -70,38 +88,48 @@ export function ProductCard({ product }: ProductCardProps) {
     return Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
   }, [resolvedMrp, resolvedPrice])
 
-  const cartProduct = useMemo(() => ({
-    id: resolvedId,
-    name: resolvedVariantName ? `${product.name} (${resolvedVariantName})` : product.name,
-    slug: product.slug,
-    imageUrl: product.imageUrl,
-    mrp: resolvedMrp,
-    price: resolvedPrice,
-    discount: resolvedDiscount,
-    unit: product.unit,
-    stock: resolvedStock,
-    category: product.category,
-  }), [product, resolvedId, resolvedVariantName, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
-
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    addItem(cartProduct)
-    setShowAdded(true)
-    setTimeout(() => setShowAdded(false), 600)
-
-  }, [addItem, cartProduct])
+    
+    if (hasVariants) {
+      setActiveVariantProduct(product)
+    } else {
+      addItem({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        imageUrl: product.imageUrl,
+        mrp: resolvedMrp,
+        price: resolvedPrice,
+        discount: resolvedDiscount,
+        unit: product.unit,
+        stock: resolvedStock,
+        category: product.category,
+      })
+      setShowAdded(true)
+      setTimeout(() => setShowAdded(false), 600)
+    }
+  }, [hasVariants, product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, addItem, setActiveVariantProduct])
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(resolvedId, cartProduct.name, quantity + 1)
+    if (hasVariants) {
+      setActiveVariantProduct(product)
+    } else {
+      updateQuantity(product.id, product.name, quantity + 1)
+    }
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(resolvedId, cartProduct.name, quantity - 1)
+    if (hasVariants) {
+      setActiveVariantProduct(product)
+    } else {
+      updateQuantity(product.id, product.name, quantity - 1)
+    }
   }
 
   const savings = resolvedMrp - resolvedPrice
@@ -166,27 +194,9 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
           {/* Unit / Variant Dropdown */}
           {hasVariants ? (
-            <div className="mt-0.5">
-              <select
-                value={selectedVariantName}
-                onChange={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setSelectedVariantName(e.target.value)
-                }}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }}
-                className="text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-bold text-text-primary bg-muted/40 border border-border/50 px-1 py-0.5 rounded focus:outline-none focus:border-primary max-w-full cursor-pointer"
-              >
-                {variantsList.map((v) => (
-                  <option key={v.name} value={v.name} className="bg-card text-text-primary">
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md mt-1 mb-0.5 w-fit border border-primary/10">
+              {product.unit || 'Options'} • Options ▾
+            </span>
           ) : (
             <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
               {product.unit}

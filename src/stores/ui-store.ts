@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { Product } from '@/types'
 
 interface UserCoords {
   lat: number
@@ -10,6 +11,7 @@ interface UIState {
   isMobileMenuOpen: boolean
   isSearchOpen: boolean
   isLocationPickerOpen: boolean
+  activeVariantProduct: Product | null
   selectedLocation: string
   userCoords: UserCoords | null
   shopName: string
@@ -22,6 +24,7 @@ interface UIState {
   setMobileMenuOpen: (open: boolean) => void
   setSearchOpen: (open: boolean) => void
   setLocationPickerOpen: (open: boolean) => void
+  setActiveVariantProduct: (product: Product | null) => void
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
   setShopDetails: (name: string, phone: string) => void
@@ -34,6 +37,7 @@ export const useUIStore = create<UIState>((set) => ({
   isMobileMenuOpen: false,
   isSearchOpen: false,
   isLocationPickerOpen: false,
+  activeVariantProduct: null,
   selectedLocation: 'Select Location',
   userCoords: null,
   shopName: '',
@@ -47,6 +51,7 @@ export const useUIStore = create<UIState>((set) => ({
   setMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
   setSearchOpen: (open) => set({ isSearchOpen: open }),
   setLocationPickerOpen: (open) => set({ isLocationPickerOpen: open }),
+  setActiveVariantProduct: (product) => set({ activeVariantProduct: product }),
   setSelectedLocation: (location) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('fk-location', location)

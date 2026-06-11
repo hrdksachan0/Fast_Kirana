@@ -111,6 +111,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
   const { getItemQuantity, addItem, updateQuantity } = useCart()
 
@@ -384,9 +385,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    saveSearchTerm(product.name)
-                                    router.push(`/product/${product.slug}`)
-                                    onClose()
+                                    setActiveVariantProduct(product)
                                   }}
                                   className="w-full h-full border border-[#2e7d32] bg-white text-[#2e7d32] hover:bg-[#2e7d32] hover:text-white text-[10px] sm:text-xs font-black rounded-lg transition-all flex items-center justify-center cursor-pointer shadow-sm animate-pulse-gentle"
                                 >

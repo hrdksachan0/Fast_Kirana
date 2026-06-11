@@ -9,6 +9,7 @@ import { Footer } from '@/components/layout/footer'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { CartStickyBar } from '@/components/cart/cart-sticky-bar'
 import { CartDrawer } from '@/components/cart/cart-drawer'
+import { VariantSelectorDrawer } from '@/components/product/variant-selector-drawer'
 import { CartFlyAnimation } from '@/components/shared/cart-fly-animation'
 import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
@@ -84,6 +85,7 @@ export default function RootLayout({
                 <MobileBottomNav />
                 <CartStickyBar />
                 <CartDrawer />
+                <VariantSelectorDrawer />
                 <CartFlyAnimation />
                 <Toaster position="bottom-center" richColors closeButton visibleToasts={1} />
                 <PWARegistration />

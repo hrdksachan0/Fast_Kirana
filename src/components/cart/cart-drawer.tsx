@@ -17,6 +17,7 @@ export function CartDrawer() {
   const router = useRouter()
   const isOpen = useUIStore((s) => s.isCartOpen)
   const setCartOpen = useUIStore((s) => s.setCartOpen)
+  const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -391,8 +392,7 @@ export function CartDrawer() {
                             disabled={isRecClosed}
                             onClick={() => {
                               if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
-                                router.push(`/product/${prod.slug}`)
-                                setCartOpen(false)
+                                setActiveVariantProduct(prod)
                               } else {
                                 addItem({
                                   id: prod.id,
