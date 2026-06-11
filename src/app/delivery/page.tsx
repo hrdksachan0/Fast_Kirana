@@ -159,6 +159,12 @@ export default function DeliveryDashboard() {
   const [isOffline, setIsOffline] = useState(false)
   const [offlineQueue, setOfflineQueue] = useState<any[]>([])
 
+  const ordersRef = useRef<any[]>([])
+
+  useEffect(() => {
+    ordersRef.current = orders
+  }, [orders])
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/delivery')
@@ -296,6 +302,32 @@ export default function DeliveryDashboard() {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          
+          if (data.type === 'status-change') {
+            const { orderId, status: newStatus } = data
+            
+            // Check if any of our out-for-delivery (SHIPPED) orders are cancelled
+            const activeShipped = ordersRef.current.filter(o => o.status === 'SHIPPED')
+            const wasActive = activeShipped.find(o => o.id === orderId)
+            if (wasActive && newStatus === 'CANCELLED') {
+              playNotificationChime()
+              triggerHaptic('warning')
+              toast.error(`⚠️ Active delivery #${orderId.slice(-6).toUpperCase()} to ${wasActive.user?.name || 'customer'} was CANCELLED by the customer! Please do not deliver.`, {
+                duration: 10000,
+                icon: '🛑'
+              })
+            }
+
+            // Check if any of our pending pickups (PACKED) orders in the local queue are cancelled
+            const activePacked = ordersRef.current.filter(o => o.status === 'PACKED')
+            const wasPending = activePacked.find(o => o.id === orderId)
+            if (wasPending && newStatus === 'CANCELLED') {
+              toast.info(`📦 Order #${orderId.slice(-6).toUpperCase()} in pickup queue has been CANCELLED.`, {
+                icon: 'ℹ️'
+              })
+            }
+          }
+
           if (data.type === 'new-order' || data.type === 'status-change') {
             // Instant refresh of orders list
             fetchOrders(true)
@@ -424,7 +456,9 @@ export default function DeliveryDashboard() {
         fetchOrders(true)
         return true
       } else {
-        toast.error('Failed to update order')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || 'Failed to update order')
+        fetchOrders(true)
         return false
       }
     } catch (err) {
