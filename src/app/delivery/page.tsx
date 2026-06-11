@@ -550,12 +550,12 @@ export default function DeliveryDashboard() {
             : `Photo proof saved for order #${capturingOrderId.slice(0, 8)}… (GPS not available)`,
           duration: 4000,
         })
+        setCapturingOrderId(null)
       }
     } catch (err) {
       toast.error('Failed to save delivery proof')
     } finally {
       setCapturingPhotoSubmitting(false)
-      setCapturingOrderId(null)
     }
   }
 

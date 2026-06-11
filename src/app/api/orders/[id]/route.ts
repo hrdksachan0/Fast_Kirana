@@ -207,10 +207,16 @@ export async function PATCH(
 
     // Update using raw SQL to handle enum properly
     if (status === 'DELIVERED') {
+      let safePhoto = finalDeliveryPhoto
+      if (safePhoto && safePhoto.startsWith('data:') && safePhoto.length > 200000) {
+        console.warn(`[API orders] Delivery photo for order ${id} is too large (${safePhoto.length} chars). Saving as null to prevent db error.`)
+        safePhoto = null
+      }
+
       await prisma.$executeRaw`
         UPDATE orders 
         SET status = ${status}::"OrderStatus", 
-            "deliveryPhoto" = ${finalDeliveryPhoto}, 
+            "deliveryPhoto" = ${safePhoto}, 
             "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
             "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
             "deliveredAt" = NOW(),

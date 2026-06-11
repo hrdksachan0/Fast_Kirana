@@ -37,7 +37,7 @@ function compressImage(base64Str: string, maxWidth = 800, maxHeight = 800): Prom
       const ctx = canvas.getContext('2d')
       if (ctx) {
         ctx.drawImage(img, 0, 0, width, height)
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5)
         resolve(compressedBase64)
       } else {
         resolve(base64Str)
@@ -66,7 +66,7 @@ export default function PhotoCapture({
       const reader = new FileReader()
       reader.onloadend = async () => {
         const rawBase64 = reader.result as string
-        const compressed = await compressImage(rawBase64, 800, 800)
+        const compressed = await compressImage(rawBase64, 600, 600)
         setPreview(compressed)
       }
       reader.readAsDataURL(file)
