@@ -11,7 +11,10 @@ import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import { useRouter } from 'next/navigation'
+
 export function CartDrawer() {
+  const router = useRouter()
   const isOpen = useUIStore((s) => s.isCartOpen)
   const setCartOpen = useUIStore((s) => s.setCartOpen)
 
@@ -387,22 +390,27 @@ export function CartDrawer() {
                             type="button"
                             disabled={isRecClosed}
                             onClick={() => {
-                              addItem({
-                                id: prod.id,
-                                name: prod.name,
-                                slug: prod.slug,
-                                imageUrl: prod.imageUrl,
-                                mrp: prod.mrp,
-                                price: prod.price,
-                                discount: prod.discount,
-                                unit: prod.unit,
-                                stock: prod.stock,
-                                category: prod.category,
-                              })
+                              if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
+                                router.push(`/product/${prod.slug}`)
+                                setCartOpen(false)
+                              } else {
+                                addItem({
+                                  id: prod.id,
+                                  name: prod.name,
+                                  slug: prod.slug,
+                                  imageUrl: prod.imageUrl,
+                                  mrp: prod.mrp,
+                                  price: prod.price,
+                                  discount: prod.discount,
+                                  unit: prod.unit,
+                                  stock: prod.stock,
+                                  category: prod.category,
+                                })
+                              }
                             }}
                             className="shrink-0 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white px-2 py-1 text-[9px] font-black transition-colors cursor-pointer disabled:bg-zinc-100 dark:disabled:bg-zinc-800 disabled:text-zinc-400 disabled:cursor-not-allowed"
                           >
-                            {isRecClosed ? 'Closed' : '+ Add'}
+                            {isRecClosed ? 'Closed' : (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) ? 'Options' : '+ Add'}
                           </button>
                         </div>
                       )

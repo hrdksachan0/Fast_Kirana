@@ -95,13 +95,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(product.id, product.name, quantity + 1)
+    updateQuantity(resolvedId, cartProduct.name, quantity + 1)
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(product.id, product.name, quantity - 1)
+    updateQuantity(resolvedId, cartProduct.name, quantity - 1)
   }
 
   const savings = resolvedMrp - resolvedPrice

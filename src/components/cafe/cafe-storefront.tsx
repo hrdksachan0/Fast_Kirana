@@ -251,6 +251,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       isAvailable: p.isAvailable,
       tags: p.tags || [],
       minStock: p.minStock,
+      variants: p.variants || null,
       category: p.category ? {
         id: p.category.id,
         name: p.category.name,

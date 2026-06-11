@@ -379,7 +379,20 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
                             {/* Right: Inline Quick ADD button */}
                             <div className="relative h-8 w-16 sm:w-20 flex-shrink-0">
-                              {quantity === 0 ? (
+                              {product.variants && Array.isArray(product.variants) && product.variants.length > 0 ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    saveSearchTerm(product.name)
+                                    router.push(`/product/${product.slug}`)
+                                    onClose()
+                                  }}
+                                  className="w-full h-full border border-[#2e7d32] bg-white text-[#2e7d32] hover:bg-[#2e7d32] hover:text-white text-[10px] sm:text-xs font-black rounded-lg transition-all flex items-center justify-center cursor-pointer shadow-sm animate-pulse-gentle"
+                                >
+                                  Options
+                                </button>
+                              ) : quantity === 0 ? (
                                 <button
                                   onClick={(e) => handleAddProduct(e, product)}
                                   disabled={product.stock <= 0 || isStoreClosed}

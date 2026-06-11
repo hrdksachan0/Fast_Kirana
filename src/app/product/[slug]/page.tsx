@@ -83,6 +83,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     stock: p.stock,
     isAvailable: p.isAvailable,
     tags: p.tags,
+    variants: p.variants,
     category: p.category ? {
       id: p.category.id,
       name: p.category.name,

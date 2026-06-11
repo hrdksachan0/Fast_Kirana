@@ -77,6 +77,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     isAvailable: p.isAvailable,
     tags: p.tags,
     minStock: p.minStock,
+    variants: p.variants as any,
     category: {
       id: activeCategory.id,
       name: activeCategory.name,

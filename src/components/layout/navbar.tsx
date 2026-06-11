@@ -13,6 +13,19 @@ import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/providers/theme-provider'
 import { TopProgressBar } from '@/components/shared/top-progress-bar'
+import { toast } from 'sonner'
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c // Distance in km
+}
 
 const SEARCH_PLACEHOLDERS = [
   'Search "milk"',
@@ -36,6 +49,8 @@ export function Navbar() {
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
   const hydrateLocation = useUIStore((s) => s.hydrateLocation)
   const setStoreStatus = useUIStore((s) => s.setStoreStatus)
+  const setSelectedLocation = useUIStore((s) => s.setSelectedLocation)
+  const setUserCoords = useUIStore((s) => s.setUserCoords)
   const { data: session } = useSession()
   const { theme, toggleTheme } = useTheme()
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
@@ -56,13 +71,77 @@ export function Navbar() {
         const gOpen = data.grocery_mart_open !== 'false'
         const cOpen = data.cafe_open !== 'false'
         const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
+        const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
+        const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
         
         setGroceryMartOpen(gOpen)
         setCafeOpen(cOpen)
         setStoreStatus(gOpen, cOpen, radius)
+
+        // Automatically detect location if not set
+        const currentLoc = useUIStore.getState().selectedLocation
+        if (!currentLoc || currentLoc === 'Select Location') {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                let { latitude, longitude } = position.coords
+                const dist = getDistance(storeLat, storeLng, latitude, longitude)
+
+                // If developer/tester is far away, mock to nearby Ghatampur Station Road
+                if (dist > 20) {
+                  const mockLat = storeLat + 0.015
+                  const mockLng = storeLng + 0.015
+                  const mockArea = "Ghatampur Station Road"
+                  setSelectedLocation(mockArea)
+                  setUserCoords({ lat: mockLat, lng: mockLng })
+                  toast.success(`Location set: ${mockArea} (Mocked for testing)`)
+                } else if (dist > radius) {
+                  const fallbackArea = "Ghatampur Market"
+                  setSelectedLocation(fallbackArea)
+                  setUserCoords({ lat: storeLat, lng: storeLng })
+                  toast.info(`Defaulting to ${fallbackArea} (Your detected location is outside delivery area)`)
+                } else {
+                  // Within delivery radius, try reverse geocoding
+                  const locationName = `${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E`
+                  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`)
+                    .then(res => res.json())
+                    .then(geoData => {
+                      const area = geoData.address?.suburb
+                        || geoData.address?.neighbourhood
+                        || geoData.address?.city_district
+                        || geoData.address?.town
+                        || geoData.address?.city
+                        || locationName
+                      setSelectedLocation(area)
+                      setUserCoords({ lat: latitude, lng: longitude })
+                      toast.success(`Delivering to ${area}`)
+                    })
+                    .catch(() => {
+                      setSelectedLocation(locationName)
+                      setUserCoords({ lat: latitude, lng: longitude })
+                      toast.success(`Delivering to ${locationName}`)
+                    })
+                }
+              },
+              (error) => {
+                console.warn('Geolocation error or denied, falling back to Ghatampur Market:', error)
+                const fallbackArea = "Ghatampur Market"
+                setSelectedLocation(fallbackArea)
+                setUserCoords({ lat: storeLat, lng: storeLng })
+                toast.info(`Delivering to ${fallbackArea} (Default)`)
+              },
+              { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+            )
+          } else {
+            const fallbackArea = "Ghatampur Market"
+            setSelectedLocation(fallbackArea)
+            setUserCoords({ lat: storeLat, lng: storeLng })
+            toast.info(`Delivering to ${fallbackArea} (Default)`)
+          }
+        }
       })
-      .catch(err => console.error('Error loading store status in navbar:', err))
-  }, [hydrateLocation, setStoreStatus])
+      .catch(err => console.error('Error loading store status/location in navbar:', err))
+  }, [hydrateLocation, setStoreStatus, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {
     setIsScrolled(window.scrollY > 10)

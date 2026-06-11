@@ -90,6 +90,7 @@ export async function GET(request: Request) {
       stock: p.stock,
       isAvailable: p.isAvailable,
       tags: p.tags,
+      variants: p.variants,
       category: {
         id: p.category.id,
         name: p.category.name,

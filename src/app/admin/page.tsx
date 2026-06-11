@@ -108,6 +108,8 @@ export default async function AdminPage() {
           stock: true,
           minStock: true,
           isAvailable: true,
+          tags: true,
+          variants: true,
           category: {
             select: {
               id: true,
@@ -173,6 +175,7 @@ export default async function AdminPage() {
     stock: p.stock,
     isAvailable: p.isAvailable,
     tags: p.tags,
+    variants: p.variants,
     category: {
       id: p.category.id,
       name: p.category.name,
@@ -235,6 +238,8 @@ export default async function AdminPage() {
     stock: p.stock,
     minStock: p.minStock,
     isAvailable: p.isAvailable,
+    tags: p.tags,
+    variants: p.variants,
     category: {
       id: p.category.id,
       name: p.category.name,

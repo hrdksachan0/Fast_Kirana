@@ -51,6 +51,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       isAvailable: p.isAvailable,
       tags: p.tags,
       minStock: p.minStock,
+      variants: p.variants as any,
       category: p.category ? {
         id: p.category.id,
         name: p.category.name,
