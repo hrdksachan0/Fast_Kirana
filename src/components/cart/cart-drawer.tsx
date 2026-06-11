@@ -81,7 +81,7 @@ export function CartDrawer() {
   const total = groceryAdjustedSubtotal + cafeAdjustedSubtotal + deliveryFee
 
   const hasInventoryIssues = items.some(
-    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || !item.product.isAvailable
+    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
   )
   const hasClosedGroceryItems = groceryItems.length > 0 && !groceryMartOpen
   const hasClosedCafeItems = cafeItems.length > 0 && !cafeOpen
@@ -90,7 +90,7 @@ export function CartDrawer() {
   const handleAutoAdjust = () => {
     let adjustedCount = 0
     items.forEach((item) => {
-      if (!item.product.isAvailable || item.product.stock <= 0) {
+      if (item.product.isAvailable === false || item.product.stock <= 0) {
         removeItem(item.product.id, item.product.name)
         adjustedCount++
       } else if (item.quantity > item.product.stock) {
@@ -145,7 +145,7 @@ export function CartDrawer() {
                 Save {formatPrice(perItemSaving)}
               </p>
             )}
-            {item.product.stock <= 0 || !item.product.isAvailable ? (
+            {item.product.stock <= 0 || item.product.isAvailable === false ? (
               <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
                 <span>❌</span> Out of Stock
               </p>
@@ -404,6 +404,7 @@ export function CartDrawer() {
                                   discount: prod.discount,
                                   unit: prod.unit,
                                   stock: prod.stock,
+                                  isAvailable: prod.isAvailable ?? true,
                                   category: prod.category,
                                 })
                               }

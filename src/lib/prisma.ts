@@ -1,3 +1,6 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
@@ -35,6 +38,7 @@ function createPrismaClient() {
     idleTimeoutMillis: 10000, // close idle connections quickly
     connectionTimeoutMillis: 5000 // wait up to 5 seconds to establish connection
   })
+  
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }

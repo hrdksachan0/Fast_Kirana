@@ -240,6 +240,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       discount: product.discount,
       unit: product.unit,
       stock: product.stock,
+      isAvailable: product.isAvailable,
       category: product.category,
     }
     

@@ -105,12 +105,13 @@ export function ProductCard({ product }: ProductCardProps) {
         discount: resolvedDiscount,
         unit: product.unit,
         stock: resolvedStock,
+        isAvailable: resolvedIsAvailable,
         category: product.category,
       })
       setShowAdded(true)
       setTimeout(() => setShowAdded(false), 600)
     }
-  }, [hasVariants, product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, addItem, setActiveVariantProduct])
+  }, [hasVariants, product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable, addItem, setActiveVariantProduct])
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()

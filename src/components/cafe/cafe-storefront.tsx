@@ -46,8 +46,9 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
     discount: resolvedDiscount,
     unit: product.unit,
     stock: resolvedStock,
+    isAvailable: resolvedIsAvailable,
     category: product.category,
-  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
+  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable])
 
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()

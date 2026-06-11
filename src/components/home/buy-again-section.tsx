@@ -124,6 +124,7 @@ export function BuyAgainSection() {
       discount: item.mrp > item.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0,
       unit: item.unit,
       stock: 50,
+      isAvailable: true,
     })
     toast.success(`${item.name} added to cart`, {
       id: `buyagain-${item.id}`,

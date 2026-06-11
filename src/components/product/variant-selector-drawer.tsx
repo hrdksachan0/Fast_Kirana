@@ -27,6 +27,7 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
   const resolvedStock = liveState !== null ? liveState.stock : variant.stock
   const resolvedPrice = liveState !== null ? liveState.price : variant.price
   const resolvedMrp = liveState !== null ? liveState.mrp : variant.mrp
+  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : (product.isAvailable ?? true)
 
   const discount = resolvedMrp > resolvedPrice
     ? Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
@@ -45,8 +46,9 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
     discount: discount,
     unit: product.unit,
     stock: resolvedStock,
+    isAvailable: resolvedIsAvailable,
     category: product.category,
-  }), [product, variant, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock])
+  }), [product, variant, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable])
 
   const handleAdd = () => {
     addItem(cartProduct)

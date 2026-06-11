@@ -29,6 +29,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const resolvedStock = liveState !== null ? liveState.stock : product.stock
   const resolvedPrice = liveState !== null ? liveState.price : product.price
   const resolvedMrp = liveState !== null ? liveState.mrp : product.mrp
+  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : product.isAvailable
   
   const resolvedDiscount = useMemo(() => {
     if (liveState === null) return product.discount
@@ -46,8 +47,9 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
     discount: resolvedDiscount,
     unit: product.unit,
     stock: resolvedStock,
+    isAvailable: resolvedIsAvailable,
     category: product.category,
-  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock])
+  }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable])
 
   const handleAdd = () => {
     addItem(cartProduct)
