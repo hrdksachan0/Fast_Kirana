@@ -74,7 +74,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice } = body
+    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants } = body
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
@@ -88,6 +88,7 @@ export async function PATCH(
     if (minStock !== undefined) updateData.minStock = parseInt(minStock)
     if (expiryDate !== undefined) updateData.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (costPrice !== undefined) updateData.costPrice = parseFloat(costPrice)
+    if (variants !== undefined) updateData.variants = variants
 
     const finalMrp = mrp !== undefined ? parseFloat(mrp) : product.mrp
     const finalPrice = price !== undefined ? parseFloat(price) : product.price

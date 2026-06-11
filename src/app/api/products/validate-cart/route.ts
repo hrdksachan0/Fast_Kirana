@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
     }
 
-    const productIds = items.map((item: any) => item.product?.id).filter(Boolean)
+    const productIds = items.map((item: any) => item.product?.id ? item.product.id.split('_')[0] : null).filter(Boolean)
     if (productIds.length === 0) {
       return NextResponse.json({ hasChanges: false, updates: [] })
     }
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
         mrp: true,
         stock: true,
         isAvailable: true,
+        variants: true,
       },
     })
 
@@ -36,10 +37,36 @@ export async function POST(request: NextRequest) {
       const clientQty = item.quantity
       if (!clientProduct?.id) continue
 
-      const dbProduct = dbProducts.find((p) => p.id === clientProduct.id)
+      const isVariant = clientProduct.id.includes('_')
+      const [productId, variantName] = isVariant ? clientProduct.id.split('_') : [clientProduct.id, null]
+
+      const dbProduct = dbProducts.find((p) => p.id === productId)
 
       // 1. Check if product exists and is available
-      if (!dbProduct || !dbProduct.isAvailable || dbProduct.stock <= 0) {
+      if (!dbProduct || !dbProduct.isAvailable) {
+        updates.push({
+          type: 'OUT_OF_STOCK',
+          productId: clientProduct.id,
+          name: clientProduct.name || 'Product',
+        })
+        continue
+      }
+
+      // Resolve variant price, mrp, and stock
+      let dbPrice = dbProduct.price
+      let dbMrp = dbProduct.mrp
+      let dbStock = dbProduct.stock
+
+      if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+        const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          dbPrice = variant.price
+          dbMrp = variant.mrp
+          dbStock = variant.stock
+        }
+      }
+
+      if (dbStock <= 0) {
         updates.push({
           type: 'OUT_OF_STOCK',
           productId: clientProduct.id,
@@ -49,35 +76,35 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. Check if requested quantity exceeds stock
-      if (clientQty > dbProduct.stock) {
+      if (clientQty > dbStock) {
         updates.push({
           type: 'QUANTITY_CAP',
           productId: clientProduct.id,
-          name: dbProduct.name,
+          name: clientProduct.name,
           oldVal: clientQty,
-          newVal: dbProduct.stock,
+          newVal: dbStock,
         })
       }
 
       // 3. Check for price changes
-      if (clientProduct.price !== dbProduct.price) {
+      if (clientProduct.price !== dbPrice) {
         updates.push({
           type: 'PRICE_UPDATE',
           productId: clientProduct.id,
-          name: dbProduct.name,
+          name: clientProduct.name,
           oldVal: clientProduct.price,
-          newVal: dbProduct.price,
+          newVal: dbPrice,
         })
       }
 
       // 4. Check for MRP changes
-      if (clientProduct.mrp !== dbProduct.mrp) {
+      if (clientProduct.mrp !== dbMrp) {
         updates.push({
           type: 'MRP_UPDATE',
           productId: clientProduct.id,
-          name: dbProduct.name,
+          name: clientProduct.name,
           oldVal: clientProduct.mrp,
-          newVal: dbProduct.mrp,
+          newVal: dbMrp,
         })
       }
     }

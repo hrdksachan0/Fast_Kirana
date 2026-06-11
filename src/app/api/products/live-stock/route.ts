@@ -16,24 +16,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({})
     }
 
+    const baseIds = ids.map((id: string) => id.includes('_') ? id.split('_')[0] : id)
+
     const products = await prisma.product.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: baseIds } },
       select: {
         id: true,
         price: true,
         mrp: true,
         stock: true,
         isAvailable: true,
+        variants: true,
       },
     })
 
     const stockMap: Record<string, { price: number; mrp: number; stock: number; isAvailable: boolean }> = {}
-    products.forEach((p) => {
-      stockMap[p.id] = {
-        price: p.price,
-        mrp: p.mrp,
-        stock: p.stock,
-        isAvailable: p.isAvailable,
+    
+    ids.forEach((id: string) => {
+      const isVariant = id.includes('_')
+      const [productId, variantName] = isVariant ? id.split('_') : [id, null]
+      
+      const dbProduct = products.find((p) => p.id === productId)
+      if (!dbProduct) return
+      
+      if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+        const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          stockMap[id] = {
+            price: variant.price,
+            mrp: variant.mrp,
+            stock: variant.stock,
+            isAvailable: dbProduct.isAvailable && variant.stock > 0,
+          }
+          return
+        }
+      }
+      
+      stockMap[id] = {
+        price: dbProduct.price,
+        mrp: dbProduct.mrp,
+        stock: dbProduct.stock,
+        isAvailable: dbProduct.isAvailable,
       }
     })
 

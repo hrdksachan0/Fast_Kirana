@@ -402,6 +402,10 @@ export function AdminDashboard({
   const [editProductType, setEditProductType] = useState<'grocery' | 'cafe'>('grocery')
   const [newCustomTag, setNewCustomTag] = useState('')
   const [editCustomTag, setEditCustomTag] = useState('')
+  const [newProductVariants, setNewProductVariants] = useState<any[]>([])
+  const [editProductVariants, setEditProductVariants] = useState<any[]>([])
+  const [hasVariantsNew, setHasVariantsNew] = useState(false)
+  const [hasVariantsEdit, setHasVariantsEdit] = useState(false)
 
   const isNewProductCafe = newProductType === 'cafe'
   const isEditProductCafe = editProductType === 'cafe'
@@ -808,6 +812,16 @@ export function AdminDashboard({
     const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
                    categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
     setEditProductType(isCafe ? 'cafe' : 'grocery')
+    
+    const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
+    setHasVariantsEdit(hasVariants)
+    setEditProductVariants(hasVariants ? (p.variants as any[]).map(v => ({
+      name: v.name,
+      price: String(v.price),
+      mrp: String(v.mrp),
+      stock: String(v.stock),
+    })) : [])
+
     setProductEditForm({
       name: p.name || '',
       description: p.description || '',
@@ -829,6 +843,16 @@ export function AdminDashboard({
     e.preventDefault()
     if (!editingProduct) return
 
+    const requiresBasePrice = !hasVariantsEdit
+    if (!productEditForm.name || !productEditForm.categoryId || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp)) || !productEditForm.unit) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    if (hasVariantsEdit && editProductVariants.length === 0) {
+      toast.error('Please add at least one variant option')
+      return
+    }
+
     setSavingProductId(editingProduct.id)
     try {
       const tagsArray = productEditForm.tags
@@ -843,15 +867,21 @@ export function AdminDashboard({
           description: productEditForm.description,
           imageUrl: productEditForm.imageUrl,
           categoryId: productEditForm.categoryId,
-          mrp: parseFloat(productEditForm.mrp) || 0,
-          price: parseFloat(productEditForm.price) || 0,
+          mrp: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].mrp) : parseFloat(productEditForm.mrp),
+          price: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].price) : parseFloat(productEditForm.price),
           unit: productEditForm.unit,
-          stock: isEditProductCafe ? 99999 : (parseInt(productEditForm.stock) || 0),
+          stock: isEditProductCafe ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
           minStock: isEditProductCafe ? 0 : (parseInt(productEditForm.minStock) || 10),
           isAvailable: productEditForm.isAvailable,
           tags: tagsArray,
           expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
           costPrice: parseFloat(productEditForm.costPrice) || 0,
+          variants: hasVariantsEdit ? editProductVariants.map(v => ({
+            name: v.name,
+            price: parseFloat(v.price) || 0,
+            mrp: parseFloat(v.mrp) || 0,
+            stock: parseInt(v.stock) || 0,
+          })) : null,
         }),
       })
 
@@ -896,8 +926,13 @@ export function AdminDashboard({
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newProduct.name || !newProduct.categoryId || !newProduct.price || !newProduct.mrp || !newProduct.unit) {
+    const requiresBasePrice = !hasVariantsNew
+    if (!newProduct.name || !newProduct.categoryId || (requiresBasePrice && (!newProduct.price || !newProduct.mrp)) || !newProduct.unit) {
       toast.error('Please fill in all required fields')
+      return
+    }
+    if (hasVariantsNew && newProductVariants.length === 0) {
+      toast.error('Please add at least one variant option')
       return
     }
 
@@ -912,13 +947,19 @@ export function AdminDashboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newProduct,
-          mrp: parseFloat(newProduct.mrp),
-          price: parseFloat(newProduct.price),
-          stock: isNewProductCafe ? 99999 : (parseInt(newProduct.stock) || 0),
+          mrp: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].mrp) : parseFloat(newProduct.mrp),
+          price: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].price) : parseFloat(newProduct.price),
+          stock: isNewProductCafe ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
           minStock: isNewProductCafe ? 0 : (parseInt(newProduct.minStock) || 10),
           expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
           costPrice: parseFloat(newProduct.costPrice) || 0,
           tags: tagsArray,
+          variants: hasVariantsNew ? newProductVariants.map(v => ({
+            name: v.name,
+            price: parseFloat(v.price) || 0,
+            mrp: parseFloat(v.mrp) || 0,
+            stock: parseInt(v.stock) || 0,
+          })) : null,
         }),
       })
 
@@ -928,6 +969,8 @@ export function AdminDashboard({
         setAllProducts([created, ...allProducts])
         toast.success(`Product "${created.name}" created successfully!`)
         setShowAddProduct(false)
+        setNewProductVariants([])
+        setHasVariantsNew(false)
         setNewProduct({
           name: '',
           description: '',
@@ -1858,45 +1901,151 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="e.g. 100"
-                    value={newProduct.mrp}
-                    onChange={(e) => setNewProduct({ ...newProduct, mrp: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                {!hasVariantsNew && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required={!hasVariantsNew}
+                        placeholder="e.g. 100"
+                        value={newProduct.mrp}
+                        onChange={(e) => setNewProduct({ ...newProduct, mrp: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
+                    </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">FastKirana Discounted Price (INR) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="e.g. 80"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">FastKirana Discounted Price (INR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required={!hasVariantsNew}
+                        placeholder="e.g. 80"
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
+                    </div>
 
-                {!isNewProductCafe && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="e.g. 50"
-                      value={newProduct.stock}
-                      onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
+                    {!isNewProductCafe && (
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
+                        <input
+                          type="number"
+                          required={!hasVariantsNew}
+                          placeholder="e.g. 50"
+                          value={newProduct.stock}
+                          onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
+
+                <div className="md:col-span-2 border border-border/60 bg-muted/5 p-4 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-primary flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hasVariantsNew}
+                        onChange={(e) => setHasVariantsNew(e.target.checked)}
+                        className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      This product has multiple size/weight variations (Variants)
+                    </label>
+                  </div>
+
+                  {hasVariantsNew && (
+                    <div className="space-y-3 pt-2 border-t border-border/60">
+                      {newProductVariants.length > 0 && (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {newProductVariants.map((v, idx) => (
+                            <div key={idx} className="flex justify-between items-center bg-card border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Stock: {v.stock})</span>
+                              <button
+                                type="button"
+                                onClick={() => setNewProductVariants(newProductVariants.filter((_, i) => i !== idx))}
+                                className="text-[10px] text-red-500 hover:text-red-600 font-bold cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-4 gap-2 items-end">
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Variant Name</label>
+                          <input
+                            type="text"
+                            id="new-var-name"
+                            placeholder="e.g. Small, 500g"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">MRP Price</label>
+                          <input
+                            type="number"
+                            id="new-var-mrp"
+                            placeholder="MRP"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Selling Price</label>
+                          <input
+                            type="number"
+                            id="new-var-price"
+                            placeholder="Selling"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock</label>
+                          <input
+                            type="number"
+                            id="new-var-stock"
+                            placeholder="Qty"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nameInput = document.getElementById('new-var-name') as HTMLInputElement
+                          const mrpInput = document.getElementById('new-var-mrp') as HTMLInputElement
+                          const priceInput = document.getElementById('new-var-price') as HTMLInputElement
+                          const stockInput = document.getElementById('new-var-stock') as HTMLInputElement
+
+                          const name = nameInput.value.trim()
+                          const mrp = mrpInput.value.trim()
+                          const price = priceInput.value.trim()
+                          const stock = stockInput.value.trim()
+
+                          if (!name || !mrp || !price || !stock) {
+                            toast.error('Please fill in all variant fields')
+                            return
+                          }
+
+                          setNewProductVariants([...newProductVariants, { name, mrp, price, stock }])
+                          nameInput.value = ''
+                          mrpInput.value = ''
+                          priceInput.value = ''
+                          stockInput.value = ''
+                        }}
+                        className="w-full py-1.5 text-[10px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
+                      >
+                        + Add Variant Option
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="md:col-span-2">
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Description</label>
@@ -3515,39 +3664,145 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                {!isEditProductCafe && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
-                    <input
-                      type="number"
-                      required
-                      value={productEditForm.stock}
-                      onChange={(e) => setProductEditForm({ ...productEditForm, stock: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
+                {!hasVariantsEdit && (
+                  <>
+                    {!isEditProductCafe && (
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
+                        <input
+                          type="number"
+                          required={!hasVariantsEdit}
+                          value={productEditForm.stock}
+                          onChange={(e) => setProductEditForm({ ...productEditForm, stock: e.target.value })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required={!hasVariantsEdit}
+                        value={productEditForm.mrp}
+                        onChange={(e) => setProductEditForm({ ...productEditForm, mrp: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">FastKirana Discounted Price (INR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required={!hasVariantsEdit}
+                        value={productEditForm.price}
+                        onChange={(e) => setProductEditForm({ ...productEditForm, price: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
+                    </div>
+                  </>
                 )}
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={productEditForm.mrp}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, mrp: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">FastKirana Discounted Price (INR) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={productEditForm.price}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, price: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
+
+                <div className="md:col-span-2 border border-border/60 bg-muted/5 p-4 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-primary flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hasVariantsEdit}
+                        onChange={(e) => setHasVariantsEdit(e.target.checked)}
+                        className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      This product has multiple size/weight variations (Variants)
+                    </label>
+                  </div>
+
+                  {hasVariantsEdit && (
+                    <div className="space-y-3 pt-2 border-t border-border/60">
+                      {editProductVariants.length > 0 && (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {editProductVariants.map((v, idx) => (
+                            <div key={idx} className="flex justify-between items-center bg-card border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Stock: {v.stock})</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditProductVariants(editProductVariants.filter((_, i) => i !== idx))}
+                                className="text-[10px] text-red-500 hover:text-red-600 font-bold cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-4 gap-2 items-end">
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Variant Name</label>
+                          <input
+                            type="text"
+                            id="edit-var-name"
+                            placeholder="e.g. Small, 500g"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">MRP Price</label>
+                          <input
+                            type="number"
+                            id="edit-var-mrp"
+                            placeholder="MRP"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Selling Price</label>
+                          <input
+                            type="number"
+                            id="edit-var-price"
+                            placeholder="Selling"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock</label>
+                          <input
+                            type="number"
+                            id="edit-var-stock"
+                            placeholder="Qty"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nameInput = document.getElementById('edit-var-name') as HTMLInputElement
+                          const mrpInput = document.getElementById('edit-var-mrp') as HTMLInputElement
+                          const priceInput = document.getElementById('edit-var-price') as HTMLInputElement
+                          const stockInput = document.getElementById('edit-var-stock') as HTMLInputElement
+
+                          const name = nameInput.value.trim()
+                          const mrp = mrpInput.value.trim()
+                          const price = priceInput.value.trim()
+                          const stock = stockInput.value.trim()
+
+                          if (!name || !mrp || !price || !stock) {
+                            toast.error('Please fill in all variant fields')
+                            return
+                          }
+
+                          setEditProductVariants([...editProductVariants, { name, mrp, price, stock }])
+                          nameInput.value = ''
+                          mrpInput.value = ''
+                          priceInput.value = ''
+                          stockInput.value = ''
+                        }}
+                        className="w-full py-1.5 text-[10px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
+                      >
+                        + Add Variant Option
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Emoji Icon / Image URL (Cloudinary)</label>

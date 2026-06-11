@@ -1,12 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { ProductDetailActions } from '@/components/product/product-detail-actions'
 import { ProductScrollSection } from '@/components/product/product-scroll-section'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Star, Truck, ShieldCheck, Heart, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
-import { ProductStockBanner } from '@/components/product/product-stock-banner'
+import { ProductVariantSelector } from '@/components/product/product-variant-selector'
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   'fruits-vegetables': Salad,
@@ -177,49 +176,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
               )}
             </div>
 
-            {/* Price list */}
-            <div className="flex items-baseline gap-3 pt-2">
-              <span className="text-3xl font-black text-text-primary">
-                ₹{product.price}
-              </span>
-              {product.mrp > product.price && (
-                <span className="text-lg text-text-muted line-through font-bold">
-                  ₹{product.mrp}
-                </span>
-              )}
-            </div>
-
-            {/* Delivery banner CTA inside product details */}
-            <div className="flex items-center gap-3 border border-border/60 bg-muted/30 p-3 rounded-xl">
-              <Truck className="h-5 w-5 text-accent animate-pulse-gentle" />
-              <span className="text-xs font-bold text-text-primary">
-                Delivered to your door with <span className="text-accent">Fast Delivery</span>
-              </span>
-            </div>
-
-            {/* Dark Store verification banner */}
-            <div className="flex items-start gap-3 border border-accent/20 bg-accent/5 p-2.5 min-[375px]:p-3.5 rounded-xl shadow-[0_0_12px_rgba(0,177,64,0.03)] border-l-4 border-l-accent">
-              <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-              <div className="text-xs font-bold text-text-primary">
-                <span className="text-accent">FastKirana DarkStore Fresh Verified</span>
-                <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                  Sourced directly, stored in a hygiene-controlled environment, and packed under strict guidelines. Freshness guaranteed with zero retail shelf dust.
-                </p>
-              </div>
-            </div>
-
-            {/* Low stock warning banner */}
-            <ProductStockBanner
-              productId={product.id}
-              initialStock={product.stock}
-              categorySlug={product.category?.slug}
-              tags={product.tags}
-            />
-
-            {/* Interactive Add to Cart button */}
-            <div className="pt-2">
-              <ProductDetailActions product={product} />
-            </div>
+            {/* Price list, variants, banners, stock alerts and dynamic action controls */}
+            <ProductVariantSelector product={product} />
           </div>
 
           {/* Product description & collapsible details */}

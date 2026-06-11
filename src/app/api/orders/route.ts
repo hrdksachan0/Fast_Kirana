@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
-    const productIds = items.map((i: any) => i.product.id)
+    const productIds = items.map((i: any) => i.product.id.split('_')[0])
     const productSlugs = items.map((i: any) => i.product.slug).filter(Boolean)
 
     const dbProducts = await prisma.product.findMany({
@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
     const groceryItems: any[] = []
 
     for (const item of items) {
-      let dbProduct = dbProducts.find((p) => p.id === item.product.id)
+      const isVariant = item.product.id.includes('_')
+      const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+
+      let dbProduct = dbProducts.find((p) => p.id === productId)
       if (!dbProduct && item.product.slug) {
         dbProduct = dbProducts.find((p) => p.slug === item.product.slug)
       }
@@ -96,8 +99,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Product "${item.product.name}" is no longer available` }, { status: 400 })
       }
 
-      if (dbProduct.stock < item.quantity) {
-        return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name}"` }, { status: 400 })
+      let dbStock = dbProduct.stock
+      if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+        const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          dbStock = variant.stock
+        }
+      }
+
+      if (dbStock < item.quantity) {
+        return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
       const itemWithDb = {
@@ -113,11 +124,23 @@ export async function POST(request: NextRequest) {
     }
 
     const combinedSubtotal = items.reduce((sum: number, item: any) => {
-      let dbProduct = dbProducts.find((p) => p.id === item.product.id)
+      const isVariant = item.product.id.includes('_')
+      const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+
+      let dbProduct = dbProducts.find((p) => p.id === productId)
       if (!dbProduct && item.product.slug) {
         dbProduct = dbProducts.find((p) => p.slug === item.product.slug)
       }
-      return sum + (dbProduct ? dbProduct.price * item.quantity : 0)
+
+      let itemPrice = dbProduct ? dbProduct.price : 0
+      if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+        const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+
+      return sum + itemPrice * item.quantity
     }, 0)
 
     // Enforce B2B Wholesale minimum order value
@@ -227,13 +250,27 @@ export async function POST(request: NextRequest) {
       const results: any[] = []
 
       for (const orderInfo of ordersToCreate) {
-        const orderItemsData = orderInfo.items.map((item: any) => ({
-          productId: item.dbProduct.id,
-          name: item.dbProduct.name,
-          price: item.dbProduct.price,
-          quantity: item.quantity,
-          imageUrl: item.dbProduct.imageUrl,
-        }))
+        const orderItemsData = orderInfo.items.map((item: any) => {
+          const isVariant = item.product.id.includes('_')
+          const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+          
+          let itemPrice = item.dbProduct.price
+          if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+            const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+            if (variant) {
+              itemPrice = variant.price
+            }
+          }
+
+          return {
+            productId: productId,
+            name: item.product.name,
+            price: itemPrice,
+            quantity: item.quantity,
+            imageUrl: item.dbProduct.imageUrl,
+            selectedVariant: variantName,
+          }
+        })
 
         // Create order
         const newOrder = await tx.order.create({
@@ -254,7 +291,14 @@ export async function POST(request: NextRequest) {
             shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
             shopPhone: orderInfo.type === 'CAFE' ? '+91 70544 70303' : shopPhone,
             items: {
-              create: orderItemsData,
+              create: orderItemsData.map((item: any) => ({
+                productId: item.productId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                imageUrl: item.imageUrl,
+                selectedVariant: item.selectedVariant,
+              })),
             },
           },
           include: {
@@ -267,54 +311,78 @@ export async function POST(request: NextRequest) {
 
         // Deduct stock
         for (const item of orderItemsData) {
-          const batches = await tx.productBatch.findMany({
-            where: {
-              productId: item.productId,
-              quantity: { gt: 0 }
-            },
-            orderBy: {
-              expiryDate: 'asc'
-            }
-          })
-
-          let remainingToDeduct = item.quantity
-
-          if (batches.length > 0) {
-            for (const batch of batches) {
-              if (remainingToDeduct <= 0) break
-              const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
-              await tx.productBatch.update({
-                where: { id: batch.id },
-                data: { quantity: { decrement: deductFromThisBatch } }
+          if (item.selectedVariant) {
+            // Deduct stock from the variant in JSON variants
+            const dbProd = await tx.product.findUnique({
+              where: { id: item.productId }
+            })
+            if (dbProd && dbProd.variants && Array.isArray(dbProd.variants)) {
+              const updatedVariants = (dbProd.variants as any[]).map((v) => {
+                if (v.name === item.selectedVariant) {
+                  return { ...v, stock: Math.max(0, v.stock - item.quantity) }
+                }
+                return v
               })
-              remainingToDeduct -= deductFromThisBatch
+              const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stock, 0)
+              
+              await tx.product.update({
+                where: { id: item.productId },
+                data: {
+                  variants: updatedVariants,
+                  stock: newTotalStock,
+                }
+              })
             }
-          }
-
-          const activeBatches = await tx.productBatch.findMany({
-            where: {
-              productId: item.productId,
-              quantity: { gt: 0 }
-            },
-            orderBy: { expiryDate: 'asc' }
-          })
-
-          const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
-          const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
-
-          if (activeBatches.length > 0 || batches.length > 0) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                stock: newTotalStock,
-                expiryDate: newEarliestExpiry
+          } else {
+            const batches = await tx.productBatch.findMany({
+              where: {
+                productId: item.productId,
+                quantity: { gt: 0 }
+              },
+              orderBy: {
+                expiryDate: 'asc'
               }
             })
-          } else {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
+
+            let remainingToDeduct = item.quantity
+
+            if (batches.length > 0) {
+              for (const batch of batches) {
+                if (remainingToDeduct <= 0) break
+                const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
+                await tx.productBatch.update({
+                  where: { id: batch.id },
+                  data: { quantity: { decrement: deductFromThisBatch } }
+                })
+                remainingToDeduct -= deductFromThisBatch
+              }
+            }
+
+            const activeBatches = await tx.productBatch.findMany({
+              where: {
+                productId: item.productId,
+                quantity: { gt: 0 }
+              },
+              orderBy: { expiryDate: 'asc' }
             })
+
+            const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+            const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
+
+            if (activeBatches.length > 0 || batches.length > 0) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: {
+                  stock: newTotalStock,
+                  expiryDate: newEarliestExpiry
+                }
+              })
+            } else {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } }
+              })
+            }
           }
         }
       }

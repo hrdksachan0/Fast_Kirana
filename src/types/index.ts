@@ -12,6 +12,7 @@ export interface Product {
   stock: number
   isAvailable: boolean
   tags: string[]
+  variants?: any[] | null
   minStock?: number
   category?: Category
   images?: ProductImage[]
@@ -40,6 +41,7 @@ export interface CartItem {
   productId: string
   quantity: number
   product: Product
+  selectedVariant?: string | null
 }
 
 export interface Address {
@@ -83,6 +85,7 @@ export interface OrderItem {
   price: number
   quantity: number
   imageUrl: string | null
+  selectedVariant?: string | null
 }
 
 export interface Review {
