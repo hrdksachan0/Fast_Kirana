@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -174,13 +175,17 @@ export function ProductImage({
 
   if (!imgError && isValidUrl) {
     return (
-      <img
-        ref={imgRef}
-        src={currentSrc!}
-        alt={alt}
-        className={className}
-        onError={handleError}
-      />
+      <div className="relative w-full h-full">
+        <Image
+          src={currentSrc!}
+          alt={alt}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+          className={className}
+          onError={handleError}
+          priority={isBestseller}
+        />
+      </div>
     )
   }
 

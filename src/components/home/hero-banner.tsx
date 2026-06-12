@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Gift, Apple, Milk, Leaf, Salad, Zap } from 'lucide-react'
 
 interface BannerItem {
@@ -110,10 +111,12 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 
         {/* Right Column Visual Graphic */}
         <div className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
-          <img
+          <Image
             src="/grocery_bag_banner.png"
             alt="Grocery bag with fresh vegetables"
-            className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2 animate-float"
+            fill
+            sizes="(max-width: 768px) 30vw, 300px"
+            className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2 animate-float"
           />
         </div>
       </div>
@@ -161,10 +164,12 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
       {/* Slide Visual Graphic/Badge */}
       {currentBanner.type === 'express-delivery' ? (
         <div className="relative w-[32%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
-          <img
+          <Image
             src="/grocery_bag_banner.png"
             alt="Grocery bag with fresh vegetables"
-            className="object-contain max-h-[95px] sm:max-h-[135px] md:max-h-[220px] w-auto h-auto drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2 animate-float"
+            fill
+            sizes="(max-width: 768px) 30vw, 300px"
+            className="object-contain max-h-[95px] sm:max-h-[135px] md:max-h-[220px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2 animate-float"
           />
         </div>
       ) : (

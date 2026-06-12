@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Category } from '@/types'
 import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
 
@@ -140,10 +141,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   className={`w-full aspect-square rounded-2xl ${config.bg} overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
                 >
                   {categoryPhotos[category.slug] ? (
-                    <img
+                    <Image
                       src={categoryPhotos[category.slug]}
                       alt={config.label}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      sizes="100px"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -190,12 +193,24 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               className="group flex flex-col items-center text-center p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1"
             >
               <div
-                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden`}
+                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden relative`}
               >
                 {categoryPhotos[category.slug] ? (
-                  <img src={categoryPhotos[category.slug]} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                  <Image
+                    src={categoryPhotos[category.slug]}
+                    alt={category.name}
+                    fill
+                    sizes="80px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
                 ) : category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
-                  <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                  <Image
+                    src={category.imageUrl}
+                    alt={category.name}
+                    fill
+                    sizes="80px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
                 ) : category.imageUrl && category.imageUrl.length < 5 ? (
                   <span className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>
                 ) : (
