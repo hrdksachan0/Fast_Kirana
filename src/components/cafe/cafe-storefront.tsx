@@ -234,6 +234,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
+  const [navbarHeight, setNavbarHeight] = useState<number>(96)
 
   // Map products to categories
   const mappedProducts = useMemo(() => {
@@ -395,7 +396,22 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   // Scroll tracker logic
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 160 // Header offset (navbar + sticky tabs)
+      const navbarEl = document.querySelector('nav')
+      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
+      
+      setNavbarHeight(prev => {
+        if (Math.abs(prev - currentNavbarHeight) > 1) {
+          return currentNavbarHeight
+        }
+        return prev
+      })
+
+      // Get sticky categories bar height if on mobile
+      const stickyBarEl = document.getElementById('mobile-category-sticky-bar')
+      const stickyBarHeight = stickyBarEl ? stickyBarEl.getBoundingClientRect().height : 44
+
+      const headerOffset = currentNavbarHeight + (window.innerWidth < 768 ? stickyBarHeight : 0) + 16
+      const scrollPosition = window.scrollY + headerOffset
       
       // Determine if floating menu button should appear (after scrolling past hero banner)
       setShowFloatingMenuBtn(window.scrollY > 250)
@@ -441,11 +457,16 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
 
     const timeoutId = setTimeout(() => {
       const activeTabEl = document.getElementById(`category-tab-${activeCategory}`)
-      if (activeTabEl) {
-        activeTabEl.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center'
+      const containerEl = document.getElementById('mobile-category-sticky-bar')
+      if (activeTabEl && containerEl) {
+        const containerWidth = containerEl.clientWidth
+        const tabOffsetLeft = activeTabEl.offsetLeft
+        const tabWidth = activeTabEl.clientWidth
+        const targetScrollLeft = tabOffsetLeft - (containerWidth / 2) + (tabWidth / 2)
+        
+        containerEl.scrollTo({
+          left: targetScrollLeft,
+          behavior: 'smooth'
         })
       }
     }, 150)
@@ -457,12 +478,22 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const scrollToCategory = (tag: string) => {
     const el = document.getElementById(`category-section-${tag}`)
     if (el) {
-      const headerOffset = 150 // Sum of fixed navbar + sticky categories bar
-      const elementPosition = el.getBoundingClientRect().top
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+      const navbarEl = document.querySelector('nav')
+      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
+      
+      const isMobile = window.innerWidth < 768
+      let stickyBarHeight = 0
+      if (isMobile) {
+        const stickyBarEl = document.getElementById('mobile-category-sticky-bar')
+        stickyBarHeight = stickyBarEl ? stickyBarEl.getBoundingClientRect().height : 44
+      }
+
+      const headerOffset = currentNavbarHeight + stickyBarHeight + 8
+      const elementPosition = el.offsetTop
+      const offsetPosition = elementPosition - headerOffset
 
       window.scrollTo({
-        top: offsetPosition,
+        top: offsetPosition >= 0 ? offsetPosition : 0,
         behavior: 'smooth'
       })
       
@@ -512,7 +543,11 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       </div>
 
       {/* -------------------- STICKY CATEGORY NAVIGATION TAB BAR (Mobile Only) -------------------- */}
-      <div className="sticky top-[96px] md:hidden z-30 bg-background/95 backdrop-blur-md border-b border-border/80 py-2.5 -mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-none shadow-sm select-none transition-all duration-300">
+      <div 
+        id="mobile-category-sticky-bar"
+        style={{ top: `${navbarHeight}px` }}
+        className="sticky md:hidden z-30 bg-background/95 backdrop-blur-md border-b border-border/80 py-2.5 -mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-none shadow-sm select-none transition-all duration-300"
+      >
         {menuCategories.map((cat) => {
           const isActive = activeCategory === cat.tag
           return (
@@ -541,7 +576,13 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       {/* Split layout: Sidebar categories for desktop, main content on right */}
       <div className="flex gap-8 items-start">
         {/* Desktop Vertical Sidebar (Swiggy Style) */}
-        <aside className="hidden md:block w-64 shrink-0 sticky top-[100px] max-h-[calc(100vh-140px)] overflow-y-auto pr-2 border-r border-border/40 space-y-1 scrollbar-none py-1">
+        <aside 
+          style={{ 
+            top: `${navbarHeight + 16}px`, 
+            maxHeight: `calc(100vh - ${navbarHeight + 40}px)` 
+          }}
+          className="hidden md:block w-64 shrink-0 sticky overflow-y-auto pr-2 border-r border-border/40 space-y-1 scrollbar-none py-1"
+        >
           <div className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider px-3 mb-2">
             Menu Categories
           </div>
