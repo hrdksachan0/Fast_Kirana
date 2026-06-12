@@ -809,6 +809,48 @@ export function AdminDashboard({
   // ----------------------------------------------------
   // Handlers for Product Management (Modal Edit & Create)
   // ----------------------------------------------------
+  const handleDuplicateProduct = (p: any) => {
+    const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
+                   categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
+    setNewProductType(isCafe ? 'cafe' : 'grocery')
+    
+    const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
+    setHasVariantsNew(hasVariants)
+    setNewProductVariants(hasVariants ? (p.variants as any[]).map(v => ({
+      name: v.name,
+      price: String(v.price),
+      mrp: String(v.mrp),
+      stock: String(v.stock),
+    })) : [])
+
+    setNewProduct({
+      name: `${p.name} (Copy)`,
+      description: p.description || '',
+      imageUrl: p.imageUrl || '',
+      categoryId: p.categoryId || '',
+      mrp: String(p.mrp || ''),
+      price: String(p.price || ''),
+      unit: p.unit || '',
+      stock: String(p.stock || ''),
+      isAvailable: p.isAvailable !== false,
+      tags: p.tags ? p.tags.join(', ') : '',
+      minStock: String(p.minStock ?? 10),
+      expiryDate: p.expiryDate ? String(p.expiryDate) : '',
+      costPrice: String(p.costPrice ?? 0),
+    })
+
+    setShowAddProduct(true)
+    setShowCsvImport(false)
+    
+    // Smooth scroll to the top of the Add Product form container
+    setTimeout(() => {
+      const formElement = document.getElementById('add-product-form-container')
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 50)
+  }
+
   const startEditingProduct = (p: any) => {
     setEditingProduct(p)
     const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
@@ -1809,6 +1851,7 @@ export function AdminDashboard({
           {/* Add Product Inline Form */}
           {showAddProduct && (
             <form 
+              id="add-product-form-container"
               onSubmit={handleCreateProduct}
               className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
             >
@@ -2532,6 +2575,13 @@ export function AdminDashboard({
                           {/* Actions */}
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleDuplicateProduct(p)}
+                                className="px-2.5 py-1 border border-border bg-blue-500/5 hover:bg-blue-500/10 text-[10px] font-bold rounded-lg text-blue-600 dark:text-blue-400 transition-all"
+                                title="Duplicate / Copy Product"
+                              >
+                                Copy
+                              </button>
                               <button
                                 onClick={() => startEditingProduct(p)}
                                 className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all"
