@@ -13,6 +13,8 @@ import {
   Trash,
   ChevronDown,
   ChevronUp,
+  ShoppingBasket,
+  Coffee,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -91,17 +93,29 @@ function parseCSV(text: string): string[][] {
   return rows
 }
 
-const TEMPLATE_HEADERS = [
+const GROCERY_TEMPLATE_HEADERS = [
   'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
 ]
 
-const TEMPLATE_EXAMPLE_ROWS = [
+const GROCERY_TEMPLATE_ROWS = [
   ['Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10'],
   ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '14', '12', '100', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20'],
   ['Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15'],
 ]
 
+const CAFE_TEMPLATE_HEADERS = [
+  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
+]
+
+const CAFE_TEMPLATE_ROWS = [
+  ['Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5'],
+  ['Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10'],
+  ['Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5'],
+  ['Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3'],
+]
+
 export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminCsvImportProps) {
+  const [importType, setImportType] = useState<'grocery' | 'cafe'>('grocery')
   const [parsedProducts, setParsedProducts] = useState<ParsedProduct[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
   const [isImporting, setIsImporting] = useState(false)
@@ -113,41 +127,85 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
   const categoryNames = new Set(categories.map(c => c.name.toLowerCase().trim()))
   const categorySlugs = new Set(categories.map(c => c.slug.toLowerCase().trim()))
 
+  const handleImportTypeChange = useCallback((type: 'grocery' | 'cafe') => {
+    setImportType(type)
+    setParsedProducts([])
+    setValidationErrors([])
+    setFileName('')
+    setImportResult(null)
+  }, [])
+
   const downloadTemplate = useCallback(() => {
-    const header = TEMPLATE_HEADERS.join(',')
-    const rows = TEMPLATE_EXAMPLE_ROWS.map(row =>
-      row.map(cell => cell.includes(',') ? `"${cell}"` : cell).join(',')
-    )
-    const csv = [header, ...rows].join('\n')
+    const headers = importType === 'grocery' ? GROCERY_TEMPLATE_HEADERS : CAFE_TEMPLATE_HEADERS
+    const rowsData = importType === 'grocery' ? GROCERY_TEMPLATE_ROWS : CAFE_TEMPLATE_ROWS
+
+    const cafeCategory = categories.find(c => c.slug === 'cafe')
+    const cafeCategoryName = cafeCategory?.name || 'FastKirana Cafe'
+
+    const rows = rowsData.map(row => {
+      const parsedRow = [...row]
+      if (importType === 'cafe') {
+        parsedRow[1] = cafeCategoryName
+      }
+      return parsedRow.map(cell => cell.includes(',') ? `"${cell}"` : cell).join(',')
+    })
+
+    const csv = [headers.join(','), ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'fastkirana_product_template.csv'
+    a.download = importType === 'grocery' ? 'fastkirana_grocery_template.csv' : 'fastkirana_cafe_template.csv'
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('Template CSV downloaded!')
-  }, [])
+    toast.success(`${importType === 'grocery' ? 'Grocery' : 'Cafe'} template CSV downloaded!`)
+  }, [importType, categories])
 
-  const validateProducts = useCallback((products: ParsedProduct[]): ValidationError[] => {
+  const validateProducts = useCallback((products: ParsedProduct[], type: 'grocery' | 'cafe'): ValidationError[] => {
     const errors: ValidationError[] = []
+
+    const cafeCategory = categories.find(c => c.slug === 'cafe')
+    const cafeCategoryName = cafeCategory?.name || 'FastKirana Cafe'
+    const cafeCategoryNameLower = cafeCategoryName.toLowerCase().trim()
+
     products.forEach((p, i) => {
       const row = i + 1
       if (!p.name) errors.push({ row, field: 'Name', message: 'Name is required' })
-      if (!p.category) errors.push({ row, field: 'Category', message: 'Category is required' })
-      else {
+      
+      if (!p.category) {
+        errors.push({ row, field: 'Category', message: 'Category is required' })
+      } else {
         const catLower = p.category.toLowerCase().trim()
-        if (!categoryNames.has(catLower) && !categorySlugs.has(catLower)) {
-          errors.push({ row, field: 'Category', message: `Category "${p.category}" not found in database` })
+        const isCafeCategory = (catLower === 'cafe' || catLower === cafeCategoryNameLower)
+
+        if (type === 'cafe') {
+          if (!isCafeCategory) {
+            errors.push({
+              row,
+              field: 'Category',
+              message: `Cafe Import must have Category "${cafeCategoryName}". Found "${p.category}".`
+            })
+          }
+        } else {
+          if (isCafeCategory) {
+            errors.push({
+              row,
+              field: 'Category',
+              message: `Category "${cafeCategoryName}" is not allowed in Grocery Import. Switch to Cafe Import.`
+            })
+          } else if (!categoryNames.has(catLower) && !categorySlugs.has(catLower)) {
+            errors.push({ row, field: 'Category', message: `Category "${p.category}" not found in database` })
+          }
         }
       }
+
       if (!p.unit) errors.push({ row, field: 'Unit', message: 'Unit is required' })
       if (!p.mrp || isNaN(parseFloat(p.mrp)) || parseFloat(p.mrp) <= 0) errors.push({ row, field: 'MRP', message: 'Valid MRP required' })
       if (!p.price || isNaN(parseFloat(p.price)) || parseFloat(p.price) <= 0) errors.push({ row, field: 'Price', message: 'Valid Price required' })
       if (parseFloat(p.price) > parseFloat(p.mrp)) errors.push({ row, field: 'Price', message: 'Price cannot exceed MRP' })
     })
     return errors
-  }, [categoryNames, categorySlugs])
+  }, [categories, categoryNames, categorySlugs])
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -167,7 +225,6 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
           return
         }
 
-        // Parse header to map columns
         const headerRow = rows[0].map(h => h.toLowerCase().trim())
         const dataRows = rows.slice(1)
 
@@ -213,7 +270,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
           }))
 
         setParsedProducts(products)
-        const errs = validateProducts(products)
+        const errs = validateProducts(products, importType)
         setValidationErrors(errs)
 
         if (products.length === 0) {
@@ -228,9 +285,8 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     }
     reader.readAsText(file)
 
-    // Reset input so same file can be re-uploaded
     e.target.value = ''
-  }, [validateProducts])
+  }, [validateProducts, importType])
 
   const handleImport = useCallback(async () => {
     if (parsedProducts.length === 0) return
@@ -281,13 +337,37 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
   const removeProduct = useCallback((index: number) => {
     const updated = parsedProducts.filter((_, i) => i !== index)
     setParsedProducts(updated)
-    setValidationErrors(validateProducts(updated))
-  }, [parsedProducts, validateProducts])
+    setValidationErrors(validateProducts(updated, importType))
+  }, [parsedProducts, validateProducts, importType])
 
   const errorCount = validationErrors.length
   const criticalCount = validationErrors.filter(e => ['Name', 'Category', 'MRP', 'Price'].includes(e.field)).length
   const hasErrors = errorCount > 0
   const canImport = parsedProducts.length > 0 && criticalCount === 0 && !isImporting
+
+  const isCafe = importType === 'cafe'
+  const visibleCategories = categories.filter(c => isCafe ? c.slug === 'cafe' : c.slug !== 'cafe')
+
+  // UI styling strings mapped to theme
+  const headerGradient = isCafe
+    ? 'from-rose-500/5 to-amber-500/5'
+    : 'from-blue-500/5 to-indigo-500/5'
+
+  const iconContainerClass = isCafe
+    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+
+  const downloadButtonClass = isCafe
+    ? 'border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+    : 'border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+
+  const uploadLabelClass = isCafe
+    ? 'border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+    : 'border-accent/30 bg-accent/5 hover:bg-accent/10 text-accent'
+
+  const importButtonClass = isCafe
+    ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/10'
+    : 'bg-accent hover:bg-accent/90 text-white shadow-accent/10'
 
   return (
     <motion.div
@@ -297,9 +377,9 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
       className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden animate-slide-up"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 md:p-5 border-b border-border/60 bg-gradient-to-r from-blue-500/5 to-indigo-500/5">
+      <div className={`flex items-center justify-between p-4 md:p-5 border-b border-border/60 bg-gradient-to-r ${headerGradient}`}>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconContainerClass}`}>
             <FileSpreadsheet className="h-5 w-5" />
           </div>
           <div>
@@ -315,19 +395,45 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
         </button>
       </div>
 
+      {/* Segmented Import Type Selection Tabs */}
+      <div className="flex p-1 bg-muted/30 border-b border-border/40 gap-1">
+        <button
+          onClick={() => handleImportTypeChange('grocery')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            !isCafe
+              ? 'bg-card text-blue-600 dark:text-blue-400 shadow-sm border border-border/40'
+              : 'text-text-secondary hover:text-text-primary hover:bg-muted/40'
+          }`}
+        >
+          <ShoppingBasket className="h-4 w-4" />
+          Grocery Import
+        </button>
+        <button
+          onClick={() => handleImportTypeChange('cafe')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            isCafe
+              ? 'bg-card text-rose-600 dark:text-rose-400 shadow-sm border border-border/40'
+              : 'text-text-secondary hover:text-text-primary hover:bg-muted/40'
+          }`}
+        >
+          <Coffee className="h-4 w-4" />
+          Cafe Import
+        </button>
+      </div>
+
       <div className="p-4 md:p-5 space-y-4">
 
         {/* Step 1: Download Template + Upload */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={downloadTemplate}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-xl transition-all cursor-pointer"
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed text-xs font-bold rounded-xl transition-all cursor-pointer ${downloadButtonClass}`}
           >
             <Download className="h-4 w-4" />
-            Download Template CSV
+            Download {isCafe ? 'Cafe' : 'Grocery'} Template CSV
           </button>
 
-          <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 text-accent text-xs font-bold rounded-xl transition-all cursor-pointer">
+          <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed text-xs font-bold rounded-xl transition-all cursor-pointer ${uploadLabelClass}`}>
             <Upload className="h-4 w-4" />
             {fileName ? `📄 ${fileName}` : 'Upload CSV File'}
             <input
@@ -342,13 +448,18 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
 
         {/* Available Categories Reference */}
         <div className="bg-muted/20 border border-border/40 rounded-xl p-3">
-          <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider mb-1.5">Available Categories (use exact name in CSV):</p>
+          <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider mb-1.5">
+            Available {isCafe ? 'Cafe' : 'Grocery'} Categories (use exact name in CSV):
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {categories.map(c => (
+            {visibleCategories.map(c => (
               <span key={c.id} className="px-2 py-0.5 bg-card border border-border/50 rounded-md text-[10px] font-bold text-text-primary">
                 {c.name}
               </span>
             ))}
+            {visibleCategories.length === 0 && (
+              <span className="text-[10px] text-text-muted italic">No categories found</span>
+            )}
           </div>
         </div>
 
@@ -487,7 +598,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
             <button
               onClick={handleImport}
               disabled={!canImport}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent/90 text-white text-sm font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${importButtonClass}`}
             >
               {isImporting ? (
                 <>
