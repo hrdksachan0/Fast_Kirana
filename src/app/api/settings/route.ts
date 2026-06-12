@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_SETTINGS = {
   deliveries_count: '10,000+',
   rating_value: '4.8',

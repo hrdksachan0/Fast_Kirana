@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -107,21 +107,23 @@ export function AdminDashboard({
     return DEFAULT_CAFE_MENU_SECTIONS
   }, [settingsMap])
 
+  // Fetch settings function
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings', { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setSettingsMap(data)
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err)
+    }
+  }, [])
+
   // Fetch settings on mount to retrieve Cloudinary credentials
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch('/api/settings')
-        if (res.ok) {
-          const data = await res.json()
-          setSettingsMap(data)
-        }
-      } catch (err) {
-        console.error('Failed to load settings:', err)
-      }
-    }
     fetchSettings()
-  }, [])
+  }, [fetchSettings])
 
   const handleCloudinaryUpload = async (file: File, onUploadSuccess: (url: string) => void) => {
     const cloudName = settingsMap['cloudinary_cloud_name']
@@ -3755,7 +3757,7 @@ export function AdminDashboard({
 
       {activeTab === 'settings' && (
         <div className="animate-fade-in">
-          <AdminSettings />
+          <AdminSettings onSettingsSaved={fetchSettings} />
         </div>
       )}
         </motion.div>

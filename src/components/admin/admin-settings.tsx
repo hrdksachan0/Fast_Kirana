@@ -6,7 +6,11 @@ import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, Coffee, Pl
 import { motion } from 'framer-motion'
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 
-export function AdminSettings() {
+interface AdminSettingsProps {
+  onSettingsSaved?: () => void
+}
+
+export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [deliveriesCount, setDeliveriesCount] = useState('10,000+')
   const [ratingValue, setRatingValue] = useState('4.8')
   const [happyFamilies, setHappyFamilies] = useState('5,000+')
@@ -41,7 +45,7 @@ export function AdminSettings() {
     async function loadSettings() {
       try {
         setLoading(true)
-        const res = await fetch('/api/settings')
+        const res = await fetch('/api/settings', { cache: 'no-store' })
         if (!res.ok) throw new Error('Failed to load settings')
         const data = await res.json()
         
@@ -184,6 +188,7 @@ export function AdminSettings() {
       if (!res.ok) throw new Error('Failed to update café menu sections')
       
       toast.success('Café menu sections saved successfully!')
+      if (onSettingsSaved) onSettingsSaved()
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Error saving café menu sections')
@@ -227,6 +232,7 @@ export function AdminSettings() {
       if (!res.ok) throw new Error('Failed to update settings')
       
       toast.success('Store settings updated successfully!')
+      if (onSettingsSaved) onSettingsSaved()
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Error saving store settings')

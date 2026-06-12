@@ -298,10 +298,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       for (const cat of PREDEFINED_CATEGORIES) {
         const hasMatch = product.tags?.some((t: string) => 
           cat.matchTags.includes(t.toLowerCase())
-        ) || (cat.tag === 'hot-beverage' && ['nescafe-classic', 'tata-tea-gold'].includes(product.slug))
-          || (cat.tag === 'hot-bite' && ['maggi-noodles'].includes(product.slug))
-          || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate', 'lays-classic-salted'].includes(product.slug))
-          || (cat.tag === 'chilled' && ['coca-cola', 'sprite', 'red-bull-energy'].includes(product.slug))
+        ) || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate'].includes(product.slug))
 
         if (hasMatch) {
           const sec = sectionsMap.get(cat.tag)
