@@ -1020,11 +1020,16 @@ export default function DeliveryDashboard() {
 
                       {/* Step 2 — Deliver */}
                       <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                          `${order.address.houseNo}, ${order.address.street}, ${order.address.area}, ${order.address.city} ${order.address.pincode}`
-                        )}`}
+                        href={
+                          order.address.lat && order.address.lng
+                            ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                `${order.address.houseNo}, ${order.address.street}, ${order.address.area}, ${order.address.city} ${order.address.pincode}`
+                              )}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
+
                         className="flex gap-3 group/map hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 -mx-1 px-1 py-1 rounded-lg transition-colors cursor-pointer"
                         title="Click to navigate with Google Maps"
                       >
@@ -1188,16 +1193,30 @@ export default function DeliveryDashboard() {
                           </div>
                         </div>
                         <div className="h-px bg-border/30 ml-7" />
-                        <div className="flex items-start gap-2">
-                          <div className="h-5 w-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <a
+                          href={
+                            order.address.lat && order.address.lng
+                              ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                  `${order.address.houseNo}, ${order.address.street}, ${order.address.area}, ${order.address.city} ${order.address.pincode}`
+                                )}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start gap-2 hover:bg-muted/50 p-1 -m-1 rounded-lg transition-colors cursor-pointer group"
+                        >
+                          <div className="h-5 w-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                             <MapPin className="h-3 w-3 text-white" />
                           </div>
                           <div>
-                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">Deliver To</span>
-                            <span className="text-text-primary font-bold">{order.address.area}, {order.address.city}</span>
+                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
+                              Deliver To <span className="text-[7px] text-emerald-600 font-black ml-1 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-0.2 rounded">NAV 🗺️</span>
+                            </span>
+                            <span className="text-text-primary font-bold group-hover:underline">{order.address.area}, {order.address.city}</span>
                           </div>
-                        </div>
+                        </a>
                       </div>
+
 
                       {/* Amount + Action */}
                       <div className="flex justify-between items-center pt-1.5 border-t border-border/40">

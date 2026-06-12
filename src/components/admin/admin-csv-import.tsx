@@ -30,6 +30,7 @@ interface ParsedProduct {
   imageUrl: string
   costPrice: string
   minStock: string
+  location: string
 }
 
 interface ValidationError {
@@ -94,25 +95,26 @@ function parseCSV(text: string): string[][] {
 }
 
 const GROCERY_TEMPLATE_HEADERS = [
-  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
+  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
 ]
 
 const GROCERY_TEMPLATE_ROWS = [
-  ['Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10'],
-  ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '14', '12', '100', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20'],
-  ['Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15'],
+  ['Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10', 'Aisle 2-B'],
+  ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '14', '12', '100', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20', 'Aisle 4-A'],
+  ['Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15', 'Aisle 1-C'],
 ]
 
 const CAFE_TEMPLATE_HEADERS = [
-  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
+  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
 ]
 
 const CAFE_TEMPLATE_ROWS = [
-  ['Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5'],
-  ['Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10'],
-  ['Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5'],
-  ['Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3'],
+  ['Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5', 'Kitchen Grid A'],
+  ['Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10', 'Chai Station'],
+  ['Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5', 'Kitchen Grid B'],
+  ['Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3', 'Pasta Station'],
 ]
+
 
 export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminCsvImportProps) {
   const [importType, setImportType] = useState<'grocery' | 'cafe'>('grocery')
@@ -247,6 +249,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
         const imgIdx = getIdx(['image url', 'imageurl', 'image', 'photo'])
         const costIdx = getIdx(['cost price', 'costprice', 'cost'])
         const minStockIdx = getIdx(['min stock', 'minstock', 'min stock alert'])
+        const locationIdx = getIdx(['location', 'shelf', 'rack', 'aisle'])
 
         if (nameIdx === -1 || mrpIdx === -1 || priceIdx === -1) {
           toast.error('CSV must have at least Name, MRP, and Price columns')
@@ -267,7 +270,9 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
             imageUrl: imgIdx >= 0 ? (row[imgIdx] || '') : '',
             costPrice: costIdx >= 0 ? (row[costIdx] || '0') : '0',
             minStock: minStockIdx >= 0 ? (row[minStockIdx] || '10') : '10',
+            location: locationIdx >= 0 ? (row[locationIdx] || '') : '',
           }))
+
 
         setParsedProducts(products)
         const errs = validateProducts(products, importType)

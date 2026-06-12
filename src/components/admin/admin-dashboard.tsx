@@ -381,6 +381,7 @@ export function AdminDashboard({
     minStock: '10',
     expiryDate: '',
     costPrice: '0',
+    location: '',
   })
   
   // State for Add Product Form
@@ -403,6 +404,7 @@ export function AdminDashboard({
     minStock: '10',
     expiryDate: '',
     costPrice: '0',
+    location: '',
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
@@ -842,6 +844,7 @@ export function AdminDashboard({
       minStock: String(p.minStock ?? 10),
       expiryDate: p.expiryDate ? String(p.expiryDate) : '',
       costPrice: String(p.costPrice ?? 0),
+      location: p.location || '',
     })
 
     setShowAddProduct(true)
@@ -878,7 +881,7 @@ export function AdminDashboard({
       // Convert products array to CSV string matching the import headers
       // Headers: Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock
       const headers = [
-        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
+        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
       ]
       
       const csvRows = [headers.join(',')]
@@ -896,7 +899,9 @@ export function AdminDashboard({
           p.imageUrl || '',
           p.costPrice?.toString() || '0',
           p.minStock?.toString() || '10',
+          p.location || '',
         ]
+
         
         // Escape quotes and commas in CSV cells
         const escapedRow = row.map(cell => {
@@ -932,6 +937,78 @@ export function AdminDashboard({
     }
   }
 
+  const handleReplenishCsv = async () => {
+    setIsExporting(true)
+    try {
+      const url = '/api/admin/products?limit=5000'
+      const res = await fetch(url)
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch products for replenish PO')
+      }
+      
+      const replenishProducts = (data.products || []).filter((p: any) => p.stock <= (p.minStock ?? 10))
+      
+      if (replenishProducts.length === 0) {
+        toast.success('Excellent! No products are currently below min stock levels.')
+        setIsExporting(false)
+        return
+      }
+
+      const headers = [
+        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
+      ]
+      
+      const csvRows = [headers.join(',')]
+      
+      replenishProducts.forEach((p: any) => {
+        const row = [
+          p.name || '',
+          p.category?.name || '',
+          p.unit || '',
+          p.mrp?.toString() || '0',
+          p.price?.toString() || '0',
+          p.stock?.toString() || '0',
+          Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
+          p.description || '',
+          p.imageUrl || '',
+          p.costPrice?.toString() || '0',
+          p.minStock?.toString() || '10',
+          p.location || '',
+        ]
+        
+        const escapedRow = row.map(cell => {
+          const cleanCell = cell.replace(/"/g, '""')
+          if (cleanCell.includes(',') || cleanCell.includes('\n') || cleanCell.includes('"')) {
+            return `"${cleanCell}"`
+          }
+          return cleanCell
+        })
+        
+        csvRows.push(escapedRow.join(','))
+      })
+      
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const urlBlob = URL.createObjectURL(blob)
+      
+      const link = document.createElement('a')
+      link.href = urlBlob
+      
+      const filename = `fastkirana_replenish_po_${new Date().toISOString().split('T')[0]}.csv`
+      link.setAttribute('download', filename)
+      link.click()
+      URL.revokeObjectURL(urlBlob)
+      
+      toast.success(`Generated replenishment PO with ${replenishProducts.length} items!`)
+    } catch (err: any) {
+      toast.error(err.message || 'Error generating replenishment PO')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const startEditingProduct = (p: any) => {
     setEditingProduct(p)
     const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
@@ -961,6 +1038,7 @@ export function AdminDashboard({
       minStock: String(p.minStock ?? 10),
       expiryDate: p.expiryDate ? String(p.expiryDate) : '',
       costPrice: String(p.costPrice ?? 0),
+      location: p.location || '',
     })
   }
 
@@ -1001,6 +1079,7 @@ export function AdminDashboard({
           tags: tagsArray,
           expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
           costPrice: parseFloat(productEditForm.costPrice) || 0,
+          location: productEditForm.location || null,
           variants: hasVariantsEdit ? editProductVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -1008,6 +1087,7 @@ export function AdminDashboard({
             stock: parseInt(v.stock) || 0,
           })) : null,
         }),
+
       })
 
       if (res.ok) {
@@ -1110,7 +1190,9 @@ export function AdminDashboard({
           minStock: '10',
           expiryDate: '',
           costPrice: '0',
+          location: '',
         })
+
       } else {
         const errData = await res.json()
         toast.error(errData.error || 'Failed to create product')
@@ -1920,7 +2002,15 @@ export function AdminDashboard({
               <Download className="h-4 w-4" />
               📤 Export CSV
             </button>
+            <button
+              onClick={handleReplenishCsv}
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer shadow-sm"
+            >
+              <AlertCircle className="h-4 w-4" />
+              ⚠️ Replenish CSV
+            </button>
           </div>
+
 
           {/* CSV Export Options Panel */}
           <AnimatePresence>
@@ -2324,6 +2414,17 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Aisle/Shelf Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Aisle 2-B"
+                    value={newProduct.location}
+                    onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                  </div>
+
 
                 {!isNewProductCafe && (
                   <div>
@@ -2628,17 +2729,20 @@ export function AdminDashboard({
                     <th className="py-3 px-4 w-[110px]">MRP (₹)</th>
                     <th className="py-3 px-4 w-[110px]">Price (₹)</th>
                     <th className="py-3 px-4 w-[90px]">Stock</th>
+                    <th className="py-3 px-4 w-[110px]">Location</th>
                     <th className="py-3 px-4 w-[100px] text-center">Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
+
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 font-semibold">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-text-secondary">
+                      <td colSpan={8} className="text-center py-10 text-text-secondary">
                         No products found matching your search.
                       </td>
                     </tr>
+
                   ) : (
                     filteredProducts.map((p) => {
                       const isLowStock = p.stock < 15
@@ -4072,6 +4176,17 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Aisle/Shelf Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Aisle 2-B"
+                    value={productEditForm.location || ''}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, location: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+
 
                 {!isEditProductCafe && (
                   <div>

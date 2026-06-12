@@ -43,6 +43,10 @@ interface OrderItem {
   imageUrl?: string
   product?: {
     slug: string
+    location?: string | null
+    category?: {
+      slug: string
+    }
   }
 }
 
@@ -729,7 +733,7 @@ export default function PickerDashboard() {
     }
   }
 
-  // Consolidated checklist sorted by Aisle number
+  // Consolidated checklist sorted by Location / Aisle number
   const consolidatedItems = useMemo(() => {
     if (!isMultiPickingMode || multiActiveOrders.length === 0) return []
 
@@ -739,6 +743,7 @@ export default function PickerDashboard() {
       imageUrl?: string
       unit: string
       categorySlug: string
+      location?: string | null
       totalNeeded: number
       totalPicked: number
       placements: Array<{
@@ -756,7 +761,7 @@ export default function PickerDashboard() {
 
       order.items.forEach(item => {
         const picked = orderPicked[item.id] || 0
-        const catSlug = item.product?.slug || ''
+        const catSlug = item.product?.category?.slug || ''
 
         if (!itemsMap[item.productId]) {
           itemsMap[item.productId] = {
@@ -765,6 +770,7 @@ export default function PickerDashboard() {
             imageUrl: item.imageUrl,
             unit: item.name.toLowerCase().includes('gm') || item.name.toLowerCase().includes('kg') ? '' : 'pc',
             categorySlug: catSlug,
+            location: item.product?.location || null,
             totalNeeded: 0,
             totalPicked: 0,
             placements: []
@@ -785,11 +791,17 @@ export default function PickerDashboard() {
     })
 
     return Object.values(itemsMap).sort((a, b) => {
+      if (a.location && b.location) {
+        return a.location.localeCompare(b.location)
+      }
+      if (a.location) return -1
+      if (b.location) return 1
       const aisleA = getAisleNumber(a.categorySlug)
       const aisleB = getAisleNumber(b.categorySlug)
       return aisleA - aisleB
     })
   }, [isMultiPickingMode, multiActiveOrders, binColors, multiPickedItemIds])
+
 
   const handleMultiPickOne = (productId: string) => {
     const itemEntry = consolidatedItems.find(item => item.productId === productId)
@@ -1164,7 +1176,15 @@ export default function PickerDashboard() {
                                   />
                                 </div>
                                 <div className="min-w-0">
-                                  <h4 className="text-xs sm:text-sm font-extrabold text-gray-800 truncate leading-tight">{item.name}</h4>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-800 truncate leading-tight">{item.name}</h4>
+                                    {item.location && (
+                                      <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[9px] font-black uppercase shadow-sm">
+                                        📍 {item.location}
+                                      </span>
+                                    )}
+                                  </div>
+
                                   
                                   {/* Bin Placement list */}
                                   <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -1396,8 +1416,16 @@ export default function PickerDashboard() {
                   <p>All items checked off successfully! Ready to Pack.</p>
                 </motion.div>
               ) : (
-                activeOrder.items
-                  .filter(item => (pickedItemIds[item.id] || 0) < item.quantity)
+                [...activeOrder.items].sort((a, b) => {
+                        const locA = a.product?.location
+                        const locB = b.product?.location
+                        if (locA && locB) return locA.localeCompare(locB)
+                        if (locA) return -1
+                        if (locB) return 1
+                        const slugA = a.product?.category?.slug || ''
+                        const slugB = b.product?.category?.slug || ''
+                        return getAisleNumber(slugA) - getAisleNumber(slugB)
+                      }).filter(item => (pickedItemIds[item.id] || 0) < item.quantity)
                   .map((item, idx) => {
                     const picked = pickedItemIds[item.id] || 0
                     const progress = (picked / item.quantity) * 100
@@ -1423,7 +1451,15 @@ export default function PickerDashboard() {
                               />
                             </div>
                             <div className="min-w-0">
-                              <h4 className="text-xs sm:text-sm font-extrabold text-gray-800 truncate">{item.name}</h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-xs sm:text-sm font-extrabold text-gray-800 truncate">{item.name}</h4>
+                                {item.product?.location && (
+                                  <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[9px] font-black uppercase shadow-sm">
+                                    📍 {item.product.location}
+                                  </span>
+                                )}
+                              </div>
+
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] text-gray-400 font-bold">
                                   {picked}/{item.quantity}

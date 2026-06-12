@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
@@ -152,9 +153,31 @@ export default function CafeKitchenDashboard() {
   const [preparedToday, setPreparedToday] = useState(0)
   const [scanFocused, setScanFocused] = useState(false)
 
-  // State refs for stable callbacks and effects
   const activeOrderRef = useRef<Order | null>(null)
   const updatingIdRef = useRef<string | null>(null)
+
+  const aggregatedPrepItems = useMemo(() => {
+    const counts: Record<string, { name: string; quantity: number; image?: string }> = {}
+    
+    orders.forEach(order => {
+      const isClaimedByOther = !!(order.status === 'CONFIRMED' && order.assignedChefId && order.assignedChefId !== session?.user?.id)
+      if (isClaimedByOther) return
+
+      order.items.forEach((item: any) => {
+        if (!counts[item.name]) {
+          counts[item.name] = {
+            name: item.name,
+            quantity: 0,
+            image: item.imageUrl || null
+          }
+        }
+        counts[item.name].quantity += item.quantity
+      })
+    })
+
+    return Object.values(counts).sort((a, b) => b.quantity - a.quantity)
+  }, [orders, session?.user?.id])
+
 
   useEffect(() => {
     activeOrderRef.current = activeOrder
@@ -1008,6 +1031,40 @@ export default function CafeKitchenDashboard() {
           <Coffee className="h-4 w-4 text-rose-500" />
           Hot Orders to Prepare ({orders.length})
         </h2>
+
+        {/* Aggregated Preparation Summary */}
+        {orders.length > 0 && aggregatedPrepItems.length > 0 && (
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200/50 dark:border-amber-900/40 rounded-2xl p-4 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                <ChefHat className="h-4 w-4" />
+                Aggregated Prep Summary (Bulk Cooking)
+              </span>
+              <span className="text-[10px] text-amber-600/80 dark:text-amber-500/80 font-bold">
+                {aggregatedPrepItems.reduce((acc, x) => acc + x.quantity, 0)} total items
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {aggregatedPrepItems.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-amber-100 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-xs animate-slide-up"
+                >
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="h-6 w-6 object-contain rounded-md bg-muted/40 p-0.5" />
+                  ) : (
+                    <span className="text-sm">🍔</span>
+                  )}
+                  <span className="text-xs font-black text-gray-800 dark:text-gray-200">{item.name}</span>
+                  <span className="text-xs font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
+                    x{item.quantity}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
 
         {orders.length === 0 ? (
           <motion.div

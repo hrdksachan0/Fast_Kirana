@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
             tags,
             costPrice,
             minStock: parseInt(item.minStock) || 10,
+            location: item.location?.trim() || null,
           },
           include: { category: true },
         })

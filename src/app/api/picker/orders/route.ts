@@ -66,7 +66,16 @@ export async function GET(request: Request) {
 
     const [allItems, allUsers, allAddresses, allPotentialCompanions] = await Promise.all([
       orderIds.length > 0
-        ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
+        ? prisma.orderItem.findMany({
+            where: { orderId: { in: orderIds } },
+            include: {
+              product: {
+                include: {
+                  category: true
+                }
+              }
+            }
+          })
         : [],
       userIds.length > 0
         ? prisma.$queryRaw`

@@ -93,6 +93,7 @@ export async function GET(request: Request) {
       variants: p.variants,
       costPrice: p.costPrice ?? 0,
       minStock: p.minStock ?? 10,
+      location: p.location,
       category: {
         id: p.category.id,
         name: p.category.name,

@@ -162,6 +162,7 @@ model Product {
   minStock    Int       @default(10)
   expiryDate  DateTime?
   costPrice   Float     @default(0)
+  location    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
