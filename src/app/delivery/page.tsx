@@ -85,8 +85,8 @@ const itemVariants = {
 function optimizeRoute(ordersList: any[]) {
   if (ordersList.length <= 1) return ordersList
 
-  const storeLat = 26.155
-  const storeLng = 80.175
+  const storeLat = 26.1534185
+  const storeLng = 80.1714024
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371
