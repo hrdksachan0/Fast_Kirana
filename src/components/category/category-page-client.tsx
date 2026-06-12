@@ -233,34 +233,6 @@ export function CategoryPageClient({
               <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none select-none">
                 <button
                   type="button"
-                  onClick={() => setVegFilter(vegFilter === 'veg' ? 'all' : 'veg')}
-                  className={cn(
-                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
-                    vegFilter === 'veg'
-                      ? 'bg-green-600/10 border-green-600/30 text-green-700 dark:text-green-400 font-extrabold shadow-sm'
-                      : 'bg-card border-border hover:bg-muted text-text-secondary'
-                  )}
-                >
-                  <span className="text-[13px]">🥦</span>
-                  <span>Veg Only</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setVegFilter(vegFilter === 'nonveg' ? 'all' : 'nonveg')}
-                  className={cn(
-                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
-                    vegFilter === 'nonveg'
-                      ? 'bg-red-600/10 border-red-600/30 text-red-700 dark:text-red-400 font-extrabold shadow-sm'
-                      : 'bg-card border-border hover:bg-muted text-text-secondary'
-                  )}
-                >
-                  <span className="text-[13px]">🍗</span>
-                  <span>Non-Veg</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => setShowPriceFilter(!showPriceFilter)}
                   className={cn(
                     'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
