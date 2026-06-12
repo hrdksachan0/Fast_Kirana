@@ -91,6 +91,8 @@ export async function GET(request: Request) {
       isAvailable: p.isAvailable,
       tags: p.tags,
       variants: p.variants,
+      costPrice: p.costPrice ?? 0,
+      minStock: p.minStock ?? 10,
       category: {
         id: p.category.id,
         name: p.category.name,

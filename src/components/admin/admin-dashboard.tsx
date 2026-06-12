@@ -17,6 +17,7 @@ import {
   PlusCircle, 
   Check, 
   X,
+  Download,
   TrendingUp,
   Zap,
   AlertCircle,
@@ -383,6 +384,8 @@ export function AdminDashboard({
   // State for Add Product Form
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [showCsvImport, setShowCsvImport] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -849,6 +852,82 @@ export function AdminDashboard({
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     }, 50)
+  }
+
+  const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
+    setIsExporting(true)
+    try {
+      const url = `/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
+      const res = await fetch(url)
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch products for export')
+      }
+      
+      const exportProducts = data.products || []
+      
+      if (exportProducts.length === 0) {
+        toast.warning('No products found to export.')
+        setIsExporting(false)
+        return
+      }
+
+      // Convert products array to CSV string matching the import headers
+      // Headers: Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock
+      const headers = [
+        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock'
+      ]
+      
+      const csvRows = [headers.join(',')]
+      
+      exportProducts.forEach((p: any) => {
+        const row = [
+          p.name || '',
+          p.category?.name || '',
+          p.unit || '',
+          p.mrp?.toString() || '0',
+          p.price?.toString() || '0',
+          p.stock?.toString() || '0',
+          Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
+          p.description || '',
+          p.imageUrl || '',
+          p.costPrice?.toString() || '0',
+          p.minStock?.toString() || '10',
+        ]
+        
+        // Escape quotes and commas in CSV cells
+        const escapedRow = row.map(cell => {
+          const cleanCell = cell.replace(/"/g, '""') // Escape quotes
+          if (cleanCell.includes(',') || cleanCell.includes('\n') || cleanCell.includes('"')) {
+            return `"${cleanCell}"`
+          }
+          return cleanCell
+        })
+        
+        csvRows.push(escapedRow.join(','))
+      })
+      
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const urlBlob = URL.createObjectURL(blob)
+      
+      const link = document.createElement('a')
+      link.href = urlBlob
+      
+      const filename = `fastkirana_products_${type}_${new Date().toISOString().split('T')[0]}.csv`
+      link.setAttribute('download', filename)
+      link.click()
+      URL.revokeObjectURL(urlBlob)
+      
+      toast.success(`Successfully exported ${exportProducts.length} items!`)
+      setShowExportModal(false)
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.message || 'Failed to export products')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const startEditingProduct = (p: any) => {
@@ -1826,13 +1905,69 @@ export function AdminDashboard({
               Add New Product
             </button>
             <button
-              onClick={() => setShowCsvImport(!showCsvImport)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center"
+              onClick={() => { setShowCsvImport(!showCsvImport); setShowExportModal(false); }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
             >
               <FileText className="h-4 w-4" />
               📥 CSV Import
             </button>
+            <button
+              onClick={() => { setShowExportModal(!showExportModal); setShowCsvImport(false); }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
+            >
+              <Download className="h-4 w-4" />
+              📤 Export CSV
+            </button>
           </div>
+
+          {/* CSV Export Options Panel */}
+          <AnimatePresence>
+            {showExportModal && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-card p-5 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
+              >
+                <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                  <div>
+                    <h4 className="font-extrabold text-text-primary text-sm">Export Catalog Items</h4>
+                    <p className="text-[10px] text-text-secondary mt-0.5">Select category type to generate and download product CSV sheet.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowExportModal(false)}
+                    className="p-1 rounded-lg hover:bg-muted text-text-secondary hover:text-text-primary cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    disabled={isExporting}
+                    onClick={() => handleExportCsv('all')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-border bg-muted/20 hover:bg-muted text-text-primary text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    All Catalog Items (All)
+                  </button>
+                  <button
+                    disabled={isExporting}
+                    onClick={() => handleExportCsv('grocery')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    📦 Grocery Items Only
+                  </button>
+                  <button
+                    disabled={isExporting}
+                    onClick={() => handleExportCsv('cafe')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    ☕ Cafe Items Only
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* CSV Bulk Import */}
           <AnimatePresence>

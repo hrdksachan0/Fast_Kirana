@@ -37,6 +37,26 @@ export function CategoryPageClient({
     setMaxPrice(maxPriceOfCategory)
   }, [maxPriceOfCategory])
 
+  // Center active category tab on mobile horizontal scroll bar on mount
+  useEffect(() => {
+    const activeTabEl = document.getElementById(`category-tab-${activeCategory.slug}`)
+    const containerEl = document.getElementById('mobile-category-scrollbar')
+    if (activeTabEl && containerEl) {
+      const timer = setTimeout(() => {
+        const containerWidth = containerEl.clientWidth
+        const tabOffsetLeft = activeTabEl.offsetLeft
+        const tabWidth = activeTabEl.clientWidth
+        const targetScrollLeft = tabOffsetLeft - (containerWidth / 2) + (tabWidth / 2)
+        
+        containerEl.scrollTo({
+          left: targetScrollLeft,
+          behavior: 'auto'
+        })
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [activeCategory.slug])
+
   const sortOptions = [
     { label: 'Popularity', value: 'popularity' },
     { label: 'Price: Low to High', value: 'price-asc' },
@@ -132,12 +152,13 @@ export function CategoryPageClient({
         {/* Right Section: Header and Product Grid */}
         <main className="flex-grow space-y-6">
           {/* Mobile Category Horizontal Scrollbar */}
-          <div className="md:hidden overflow-x-auto flex gap-2 pb-2 scrollbar-hide">
+          <div id="mobile-category-scrollbar" className="md:hidden overflow-x-auto flex gap-2 pb-2 scrollbar-hide">
             {categories.map((cat) => {
               const isActive = cat.slug === activeCategory.slug
               return (
                 <Link
                   key={cat.id}
+                  id={`category-tab-${cat.slug}`}
                   href={`/category/${cat.slug}`}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border whitespace-nowrap flex-shrink-0 transition-colors',
