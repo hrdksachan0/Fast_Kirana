@@ -49,6 +49,7 @@ import { AdminReports } from './admin-reports'
 import { AdminInward } from './admin-inward'
 import { AdminBanners } from './admin-banners'
 import { AdminSettings } from './admin-settings'
+import { AdminCsvImport } from './admin-csv-import'
 
 interface AdminDashboardProps {
   initialOrders: any[]
@@ -381,6 +382,7 @@ export function AdminDashboard({
   
   // State for Add Product Form
   const [showAddProduct, setShowAddProduct] = useState(false)
+  const [showCsvImport, setShowCsvImport] = useState(false)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -1781,7 +1783,28 @@ export function AdminDashboard({
               <PlusCircle className="h-4 w-4" />
               Add New Product
             </button>
+            <button
+              onClick={() => setShowCsvImport(!showCsvImport)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center"
+            >
+              <FileText className="h-4 w-4" />
+              📥 CSV Import
+            </button>
           </div>
+
+          {/* CSV Bulk Import */}
+          <AnimatePresence>
+            {showCsvImport && (
+              <AdminCsvImport
+                categories={categories}
+                onImportComplete={(imported) => {
+                  setProducts([...imported, ...products])
+                  setAllProducts([...imported.map((p: any) => ({ id: p.id, name: p.name, price: p.price, mrp: p.mrp, costPrice: p.costPrice ?? 0, stock: p.stock, minStock: p.minStock, isAvailable: p.isAvailable, tags: p.tags, variants: p.variants, category: { id: p.category?.id, name: p.category?.name, slug: p.category?.slug } })), ...allProducts])
+                }}
+                onClose={() => setShowCsvImport(false)}
+              />
+            )}
+          </AnimatePresence>
 
           {/* Add Product Inline Form */}
           {showAddProduct && (

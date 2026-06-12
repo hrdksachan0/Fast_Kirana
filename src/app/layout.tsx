@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning>
       <head />
       <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
         <script

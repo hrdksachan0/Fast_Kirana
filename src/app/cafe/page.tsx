@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { CafeStorefront } from '@/components/cafe/cafe-storefront'
 
-// Revalidate page every 30 seconds to keep quantities synced
-export const revalidate = 30
+export const dynamic = 'force-dynamic'
 
 export default async function CafePage() {
   // 1. Self-healing seeding for Cafe category & hot food products
