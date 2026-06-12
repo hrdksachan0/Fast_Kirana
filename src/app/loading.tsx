@@ -22,13 +22,20 @@ export default function Loading() {
   const pathname = usePathname()
   const [visible, setVisible] = useState(false)
 
+  // Scroll to top instantly when loading starts to prevent seeing footer jumps
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [pathname])
+
   // Delay showing the loader by 50ms to prevent flickering on ultra-fast transitions
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(timer)
   }, [])
 
-  if (!visible) return null
+  if (!visible) {
+    return <div className="min-h-screen" />
+  }
 
   // 1. Full-page customized skeleton rendering based on path
   if (pathname === '/' || pathname === '') {

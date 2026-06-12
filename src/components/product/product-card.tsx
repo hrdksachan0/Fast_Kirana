@@ -193,10 +193,9 @@ export function ProductCard({ product }: ProductCardProps) {
           <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px] mb-0.5">
             {product.name}
           </h3>
-          {/* Unit / Variant Dropdown */}
           {hasVariants ? (
             <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md mt-1 mb-0.5 w-fit border border-primary/10">
-              {product.unit || 'Options'} • Options ▾
+              Customisable ▾
             </span>
           ) : (
             <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
