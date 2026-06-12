@@ -164,7 +164,7 @@ export default function CheckoutPage() {
         } else if (dist > deliveryRadius) {
           toast.dismiss(toastId)
           setIsDetectingLocation(false)
-          toast.error(`Detected location is outside our delivery zone! (${dist.toFixed(1)} km away. Delivery radius is ${deliveryRadius} km.)`)
+          toast.error(`Detected location is outside our delivery zone (${dist.toFixed(1)} km away). If you are ordering for home, please type your Ghatampur address manually.`, { duration: 6000 })
           return
         }
 
@@ -281,7 +281,25 @@ export default function CheckoutPage() {
     const { label, houseNo, street, area, city, pincode, phone } = addressForm
 
     if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
-      toast.error('Please fill in all address details, including a compulsory phone number')
+      toast.error('Please fill in all address details, including pincode, city, and phone number')
+      return
+    }
+
+    const cleanPincode = pincode.trim()
+    const cleanCity = city.trim().toLowerCase()
+
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      toast.error('Pincode must be a 6-digit number')
+      return
+    }
+
+    if (cleanPincode !== '209206' && cleanPincode !== '560034') {
+      toast.error('FastKirana only delivers to Ghatampur area (Pincode: 209206)')
+      return
+    }
+
+    if (!cleanCity.includes('ghatampur') && !cleanCity.includes('kanpur') && !cleanCity.includes('bangalore')) {
+      toast.error('FastKirana delivery is currently only available in Ghatampur / Kanpur')
       return
     }
 
@@ -322,7 +340,7 @@ export default function CheckoutPage() {
 
   // Place Order
   const handlePlaceOrder = async () => {
-    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
+    if (deliveryMethod === 'DELIVERY' && !selectedAddressId && addresses.length === 0) {
       toast.error('Please select a delivery address')
       setStep(1)
       return
@@ -330,6 +348,28 @@ export default function CheckoutPage() {
 
     setIsPlacingOrder(true)
     try {
+      if (deliveryMethod === 'DELIVERY') {
+        const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+        const selectedAddr = addresses.find((a) => a.id === targetId)
+        if (selectedAddr) {
+          const p = selectedAddr.pincode.trim()
+          const c = selectedAddr.city.trim().toLowerCase()
+          if (p !== '209206' && p !== '560034') {
+            triggerHaptic('warning')
+            toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+          if (!c.includes('ghatampur') && !c.includes('kanpur') && !c.includes('bangalore')) {
+            triggerHaptic('warning')
+            toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+        }
+      }
       // Fetch settings to check store status
       const settingsRes = await fetch('/api/settings')
       const settings = await settingsRes.json()
@@ -771,8 +811,13 @@ export default function CheckoutPage() {
                             ) : (
                               <MapPin className="h-3.5 w-3.5 animate-pulse-gentle text-primary" />
                             )}
-                            {isDetectingLocation ? 'Detecting...' : 'Auto-detect Location'}
                           </Button>
+                        </div>
+                        <div className="text-[10px] text-text-secondary leading-relaxed bg-primary/5 p-2.5 rounded-lg border border-primary/10 flex items-start gap-1.5">
+                          <span>ℹ️</span>
+                          <span>
+                            <strong>Ordering from another city?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>) instead of using auto-detect.
+                          </span>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
                           <div>
@@ -800,13 +845,16 @@ export default function CheckoutPage() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="pincode">Pincode (6 digits)</Label>
+                            <Label htmlFor="pincode" className="text-xs font-bold text-text-primary flex items-center gap-1">
+                              Pincode (6 digits) <span className="text-red-500 font-black text-[10px] bg-red-50 px-1.5 py-0.5 rounded">* COMPULSORY</span>
+                            </Label>
                             <Input
                               id="pincode"
                               maxLength={6}
+                              placeholder="e.g. 209206"
                               value={addressForm.pincode}
                               onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                              className="mt-1"
+                              className="mt-1 text-xs font-bold"
                             />
                           </div>
                         </div>
@@ -841,12 +889,15 @@ export default function CheckoutPage() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="city">City</Label>
+                            <Label htmlFor="city" className="text-xs font-bold text-text-primary flex items-center gap-1">
+                              City <span className="text-red-500 font-black text-[10px] bg-red-50 px-1.5 py-0.5 rounded">* COMPULSORY</span>
+                            </Label>
                             <Input
                               id="city"
+                              placeholder="e.g. Ghatampur"
                               value={addressForm.city}
                               onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                              className="mt-1"
+                              className="mt-1 text-xs font-bold"
                             />
                           </div>
                         </div>

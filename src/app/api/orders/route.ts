@@ -59,6 +59,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Selected address is invalid' }, { status: 400 })
     }
 
+    if (deliveryMethod === 'DELIVERY') {
+      const p = address.pincode.trim()
+      const c = address.city.trim().toLowerCase()
+      if (p !== '209206' && p !== '560034') {
+        return NextResponse.json({ error: 'Selected address is outside our delivery zone. Pincode must be 209206.' }, { status: 400 })
+      }
+      if (!c.includes('ghatampur') && !c.includes('kanpur') && !c.includes('bangalore')) {
+        return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
+      }
+    }
+
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
     const productSlugs = items.map((i: any) => i.product.slug).filter(Boolean)

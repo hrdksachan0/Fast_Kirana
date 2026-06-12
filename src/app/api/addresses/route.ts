@@ -29,7 +29,18 @@ export async function POST(request: Request) {
     const { label, houseNo, street, area, city, pincode, phone, isDefault } = await request.json()
 
     if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
-      return NextResponse.json({ error: 'Missing required fields (including phone number)' }, { status: 400 })
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const cleanPincode = pincode.toString().trim()
+    const cleanCity = city.toString().trim().toLowerCase()
+
+    if (cleanPincode !== '209206' && cleanPincode !== '560034') {
+      return NextResponse.json({ error: 'FastKirana only delivers to Ghatampur area (Pincode: 209206)' }, { status: 400 })
+    }
+
+    if (!cleanCity.includes('ghatampur') && !cleanCity.includes('kanpur') && !cleanCity.includes('bangalore')) {
+      return NextResponse.json({ error: 'FastKirana delivery is currently only available in Ghatampur / Kanpur' }, { status: 400 })
     }
 
     // If setting default, reset existing defaults
