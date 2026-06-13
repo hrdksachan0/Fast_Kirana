@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
     },
     googleOAuth: {
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID 
-        ? (process.env.GOOGLE_CLIENT_ID.startsWith('"') ? 'PRESENT_WITH_QUOTES' : 'PRESENT')
+        ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...${process.env.GOOGLE_CLIENT_ID.substring(process.env.GOOGLE_CLIENT_ID.length - 15)}`
         : 'MISSING',
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET 
-        ? (process.env.GOOGLE_CLIENT_SECRET.startsWith('"') ? 'PRESENT_WITH_QUOTES' : 'PRESENT')
+        ? `${process.env.GOOGLE_CLIENT_SECRET.substring(0, 6)}...${process.env.GOOGLE_CLIENT_SECRET.substring(process.env.GOOGLE_CLIENT_SECRET.length - 6)}`
         : 'MISSING',
     },
     database: {
