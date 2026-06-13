@@ -163,9 +163,11 @@ model Product {
   expiryDate  DateTime?
   costPrice   Float     @default(0)
   location    String?
-  isFlashDeal Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isFlashDeal  Boolean   @default(false)
+  isTopPick    Boolean   @default(false)
+  isBestSeller Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   category     Category       @relation(fields: [categoryId], references: [id])
   images       ProductImage[]

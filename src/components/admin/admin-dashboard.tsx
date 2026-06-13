@@ -53,7 +53,7 @@ import { AdminBanners } from './admin-banners'
 import { AdminSettings } from './admin-settings'
 import { AdminCsvImport } from './admin-csv-import'
 import { AdminPushNotifications } from './admin-push-notifications'
-import { AdminFlashDeals } from './admin-flash-deals'
+import { AdminPromotions } from './admin-promotions'
 
 interface AdminDashboardProps {
   initialOrders: any[]
@@ -386,6 +386,8 @@ export function AdminDashboard({
     costPrice: '0',
     location: '',
     isFlashDeal: false,
+    isTopPick: false,
+    isBestSeller: false,
   })
   
   // State for Add Product Form
@@ -410,6 +412,8 @@ export function AdminDashboard({
     costPrice: '0',
     location: '',
     isFlashDeal: false,
+    isTopPick: false,
+    isBestSeller: false,
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
@@ -851,6 +855,8 @@ export function AdminDashboard({
       costPrice: String(p.costPrice ?? 0),
       location: p.location || '',
       isFlashDeal: p.isFlashDeal || false,
+      isTopPick: p.isTopPick || false,
+      isBestSeller: p.isBestSeller || false,
     })
 
     setShowAddProduct(true)
@@ -1046,6 +1052,8 @@ export function AdminDashboard({
       costPrice: String(p.costPrice ?? 0),
       location: p.location || '',
       isFlashDeal: p.isFlashDeal || false,
+      isTopPick: p.isTopPick || false,
+      isBestSeller: p.isBestSeller || false,
     })
   }
 
@@ -1088,6 +1096,8 @@ export function AdminDashboard({
           costPrice: parseFloat(productEditForm.costPrice) || 0,
           location: productEditForm.location || null,
           isFlashDeal: productEditForm.isFlashDeal,
+          isTopPick: productEditForm.isTopPick,
+          isBestSeller: productEditForm.isBestSeller,
           variants: hasVariantsEdit ? editProductVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -1200,6 +1210,8 @@ export function AdminDashboard({
           costPrice: '0',
           location: '',
           isFlashDeal: false,
+          isTopPick: false,
+          isBestSeller: false,
         })
 
       } else {
@@ -1608,7 +1620,7 @@ export function AdminDashboard({
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
-    { key: 'flash-deals', label: 'Flash Deals', icon: Zap },
+    { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
   ]
@@ -2688,30 +2700,57 @@ export function AdminDashboard({
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isAvailable"
-                    checked={newProduct.isAvailable}
-                    onChange={(e) => setNewProduct({ ...newProduct, isAvailable: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="isAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Immediately Available for Sale
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isFlashDeal"
-                    checked={newProduct.isFlashDeal}
-                    onChange={(e) => setNewProduct({ ...newProduct, isFlashDeal: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="isFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Promote in Flash Deals
-                  </label>
+              <div className="flex flex-col gap-2 pt-5 border-t border-border/20">
+                <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Promotional Highlight Placements</p>
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isAvailable"
+                      checked={newProduct.isAvailable}
+                      onChange={(e) => setNewProduct({ ...newProduct, isAvailable: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="isAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Immediately Available for Sale
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isFlashDeal"
+                      checked={newProduct.isFlashDeal}
+                      onChange={(e) => setNewProduct({ ...newProduct, isFlashDeal: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="isFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      ⚡ Flash Deal
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isTopPick"
+                      checked={newProduct.isTopPick}
+                      onChange={(e) => setNewProduct({ ...newProduct, isTopPick: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="isTopPick" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      ⭐ Top Pick
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isBestSeller"
+                      checked={newProduct.isBestSeller}
+                      onChange={(e) => setNewProduct({ ...newProduct, isBestSeller: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="isBestSeller" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      🏆 Best Seller
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -3898,7 +3937,7 @@ export function AdminDashboard({
 
       {activeTab === 'flash-deals' && (
         <div className="animate-fade-in">
-          <AdminFlashDeals />
+          <AdminPromotions />
         </div>
       )}
         </motion.div>
@@ -4484,30 +4523,57 @@ export function AdminDashboard({
                   className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                 />
               </div>
-              <div className="flex items-center gap-6 pt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="editIsAvailable"
-                    checked={productEditForm.isAvailable}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, isAvailable: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="editIsAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Available for Sale
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="editIsFlashDeal"
-                    checked={productEditForm.isFlashDeal}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, isFlashDeal: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="editIsFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Promote in Flash Deals
-                  </label>
+              <div className="flex flex-col gap-2 pt-3 border-t border-border/20">
+                <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Promotional Highlight Placements</p>
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editIsAvailable"
+                      checked={productEditForm.isAvailable}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, isAvailable: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editIsAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Available for Sale
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editIsFlashDeal"
+                      checked={productEditForm.isFlashDeal}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, isFlashDeal: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editIsFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      ⚡ Flash Deal
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editIsTopPick"
+                      checked={productEditForm.isTopPick}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, isTopPick: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editIsTopPick" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      ⭐ Top Pick
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editIsBestSeller"
+                      checked={productEditForm.isBestSeller}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, isBestSeller: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editIsBestSeller" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      🏆 Best Seller
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">

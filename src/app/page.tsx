@@ -141,7 +141,10 @@ export default async function Home() {
             { category: { slug: 'cafe' } },
           ]
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { isBestSeller: 'desc' },
+          { createdAt: 'desc' }
+        ],
         take: 12,
         include: { category: true },
       }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
@@ -161,8 +164,26 @@ export default async function Home() {
     console.error('Failed to execute parallel queries on home page:', error)
   }
 
-  // 3. Process dynamic trending items (sequential query because it requires the mapped product IDs)
+  // 3. Process Top Picks: Load manually pinned top picks first, then append dynamic sales trending
+  let manualTopPicks: any[] = []
+  try {
+    manualTopPicks = await prisma.product.findMany({
+      where: {
+        isTopPick: true,
+        isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } },
+        ]
+      },
+      include: { category: true },
+    })
+  } catch (err) {
+    console.warn('Failed to load manual top picks:', err)
+  }
+
   const trendingProductIds = trendingOrderItems.map((item) => item.productId).filter((id): id is string => id !== null)
+  let dynamicTopPicks: any[] = []
   if (trendingProductIds.length > 0) {
     try {
       const orderHistoryProducts = await prisma.product.findMany({
@@ -177,13 +198,20 @@ export default async function Home() {
         include: { category: true },
       })
       // Sort in order of sales popularity
-      topPicksRaw = orderHistoryProducts.sort(
+      dynamicTopPicks = orderHistoryProducts.sort(
         (a, b) => trendingProductIds.indexOf(a.id) - trendingProductIds.indexOf(b.id)
       )
     } catch (error) {
       console.warn('Database error in home page: failed to load dynamic trending product list', error)
     }
   }
+
+  // Combine manual and dynamic trending (without duplicates)
+  const manualIds = new Set(manualTopPicks.map(p => p.id))
+  topPicksRaw = [
+    ...manualTopPicks,
+    ...dynamicTopPicks.filter(p => !manualIds.has(p.id))
+  ]
 
   // Fallback/fill: If we don't have enough dynamic trending products, pad with products tagged 'popular'
   if (topPicksRaw.length < 6) {

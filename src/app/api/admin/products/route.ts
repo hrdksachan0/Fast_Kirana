@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   const search = searchParams.get('search')
   const lowStock = searchParams.get('lowStock') === 'true'
   const flashDeals = searchParams.get('flashDeals') === 'true'
+  const topPicks = searchParams.get('topPicks') === 'true'
+  const bestSellers = searchParams.get('bestSellers') === 'true'
   const type = searchParams.get('type')
   
   const skip = (page - 1) * limit
@@ -33,6 +35,14 @@ export async function GET(request: Request) {
 
     if (flashDeals) {
       andClauses.push({ isFlashDeal: true })
+    }
+
+    if (topPicks) {
+      andClauses.push({ isTopPick: true })
+    }
+
+    if (bestSellers) {
+      andClauses.push({ isBestSeller: true })
     }
 
     if (search) {
@@ -100,6 +110,8 @@ export async function GET(request: Request) {
       minStock: p.minStock ?? 10,
       location: p.location,
       isFlashDeal: p.isFlashDeal,
+      isTopPick: p.isTopPick,
+      isBestSeller: p.isBestSeller,
       category: {
         id: p.category.id,
         name: p.category.name,
