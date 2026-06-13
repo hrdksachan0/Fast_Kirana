@@ -2,7 +2,25 @@ import NextAuth from 'next-auth'
 import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
 
-const { auth } = NextAuth(authConfig)
+// Clean environment variables (removes quotes if copy-pasted with quotes)
+const getCleanSecret = (key: string): string => {
+  let val = process.env[key] || ''
+  val = val.trim()
+  if (val.startsWith('"') && val.endsWith('"')) {
+    val = val.substring(1, val.length - 1)
+  }
+  if (val.startsWith("'") && val.endsWith("'")) {
+    val = val.substring(1, val.length - 1)
+  }
+  return val.trim()
+}
+
+const cleanSecret = getCleanSecret('AUTH_SECRET')
+
+const { auth } = NextAuth({
+  ...authConfig,
+  secret: cleanSecret || undefined,
+})
 
 export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth

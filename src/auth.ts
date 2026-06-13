@@ -25,6 +25,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: cleanSecret || undefined,
   adapter: PrismaAdapter(prisma),
   debug: true,
+  logger: {
+    error: (error: any) => {
+      console.error('--- NEXTAUTH ERROR ---')
+      console.error(error)
+    },
+    warn: (code) => {
+      console.warn('--- NEXTAUTH WARN ---')
+      console.warn('Code:', code)
+    },
+    debug: (code, metadata) => {
+      console.log('--- NEXTAUTH DEBUG ---')
+      console.log('Code:', code)
+      console.log('Metadata:', JSON.stringify(metadata, null, 2))
+    }
+  },
   providers: [
     ...authConfig.providers,
     Credentials({
