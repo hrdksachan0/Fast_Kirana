@@ -75,8 +75,12 @@ export async function sendOtpEmail(email: string, otp: string) {
 
   if (resend) {
     try {
+      const resendFrom = fromEmail.includes('@gmail.com') || fromEmail.includes('@yahoo.com') || fromEmail.includes('@outlook.com')
+        ? 'onboarding@resend.dev'
+        : fromEmail
+
       await resend.emails.send({
-        from: fromEmail,
+        from: resendFrom,
         to: email,
         subject: `${otp} is your FastKirana verification code`,
         html: htmlContent,
