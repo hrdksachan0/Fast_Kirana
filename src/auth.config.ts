@@ -23,6 +23,7 @@ export const authConfig = {
     Google({
       clientId: googleClientId || 'placeholder',
       clientSecret: googleClientSecret || 'placeholder',
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   callbacks: {
@@ -52,5 +53,6 @@ export const authConfig = {
   },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
 } satisfies NextAuthConfig
