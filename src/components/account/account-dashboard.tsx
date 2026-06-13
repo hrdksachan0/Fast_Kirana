@@ -103,6 +103,14 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
   }
 
+  const formatEmailForDisplay = (email: string) => {
+    if (email.startsWith('wa-') && email.includes('@')) {
+      const phoneDigits = email.split('@')[0].replace('wa-', '')
+      return `+91 ${phoneDigits}`
+    }
+    return email
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       
@@ -114,7 +122,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           </div>
           <div>
             <h2 className="text-lg font-black text-text-primary">{user.name || 'User'}</h2>
-            <p className="text-xs text-text-secondary">{user.email}</p>
+            <p className="text-xs text-text-secondary">{formatEmailForDisplay(user.email)}</p>
           </div>
         </div>
         
@@ -286,12 +294,14 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                   {user.name || 'Not provided'}
                 </span>
               </div>
-              <div className="space-y-1">
-                <span className="text-text-secondary block">Email Address</span>
-                <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
-                  {user.email}
-                </span>
-              </div>
+              {!user.email.startsWith('wa-') && (
+                <div className="space-y-1">
+                  <span className="text-text-secondary block">Email Address</span>
+                  <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
+                    {user.email}
+                  </span>
+                </div>
+              )}
               <div className="space-y-1">
                 <span className="text-text-secondary block">Phone Number</span>
                 <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">

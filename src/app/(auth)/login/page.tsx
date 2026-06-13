@@ -343,6 +343,13 @@ function LoginForm() {
     setHasPassword(true)
     setNeedsProfileSetup(false)
     setUserRole('')
+
+    // If it's a WhatsApp placeholder email, convert it back to the 10-digit phone number
+    if (email.startsWith('wa-') && email.includes('@')) {
+      const phoneDigits = email.split('@')[0].replace('wa-', '')
+      setEmail(phoneDigits)
+      setLoginType('WHATSAPP')
+    }
   }
 
   return (
