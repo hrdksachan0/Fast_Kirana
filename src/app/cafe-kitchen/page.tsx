@@ -103,8 +103,8 @@ function getSlaClass(createdAt: string | Date, status: string): string {
   const now = new Date()
   const diffMs = now.getTime() - created.getTime()
   const mins = Math.floor(diffMs / 60000)
-  if (mins >= 10) return 'text-rose-500 font-black animate-pulse'
-  if (mins >= 5) return 'text-amber-500 font-black animate-pulse'
+  if (mins >= 30) return 'text-rose-500 font-black animate-pulse'
+  if (mins >= 15) return 'text-amber-500 font-black animate-pulse'
   return 'text-gray-400 font-semibold'
 }
 

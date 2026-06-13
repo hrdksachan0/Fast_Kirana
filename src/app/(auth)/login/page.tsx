@@ -42,6 +42,7 @@ function LoginForm() {
   const [step, setStep] = useState<'EMAIL' | 'PASSWORD' | 'OTP' | 'PROFILE'>('EMAIL')
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [loginType, setLoginType] = useState<'WHATSAPP' | 'EMAIL'>('WHATSAPP')
 
   // Fields state
   const [email, setEmail] = useState('')
@@ -62,10 +63,37 @@ function LoginForm() {
   // Errors state
   const [errors, setErrors] = useState<{ email?: string; password?: string; otp?: string; name?: string; phone?: string }>({})
 
-  const validateEmail = (val: string) => {
-    if (!val) return 'Email is required'
-    if (!/\S+@\S+\.\S+/.test(val)) return 'Please enter a valid email address'
-    return null
+  const isPhoneNumber = (val: string) => {
+    const cleaned = val.replace(/\D/g, '')
+    return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
+  }
+
+  const normalizePhoneNumber = (val: string) => {
+    const cleaned = val.replace(/\D/g, '')
+    if (cleaned.length === 10) return `+91${cleaned}`
+    if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
+    return val
+  }
+
+  const validateIdentifier = (val: string) => {
+    const trimmed = val.trim()
+    if (loginType === 'WHATSAPP') {
+      if (!trimmed) return 'WhatsApp number is required'
+      if (!isPhoneNumber(trimmed)) return 'Please enter a valid 10-digit WhatsApp number'
+      return null
+    } else {
+      if (!trimmed) return 'Email is required'
+      if (!/\S+@\S+\.\S+/.test(trimmed)) return 'Please enter a valid email address'
+      return null
+    }
+  }
+
+  const formatIdentifierDisplay = (val: string): string => {
+    if (val.startsWith('wa-') && val.includes('@')) {
+      const phoneDigits = val.split('@')[0].replace('wa-', '')
+      return `WhatsApp (+91 ${phoneDigits})`
+    }
+    return val
   }
 
   const validateOtp = (val: string) => {
@@ -85,28 +113,30 @@ function LoginForm() {
     return errs
   }
 
-  // Step 1: Check email type via API
+  // Step 1: Check email/phone type via API
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const emailErr = validateEmail(email)
-    if (emailErr) {
-      setErrors({ email: emailErr })
+    const idErr = validateIdentifier(email)
+    if (idErr) {
+      setErrors({ email: idErr })
       return
     }
     setErrors({})
     setIsLoading(true)
 
+    const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
+
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+        body: JSON.stringify({ email: normalizedInput }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to check email')
+        toast.error(data.error || 'Failed to check account status')
         return
       }
 
@@ -116,17 +146,26 @@ function LoginForm() {
       setNeedsProfileSetup(data.needsProfileSetup ?? false)
       setUserRole(data.role ?? '')
 
+      let finalEmail = normalizedInput
+      if (data.email) {
+        finalEmail = data.email
+        setEmail(data.email)
+        if (data.email.startsWith('wa-')) {
+          const phoneDigits = data.email.split('@')[0].replace('wa-', '')
+          setPhone(`+91${phoneDigits}`)
+        }
+      }
+
       if (data.isWorker) {
         // Worker flow → password step
         if (!data.hasPassword) {
-          // Worker has no password set yet
           toast.error('Your admin hasn\'t set your password yet. Please contact your admin.')
           return
         }
         setStep('PASSWORD')
       } else {
         // Customer flow → auto-send OTP and go to OTP step
-        await sendOtp()
+        await sendOtp(finalEmail)
       }
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -136,12 +175,13 @@ function LoginForm() {
   }
 
   // Send OTP helper (used for customer flow)
-  const sendOtp = async () => {
+  const sendOtp = async (targetEmail?: string) => {
+    const emailToUse = targetEmail || email
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+        body: JSON.stringify({ email: emailToUse.toLowerCase().trim() }),
       })
 
       const data = await res.json()
@@ -149,7 +189,7 @@ function LoginForm() {
       if (!res.ok) {
         toast.error(data.error || 'Failed to send OTP code')
       } else {
-        toast.success(`Verification code sent to ${email}`)
+        toast.success(`Verification code sent to ${formatIdentifierDisplay(emailToUse)}`)
         if (data.otp) {
           setTestOtp(data.otp)
         }
@@ -325,13 +365,13 @@ function LoginForm() {
           <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && 'Welcome to FastKirana'}
             {step === 'PASSWORD' && 'Enter Password'}
-            {step === 'OTP' && 'Verify Email'}
+            {step === 'OTP' && (email.startsWith('wa-') ? 'Verify WhatsApp' : 'Verify Email')}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
             {step === 'EMAIL' && 'Log in or sign up to shop groceries with fast delivery'}
             {step === 'PASSWORD' && `Enter password for ${email}`}
-            {step === 'OTP' && `We sent a 6-digit OTP code to ${email}`}
+            {step === 'OTP' && `We sent a 6-digit OTP code to ${formatIdentifierDisplay(email)}`}
             {step === 'PROFILE' && 'Enter your name and phone number to finish setup'}
           </p>
         </div>
@@ -344,22 +384,70 @@ function LoginForm() {
           </div>
         )}
 
-        {/* STEP 1: ENTER EMAIL */}
+        {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
         {step === 'EMAIL' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handleEmailSubmit}
           >
+            {/* Tabs Selector */}
+            <div className="grid grid-cols-2 gap-2 bg-zinc-100/80 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('WHATSAPP')
+                  setEmail('')
+                  setErrors({})
+                }}
+                className={`py-2 px-3 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  loginType === 'WHATSAPP'
+                    ? 'bg-white dark:bg-zinc-800 text-primary shadow-xs border border-zinc-200/30'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Phone size={14} className="stroke-[2.2]" />
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('EMAIL')
+                  setEmail('')
+                  setErrors({})
+                }}
+                className={`py-2 px-3 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  loginType === 'EMAIL'
+                    ? 'bg-white dark:bg-zinc-800 text-primary shadow-xs border border-zinc-200/30'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Mail size={14} className="stroke-[2.2]" />
+                Email
+              </button>
+            </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="font-bold text-xs text-text-secondary">Email Address</Label>
+              <Label htmlFor="email" className="font-bold text-xs text-text-secondary">
+                {loginType === 'WHATSAPP' ? 'WhatsApp Number' : 'Email Address'}
+              </Label>
               <div className="relative group">
-                <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
+                {loginType === 'WHATSAPP' ? (
+                  <Phone className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
+                ) : (
+                  <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
+                )}
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="name@example.com"
+                  type={loginType === 'WHATSAPP' ? 'text' : 'email'}
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit number' : 'name@example.com'}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    let val = e.target.value
+                    if (loginType === 'WHATSAPP') {
+                      val = val.replace(/\D/g, '').slice(0, 10)
+                    }
+                    setEmail(val)
+                  }}
                   className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                   disabled={isLoading}
                   required

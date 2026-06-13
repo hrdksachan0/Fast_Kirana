@@ -7,13 +7,41 @@ export async function POST(request: NextRequest) {
   if (limited) return limited
 
   try {
-    const { email, otp } = await request.json()
+    const { email: rawEmail, otp } = await request.json()
 
-    if (!email || !otp) {
-      return NextResponse.json({ error: 'Email and OTP are required' }, { status: 400 })
+    if (!rawEmail || !otp) {
+      return NextResponse.json({ error: 'Email/phone and OTP are required' }, { status: 400 })
     }
 
-    const normalizedEmail = email.toLowerCase().trim()
+    const trimmed = rawEmail.trim()
+    let normalizedEmail = trimmed.toLowerCase()
+
+    // Helper to check if it's a phone number
+    const isPhoneNumber = (val: string) => {
+      const cleaned = val.replace(/\D/g, '')
+      return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
+    }
+
+    const getNormalizedPhone = (val: string) => {
+      const cleaned = val.replace(/\D/g, '')
+      if (cleaned.length === 10) return `+91${cleaned}`
+      if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
+      return val
+    }
+
+    if (isPhoneNumber(trimmed)) {
+      const normalizedPhone = getNormalizedPhone(trimmed)
+      const existingUser = await prisma.user.findFirst({
+        where: { phone: normalizedPhone },
+        select: { email: true }
+      })
+      if (existingUser) {
+        normalizedEmail = existingUser.email
+      } else {
+        const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+        normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
+      }
+    }
 
     // 1. Find the OTP token
     const otpRecord = await prisma.otpToken.findFirst({

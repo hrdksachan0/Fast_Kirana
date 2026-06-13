@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendOtpEmail } from '@/lib/mail'
+import { sendWhatsAppOtp } from '@/lib/whatsapp'
 import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
@@ -8,13 +9,43 @@ export async function POST(request: NextRequest) {
   if (limited) return limited
 
   try {
-    const { email } = await request.json()
+    const { email: rawEmail } = await request.json()
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 })
+    if (!rawEmail || typeof rawEmail !== 'string') {
+      return NextResponse.json({ error: 'Email or WhatsApp number is required' }, { status: 400 })
     }
 
-    const normalizedEmail = email.toLowerCase().trim()
+    const trimmed = rawEmail.trim()
+    let normalizedEmail = trimmed.toLowerCase()
+
+    // Helper to check if it's a phone number
+    const isPhoneNumber = (val: string) => {
+      const cleaned = val.replace(/\D/g, '')
+      return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
+    }
+
+    const getNormalizedPhone = (val: string) => {
+      const cleaned = val.replace(/\D/g, '')
+      if (cleaned.length === 10) return `+91${cleaned}`
+      if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
+      return val
+    }
+
+    if (isPhoneNumber(trimmed)) {
+      const normalizedPhone = getNormalizedPhone(trimmed)
+      const existingUser = await prisma.user.findFirst({
+        where: { phone: normalizedPhone },
+        select: { email: true }
+      })
+      if (existingUser) {
+        normalizedEmail = existingUser.email
+      } else {
+        const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+        normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
+      }
+    } else if (!trimmed.includes('@')) {
+      return NextResponse.json({ error: 'Please enter a valid email address or 10-digit WhatsApp number' }, { status: 400 })
+    }
 
     // 1. Generate a 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
@@ -36,12 +67,20 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 5. Send OTP Email
-    await sendOtpEmail(normalizedEmail, otp)
+    // 5. Send OTP Email or WhatsApp Message
+    let isSent = false
+    if (normalizedEmail.startsWith('wa-')) {
+      const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
+      const recipientPhone = `+91${phoneDigits}`
+      isSent = await sendWhatsAppOtp(recipientPhone, otp)
+    } else {
+      await sendOtpEmail(normalizedEmail, otp)
+      isSent = true
+    }
 
-    // Return the OTP in development mode for easy testing without checking console logs
+    // Return the OTP in development mode, or for whatsapp placeholders if Meta send failed, for easy testing
     const responseData: Record<string, any> = { success: true }
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || !isSent) {
       responseData.otp = otp
     }
 

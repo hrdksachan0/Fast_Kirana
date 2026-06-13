@@ -149,10 +149,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.otp) return null
 
-        const email = (credentials.email as string).toLowerCase().trim()
+        let email = (credentials.email as string).toLowerCase().trim()
         const otp = credentials.otp as string
         const name = credentials.name as string
-        const phone = credentials.phone as string
+        let phone = credentials.phone as string
+
+        // Helper to check if it's a phone number
+        const isPhoneNumber = (val: string) => {
+          const cleaned = val.replace(/\D/g, '')
+          return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
+        }
+
+        const getNormalizedPhone = (val: string) => {
+          const cleaned = val.replace(/\D/g, '')
+          if (cleaned.length === 10) return `+91${cleaned}`
+          if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
+          return val
+        }
+
+        if (isPhoneNumber(email)) {
+          const normalizedPhone = getNormalizedPhone(email)
+          const existingUser = await prisma.user.findFirst({
+            where: { phone: normalizedPhone },
+            select: { email: true }
+          })
+          if (existingUser) {
+            email = existingUser.email
+          } else {
+            const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+            email = `wa-${phoneDigits}@fastkirana.com`
+          }
+          if (!phone) {
+            phone = normalizedPhone
+          }
+        }
 
         // 1. Verify OTP in database
         const otpRecord = await prisma.otpToken.findFirst({
@@ -176,11 +206,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (!user) {
+          let userPhone = phone || null
+          if (email.startsWith('wa-') && !userPhone) {
+            const phoneDigits = email.split('@')[0].replace('wa-', '')
+            userPhone = `+91${phoneDigits}`
+          }
+
           user = await prisma.user.create({
             data: {
               email,
               name: name || null,
-              phone: phone || null,
+              phone: userPhone,
               role: 'USER'
             }
           })

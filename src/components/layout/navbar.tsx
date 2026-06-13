@@ -286,7 +286,7 @@ export function Navbar() {
             {!groceryMartOpen && !cafeOpen ? (
               <span>FastKirana Mart & Cafe are currently closed. We'll be back online soon!</span>
             ) : !groceryMartOpen ? (
-              <span>Grocery Mart is temporarily closed. Cafe is open! Prep time: 10 mins ☕</span>
+              <span>Grocery Mart is temporarily closed. Cafe is open! ☕</span>
             ) : (
               <span>Cafe Kitchen is temporarily closed. Grocery delivery is active! 📦</span>
             )}

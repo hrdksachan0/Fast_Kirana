@@ -233,32 +233,10 @@ export async function POST(request: NextRequest) {
     const paymentStatus = PaymentStatus.PENDING
 
 
-    // Calculate scheduled delivery time
-    const now = new Date()
-    let estimatedDelivery = new Date(Date.now() + 10 * 60 * 1000) // Default 10 mins
-
-    if (scheduledSlot && scheduledSlot !== 'INSTANT') {
-      let startHour = 0
-      if (scheduledSlot.includes('07:00 AM')) {
-        startHour = 7
-      } else if (scheduledSlot.includes('12:00 PM')) {
-        startHour = 12
-      } else if (scheduledSlot.includes('06:00 PM')) {
-        startHour = 18
-      }
-
-      if (startHour > 0) {
-        estimatedDelivery = new Date(now)
-        estimatedDelivery.setHours(startHour, 0, 0, 0)
-        if (estimatedDelivery.getTime() < now.getTime()) {
-          estimatedDelivery.setDate(estimatedDelivery.getDate() + 1)
-        }
-      }
-    }
-
     // 6. Create orders inside a Prisma Transaction
     const createdOrders = await prisma.$transaction(async (tx) => {
       const results: any[] = []
+      const now = new Date()
 
       for (const orderInfo of ordersToCreate) {
         const orderItemsData = orderInfo.items.map((item: any) => {
@@ -282,6 +260,28 @@ export async function POST(request: NextRequest) {
             selectedVariant: variantName,
           }
         })
+
+        // Calculate estimated delivery time for this order (30 mins for Cafe, 10 mins for Grocery)
+        let estimatedDelivery = new Date(Date.now() + (orderInfo.type === 'CAFE' ? 30 : 10) * 60 * 1000)
+
+        if (scheduledSlot && scheduledSlot !== 'INSTANT') {
+          let startHour = 0
+          if (scheduledSlot.includes('07:00 AM')) {
+            startHour = 7
+          } else if (scheduledSlot.includes('12:00 PM')) {
+            startHour = 12
+          } else if (scheduledSlot.includes('06:00 PM')) {
+            startHour = 18
+          }
+
+          if (startHour > 0) {
+            estimatedDelivery = new Date(now)
+            estimatedDelivery.setHours(startHour, 0, 0, 0)
+            if (estimatedDelivery.getTime() < now.getTime()) {
+              estimatedDelivery.setDate(estimatedDelivery.getDate() + 1)
+            }
+          }
+        }
 
         // Create order
         const newOrder = await tx.order.create({

@@ -295,8 +295,9 @@ export function AdminDashboard({
 
     const delayedOrdersCount = orders.filter((order) => {
       if (order.status === 'PENDING') {
+        const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
         const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-        return diffMs > 10 * 60 * 1000
+        return diffMs > (isCafe ? 30 : 10) * 60 * 1000
       }
       if (order.status === 'PACKED') {
         const baseTime = order.updatedAt || order.createdAt
@@ -329,8 +330,9 @@ export function AdminDashboard({
   // Filter delayed orders
   const delayedOrders = orders.filter((order) => {
     if (order.status === 'PENDING') {
+      const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
       const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-      return diffMs > 10 * 60 * 1000
+      return diffMs > (isCafe ? 30 : 10) * 60 * 1000
     }
     if (order.status === 'PACKED') {
       const baseTime = order.updatedAt || order.createdAt
@@ -3804,7 +3806,7 @@ export function AdminDashboard({
             <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
               <h4 className="font-extrabold text-sm text-text-primary mb-3">SLA Alert Stream</h4>
               {delayedOrders.length === 0 ? (
-                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within the 10-minute SLA.</p>
+                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within their SLA (10m Grocery / 30m Cafe).</p>
               ) : (
                 <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                   {delayedOrders.map(order => {
