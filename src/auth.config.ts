@@ -1,12 +1,28 @@
 import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
 
+// Clean environment variables (removes quotes if copy-pasted with quotes)
+const getCleanEnv = (key: string): string => {
+  let val = process.env[key] || ''
+  val = val.trim()
+  if (val.startsWith('"') && val.endsWith('"')) {
+    val = val.substring(1, val.length - 1)
+  }
+  if (val.startsWith("'") && val.endsWith("'")) {
+    val = val.substring(1, val.length - 1)
+  }
+  return val.trim()
+}
+
+const googleClientId = getCleanEnv('GOOGLE_CLIENT_ID')
+const googleClientSecret = getCleanEnv('GOOGLE_CLIENT_SECRET')
+
 export const authConfig = {
   trustHost: true,
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID || 'placeholder',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder',
+      clientId: googleClientId || 'placeholder',
+      clientSecret: googleClientSecret || 'placeholder',
     }),
   ],
   callbacks: {

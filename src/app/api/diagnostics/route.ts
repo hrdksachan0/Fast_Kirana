@@ -12,8 +12,12 @@ export async function GET(request: NextRequest) {
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ? 'PRESENT' : 'MISSING',
     },
     googleOAuth: {
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'PRESENT' : 'MISSING',
-      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'PRESENT' : 'MISSING',
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID 
+        ? (process.env.GOOGLE_CLIENT_ID.startsWith('"') ? 'PRESENT_WITH_QUOTES' : 'PRESENT')
+        : 'MISSING',
+      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET 
+        ? (process.env.GOOGLE_CLIENT_SECRET.startsWith('"') ? 'PRESENT_WITH_QUOTES' : 'PRESENT')
+        : 'MISSING',
     },
     database: {
       status: 'unknown',
