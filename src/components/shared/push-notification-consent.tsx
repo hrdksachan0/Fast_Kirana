@@ -67,7 +67,7 @@ export function PushNotificationConsent() {
 
       // 2. Register push subscription
       const registration = await navigator.serviceWorker.ready
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
 
       if (!vapidPublicKey) {
         toast.error('VAPID public key not configured in environment variables.')

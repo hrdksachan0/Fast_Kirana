@@ -1,8 +1,8 @@
 import webpush from 'web-push'
 import { prisma } from './prisma'
 
-const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-const privateKey = process.env.VAPID_PRIVATE_KEY
+const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
+const privateKey = process.env.VAPID_PRIVATE_KEY || '02VzQDrVNvZo88wiRVPtDu3r_Gfp0McW3nW4UoyhI7Q'
 const subject = process.env.VAPID_SUBJECT || 'mailto:admin@fastkirana.com'
 
 if (publicKey && privateKey) {
