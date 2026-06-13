@@ -383,13 +383,7 @@ function LoginForm() {
           </p>
         </div>
 
-        {/* Development mode test banner styled as a premium glass status bar */}
-        {testOtp && step === 'OTP' && (
-          <div className="relative z-10 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-center text-xs font-bold text-amber-700 dark:text-amber-400 shadow-sm animate-spring-in">
-            <span className="block text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-500 mb-1">🧪 Developer Test Code</span>
-            OTP Code: <span className="underline font-black tracking-widest text-sm bg-white/50 dark:bg-black/30 px-2 py-0.5 rounded ml-1">{testOtp}</span>
-          </div>
-        )}
+
 
         {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
         {step === 'EMAIL' && (

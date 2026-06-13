@@ -78,11 +78,8 @@ export async function POST(request: NextRequest) {
       isSent = true
     }
 
-    // Return the OTP in development mode for standard emails, or if WhatsApp sending failed, for easy testing
+    // Do not return the OTP in the response payload for security
     const responseData: Record<string, any> = { success: true }
-    if (!isSent || (process.env.NODE_ENV !== 'production' && !normalizedEmail.startsWith('wa-'))) {
-      responseData.otp = otp
-    }
 
     return NextResponse.json(responseData)
   } catch (error: any) {
