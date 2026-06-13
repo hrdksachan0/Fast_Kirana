@@ -39,8 +39,22 @@ export async function GET(request: NextRequest) {
   // 1. Test Database
   try {
     const userCount = await prisma.user.count()
+    let accountCount = 0
+    let sessionCount = 0
+    let prismaTablesError = null
+
+    try {
+      accountCount = await prisma.account.count()
+      sessionCount = await prisma.session.count()
+    } catch (tblErr: any) {
+      prismaTablesError = tblErr.message || String(tblErr)
+    }
+
     report.database.status = 'CONNECTED'
     report.database.userCount = userCount
+    report.database.accountCount = accountCount
+    report.database.sessionCount = sessionCount
+    report.database.tablesError = prismaTablesError
   } catch (err: any) {
     report.database.status = 'FAILED'
     report.database.error = err.message || String(err)
