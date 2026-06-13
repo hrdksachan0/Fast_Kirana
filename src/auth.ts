@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
-import { dbLog } from '@/lib/db-logger'
 
 // Clean environment variables (removes quotes if copy-pasted with quotes)
 const getCleanSecret = (key: string): string => {
@@ -30,39 +29,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: (error: any) => {
       console.error('--- NEXTAUTH ERROR ---')
       console.error(JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
-      dbLog('ERROR', error?.message || 'Unknown NextAuth error', error)
     },
     warn: (code) => {
       console.warn('--- NEXTAUTH WARN ---')
       console.warn('Code:', code)
-      dbLog('WARN', `Warning code: ${code}`)
     },
     debug: (code, metadata) => {
       console.log('--- NEXTAUTH DEBUG ---')
       console.log('Code:', code)
-      dbLog('DEBUG', `Debug code: ${code}`, metadata)
+      console.log('Metadata:', JSON.stringify(metadata, null, 2))
     }
   },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
       console.log('--- NEXTAUTH SIGNIN CALLBACK ---')
-      dbLog('INFO', `SignIn Callback - Provider: ${account?.provider}, Email: ${user?.email}`, { user, account, profile })
+      console.log('Provider:', account?.provider)
+      console.log('User email:', user?.email)
+      console.log('Account type:', account?.type)
       return true // allow sign-in
     },
   },
   events: {
     async linkAccount({ user, account }) {
       console.log('--- NEXTAUTH LINK ACCOUNT ---')
-      dbLog('INFO', `Link Account Event - Linked provider: ${account.provider} to user: ${user.email}`, { user, account })
+      console.log('Linked provider:', account.provider, 'to user:', user.email)
     },
     async createUser({ user }) {
       console.log('--- NEXTAUTH CREATE USER ---')
-      dbLog('INFO', `Create User Event - Created user: ${user.email}`, { user })
+      console.log('Created user:', user.email)
     },
     async signIn({ user }) {
       console.log('--- NEXTAUTH SIGNIN EVENT ---')
-      dbLog('INFO', `SignIn Event - Signed in user: ${user.email}`, { user })
+      console.log('Signed in:', user.email)
     },
   },
   providers: [
