@@ -163,6 +163,7 @@ model Product {
   expiryDate  DateTime?
   costPrice   Float     @default(0)
   location    String?
+  isFlashDeal Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -411,5 +412,18 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model PushNotification {
+  id           String   @id @default(cuid())
+  title        String
+  body         String
+  imageUrl     String?
+  linkUrl      String?
+  sentAt       DateTime @default(now())
+  successCount Int      @default(0)
+  failureCount Int      @default(0)
+
+  @@map("push_notifications")
 }
 

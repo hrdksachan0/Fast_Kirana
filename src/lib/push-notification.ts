@@ -74,3 +74,62 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
     console.error(`Error sending push notification to user ${userId}:`, error)
   }
 }
+
+/**
+ * Broadcast a push notification to all subscribed endpoints.
+ * Returns success and failure counts.
+ */
+export async function broadcastPushNotification(payload: PushPayload) {
+  if (!publicKey || !privateKey) {
+    console.error('Cannot broadcast push notification: VAPID keys not configured.')
+    return { successCount: 0, failureCount: 0, error: 'VAPID keys not configured' }
+  }
+
+  try {
+    const subscriptions = await prisma.pushSubscription.findMany()
+
+    if (subscriptions.length === 0) {
+      console.log('No active push subscriptions found in database.')
+      return { successCount: 0, failureCount: 0 }
+    }
+
+    const payloadString = JSON.stringify(payload)
+    let successCount = 0
+    let failureCount = 0
+
+    // Send notifications to all subscribers concurrently
+    const promises = subscriptions.map(async (sub) => {
+      try {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        }
+
+        await webpush.sendNotification(pushSubscription, payloadString)
+        successCount++
+      } catch (err: any) {
+        failureCount++
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          console.log(`Removing expired subscription: ${sub.id} / ${sub.endpoint.slice(0, 30)}...`)
+          await prisma.pushSubscription.delete({
+            where: { id: sub.id },
+          }).catch((dbErr) => {
+            console.error('Failed to delete expired subscription from DB:', dbErr)
+          })
+        } else {
+          console.error(`Failed to send push notification to endpoint: ${sub.endpoint.slice(0, 30)}...`, err)
+        }
+      }
+    })
+
+    await Promise.all(promises)
+    return { successCount, failureCount }
+  } catch (error) {
+    console.error('Error broadcasting push notification:', error)
+    return { successCount: 0, failureCount: 0, error: String(error) }
+  }
+}
+

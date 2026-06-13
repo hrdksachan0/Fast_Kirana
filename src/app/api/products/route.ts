@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location } = body
+    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal } = body
 
     if (!name || !categoryId || mrp === undefined || price === undefined || !unit) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
         expiryDate: expiryDate ? new Date(expiryDate) : null,
         costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,
         location: location || null,
+        isFlashDeal: isFlashDeal !== undefined ? !!isFlashDeal : false,
       },
       include: {
         category: true,

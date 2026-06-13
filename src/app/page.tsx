@@ -117,13 +117,19 @@ export default async function Home() {
       prisma.product.findMany({
         where: {
           isAvailable: true,
-          discount: { gt: 10 },
+          OR: [
+            { isFlashDeal: true },
+            { discount: { gt: 10 } }
+          ],
           NOT: [
             { tags: { has: 'cafe' } },
             { category: { slug: 'cafe' } },
           ]
         },
-        orderBy: { discount: 'desc' },
+        orderBy: [
+          { isFlashDeal: 'desc' },
+          { discount: 'desc' }
+        ],
         take: 10,
         include: { category: true },
       }).catch((err) => { console.warn('Failed to fetch flash deals:', err); return []; }),

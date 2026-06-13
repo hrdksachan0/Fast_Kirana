@@ -40,6 +40,7 @@ import {
   VolumeX,
   Clock,
   Utensils,
+  Bell,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -51,6 +52,8 @@ import { AdminInward } from './admin-inward'
 import { AdminBanners } from './admin-banners'
 import { AdminSettings } from './admin-settings'
 import { AdminCsvImport } from './admin-csv-import'
+import { AdminPushNotifications } from './admin-push-notifications'
+import { AdminFlashDeals } from './admin-flash-deals'
 
 interface AdminDashboardProps {
   initialOrders: any[]
@@ -68,7 +71,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals'
 
 export function AdminDashboard({
   initialOrders,
@@ -382,6 +385,7 @@ export function AdminDashboard({
     expiryDate: '',
     costPrice: '0',
     location: '',
+    isFlashDeal: false,
   })
   
   // State for Add Product Form
@@ -405,6 +409,7 @@ export function AdminDashboard({
     expiryDate: '',
     costPrice: '0',
     location: '',
+    isFlashDeal: false,
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
@@ -845,6 +850,7 @@ export function AdminDashboard({
       expiryDate: p.expiryDate ? String(p.expiryDate) : '',
       costPrice: String(p.costPrice ?? 0),
       location: p.location || '',
+      isFlashDeal: p.isFlashDeal || false,
     })
 
     setShowAddProduct(true)
@@ -1039,6 +1045,7 @@ export function AdminDashboard({
       expiryDate: p.expiryDate ? String(p.expiryDate) : '',
       costPrice: String(p.costPrice ?? 0),
       location: p.location || '',
+      isFlashDeal: p.isFlashDeal || false,
     })
   }
 
@@ -1080,6 +1087,7 @@ export function AdminDashboard({
           expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
           costPrice: parseFloat(productEditForm.costPrice) || 0,
           location: productEditForm.location || null,
+          isFlashDeal: productEditForm.isFlashDeal,
           variants: hasVariantsEdit ? editProductVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -1191,6 +1199,7 @@ export function AdminDashboard({
           expiryDate: '',
           costPrice: '0',
           location: '',
+          isFlashDeal: false,
         })
 
       } else {
@@ -1599,6 +1608,8 @@ export function AdminDashboard({
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
+    { key: 'flash-deals', label: 'Flash Deals', icon: Zap },
+    { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
   ]
 
@@ -2677,7 +2688,8 @@ export function AdminDashboard({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-5">
+                <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="isAvailable"
@@ -2688,6 +2700,19 @@ export function AdminDashboard({
                   <label htmlFor="isAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
                     Immediately Available for Sale
                   </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isFlashDeal"
+                    checked={newProduct.isFlashDeal}
+                    onChange={(e) => setNewProduct({ ...newProduct, isFlashDeal: e.target.checked })}
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                  />
+                  <label htmlFor="isFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                    Promote in Flash Deals
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
@@ -3864,6 +3889,18 @@ export function AdminDashboard({
           <AdminSettings onSettingsSaved={fetchSettings} />
         </div>
       )}
+
+      {activeTab === 'push-notifications' && (
+        <div className="animate-fade-in">
+          <AdminPushNotifications />
+        </div>
+      )}
+
+      {activeTab === 'flash-deals' && (
+        <div className="animate-fade-in">
+          <AdminFlashDeals />
+        </div>
+      )}
         </motion.div>
       </AnimatePresence>
 
@@ -4447,17 +4484,31 @@ export function AdminDashboard({
                   className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                 />
               </div>
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="editIsAvailable"
-                  checked={productEditForm.isAvailable}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, isAvailable: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                />
-                <label htmlFor="editIsAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                  Available for Sale
-                </label>
+              <div className="flex items-center gap-6 pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editIsAvailable"
+                    checked={productEditForm.isAvailable}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, isAvailable: e.target.checked })}
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                  />
+                  <label htmlFor="editIsAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                    Available for Sale
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editIsFlashDeal"
+                    checked={productEditForm.isFlashDeal}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, isFlashDeal: e.target.checked })}
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                  />
+                  <label htmlFor="editIsFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                    Promote in Flash Deals
+                  </label>
+                </div>
               </div>
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
                 <button

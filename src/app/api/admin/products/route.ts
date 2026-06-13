@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const categoryId = searchParams.get('categoryId')
   const search = searchParams.get('search')
   const lowStock = searchParams.get('lowStock') === 'true'
+  const flashDeals = searchParams.get('flashDeals') === 'true'
   const type = searchParams.get('type')
   
   const skip = (page - 1) * limit
@@ -28,6 +29,10 @@ export async function GET(request: Request) {
 
     if (lowStock) {
       andClauses.push({ stock: { lt: 15 } })
+    }
+
+    if (flashDeals) {
+      andClauses.push({ isFlashDeal: true })
     }
 
     if (search) {
@@ -94,6 +99,7 @@ export async function GET(request: Request) {
       costPrice: p.costPrice ?? 0,
       minStock: p.minStock ?? 10,
       location: p.location,
+      isFlashDeal: p.isFlashDeal,
       category: {
         id: p.category.id,
         name: p.category.name,
