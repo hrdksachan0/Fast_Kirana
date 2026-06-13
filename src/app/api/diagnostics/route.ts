@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
     timestamp: new Date().toISOString(),
     env: {
       NODE_ENV: process.env.NODE_ENV,
-      NEXTAUTH_URL: process.env.NEXTAUTH_URL ? 'PRESENT' : 'MISSING',
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'MISSING',
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'MISSING',
       AUTH_SECRET: process.env.AUTH_SECRET ? 'PRESENT' : 'MISSING',
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ? 'PRESENT' : 'MISSING',
     },
     googleOAuth: {
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID 
