@@ -69,8 +69,8 @@ function ProfileSetupForm() {
         return
       }
 
-      // Update the NextAuth session dynamically
-      await update({ name, phone })
+      // Update the NextAuth session dynamically in the background to avoid blocking the redirect
+      update({ name, phone }).catch(err => console.error('NextAuth session update error:', err))
       
       toast.success('Profile completed successfully!')
       router.push(callbackUrl)

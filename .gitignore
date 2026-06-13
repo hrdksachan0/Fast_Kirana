@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mobile binaries and deleted wrappers
+*.apk
+/fastkirana-app
+/fastkirana-rn
+/fastkirana-android
