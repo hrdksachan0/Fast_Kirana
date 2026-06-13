@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bell, Check, X, ShieldAlert, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -17,6 +18,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export function PushNotificationConsent() {
+  const { data: session, status } = useSession()
   const [isSupported, setIsSupported] = useState(true)
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -105,10 +107,12 @@ export function PushNotificationConsent() {
     localStorage.setItem('push-prompt-dismissed', 'true')
   }
 
+  if (status !== 'authenticated') return null
+
   if (!isSupported) {
     if (isIOS && showPrompt) {
       return (
-        <div className="relative overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-sm flex items-start justify-between gap-3 animate-card-enter md:hidden">
+        <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-elevated flex items-start justify-between gap-3 animate-card-enter">
           <div className="flex gap-3">
             <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
               <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
@@ -136,38 +140,12 @@ export function PushNotificationConsent() {
     return null
   }
 
-  if (!showPrompt) return null
-
-  // If already subscribed, show a premium status badge
-  if (isSubscribed) {
-    return (
-      <div className="bg-[#f0fbf4] dark:bg-emerald-950/20 border border-emerald-500/20 dark:border-emerald-500/10 p-4 rounded-2xl flex items-center justify-between gap-4 animate-fade-in shadow-sm md:hidden">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
-            <Check className="h-5 w-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <h4 className="text-xs font-black text-emerald-800 dark:text-emerald-400">Live Updates Enabled</h4>
-            <p className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-500/80 mt-0.5">
-              You will receive push notifications on status changes, even if you close the app.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleDismiss}
-          className="text-emerald-600/40 hover:text-emerald-600 transition-colors h-7 w-7 rounded-lg hover:bg-emerald-500/5 flex items-center justify-center shrink-0 cursor-pointer"
-          aria-label="Dismiss banner"
-        >
-          <X size={14} />
-        </button>
-      </div>
-    )
-  }
+  if (!showPrompt || isSubscribed) return null
 
   // If permission is denied, show a instruction box to enable in settings
   if (permission === 'denied') {
     return (
-      <div className="bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in md:hidden">
+      <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated">
         <div className="flex gap-3">
           <div className="h-10 w-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
             <ShieldAlert className="h-5 w-5" />
@@ -191,7 +169,7 @@ export function PushNotificationConsent() {
   }
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter md:hidden">
+    <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter">
       
       {/* Decorative sparkles for premium SaaS look */}
       <div className="absolute top-[-20%] right-[-5%] w-[120px] h-[120px] rounded-full bg-primary/5 blur-[30px] pointer-events-none" />

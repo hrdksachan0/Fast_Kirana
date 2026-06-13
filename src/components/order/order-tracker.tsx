@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { PushNotificationConsent } from '@/components/shared/push-notification-consent'
 
 interface OrderItem {
   id: string
@@ -317,7 +316,6 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <PushNotificationConsent />
       
       {/* Visual Delivery Status Card */}
       <div className="bg-card border border-border p-4 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-5 md:space-y-6">

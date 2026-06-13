@@ -14,6 +14,7 @@ import { CartFlyAnimation } from '@/components/shared/cart-fly-animation'
 import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
+import { PushNotificationConsent } from '@/components/shared/push-notification-consent'
 import { LiveStockProvider } from '@/components/providers/live-stock-provider'
 import Script from 'next/script'
 import { Suspense } from 'react'
@@ -89,6 +90,7 @@ export default function RootLayout({
                 <CartFlyAnimation />
                 <Toaster position="bottom-center" richColors closeButton visibleToasts={1} />
                 <PWARegistration />
+                <PushNotificationConsent />
               </LiveStockProvider>
             </ThemeProvider>
           </AuthProvider>
