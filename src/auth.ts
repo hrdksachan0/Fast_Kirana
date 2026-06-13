@@ -5,8 +5,24 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
 
+// Clean environment variables (removes quotes if copy-pasted with quotes)
+const getCleanSecret = (key: string): string => {
+  let val = process.env[key] || ''
+  val = val.trim()
+  if (val.startsWith('"') && val.endsWith('"')) {
+    val = val.substring(1, val.length - 1)
+  }
+  if (val.startsWith("'") && val.endsWith("'")) {
+    val = val.substring(1, val.length - 1)
+  }
+  return val.trim()
+}
+
+const cleanSecret = getCleanSecret('AUTH_SECRET')
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  secret: cleanSecret || undefined,
   adapter: PrismaAdapter(prisma),
   debug: true,
   providers: [
