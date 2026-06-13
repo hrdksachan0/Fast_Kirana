@@ -28,7 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     error: (error: any) => {
       console.error('--- NEXTAUTH ERROR ---')
-      console.error(error)
+      console.error(JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
     },
     warn: (code) => {
       console.warn('--- NEXTAUTH WARN ---')
@@ -39,6 +39,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       console.log('Code:', code)
       console.log('Metadata:', JSON.stringify(metadata, null, 2))
     }
+  },
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account, profile }) {
+      console.log('--- NEXTAUTH SIGNIN CALLBACK ---')
+      console.log('Provider:', account?.provider)
+      console.log('User email:', user?.email)
+      console.log('Account type:', account?.type)
+      return true // allow sign-in
+    },
+  },
+  events: {
+    async linkAccount({ user, account }) {
+      console.log('--- NEXTAUTH LINK ACCOUNT ---')
+      console.log('Linked provider:', account.provider, 'to user:', user.email)
+    },
+    async createUser({ user }) {
+      console.log('--- NEXTAUTH CREATE USER ---')
+      console.log('Created user:', user.email)
+    },
+    async signIn({ user }) {
+      console.log('--- NEXTAUTH SIGNIN EVENT ---')
+      console.log('Signed in:', user.email)
+    },
   },
   providers: [
     ...authConfig.providers,
