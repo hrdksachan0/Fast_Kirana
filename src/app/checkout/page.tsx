@@ -49,6 +49,7 @@ export default function CheckoutPage() {
   const [deliveryRadius, setDeliveryRadius] = useState(5.0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
+  const [onlyCod, setOnlyCod] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings')
@@ -62,6 +63,9 @@ export default function CheckoutPage() {
         }
         if (data.store_lng) {
           setStoreLng(parseFloat(data.store_lng))
+        }
+        if (data.only_cod !== undefined) {
+          setOnlyCod(data.only_cod === 'true')
         }
       })
       .catch(err => console.error('Error fetching settings on checkout mount:', err))
@@ -1060,6 +1064,13 @@ export default function CheckoutPage() {
                 Choose Payment Method
               </h2>
 
+              {onlyCod && (
+                <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                  <span>ℹ️</span>
+                  <span>Online payment options are temporarily disabled by the store. Please proceed with Cash on Delivery / Cash on Pickup.</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cash on Delivery */}
                 <div
@@ -1088,80 +1099,84 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Instant UPI */}
-                <div
-                  onClick={() => setPaymentMethod('UPI')}
-                  className={cn(
-                    "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                    paymentMethod === 'UPI' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    checked={paymentMethod === 'UPI'}
-                    onChange={() => setPaymentMethod('UPI')}
-                    className="cursor-pointer mt-1"
-                  />
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">📱</span>
-                      <h4 className="text-sm font-bold text-text-primary">Google Pay / PhonePe / Paytm UPI</h4>
+                {!onlyCod && (
+                  <>
+                    {/* Instant UPI */}
+                    <div
+                      onClick={() => setPaymentMethod('UPI')}
+                      className={cn(
+                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                        paymentMethod === 'UPI' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        checked={paymentMethod === 'UPI'}
+                        onChange={() => setPaymentMethod('UPI')}
+                        className="cursor-pointer mt-1"
+                      />
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">📱</span>
+                          <h4 className="text-sm font-bold text-text-primary">Google Pay / PhonePe / Paytm UPI</h4>
+                        </div>
+                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                          Pay instantly from your mobile screen using any installed UPI application
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                      Pay instantly from your mobile screen using any installed UPI application
-                    </p>
-                  </div>
-                </div>
 
-                {/* Credit / Debit Card */}
-                <div
-                  onClick={() => setPaymentMethod('CARD')}
-                  className={cn(
-                    "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                    paymentMethod === 'CARD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    checked={paymentMethod === 'CARD'}
-                    onChange={() => setPaymentMethod('CARD')}
-                    className="cursor-pointer mt-1"
-                  />
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">💳</span>
-                      <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
+                    {/* Credit / Debit Card */}
+                    <div
+                      onClick={() => setPaymentMethod('CARD')}
+                      className={cn(
+                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                        paymentMethod === 'CARD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        checked={paymentMethod === 'CARD'}
+                        onChange={() => setPaymentMethod('CARD')}
+                        className="cursor-pointer mt-1"
+                      />
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">💳</span>
+                          <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
+                        </div>
+                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                          Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner\'s Club cards
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                      Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner\'s Club cards
-                    </p>
-                  </div>
-                </div>
 
-                {/* Paytm Wallet / Netbanking */}
-                <div
-                  onClick={() => setPaymentMethod('WALLET')}
-                  className={cn(
-                    "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                    paymentMethod === 'WALLET' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    checked={paymentMethod === 'WALLET'}
-                    onChange={() => setPaymentMethod('WALLET')}
-                    className="cursor-pointer mt-1"
-                  />
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🏦</span>
-                      <h4 className="text-sm font-bold text-text-primary">Wallet & Netbanking</h4>
+                    {/* Paytm Wallet / Netbanking */}
+                    <div
+                      onClick={() => setPaymentMethod('WALLET')}
+                      className={cn(
+                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                        paymentMethod === 'WALLET' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        checked={paymentMethod === 'WALLET'}
+                        onChange={() => setPaymentMethod('WALLET')}
+                        className="cursor-pointer mt-1"
+                      />
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🏦</span>
+                          <h4 className="text-sm font-bold text-text-primary">Wallet & Netbanking</h4>
+                        </div>
+                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                          Pay using Paytm Wallet, Amazon Pay, Mobikwik, or Netbanking (SBI, HDFC, ICICI, etc.)
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                      Pay using Paytm Wallet, Amazon Pay, Mobikwik, or Netbanking (SBI, HDFC, ICICI, etc.)
-                    </p>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
               {/* Secure Transaction notice */}

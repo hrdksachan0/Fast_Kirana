@@ -17,6 +17,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
   const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
@@ -55,6 +56,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.trusted_text) setTrustedText(data.trusted_text)
         if (data.grocery_mart_open !== undefined) setGroceryMartOpen(data.grocery_mart_open === 'true')
         if (data.cafe_open !== undefined) setCafeOpen(data.cafe_open === 'true')
+        if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.cloudinary_cloud_name) setCloudinaryCloudName(data.cloudinary_cloud_name)
         if (data.cloudinary_upload_preset) setCloudinaryUploadPreset(data.cloudinary_upload_preset)
@@ -218,6 +220,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           trusted_text: trustedText.trim(),
           grocery_mart_open: groceryMartOpen ? 'true' : 'false',
           cafe_open: cafeOpen ? 'true' : 'false',
+          only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           cloudinary_cloud_name: cloudinaryCloudName.trim(),
           cloudinary_upload_preset: cloudinaryUploadPreset.trim(),
@@ -364,6 +367,19 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                     >
                       <option value="true">🟢 Open (Active)</option>
                       <option value="false">🔴 Closed (Temporarily)</option>
+                    </select>
+                  </div>
+
+                  {/* Only Cash on Delivery */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Only Cash on Delivery</label>
+                    <select
+                      value={onlyCod ? 'true' : 'false'}
+                      onChange={(e) => setOnlyCod(e.target.value === 'true')}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    >
+                      <option value="false">🔴 Off (All Payments)</option>
+                      <option value="true">🟢 On (COD/COP Only)</option>
                     </select>
                   </div>
 

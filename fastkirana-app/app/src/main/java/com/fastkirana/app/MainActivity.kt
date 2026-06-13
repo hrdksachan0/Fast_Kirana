@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
 
     // Default URL to load: Pointed to local network IP of running Next.js dev server.
     // Replace with your hosted deployment URL (e.g. https://fastkirana.vercel.app) when deploying to production!
-    private val TARGET_URL = "http://192.168.1.24:3000" 
+    private val TARGET_URL = "https://fastkirana-app.onrender.com" 
 
     private val LOCATION_PERMISSION_REQUEST_CODE = 1001
 

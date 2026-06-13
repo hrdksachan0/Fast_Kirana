@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   avg_delivery_time: '8 min',
   delivered_today: '1,231+',
   fresh_stock_loaded: '2 hrs ago',
+  only_cod: 'false',
 }
 
 export async function GET() {
