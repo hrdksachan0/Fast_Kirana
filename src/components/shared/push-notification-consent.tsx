@@ -108,7 +108,7 @@ export function PushNotificationConsent() {
   if (!isSupported) {
     if (isIOS && showPrompt) {
       return (
-        <div className="relative overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-sm flex items-start justify-between gap-3 animate-card-enter">
+        <div className="relative overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-sm flex items-start justify-between gap-3 animate-card-enter md:hidden">
           <div className="flex gap-3">
             <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
               <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
@@ -141,7 +141,7 @@ export function PushNotificationConsent() {
   // If already subscribed, show a premium status badge
   if (isSubscribed) {
     return (
-      <div className="bg-[#f0fbf4] dark:bg-emerald-950/20 border border-emerald-500/20 dark:border-emerald-500/10 p-4 rounded-2xl flex items-center justify-between gap-4 animate-fade-in shadow-sm">
+      <div className="bg-[#f0fbf4] dark:bg-emerald-950/20 border border-emerald-500/20 dark:border-emerald-500/10 p-4 rounded-2xl flex items-center justify-between gap-4 animate-fade-in shadow-sm md:hidden">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
             <Check className="h-5 w-5 stroke-[2.5]" />
@@ -167,7 +167,7 @@ export function PushNotificationConsent() {
   // If permission is denied, show a instruction box to enable in settings
   if (permission === 'denied') {
     return (
-      <div className="bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in">
+      <div className="bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in md:hidden">
         <div className="flex gap-3">
           <div className="h-10 w-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
             <ShieldAlert className="h-5 w-5" />
@@ -191,7 +191,7 @@ export function PushNotificationConsent() {
   }
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter">
+    <div className="relative overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter md:hidden">
       
       {/* Decorative sparkles for premium SaaS look */}
       <div className="absolute top-[-20%] right-[-5%] w-[120px] h-[120px] rounded-full bg-primary/5 blur-[30px] pointer-events-none" />
