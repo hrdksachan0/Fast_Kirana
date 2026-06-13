@@ -102,6 +102,49 @@ export async function GET(request: NextRequest) {
     note: 'This URL must be registered in Google Cloud Console under Authorized redirect URIs',
   }
 
+  // 5. Clear logs if requested
+  const clear = request.nextUrl.searchParams.get('clear')
+  if (clear === 'true') {
+    try {
+      await prisma.otpToken.deleteMany({
+        where: { email: { startsWith: '[auth-log]' } }
+      })
+      report.logsCleared = true
+    } catch (err: any) {
+      report.logsClearedError = err.message
+    }
+  }
+
+  // 6. Fetch recent auth logs
+  try {
+    const logs = await prisma.otpToken.findMany({
+      where: {
+        email: { startsWith: '[auth-log]' }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 100
+    })
+    report.logs = logs.map(l => {
+      let parsed: any = {}
+      try {
+        parsed = JSON.parse(l.token)
+      } catch {
+        parsed = { raw: l.token }
+      }
+      return {
+        id: l.id,
+        level: l.email.replace('[auth-log][', '').replace(']', ''),
+        message: parsed.message,
+        meta: parsed.meta,
+        timestamp: parsed.timestamp || l.createdAt.toISOString()
+      }
+    })
+  } catch (err: any) {
+    report.logs = { error: err.message }
+  }
+
   return NextResponse.json(report, {
     headers: { 'Cache-Control': 'no-store' },
   })

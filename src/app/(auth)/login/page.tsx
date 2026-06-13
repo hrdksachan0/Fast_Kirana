@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { toast } from 'sonner'
@@ -23,6 +23,20 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const errorParam = searchParams.get('error')
+
+  useEffect(() => {
+    if (errorParam) {
+      console.error('NextAuth Error Parameter:', errorParam)
+      if (errorParam === 'OAuthAccountNotLinked') {
+        toast.error('Email is already registered. Please login with email/OTP instead, or link accounts.')
+      } else if (errorParam === 'Callback') {
+        toast.error('Sign-in failed. This could be due to a configuration or database issue. Please try again.')
+      } else {
+        toast.error(`Authentication error: ${errorParam}`)
+      }
+    }
+  }, [errorParam])
   
   // Auth steps: 'EMAIL' | 'PASSWORD' | 'OTP' | 'PROFILE'
   const [step, setStep] = useState<'EMAIL' | 'PASSWORD' | 'OTP' | 'PROFILE'>('EMAIL')

@@ -24,6 +24,13 @@ export const authConfig = {
       clientId: googleClientId || 'placeholder',
       clientSecret: googleClientSecret || 'placeholder',
       allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+        },
+      },
     }),
   ],
   callbacks: {
