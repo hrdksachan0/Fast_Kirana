@@ -397,18 +397,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
           )}
         </div>
 
-        {/* Live Embedded Tracking Map */}
-        {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-          <div className="relative border border-border/80 rounded-2xl overflow-hidden shadow-sm h-[240px] w-full bg-muted/20 z-20">
-            <div ref={mapContainerRef} className="h-full w-full z-10" />
-            {!leafletLoaded && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-card z-20 gap-2 text-xs font-semibold text-text-secondary">
-                <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                <span>Loading live tracking map...</span>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* Step Progression Map UI */}
         <div className="relative pl-8 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border before:content-['']">
