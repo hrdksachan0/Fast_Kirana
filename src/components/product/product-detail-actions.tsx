@@ -104,15 +104,6 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
           </div>
         )}
       </div>
-
-      {resolvedStock > 0 && !isStoreClosed && (
-        <Button
-          onClick={handleExpressBuy}
-          className="h-12 px-8 bg-[#e20a22] hover:bg-[#c8081c] text-white font-black rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 text-base cursor-pointer"
-        >
-          ⚡ Express Buy
-        </Button>
-      )}
     </div>
   )
 }
