@@ -988,9 +988,6 @@ export default function CheckoutPage() {
                     )}
                   >
                     <span className="text-sm">{deliveryMethod === 'PICKUP' ? '⚡ Instant Pickup' : '⚡ Instant Delivery'}</span>
-                    <span className="text-[10px] text-text-muted">
-                      {deliveryMethod === 'PICKUP' ? 'Ready within 10-15 mins' : 'Deliver within 10-15 mins'}
-                    </span>
                   </button>
                   <button
                     type="button"
