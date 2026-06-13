@@ -134,11 +134,11 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all max-w-[70px] mx-auto"
+                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-full"
               >
                 {/* Pastel Rounded Card with Real Photo */}
                 <div
-                  className={`w-full aspect-square rounded-2xl ${config.bg} overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                  className={`w-[68px] h-[68px] mx-auto rounded-2xl ${config.bg} overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
                 >
                   {categoryPhotos[category.slug] ? (
                     <Image
