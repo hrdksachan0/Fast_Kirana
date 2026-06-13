@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, Check, X, ShieldAlert, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -21,12 +22,16 @@ export function PushNotificationConsent() {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showPrompt, setShowPrompt] = useState(true)
+  const [isIOS, setIsIOS] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const supported = 'serviceWorker' in navigator && 'PushManager' in window
     setIsSupported(supported)
+    
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    setIsIOS(ios)
 
     if (supported && 'Notification' in window) {
       setPermission(Notification.permission)
@@ -56,6 +61,7 @@ export function PushNotificationConsent() {
       setPermission(result)
 
       if (result !== 'granted') {
+        toast.error('Permission denied. Please allow notifications in your browser URL bar or settings.')
         throw new Error('Notification permission denied')
       }
 
@@ -64,6 +70,7 @@ export function PushNotificationConsent() {
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
       if (!vapidPublicKey) {
+        toast.error('VAPID public key not configured in environment variables.')
         throw new Error('VAPID public key not configured in frontend')
       }
 
@@ -84,8 +91,10 @@ export function PushNotificationConsent() {
       }
 
       setIsSubscribed(true)
-    } catch (error) {
+      toast.success('🎉 You have successfully subscribed to live updates!')
+    } catch (error: any) {
       console.error('Push subscription error:', error)
+      toast.error(`Failed to enable notifications: ${error.message || error}`)
     } finally {
       setIsLoading(false)
     }
@@ -96,7 +105,38 @@ export function PushNotificationConsent() {
     localStorage.setItem('push-prompt-dismissed', 'true')
   }
 
-  if (!isSupported || !showPrompt) return null
+  if (!isSupported) {
+    if (isIOS && showPrompt) {
+      return (
+        <div className="relative overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-sm flex items-start justify-between gap-3 animate-card-enter">
+          <div className="flex gap-3">
+            <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
+              <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 flex items-center gap-1">
+                iPhone Web Push Instructions
+                <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500/20" />
+              </h4>
+              <p className="text-[10px] font-bold text-amber-600/80 mt-0.5 leading-relaxed">
+                To receive live updates on iPhone, open this site in **Safari**, tap the **Share** button, select **"Add to Home Screen"**, and launch the app from your Home Screen.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="text-amber-600/40 hover:text-amber-600 transition-colors h-7 w-7 rounded-lg hover:bg-amber-500/5 flex items-center justify-center shrink-0 cursor-pointer"
+            aria-label="Dismiss banner"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )
+    }
+    return null
+  }
+
+  if (!showPrompt) return null
 
   // If already subscribed, show a premium status badge
   if (isSubscribed) {
