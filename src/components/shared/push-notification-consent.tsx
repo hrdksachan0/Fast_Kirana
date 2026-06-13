@@ -5,6 +5,8 @@ import { Bell, Check, X, ShieldAlert, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
+import { useCartStore } from '@/stores/cart-store'
+import { usePathname } from 'next/navigation'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -19,6 +21,9 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function PushNotificationConsent() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
+  const cartItemsCount = useCartStore((s) => s.items.length)
+  
   const [isSupported, setIsSupported] = useState(true)
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -26,7 +31,23 @@ export function PushNotificationConsent() {
   const [showPrompt, setShowPrompt] = useState(true)
   const [isIOS, setIsIOS] = useState(false)
 
-  useEffect(() => {
+  // Determine bottom offset based on active bottom navigation bars
+  const isIgnoredPage = !pathname ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/order/') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/picker') ||
+    pathname.startsWith('/cafe-kitchen') ||
+    pathname.startsWith('/delivery')
+
+  const hasStickyCart = cartItemsCount > 0 && !isIgnoredPage
+  const bottomClass = hasStickyCart ? 'bottom-[128px]' : 'bottom-[72px]'
+
+  useEffect(() => warmUpServiceWorker(), [])
+
+  function warmUpServiceWorker() {
     if (typeof window === 'undefined') return
 
     const supported = 'serviceWorker' in navigator && 'PushManager' in window
@@ -51,7 +72,7 @@ export function PushNotificationConsent() {
     if (dismissed) {
       setShowPrompt(false)
     }
-  }, [])
+  }
 
   const handleSubscribe = async () => {
     if (!isSupported) return
@@ -112,7 +133,7 @@ export function PushNotificationConsent() {
   if (!isSupported) {
     if (isIOS && showPrompt) {
       return (
-        <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-elevated flex items-start justify-between gap-3 animate-card-enter">
+        <div className={cn("fixed left-4 right-4 z-50 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-elevated flex items-start justify-between gap-3 animate-card-enter", bottomClass)}>
           <div className="flex gap-3">
             <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
               <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
@@ -145,7 +166,7 @@ export function PushNotificationConsent() {
   // If permission is denied, show a instruction box to enable in settings
   if (permission === 'denied') {
     return (
-      <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated">
+      <div className={cn("fixed left-4 right-4 z-50 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated", bottomClass)}>
         <div className="flex gap-3">
           <div className="h-10 w-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
             <ShieldAlert className="h-5 w-5" />
@@ -169,7 +190,7 @@ export function PushNotificationConsent() {
   }
 
   return (
-    <div className="fixed bottom-[80px] left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter">
+    <div className={cn("fixed left-4 right-4 z-50 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-gradient-to-r from-primary/5 via-violet-500/[0.03] to-accent/5 dark:from-zinc-900/60 dark:to-zinc-950/60 border border-primary/20 dark:border-zinc-800/80 p-4 rounded-2xl shadow-elevated flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-enter", bottomClass)}>
       
       {/* Decorative sparkles for premium SaaS look */}
       <div className="absolute top-[-20%] right-[-5%] w-[120px] h-[120px] rounded-full bg-primary/5 blur-[30px] pointer-events-none" />
