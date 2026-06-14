@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { clearSettingsCache } from '@/lib/settings-cache'
 
 async function checkAdmin() {
   const session = await auth()
@@ -26,6 +27,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     await Promise.all(updates)
+
+    // Clear shared in-memory settings cache for instant client sync
+    clearSettingsCache()
 
     // Invalidate storefront settings cache
     revalidateStorefront()

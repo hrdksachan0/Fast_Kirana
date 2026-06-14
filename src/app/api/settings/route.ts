@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCachedSettings, setCachedSettings } from '@/lib/settings-cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,11 @@ const DEFAULT_SETTINGS = {
 }
 
 export async function GET() {
+  const cached = getCachedSettings()
+  if (cached) {
+    return NextResponse.json(cached)
+  }
+
   try {
     const settings = await prisma.storeSetting.findMany()
     const settingsMap: Record<string, string> = { ...DEFAULT_SETTINGS }
@@ -28,6 +34,7 @@ export async function GET() {
       settingsMap[s.key] = s.value
     })
 
+    setCachedSettings(settingsMap)
     return NextResponse.json(settingsMap)
   } catch (error) {
     console.error('Settings API error:', error)
