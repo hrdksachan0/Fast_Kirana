@@ -41,6 +41,7 @@ import {
   Clock,
   Utensils,
   Bell,
+  BrainCircuit,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -54,6 +55,7 @@ import { AdminSettings } from './admin-settings'
 import { AdminCsvImport } from './admin-csv-import'
 import { AdminPushNotifications } from './admin-push-notifications'
 import { AdminPromotions } from './admin-promotions'
+import { AdminForecast } from './admin-forecast'
 
 interface AdminDashboardProps {
   initialOrders: any[]
@@ -71,7 +73,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
 
 export function AdminDashboard({
   initialOrders,
@@ -737,16 +739,13 @@ export function AdminDashboard({
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64String = reader.result as string
+    handleCloudinaryUpload(file, (url) => {
       if (form === 'new') {
-        setNewCategory({ ...newCategory, imageUrl: base64String })
+        setNewCategory({ ...newCategory, imageUrl: url })
       } else {
-        setCategoryEditForm({ ...categoryEditForm, imageUrl: base64String })
+        setCategoryEditForm({ ...categoryEditForm, imageUrl: url })
       }
-    }
-    reader.readAsDataURL(file)
+    })
   }
 
   // ----------------------------------------------------
@@ -1611,6 +1610,7 @@ export function AdminDashboard({
   const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
     { key: 'liveops', label: 'Live Ops Tracker', icon: Zap },
+    { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
     { key: 'alerts', label: 'Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
@@ -3844,6 +3844,28 @@ export function AdminDashboard({
               revenue: stats.revenue,
               orderCount: stats.orderCount,
               lowStockCount: stats.lowStockCount
+            }}
+          />
+        </div>
+      )}
+
+      {activeTab === 'forecast' && (
+        <div className="animate-fade-in">
+          <AdminForecast
+            categories={categories}
+            onRestockCompleted={async () => {
+              try {
+                const res = await fetch('/api/products?limit=1000')
+                if (res.ok) {
+                  const data = await res.json()
+                  if (data.products) {
+                    setProducts(data.products)
+                    setAllProducts(data.products)
+                  }
+                }
+              } catch (err) {
+                console.error(err)
+              }
             }}
           />
         </div>
