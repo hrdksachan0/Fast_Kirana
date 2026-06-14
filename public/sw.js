@@ -19,6 +19,8 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: payload.icon || '/icons/icon-192.png',
       badge: payload.badge || '/icons/icon-192.png',
+      tag: payload.tag || undefined,
+      renotify: payload.tag ? true : false,
       data: payload.data || {},
       vibrate: [100, 50, 100],
     };

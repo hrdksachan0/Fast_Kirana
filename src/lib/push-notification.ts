@@ -16,6 +16,8 @@ interface PushPayload {
   body: string
   icon?: string
   badge?: string
+  tag?: string
+  renotify?: boolean
   data?: Record<string, any>
 }
 

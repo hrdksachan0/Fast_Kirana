@@ -279,9 +279,15 @@ export async function PATCH(
       const statusTitle = `Order Update: ${statusLabels[status] || status}`
       const statusBody = `Your FastKirana order #${id.slice(-6).toUpperCase()} is now ${statusLabels[status] || status}.`
       
+      const origin = request.headers.get('origin') || 'https://fastkirana.com'
+      
       sendPushNotification(existingOrder.userId, {
         title: statusTitle,
         body: statusBody,
+        icon: `${origin}/icons/icon-192.png`,
+        badge: `${origin}/icons/icon-192.png`,
+        tag: `order-${id}`,
+        renotify: true,
         data: { orderId: id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
     } catch (pushErr) {

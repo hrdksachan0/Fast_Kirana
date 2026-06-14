@@ -16,8 +16,10 @@ export function PWARegistration() {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
-          .register('/sw.js')
+          .register('/sw.js?v=2')
           .then((reg) => {
+            // Force check update on registration
+            reg.update()
             console.log('ServiceWorker registered with scope: ', reg.scope)
           })
           .catch((err) => {
