@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { apiReadLimiter } from '@/lib/rate-limit'
+import { isCafeProduct } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   const limited = apiReadLimiter.check(request)
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
         stock: true,
         isAvailable: true,
         variants: true,
+        category: true,
+        tags: true,
       },
     })
 
@@ -75,14 +78,16 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // 2. Check if requested quantity exceeds stock
-      if (clientQty > dbStock) {
+      // 2. Check if requested quantity exceeds stock or dynamic limit
+      const limit = isCafeProduct(dbProduct) ? 10 : 5
+      const maxAllowed = Math.min(dbStock, limit)
+      if (clientQty > maxAllowed) {
         updates.push({
           type: 'QUANTITY_CAP',
           productId: clientProduct.id,
           name: clientProduct.name,
           oldVal: clientQty,
-          newVal: dbStock,
+          newVal: maxAllowed,
         })
       }
 

@@ -65,6 +65,16 @@ export function useCart() {
       return
     }
 
+    const limit = isCafeProduct(product) ? 10 : 5
+    const currentQty = store.getItemQuantity(product.id)
+    if (currentQty >= limit) {
+      triggerHaptic('warning')
+      toast.error(`Maximum limit of ${limit} units reached for ${product.name}`, {
+        id: `cart-max-limit-${product.id}`,
+      })
+      return
+    }
+
     checkFreeDeliveryUnlock(() => {
       store.addItem(product)
     })
@@ -82,6 +92,14 @@ export function useCart() {
       const { groceryMartOpen, cafeOpen } = useUIStore.getState()
       const item = store.items.find((i) => i.product.id === productId)
       if (item) {
+        const limit = isCafeProduct(item.product) ? 10 : 5
+        if (quantity > limit) {
+          triggerHaptic('warning')
+          toast.error(`Maximum limit of ${limit} units reached for ${name}`, {
+            id: `cart-max-limit-${productId}`,
+          })
+          return
+        }
         if (quantity > item.product.stock) {
           triggerHaptic('warning')
           toast.error(`Cannot add more. Only ${item.product.stock} units available in stock.`)

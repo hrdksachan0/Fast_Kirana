@@ -122,6 +122,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
+      const limit = isCafeProduct(dbProduct) ? 10 : 5
+      if (item.quantity > limit) {
+        return NextResponse.json({ error: `Maximum order limit of ${limit} units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
+      }
+
       const itemWithDb = {
         ...item,
         dbProduct

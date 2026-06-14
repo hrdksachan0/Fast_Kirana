@@ -296,7 +296,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 </span>
                 <button
                   onClick={handleIncrement}
-                  disabled={quantity >= resolvedStock || isStoreClosed}
+                  disabled={quantity >= resolvedStock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
                   className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
                   aria-label="Increase quantity"
                 >

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { isCafeProduct } from '@/lib/utils'
 
 export interface CartProduct {
   id: string
@@ -48,13 +49,14 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: CartProduct) => {
         if (product.stock <= 0) return
+        const limit = isCafeProduct(product) ? 10 : 5
         set((state) => {
           const existing = state.items.find((item) => item.product.id === product.id)
           if (existing) {
             return {
               items: state.items.map((item) =>
                 item.product.id === product.id
-                  ? { ...item, quantity: Math.min(item.quantity + 1, item.product.stock) }
+                  ? { ...item, quantity: Math.min(item.quantity + 1, item.product.stock, limit) }
                   : item
               ),
             }
@@ -75,11 +77,13 @@ export const useCartStore = create<CartState>()(
             return { items: state.items.filter((item) => item.product.id !== productId) }
           }
           return {
-            items: state.items.map((item) =>
-              item.product.id === productId
-                ? { ...item, quantity: Math.min(quantity, item.product.stock) }
-                : item
-            ),
+            items: state.items.map((item) => {
+              if (item.product.id === productId) {
+                const limit = isCafeProduct(item.product) ? 10 : 5
+                return { ...item, quantity: Math.min(quantity, item.product.stock, limit) }
+              }
+              return item
+            }),
           }
         })
       },
@@ -113,9 +117,13 @@ export const useCartStore = create<CartState>()(
             .map((item) => {
               if (item.product.id !== productId) return item
               const newProduct = { ...item.product, ...updates }
+              const limit = isCafeProduct(newProduct) ? 10 : 5
               let newQty = item.quantity
               if (updates.stock !== undefined && newQty > updates.stock) {
                 newQty = updates.stock
+              }
+              if (newQty > limit) {
+                newQty = limit
               }
               return {
                 product: newProduct,

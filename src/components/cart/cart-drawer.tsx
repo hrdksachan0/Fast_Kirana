@@ -80,9 +80,10 @@ export function CartDrawer() {
 
   const total = groceryAdjustedSubtotal + cafeAdjustedSubtotal + deliveryFee
 
-  const hasInventoryIssues = items.some(
-    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
-  )
+  const hasInventoryIssues = items.some((item) => {
+    const limit = isCafeProduct(item.product) ? 10 : 5
+    return item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > limit
+  })
   const hasClosedGroceryItems = groceryItems.length > 0 && !groceryMartOpen
   const hasClosedCafeItems = cafeItems.length > 0 && !cafeOpen
   const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
@@ -90,11 +91,15 @@ export function CartDrawer() {
   const handleAutoAdjust = () => {
     let adjustedCount = 0
     items.forEach((item) => {
+      const limit = isCafeProduct(item.product) ? 10 : 5
       if (item.product.isAvailable === false || item.product.stock <= 0) {
         removeItem(item.product.id, item.product.name)
         adjustedCount++
+      } else if (item.quantity > limit) {
+        updateQuantity(item.product.id, item.product.name, Math.min(item.product.stock, limit))
+        adjustedCount++
       } else if (item.quantity > item.product.stock) {
-        updateQuantity(item.product.id, item.product.name, item.product.stock)
+        updateQuantity(item.product.id, item.product.name, Math.min(item.product.stock, limit))
         adjustedCount++
       }
     })
@@ -149,6 +154,10 @@ export function CartDrawer() {
               <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
                 <span>❌</span> Out of Stock
               </p>
+            ) : item.quantity > (isCafe ? 10 : 5) ? (
+              <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
+                <span>⚠️</span> Max limit is {isCafe ? 10 : 5} units
+              </p>
             ) : item.quantity > item.product.stock ? (
               <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
                 <span>⚠️</span> Only {item.product.stock} available
@@ -170,7 +179,7 @@ export function CartDrawer() {
             </span>
             <button
               onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-              disabled={isStoreClosed || item.quantity >= item.product.stock}
+              disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= (isCafe ? 10 : 5)}
               className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               aria-label="Increase quantity"
             >

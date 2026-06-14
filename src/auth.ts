@@ -20,7 +20,7 @@ const getCleanSecret = (key: string): string => {
 
 const cleanSecret = getCleanSecret('AUTH_SECRET')
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
   secret: cleanSecret || undefined,
   adapter: PrismaAdapter(prisma),
@@ -242,3 +242,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 })
+
+export async function auth(...args: any[]) {
+  // 1. Try NextAuth standard cookie session first
+  const session = await (nextAuthAuth as any)(...args)
+  if (session) return session
+
+  // 2. Native Mobile Header-based authentication fallback
+  try {
+    const { headers } = require('next/headers')
+    const result = headers()
+    const headersList = result instanceof Promise ? await result : result
+    const userId = headersList.get('x-user-id')
+    
+    if (userId) {
+      const userRole = headersList.get('x-user-role') || 'USER'
+      const userEmail = headersList.get('x-user-email') || ''
+      const userName = headersList.get('x-user-name') || ''
+      const userPhone = headersList.get('x-user-phone') || ''
+
+      return {
+        user: {
+          id: userId,
+          role: userRole as any,
+          email: userEmail,
+          name: userName,
+          phone: userPhone,
+        },
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      }
+    }
+  } catch (err) {
+    // Suppress errors (not inside request context)
+  }
+  return null
+}
+
+export { handlers, signIn, signOut }
