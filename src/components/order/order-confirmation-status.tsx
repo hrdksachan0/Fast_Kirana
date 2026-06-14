@@ -59,7 +59,7 @@ export function OrderConfirmationStatus({
     if (status === 'PENDING') {
       return deliveryMethod === 'PICKUP'
         ? '🏪 Store pickup selected! Preparing your items.'
-        : '⚡ Fast delivery active! Preparing your groceries.'
+        : '⚡ Fast delivery active! Preparing your order.'
     }
     if (status === 'CONFIRMED') {
       return '🏪 Store has accepted your order and is processing it!'
