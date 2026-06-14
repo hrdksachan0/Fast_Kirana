@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon } from 'lucide-react'
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
+import { triggerHaptic } from '@/lib/haptic'
+import { playCartPop } from '@/lib/audio'
 import { useCartStore } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { usePathname } from 'next/navigation'
@@ -56,6 +58,8 @@ export function Navbar() {
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const prevGroceryOpenRef = useRef<boolean | null>(null)
+  const prevCafeOpenRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -75,6 +79,45 @@ export function Navbar() {
           const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
           const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
           const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
+
+          // Trigger alerts on opening transition
+          if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === false && gOpen === true) {
+            triggerHaptic('success')
+            toast.success('🏪 Grocery Mart is now OPEN! Order your fresh groceries now.', {
+              duration: 6000,
+              id: 'grocery-mart-opened-alert',
+            })
+            playCartPop()
+          }
+
+          if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === false && cOpen === true) {
+            triggerHaptic('success')
+            toast.success('☕ FastKirana Cafe is now OPEN! Order fresh sandwiches & coffee now.', {
+              duration: 6000,
+              id: 'cafe-opened-alert',
+            })
+            playCartPop()
+          }
+
+          // Trigger alerts on closing transition
+          if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === true && gOpen === false) {
+            triggerHaptic('warning')
+            toast.error('🏪 Grocery Mart has been temporarily closed by admin.', {
+              duration: 6000,
+              id: 'grocery-mart-closed-alert',
+            })
+          }
+
+          if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === true && cOpen === false) {
+            triggerHaptic('warning')
+            toast.error('☕ FastKirana Cafe has been temporarily closed by admin.', {
+              duration: 6000,
+              id: 'cafe-closed-alert',
+            })
+          }
+
+          prevGroceryOpenRef.current = gOpen
+          prevCafeOpenRef.current = cOpen
           
           setGroceryMartOpen(gOpen)
           setCafeOpen(cOpen)
