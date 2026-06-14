@@ -210,19 +210,20 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
     return initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
   }, [initialBanners])
 
-  const [current, setCurrent] = useState(0)
+  const [[current, direction], setCurrentAndDirection] = useState([0, 0])
   const [progressKey, setProgressKey] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
 
   // Auto-slide effect
   useEffect(() => {
     if (displayBanners.length <= 1) return
     
     if (current >= displayBanners.length) {
-      setCurrent(0)
+      setCurrentAndDirection([0, 0])
     }
 
     const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % displayBanners.length)
+      setCurrentAndDirection(([prev]) => [(prev + 1) % displayBanners.length, 1])
       setProgressKey((prev) => prev + 1)
     }, INTERVAL_MS)
 
@@ -231,14 +232,42 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
 
   const handleNext = () => {
     if (displayBanners.length <= 1) return
-    setCurrent((prev) => (prev + 1) % displayBanners.length)
+    setCurrentAndDirection(([prev]) => [(prev + 1) % displayBanners.length, 1])
     setProgressKey((prev) => prev + 1)
   }
 
   const handlePrev = () => {
     if (displayBanners.length <= 1) return
-    setCurrent((prev) => (prev - 1 + displayBanners.length) % displayBanners.length)
+    setCurrentAndDirection(([prev]) => [(prev - 1 + displayBanners.length) % displayBanners.length, -1])
     setProgressKey((prev) => prev + 1)
+  }
+
+  const swipePower = (offset: number, velocity: number) => {
+    return Math.abs(offset) * velocity
+  }
+
+  const handleDragEnd = (e: any, info: any) => {
+    // delay resetting isDragging to let the click handler intercept it
+    setTimeout(() => setIsDragging(false), 50)
+    
+    const swipeThreshold = 50 // pixels
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+    
+    if (Math.abs(offset) > swipeThreshold) {
+      if (offset < 0) {
+        handleNext()
+      } else {
+        handlePrev()
+      }
+    } else {
+      const swipe = swipePower(offset, velocity)
+      if (swipe < -10000) {
+        handleNext()
+      } else if (swipe > 10000) {
+        handlePrev()
+      }
+    }
   }
 
   const currentBanner = displayBanners[current] || displayBanners[0]
@@ -250,19 +279,32 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
-          initial={{ opacity: 0, x: 80 }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.15}
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={handleDragEnd}
+          initial={{ opacity: 0, x: direction === 0 ? 0 : direction > 0 ? 100 : -100 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -80 }}
+          exit={{ opacity: 0, x: direction > 0 ? -100 : 100 }}
           transition={{
             type: 'spring',
-            stiffness: 180,
-            damping: 24,
+            stiffness: 220,
+            damping: 26,
             mass: 0.8
           }}
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full touch-pan-y"
         >
           {currentBanner.linkUrl ? (
-            <Link href={currentBanner.linkUrl} className="block w-full h-full cursor-pointer">
+            <Link 
+              href={currentBanner.linkUrl} 
+              className="block w-full h-full cursor-pointer"
+              onClick={(e) => {
+                if (isDragging) {
+                  e.preventDefault()
+                }
+              }}
+            >
               <BannerInner currentBanner={currentBanner} />
             </Link>
           ) : (
