@@ -65,28 +65,39 @@ export function Navbar() {
 
   useEffect(() => {
     hydrateLocation()
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        const gOpen = data.grocery_mart_open !== 'false'
-        const cOpen = data.cafe_open !== 'false'
-        const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
-        const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
-        const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
-        
-        setGroceryMartOpen(gOpen)
-        setCafeOpen(cOpen)
-        setStoreStatus(gOpen, cOpen, radius)
 
-        // Automatically set default location if not set, without intrusive geolocation prompts
-        const currentLoc = useUIStore.getState().selectedLocation
-        if (!currentLoc || currentLoc === 'Select Location') {
-          const fallbackArea = "Ghatampur Market"
-          setSelectedLocation(fallbackArea)
-          setUserCoords({ lat: storeLat, lng: storeLng })
-        }
-      })
-      .catch(err => console.error('Error loading store status/location in navbar:', err))
+    const fetchStatus = () => {
+      fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => {
+          const gOpen = data.grocery_mart_open !== 'false'
+          const cOpen = data.cafe_open !== 'false'
+          const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
+          const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
+          const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
+          
+          setGroceryMartOpen(gOpen)
+          setCafeOpen(cOpen)
+          setStoreStatus(gOpen, cOpen, radius)
+
+          // Automatically set default location if not set, without intrusive geolocation prompts
+          const currentLoc = useUIStore.getState().selectedLocation
+          if (!currentLoc || currentLoc === 'Select Location') {
+            const fallbackArea = "Ghatampur Market"
+            setSelectedLocation(fallbackArea)
+            setUserCoords({ lat: storeLat, lng: storeLng })
+          }
+        })
+        .catch(err => console.error('Error loading store status/location in navbar:', err))
+    }
+
+    // Initial fetch
+    fetchStatus()
+
+    // Setup polling every 10 seconds for dynamic updates without page reload
+    const interval = setInterval(fetchStatus, 10000)
+
+    return () => clearInterval(interval)
   }, [hydrateLocation, setStoreStatus, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {
