@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Minus, Check, Zap } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
@@ -9,12 +9,14 @@ import { Product } from '@/types'
 import { useUIStore } from '@/stores/ui-store'
 import { ProductImage } from '@/components/product/product-image'
 import { motion, AnimatePresence } from 'framer-motion'
+import { usePushNotification } from '@/hooks/use-push-notification'
+import { toast } from 'sonner'
 
 interface ProductCardProps {
   product: Product
 }
 
-import { isCafeProduct } from '@/lib/utils'
+import { isCafeProduct, cn } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 
 export function ProductCard({ product }: ProductCardProps) {
@@ -54,6 +56,35 @@ export function ProductCard({ product }: ProductCardProps) {
   const quantity = totalQuantity
   const [showAdded, setShowAdded] = useState(false)
   const imageRef = useRef<HTMLDivElement>(null)
+
+  const { subscribe } = usePushNotification()
+  const [isNotifySubscribed, setIsNotifySubscribed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsNotifySubscribed(localStorage.getItem(`notify-stock-${product.id}`) === 'true')
+    }
+  }, [product.id])
+
+  const handleNotifyMe = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
+    if (isNotifySubscribed) {
+      toast.success(`You are already subscribed to stock alerts for ${product.name}.`)
+      return
+    }
+
+    subscribe(() => {
+      localStorage.setItem(`notify-stock-${product.id}`, 'true')
+      setIsNotifySubscribed(true)
+      toast.success(`🔔 Alert saved! We'll notify you when ${product.name} is back in stock.`, {
+        id: `notify-stock-alert-${product.id}`,
+      })
+    })
+  }, [isNotifySubscribed, product.id, product.name, subscribe])
 
   const isCafe = isCafeProduct(product)
   const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
@@ -259,12 +290,32 @@ export function ProductCard({ product }: ProductCardProps) {
                 className="w-full h-full"
               >
                 <Button
-                  onClick={handleAdd}
-                  disabled={resolvedStock <= 0 || !resolvedIsAvailable || isStoreClosed}
-                  className="w-full h-full border border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black md:hover:bg-[#2e7d32] md:hover:text-white rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={(e) => {
+                    if (resolvedStock <= 0 || !resolvedIsAvailable) {
+                      handleNotifyMe(e)
+                    } else {
+                      handleAdd(e)
+                    }
+                  }}
+                  disabled={isStoreClosed && resolvedStock > 0}
+                  className={cn(
+                    "w-full h-full border text-[10px] sm:text-xs font-black rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
+                    resolvedStock <= 0 || !resolvedIsAvailable
+                      ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 md:hover:bg-[#2e7d32] md:hover:text-white"
+                  )}
                 >
                   {resolvedStock <= 0 || !resolvedIsAvailable ? (
-                    'Out'
+                    isNotifySubscribed ? (
+                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        <Check className="h-2.5 w-2.5 stroke-[3.5]" />
+                        Alerted
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-500 font-extrabold">
+                        🔔 Notify
+                      </span>
+                    )
                   ) : isStoreClosed ? (
                     'Closed'
                   ) : (

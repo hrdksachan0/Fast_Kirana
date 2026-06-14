@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 import { useRouter } from 'next/navigation'
 import {
   Check,
@@ -122,14 +123,6 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const mapRef = useRef<any>(null)
   const riderMarkerRef = useRef<any>(null)
 
-  // 1. Notification Permission request
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission()
-      }
-    }
-  }, [])
 
   // 2. Connect to Server-Sent Events (SSE) live stream
   useEffect(() => {
@@ -490,6 +483,8 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
           })}
         </div>
       </div>
+
+      <LockscreenAlertMockup orderId={order.id} />
 
       {/* Simulated Tracking Map Panel */}
       {order.status !== 'DELIVERED' && order.status !== 'PENDING' && (

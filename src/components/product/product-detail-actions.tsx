@@ -9,7 +9,11 @@ import { isCafeProduct } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { triggerHaptic } from '@/lib/haptic'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
+import { usePushNotification } from '@/hooks/use-push-notification'
+import { toast } from 'sonner'
+import { Bell, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ProductDetailActionsProps {
   product: Product
@@ -51,6 +55,30 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
     category: product.category,
   }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable])
 
+  const { subscribe } = usePushNotification()
+  const [isNotifySubscribed, setIsNotifySubscribed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsNotifySubscribed(localStorage.getItem(`notify-stock-${product.id}`) === 'true')
+    }
+  }, [product.id])
+
+  const handleNotifyMe = useCallback(() => {
+    if (isNotifySubscribed) {
+      toast.success(`You are already subscribed to stock alerts for ${product.name}.`)
+      return
+    }
+
+    subscribe(() => {
+      localStorage.setItem(`notify-stock-${product.id}`, 'true')
+      setIsNotifySubscribed(true)
+      toast.success(`🔔 Alert saved! We'll notify you when ${product.name} is back in stock.`, {
+        id: `notify-stock-alert-${product.id}`,
+      })
+    })
+  }, [isNotifySubscribed, product.id, product.name, subscribe])
+
   const handleAdd = () => {
     addItem(cartProduct)
   }
@@ -68,12 +96,33 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
       <div className="flex-grow sm:flex-grow-0">
         {quantity === 0 ? (
           <Button
-            onClick={handleAdd}
-            disabled={resolvedStock <= 0 || isStoreClosed}
-            className="w-full sm:w-auto h-12 px-8 bg-accent text-white font-extrabold hover:bg-accent-dark rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            onClick={() => {
+              if (resolvedStock <= 0) {
+                handleNotifyMe()
+              } else {
+                handleAdd()
+              }
+            }}
+            disabled={resolvedStock > 0 && isStoreClosed}
+            className={cn(
+              "w-full sm:w-auto h-12 px-8 font-extrabold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base cursor-pointer",
+              resolvedStock <= 0
+                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                : "bg-accent text-white hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
           >
             {resolvedStock <= 0 ? (
-              'Out of Stock'
+              isNotifySubscribed ? (
+                <>
+                  <Check className="h-5 w-5 stroke-[3]" />
+                  Alert Activated
+                </>
+              ) : (
+                <>
+                  <Bell className="h-5 w-5" />
+                  Notify Me When Back in Stock
+                </>
+              )
             ) : isStoreClosed ? (
               isCafe ? 'Cafe Closed' : 'Mart Closed'
             ) : (

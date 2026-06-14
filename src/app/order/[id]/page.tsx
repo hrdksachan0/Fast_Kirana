@@ -6,6 +6,7 @@ import { CheckCircle2, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
+import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
@@ -125,6 +126,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           </Link>
         </div>
       </div>
+
+      <LockscreenAlertMockup orderId={order.id} />
 
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

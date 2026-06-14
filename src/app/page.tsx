@@ -10,6 +10,7 @@ import { TimeSuggestions } from '@/components/home/time-suggestions'
 import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
 import { Category, Product } from '@/types'
+import { FlashDealsBanner } from '@/components/home/flash-deals-banner'
 import Link from 'next/link'
 
 // Revalidate home page every 60 seconds to keep catalog fresh
@@ -335,6 +336,8 @@ export default async function Home() {
           </div>
         }
       />
+
+      <FlashDealsBanner />
 
       {/* Contextual Time of Day Suggestions */}
       <TimeSuggestions products={suggestionProducts} />

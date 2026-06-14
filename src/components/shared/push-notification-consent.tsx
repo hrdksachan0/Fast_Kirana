@@ -1,112 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Bell, Check, X, ShieldAlert, Sparkles } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { Bell, X, ShieldAlert, Sparkles } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
-}
+import { usePushNotification } from '@/hooks/use-push-notification'
+import { triggerHaptic } from '@/lib/haptic'
 
 export function PushNotificationConsent() {
-  const { data: session, status } = useSession()
-  const [isSupported, setIsSupported] = useState(true)
-  const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPrompt, setShowPrompt] = useState(true)
-  const [isIOS, setIsIOS] = useState(false)
-
-  useEffect(() => warmUpServiceWorker(), [])
-
-  function warmUpServiceWorker() {
-    if (typeof window === 'undefined') return
-
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window
-    setIsSupported(supported)
-    
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    setIsIOS(ios)
-
-    if (supported && 'Notification' in window) {
-      setPermission(Notification.permission)
-      
-      // Check if already subscribed in service worker
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.pushManager.getSubscription().then((subscription) => {
-          setIsSubscribed(!!subscription)
-        })
-      }).catch(err => console.log('Service worker not ready yet:', err))
-    }
-
-    // Check if user dismissed the prompt in this session
-    const dismissed = localStorage.getItem('push-prompt-dismissed') === 'true'
-    if (dismissed) {
-      setShowPrompt(false)
-    }
-  }
+  const { status } = useSession()
+  const {
+    isSupported,
+    isIOS,
+    permission,
+    isSubscribed,
+    isLoading,
+    showPrompt,
+    subscribe,
+    dismiss,
+  } = usePushNotification()
 
   const handleSubscribe = async () => {
-    if (!isSupported) return
-    setIsLoading(true)
-
-    try {
-      // 1. Request permission
-      const result = await Notification.requestPermission()
-      setPermission(result)
-
-      if (result !== 'granted') {
-        toast.error('Permission denied. Please allow notifications in your browser URL bar or settings.')
-        throw new Error('Notification permission denied')
-      }
-
-      // 2. Register push subscription
-      const registration = await navigator.serviceWorker.ready
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
-
-      if (!vapidPublicKey) {
-        toast.error('VAPID public key not configured in environment variables.')
-        throw new Error('VAPID public key not configured in frontend')
-      }
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      })
-
-      // 3. Send subscription to server
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription }),
-      })
-
-      if (!res.ok) {
-        throw new Error('Failed to save subscription on server')
-      }
-
-      setIsSubscribed(true)
-      toast.success('🎉 You have successfully subscribed to live updates!')
-    } catch (error: any) {
-      console.error('Push subscription error:', error)
-      toast.error(`Failed to enable notifications: ${error.message || error}`)
-    } finally {
-      setIsLoading(false)
-    }
+    triggerHaptic('light')
+    await subscribe()
   }
 
   const handleDismiss = () => {
-    setShowPrompt(false)
-    localStorage.setItem('push-prompt-dismissed', 'true')
+    triggerHaptic('light')
+    dismiss()
   }
 
   if (status !== 'authenticated') return null
@@ -144,7 +63,7 @@ export function PushNotificationConsent() {
 
   if (!showPrompt || isSubscribed) return null
 
-  // If permission is denied, show a instruction box to enable in settings
+  // If permission is denied, show an instruction box to enable in settings
   if (permission === 'denied') {
     return (
       <div className="fixed top-[104px] left-4 right-4 z-50 sm:top-[88px] sm:right-6 sm:left-auto sm:w-[420px] bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated">
