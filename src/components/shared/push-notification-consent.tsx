@@ -4,6 +4,7 @@ import { Bell, X, ShieldAlert, Sparkles } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { usePushNotification } from '@/hooks/use-push-notification'
 import { triggerHaptic } from '@/lib/haptic'
+import Image from 'next/image'
 
 export function PushNotificationConsent() {
   const { status } = useSession()
@@ -35,8 +36,8 @@ export function PushNotificationConsent() {
       return (
         <div className="fixed top-[104px] left-4 right-4 z-50 sm:top-[88px] sm:right-6 sm:left-auto sm:w-[420px] overflow-hidden bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl shadow-elevated flex items-start justify-between gap-3 animate-slide-down">
           <div className="flex gap-3">
-            <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
-              <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
+            <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-amber-500/20 shrink-0">
+              <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
             </div>
             <div>
               <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 flex items-center gap-1">
@@ -67,10 +68,13 @@ export function PushNotificationConsent() {
   if (permission === 'denied') {
     return (
       <div className="fixed top-[104px] left-4 right-4 z-50 sm:top-[88px] sm:right-6 sm:left-auto sm:w-[420px] bg-rose-50 dark:bg-rose-950/10 border border-rose-500/20 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated">
-        <div className="flex gap-3">
-          <div className="h-10 w-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
-            <ShieldAlert className="h-5 w-5" />
-          </div>
+          <div className="flex gap-3">
+            <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-rose-500/20 shrink-0 relative">
+              <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
+              <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center">
+                <ShieldAlert className="h-4 w-4 text-rose-600" />
+              </div>
+            </div>
           <div>
             <h4 className="text-xs font-black text-rose-800 dark:text-rose-400">Notifications Blocked</h4>
             <p className="text-[10px] font-bold text-rose-600/80 dark:text-rose-500/80 mt-0.5 leading-relaxed">
@@ -96,9 +100,9 @@ export function PushNotificationConsent() {
       <div className="absolute top-[-20%] right-[-5%] w-[120px] h-[120px] rounded-full bg-primary/5 blur-[30px] pointer-events-none" />
 
       <div className="flex items-start gap-3">
-        {/* Animated Bell Icon */}
-        <div className="h-10 w-10 bg-primary/10 dark:bg-zinc-800/80 border border-primary/20 rounded-xl flex items-center justify-center text-primary shrink-0 relative">
-          <Bell className="h-5 w-5 stroke-[2] animate-bounce-subtle" />
+        {/* App Logo with notification badge */}
+        <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-primary/20 shrink-0 relative">
+          <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
           <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>

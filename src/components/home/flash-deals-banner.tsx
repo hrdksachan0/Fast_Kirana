@@ -5,6 +5,7 @@ import { usePushNotification } from '@/hooks/use-push-notification'
 import { Bell, Sparkles, Zap, Check } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 export function FlashDealsBanner() {
   const { subscribe, isSubscribed } = usePushNotification()
@@ -44,8 +45,15 @@ export function FlashDealsBanner() {
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center text-white shrink-0 shadow-inner">
-            <Zap className="h-5 w-5 fill-amber-300 text-amber-300" />
+          {/* App Logo */}
+          <div className="h-11 w-11 rounded-xl overflow-hidden shadow-lg border-2 border-white/25 shrink-0">
+            <Image
+              src="/icons/icon-192.png"
+              alt="FastKirana"
+              width={44}
+              height={44}
+              className="object-cover"
+            />
           </div>
           <div className="text-center sm:text-left">
             <h4 className="text-white font-extrabold text-sm tracking-tight flex items-center gap-1 justify-center sm:justify-start">

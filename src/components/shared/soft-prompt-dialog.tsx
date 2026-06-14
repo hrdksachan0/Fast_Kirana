@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { usePushNotification } from '@/hooks/use-push-notification'
 import { Bell, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
+import Image from 'next/image'
 
 export function SoftPromptDialog() {
   const { showSoftPrompt, setShowSoftPrompt, confirmSubscribe, dismiss, isLoading } = usePushNotification()
@@ -27,12 +28,14 @@ export function SoftPromptDialog() {
         <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-violet-500 to-accent" />
         
         <DialogHeader className="pt-2 flex flex-col items-center text-center">
-          <div className="h-14 w-14 bg-primary/10 dark:bg-zinc-800/80 border border-primary/20 rounded-2xl flex items-center justify-center text-primary relative mb-4">
-            <Bell className="h-7 w-7 stroke-[2] animate-bounce-subtle" />
-            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-accent"></span>
-            </span>
+          {/* Logo + brand badge */}
+          <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20 mb-4 relative">
+            <Image
+              src="/icons/icon-192.png"
+              alt="FastKirana"
+              fill
+              className="object-cover"
+            />
           </div>
 
           <DialogTitle className="text-lg font-black text-text-primary tracking-tight flex items-center gap-1.5 justify-center">
@@ -44,8 +47,55 @@ export function SoftPromptDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Premium Value Props Grid */}
-        <div className="my-6 space-y-3.5">
+        {/* Notification preview strip — Swiggy/Blinkit style */}
+        <div className="my-5 rounded-xl border border-border bg-muted/30 p-3 space-y-2.5">
+          <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest px-0.5 mb-1">Preview — What you'll get</p>
+          
+          {/* Preview notification 1 */}
+          <div className="flex items-start gap-2.5 px-1">
+            <div className="h-7 w-7 rounded-md overflow-hidden shadow-sm shrink-0 border border-border">
+              <Image
+                src="/icons/icon-192.png"
+                alt="FastKirana"
+                width={28}
+                height={28}
+                className="object-cover"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastKirana</span>
+                <span className="text-[8px] text-text-muted">• 2m</span>
+              </div>
+              <p className="text-[10px] font-bold text-text-primary leading-tight">🚴 Rider is on the way!</p>
+              <p className="text-[9px] text-text-muted font-semibold mt-0.5">Your order has been picked up. Arriving in ~8 mins.</p>
+            </div>
+          </div>
+
+          {/* Preview notification 2 */}
+          <div className="flex items-start gap-2.5 px-1 opacity-60">
+            <div className="h-7 w-7 rounded-md overflow-hidden shadow-sm shrink-0 border border-border">
+              <Image
+                src="/icons/icon-192.png"
+                alt="FastKirana"
+                width={28}
+                height={28}
+                className="object-cover"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastKirana</span>
+                <span className="text-[8px] text-text-muted">• 5m</span>
+              </div>
+              <p className="text-[10px] font-bold text-text-primary leading-tight">⚡ Flash Deal ending in 3 mins!</p>
+              <p className="text-[9px] text-text-muted font-semibold mt-0.5">Tata Salt 1kg @ ₹18 — 60% off, only 4 left.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Value props */}
+        <div className="space-y-3 mb-5">
           <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
             <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
               <span className="text-sm font-bold">🚴</span>
