@@ -39,8 +39,17 @@ export function ProductCard({ product }: ProductCardProps) {
     return startVar ? startVar.mrp : product.mrp
   }, [hasVariants, variantsList, startingPrice, product.mrp])
 
-  const resolvedPrice = startingPrice
-  const resolvedMrp = startingMrp
+  const liveState = useLiveStock(product.id)
+
+  const resolvedPrice = useMemo(() => {
+    if (liveState !== null) return liveState.price
+    return startingPrice
+  }, [liveState, startingPrice])
+
+  const resolvedMrp = useMemo(() => {
+    if (liveState !== null) return liveState.mrp
+    return startingMrp
+  }, [liveState, startingMrp])
 
   // Cart operations
   const { items, getItemQuantity, addItem, updateQuantity } = useCart()
@@ -110,8 +119,15 @@ export function ProductCard({ product }: ProductCardProps) {
     return variantsList.reduce((sum, v) => sum + (v.stock || 0), 0)
   }, [hasVariants, variantsList, product.stock])
 
-  const resolvedStock = totalStock
-  const resolvedIsAvailable = product.isAvailable
+  const resolvedStock = useMemo(() => {
+    if (liveState !== null) return liveState.stock
+    return totalStock
+  }, [liveState, totalStock])
+
+  const resolvedIsAvailable = useMemo(() => {
+    if (liveState !== null) return liveState.isAvailable
+    return product.isAvailable
+  }, [liveState, product.isAvailable])
 
   // Calculate discount dynamically if price/mrp changed
   const resolvedDiscount = useMemo(() => {

@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
       for (const orderInfo of ordersToCreate) {
         const orderItemsData = orderInfo.items.map((item: any) => {
           const isVariant = item.product.id.includes('_')
-          const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+          const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
           
           let itemPrice = item.dbProduct.price
           if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
           }
 
           return {
-            productId: productId,
+            productId: item.dbProduct.id,
             name: item.product.name,
             price: itemPrice,
             quantity: item.quantity,
