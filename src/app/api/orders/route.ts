@@ -7,7 +7,7 @@ import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function POST(request: NextRequest) {
-  const limited = apiWriteLimiter.check(request)
+  const limited = await apiWriteLimiter.check(request)
   if (limited) return limited
 
   const session = await auth()
@@ -459,7 +459,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const limited = apiReadLimiter.check(request)
+  const limited = await apiReadLimiter.check(request)
   if (limited) return limited
 
   const session = await auth()

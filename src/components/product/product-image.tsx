@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
+import { getOptimizedImageUrl } from '@/lib/utils'
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   'fruits-vegetables': Salad,
@@ -173,11 +174,13 @@ export function ProductImage({
   // Determine if it is a valid image URL (not an emoji or empty)
   const isValidUrl = currentSrc && (currentSrc.startsWith('/') || currentSrc.startsWith('http') || currentSrc.startsWith('https'))
 
+  const optimizedSrc = isValidUrl ? (getOptimizedImageUrl(currentSrc, 300) || currentSrc) : currentSrc
+
   if (!imgError && isValidUrl) {
     return (
       <div className="relative w-full h-full">
         <Image
-          src={currentSrc!}
+          src={optimizedSrc!}
           alt={alt}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"

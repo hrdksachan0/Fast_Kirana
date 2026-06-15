@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { label, houseNo, street, area, city, pincode, phone, isDefault } = await request.json()
+    const { label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = await request.json()
 
     if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -62,6 +62,8 @@ export async function POST(request: Request) {
         pincode,
         phone,
         isDefault: !!isDefault,
+        lat: lat ? parseFloat(lat.toString()) : null,
+        lng: lng ? parseFloat(lng.toString()) : null,
       },
     })
 

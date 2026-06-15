@@ -5,7 +5,7 @@ import { apiWriteLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   // Rate limiting
-  const limitResponse = apiWriteLimiter.check(request)
+  const limitResponse = await apiWriteLimiter.check(request)
   if (limitResponse) return limitResponse
 
   const session = await auth()
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   // Rate limiting
-  const limitResponse = apiWriteLimiter.check(request)
+  const limitResponse = await apiWriteLimiter.check(request)
   if (limitResponse) return limitResponse
 
   const session = await auth()

@@ -4,7 +4,7 @@ import { apiReadLimiter } from '@/lib/rate-limit'
 import { isCafeProduct } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
-  const limited = apiReadLimiter.check(request)
+  const limited = await apiReadLimiter.check(request)
   if (limited) return limited
 
   try {

@@ -129,8 +129,12 @@ export function CategoryPageClient({
                       : 'text-text-secondary hover:bg-muted hover:text-text-primary'
                   )}
                 >
-                  <span className="text-xl" role="img" aria-label={cat.name}>
-                    {cat.imageUrl || '🛒'}
+                  <span className="h-5 w-5 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={cat.name}>
+                    {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
+                      <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded" />
+                    ) : (
+                      <span className="text-base leading-none">{cat.imageUrl || '🛒'}</span>
+                    )}
                   </span>
                   <span className="truncate">{cat.name}</span>
                   <span
@@ -167,7 +171,13 @@ export function CategoryPageClient({
                       : 'bg-card text-text-secondary border-border hover:bg-muted'
                   )}
                 >
-                  <span>{cat.imageUrl || '🛒'}</span>
+                  <span className="h-4 w-4 flex items-center justify-center shrink-0 overflow-hidden">
+                    {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
+                      <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded-sm" />
+                    ) : (
+                      <span className="text-xs leading-none">{cat.imageUrl || '🛒'}</span>
+                    )}
+                  </span>
                   <span>
                     {cat.name}{' '}
                     <span className="opacity-80 font-normal">
@@ -183,8 +193,12 @@ export function CategoryPageClient({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-4">
             <div>
               <div className="flex items-center gap-3">
-                <span className="text-3xl" role="img" aria-label={activeCategory.name}>
-                  {activeCategory.imageUrl || '🛒'}
+                <span className="h-10 w-10 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={activeCategory.name}>
+                  {activeCategory.imageUrl && (activeCategory.imageUrl.startsWith('data:image/') || activeCategory.imageUrl.startsWith('/') || activeCategory.imageUrl.startsWith('http')) ? (
+                    <img src={activeCategory.imageUrl} alt={activeCategory.name} className="h-full w-full object-cover rounded-lg" />
+                  ) : (
+                    <span className="text-3xl leading-none">{activeCategory.imageUrl || '🛒'}</span>
+                  )}
                 </span>
                 <div>
                   <h1 className="text-lg md:text-2xl font-extrabold text-text-primary tracking-tight">

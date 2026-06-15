@@ -13,8 +13,8 @@ import { Category, Product } from '@/types'
 import { FlashDealsBanner } from '@/components/home/flash-deals-banner'
 import Link from 'next/link'
 
-// Revalidate home page every 60 seconds to keep catalog fresh
-export const revalidate = 60
+// Revalidate home page every 24 hours (on-demand revalidation handles updates)
+export const revalidate = 86400
 
 export default async function Home() {
   let promoBanners: any[] = []
@@ -81,6 +81,34 @@ export default async function Home() {
     { category: { slug: 'cafe' } },
   ]
 
+  const productSelect = {
+    id: true,
+    name: true,
+    slug: true,
+    description: true,
+    imageUrl: true,
+    categoryId: true,
+    mrp: true,
+    price: true,
+    discount: true,
+    unit: true,
+    stock: true,
+    isAvailable: true,
+    tags: true,
+    minStock: true,
+    variants: true,
+    category: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        imageUrl: true,
+        parentId: true,
+        sortOrder: true,
+      }
+    }
+  }
+
   // 2. Fetch independent data pools in parallel to eliminate database sequential waterfall latency
   try {
     const [
@@ -132,7 +160,7 @@ export default async function Home() {
           { discount: 'desc' }
         ],
         take: 10,
-        include: { category: true },
+        select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch flash deals:', err); return []; }),
       prisma.product.findMany({
         where: {
@@ -147,11 +175,11 @@ export default async function Home() {
           { createdAt: 'desc' }
         ],
         take: 12,
-        include: { category: true },
+        select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
       prisma.product.findMany({
         where: suggestionWhereClause,
-        include: { category: true },
+        select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch time suggestions:', err); return []; }),
     ])
 
@@ -177,7 +205,7 @@ export default async function Home() {
           { category: { slug: 'cafe' } },
         ]
       },
-      include: { category: true },
+      select: productSelect,
     })
   } catch (err) {
     console.warn('Failed to load manual top picks:', err)
@@ -196,7 +224,7 @@ export default async function Home() {
             { category: { slug: 'cafe' } },
           ]
         },
-        include: { category: true },
+        select: productSelect,
       })
       // Sort in order of sales popularity
       dynamicTopPicks = orderHistoryProducts.sort(
@@ -229,7 +257,7 @@ export default async function Home() {
           ]
         },
         take: 12 - topPicksRaw.length,
-        include: { category: true },
+        select: productSelect,
       })
       topPicksRaw = [...topPicksRaw, ...popularProducts]
     } catch (error) {

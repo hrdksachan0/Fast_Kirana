@@ -180,6 +180,10 @@ model Product {
 
   @@index([categoryId])
   @@index([slug])
+  @@index([isAvailable])
+  @@index([isFlashDeal])
+  @@index([isBestSeller])
+  @@index([isTopPick])
   @@map("products")
 }
 

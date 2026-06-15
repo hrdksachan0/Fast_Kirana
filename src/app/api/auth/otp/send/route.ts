@@ -5,7 +5,7 @@ import { sendWhatsAppOtp } from '@/lib/whatsapp'
 import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
-  const limited = otpLimiter.check(request)
+  const limited = await otpLimiter.check(request)
   if (limited) return limited
 
   try {

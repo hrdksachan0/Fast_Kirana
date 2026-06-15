@@ -45,17 +45,19 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AdminAnalytics } from './admin-analytics'
-import { AdminAlerts } from './admin-alerts'
-import { AdminBulkUpdate } from './admin-bulk-update'
-import { AdminReports } from './admin-reports'
-import { AdminInward } from './admin-inward'
-import { AdminBanners } from './admin-banners'
-import { AdminSettings } from './admin-settings'
-import { AdminCsvImport } from './admin-csv-import'
-import { AdminPushNotifications } from './admin-push-notifications'
-import { AdminPromotions } from './admin-promotions'
-import { AdminForecast } from './admin-forecast'
+import dynamic from 'next/dynamic'
+
+const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => mod.AdminAnalytics), { ssr: false })
+const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
+const AdminBulkUpdate = dynamic(() => import('./admin-bulk-update').then((mod) => mod.AdminBulkUpdate), { ssr: false })
+const AdminReports = dynamic(() => import('./admin-reports').then((mod) => mod.AdminReports), { ssr: false })
+const AdminInward = dynamic(() => import('./admin-inward').then((mod) => mod.AdminInward), { ssr: false })
+const AdminBanners = dynamic(() => import('./admin-banners').then((mod) => mod.AdminBanners), { ssr: false })
+const AdminSettings = dynamic(() => import('./admin-settings').then((mod) => mod.AdminSettings), { ssr: false })
+const AdminCsvImport = dynamic(() => import('./admin-csv-import').then((mod) => mod.AdminCsvImport), { ssr: false })
+const AdminPushNotifications = dynamic(() => import('./admin-push-notifications').then((mod) => mod.AdminPushNotifications), { ssr: false })
+const AdminPromotions = dynamic(() => import('./admin-promotions').then((mod) => mod.AdminPromotions), { ssr: false })
+const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod.AdminForecast), { ssr: false })
 
 interface AdminDashboardProps {
   initialOrders: any[]

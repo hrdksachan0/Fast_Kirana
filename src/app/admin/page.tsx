@@ -60,7 +60,6 @@ export default async function AdminPage() {
           },
           address: true,
         },
-        take: 10,
       }),
       prisma.product.findMany({
         include: {
@@ -69,7 +68,6 @@ export default async function AdminPage() {
         orderBy: {
           createdAt: 'desc',
         },
-        take: 10,
       }),
       prisma.category.findMany({
         include: {
@@ -87,16 +85,14 @@ export default async function AdminPage() {
           user: { select: { id: true, name: true, email: true } },
           product: { select: { id: true, name: true, slug: true, imageUrl: true } },
         },
-        take: 10,
       }),
       prisma.coupon.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 10,
       }),
       prisma.$queryRaw`
         SELECT u.id, u.name, u.email, u.phone, u.role::text as role, u."createdAt",
                (SELECT COUNT(*)::int FROM orders o WHERE o."userId" = u.id) as order_count
-        FROM users u ORDER BY u."createdAt" DESC LIMIT 10
+        FROM users u ORDER BY u."createdAt" DESC
       `,
       prisma.product.findMany({
         select: {

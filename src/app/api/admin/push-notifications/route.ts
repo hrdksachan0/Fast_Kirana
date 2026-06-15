@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limitResponse = apiWriteLimiter.check(request)
+  const limitResponse = await apiWriteLimiter.check(request)
   if (limitResponse) return limitResponse
 
   const session = await auth()

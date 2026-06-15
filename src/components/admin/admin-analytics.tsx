@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { 
   TrendingUp, 
@@ -60,6 +61,62 @@ interface AdminAnalyticsProps {
 }
 
 export function AdminAnalytics({ products, orders, categories, stats }: AdminAnalyticsProps) {
+  const [forecast, setForecast] = useState<any[]>([])
+  const [loadingForecast, setLoadingForecast] = useState(true)
+  const [inwardingId, setInwardingId] = useState<string | null>(null)
+
+  const fetchForecast = async () => {
+    try {
+      setLoadingForecast(true)
+      const res = await fetch('/api/admin/inventory/forecast')
+      if (res.ok) {
+        const data = await res.json()
+        setForecast(data.forecast || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch forecast:', err)
+    } finally {
+      setLoadingForecast(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchForecast()
+  }, [])
+
+  const handleQuickRestock = async (product: any) => {
+    if (product.suggestedRestock <= 0) return
+    try {
+      setInwardingId(product.id)
+      const res = await fetch('/api/admin/inward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id,
+          batchCode: `AUTO_AI_${Date.now().toString().slice(-6)}`,
+          quantity: product.suggestedRestock,
+          costPrice: product.costPrice,
+          expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        })
+      })
+
+      if (res.ok) {
+        toast.success(`Successfully replenishment inwarded for ${product.name}!`)
+        fetchForecast()
+        // Reload products view
+        window.location.reload()
+      } else {
+        const errData = await res.json()
+        toast.error(errData.error || 'Failed to replenish stock')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Network error during quick restock')
+    } finally {
+      setInwardingId(null)
+    }
+  }
+
   // 1. Calculate general inventory metrics separately for Grocery and Cafe
   const metrics = useMemo(() => {
     let groceryStockValue = 0
@@ -372,6 +429,100 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
           </div>
         </div>
 
+      </div>
+
+      {/* AI Stock Forecasting section */}
+      <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-accent animate-pulse" />
+            <div>
+              <h4 className="text-sm font-bold text-text-primary">AI Stock Depletion & Replenishment Forecast</h4>
+              <p className="text-[10px] text-text-muted">Analyzing last 30 days sales velocity to predict stockouts and recommend Purchase Orders.</p>
+            </div>
+          </div>
+          <button 
+            onClick={fetchForecast}
+            disabled={loadingForecast}
+            className="text-[10px] font-extrabold text-accent bg-accent/10 px-3 py-1.5 rounded-lg border border-accent/20 active:bg-accent/20 transition-colors uppercase tracking-wider"
+          >
+            Refresh Forecast
+          </button>
+        </div>
+
+        {loadingForecast ? (
+          <div className="py-12 flex justify-center items-center gap-2">
+            <span className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full" />
+            <span className="text-xs text-text-secondary font-bold">Calculating sales velocity...</span>
+          </div>
+        ) : forecast.filter(f => f.isUrgent || f.stock === 0).length === 0 ? (
+          <div className="py-10 text-center bg-muted/40 rounded-xl border border-dashed border-border/80">
+            <span className="text-2xl">🌱</span>
+            <p className="text-xs text-text-secondary font-bold mt-2">All product stock levels healthy. No urgent depletion warnings.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto border border-border/60 rounded-xl bg-muted/20">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted/80 border-b border-border/65 text-text-secondary font-extrabold uppercase text-[9px] tracking-wider">
+                  <th className="p-3">Product</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3 text-center">Current Stock</th>
+                  <th className="p-3 text-center">Sales Velocity (30d)</th>
+                  <th className="p-3 text-center">Days to Runout</th>
+                  <th className="p-3 text-center">Recommended Restock</th>
+                  <th className="p-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {forecast.filter(f => !f.isCafe && (f.isUrgent || f.stock === 0)).slice(0, 8).map((product) => {
+                  const velocityStr = product.velocity > 0 ? `${product.velocity.toFixed(2)} units/day` : '0 units/day'
+                  const runoutStr = product.stock === 0 ? 'Out of Stock' : product.daysToDepletion !== null ? `${product.daysToDepletion.toFixed(1)} days` : 'Infinite'
+                  const runoutColor = product.stock === 0 ? 'text-red-500 bg-red-500/10 border-red-500/20 font-black' : product.daysToDepletion !== null && product.daysToDepletion <= 3 ? 'text-orange-500 bg-orange-500/10 border-orange-500/20 font-bold' : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+
+                  return (
+                    <tr key={product.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-3 font-semibold text-text-primary">{product.name}</td>
+                      <td className="p-3 text-text-secondary font-medium">{product.category?.name || 'General'}</td>
+                      <td className="p-3 text-center font-bold text-text-primary">
+                        <span className={product.stock === 0 ? 'text-red-500 font-extrabold' : product.stock <= product.minStock ? 'text-orange-500' : 'text-text-primary'}>
+                          {product.stock}
+                        </span>
+                        <span className="text-[9px] text-text-muted font-normal block">Min: {product.minStock}</span>
+                      </td>
+                      <td className="p-3 text-center text-text-secondary font-bold">{velocityStr}</td>
+                      <td className="p-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] border ${runoutColor}`}>
+                          {runoutStr}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center font-extrabold text-accent">
+                        {product.suggestedRestock > 0 ? `+${product.suggestedRestock} units` : 'Healthy'}
+                      </td>
+                      <td className="p-3 text-right">
+                        {product.suggestedRestock > 0 ? (
+                          <button
+                            onClick={() => handleQuickRestock(product)}
+                            disabled={inwardingId !== null}
+                            className="bg-accent text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-accent/90 active:bg-accent/80 transition-all flex items-center justify-center gap-1 ml-auto"
+                          >
+                            {inwardingId === product.id ? (
+                              <span className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                            ) : (
+                              'Inward Restock'
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-text-muted font-semibold italic text-[10px]">Balanced</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

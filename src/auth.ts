@@ -254,24 +254,48 @@ export async function auth(...args: any[]) {
     const result = headers()
     const headersList = result instanceof Promise ? await result : result
     const userId = headersList.get('x-user-id')
-    
-    if (userId) {
-      const userRole = headersList.get('x-user-role') || 'USER'
-      const userEmail = headersList.get('x-user-email') || ''
-      const userName = headersList.get('x-user-name') || ''
-      const userPhone = headersList.get('x-user-phone') || ''
+    const userEmail = headersList.get('x-user-email')
+    const userName = headersList.get('x-user-name')
+    const userRole = headersList.get('x-user-role')
+    const userPhone = headersList.get('x-user-phone')
+
+    if (!userId) return null;
+
+      let resolvedUserId = userId;
+      if (userId.startsWith('mock-id-') || !userId.includes('-')) {
+        try {
+          const email = userEmail || 'admin@fastkirana.com';
+          let dbUser = await prisma.user.findUnique({
+            where: { email }
+          });
+          if (dbUser) {
+            resolvedUserId = dbUser.id;
+          } else {
+            dbUser = await prisma.user.create({
+              data: {
+                email,
+                name: userName || 'Mock User',
+                role: userRole as any,
+                phone: userPhone || '+919999900000',
+              }
+            });
+            resolvedUserId = dbUser.id;
+          }
+        } catch (dbErr) {
+          console.error('Failed to resolve mock user in db:', dbErr);
+        }
+      }
 
       return {
         user: {
-          id: userId,
+          id: resolvedUserId,
           role: userRole as any,
           email: userEmail,
           name: userName,
           phone: userPhone,
         },
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      }
-    }
+      };
   } catch (err) {
     // Suppress errors (not inside request context)
   }

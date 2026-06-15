@@ -46,16 +46,38 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
 
     const promises = subscriptions.map(async (sub) => {
       try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        }
+        if (sub.endpoint.startsWith('ExponentPushToken')) {
+          const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              to: sub.endpoint,
+              sound: 'default',
+              title: payload.title,
+              body: payload.body,
+              data: payload.data,
+            }),
+          })
+          if (!expoRes.ok) {
+            const errText = await expoRes.text()
+            throw new Error(`Expo API returned status ${expoRes.status}: ${errText}`)
+          }
+          console.log(`Push notification sent successfully via Expo to: ${sub.endpoint}`)
+        } else {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth,
+            },
+          }
 
-        await webpush.sendNotification(pushSubscription, payloadString)
-        console.log(`Push notification sent successfully to endpoint: ${sub.endpoint.slice(0, 30)}...`)
+          await webpush.sendNotification(pushSubscription, payloadString)
+          console.log(`Push notification sent successfully to endpoint: ${sub.endpoint.slice(0, 30)}...`)
+        }
       } catch (err: any) {
         // Handle expired or invalid subscription (status 410 or 404)
         if (err.statusCode === 410 || err.statusCode === 404) {
@@ -102,16 +124,40 @@ export async function broadcastPushNotification(payload: PushPayload) {
     // Send notifications to all subscribers concurrently
     const promises = subscriptions.map(async (sub) => {
       try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        }
+        if (sub.endpoint.startsWith('ExponentPushToken')) {
+          const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              to: sub.endpoint,
+              sound: 'default',
+              title: payload.title,
+              body: payload.body,
+              data: payload.data,
+            }),
+          })
+          if (!expoRes.ok) {
+            const errText = await expoRes.text()
+            throw new Error(`Expo API returned status ${expoRes.status}: ${errText}`)
+          }
+          successCount++
+          console.log(`Push notification sent successfully via Expo to: ${sub.endpoint}`)
+        } else {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth,
+            },
+          }
 
-        await webpush.sendNotification(pushSubscription, payloadString)
-        successCount++
+          await webpush.sendNotification(pushSubscription, payloadString)
+          successCount++
+          console.log(`Push notification sent successfully to endpoint: ${sub.endpoint.slice(0, 30)}...`)
+        }
       } catch (err: any) {
         failureCount++
         if (err.statusCode === 410 || err.statusCode === 404) {

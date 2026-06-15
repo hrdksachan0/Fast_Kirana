@@ -6,7 +6,7 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(request: NextRequest) {
-  const limited = apiReadLimiter.check(request)
+  const limited = await apiReadLimiter.check(request)
   if (limited) return limited
 
   try {
@@ -19,10 +19,16 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
     const includeUnavailable = searchParams.get('admin') === 'true'
 
+    let isAdmin = false
+    if (includeUnavailable) {
+      const session = await auth()
+      isAdmin = session?.user?.role === 'ADMIN'
+    }
+
     const where: Prisma.ProductWhereInput = {}
 
     // Only filter available products for regular users
-    if (!includeUnavailable) {
+    if (!isAdmin) {
       where.isAvailable = true
     }
 
@@ -42,23 +48,82 @@ export async function GET(request: NextRequest) {
       orderBy = { discount: 'desc' }
     }
 
+    const productSelect = {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      imageUrl: true,
+      categoryId: true,
+      mrp: true,
+      price: true,
+      discount: true,
+      unit: true,
+      stock: true,
+      isAvailable: true,
+      tags: true,
+      variants: true,
+      minStock: true,
+      expiryDate: true,
+      isFlashDeal: true,
+      isTopPick: true,
+      isBestSeller: true,
+      createdAt: true,
+      updatedAt: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+          parentId: true,
+          sortOrder: true,
+        }
+      }
+    }
+
     let products: any[] = []
     let total = 0
 
     if (search) {
-      // 1. Fetch all products matching basic filters to perform fuzzy search in memory
-      const allProducts = await prisma.product.findMany({
+      // 1. Try to fetch matching products from database first (broad indexed filter)
+      const queryOptions: any = {
         where: {
           category: where.category,
           isAvailable: where.isAvailable,
-        },
-        include: {
-          category: true,
-        },
-      })
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      }
+      if (isAdmin) {
+        queryOptions.include = { category: true }
+      } else {
+        queryOptions.select = productSelect
+      }
+
+      let matchedProducts = await prisma.product.findMany(queryOptions)
+
+      // If no direct database matches are found, fallback to fetching all products to perform typo-tolerant fuzzy search
+      if (matchedProducts.length === 0) {
+        const fallbackOptions: any = {
+          where: {
+            category: where.category,
+            isAvailable: where.isAvailable,
+          },
+          take: 1000,
+        }
+        if (isAdmin) {
+          fallbackOptions.include = { category: true }
+        } else {
+          fallbackOptions.select = productSelect
+        }
+        matchedProducts = await prisma.product.findMany(fallbackOptions)
+      }
 
       // 2. Score each product using the fuzzy text matcher
-      const scoredProducts = allProducts.map((p) => {
+      const scoredProducts = matchedProducts.map((p) => {
         const nameScore = getFuzzyScore(search, p.name)
         const tagScore = p.tags.some((t: string) => getFuzzyScore(search, t) > 60) ? 85 : 0
         const descScore = p.description ? getFuzzyScore(search, p.description) * 0.5 : 0
@@ -86,16 +151,20 @@ export async function GET(request: NextRequest) {
       products = matches.slice(skip, skip + limit).map((m) => m.product)
     } else {
       // Standard database query for normal non-search listings
+      const queryOptions: any = {
+        where,
+        orderBy,
+        skip,
+        take: limit,
+      }
+      if (isAdmin) {
+        queryOptions.include = { category: true }
+      } else {
+        queryOptions.select = productSelect
+      }
+
       const [dbProducts, dbTotal] = await Promise.all([
-        prisma.product.findMany({
-          where,
-          orderBy,
-          skip,
-          take: limit,
-          include: {
-            category: true,
-          },
-        }),
+        prisma.product.findMany(queryOptions),
         prisma.product.count({ where }),
       ])
       products = dbProducts
@@ -175,7 +244,7 @@ function getFuzzyScore(query: string, target: string): number {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = apiWriteLimiter.check(request)
+  const limited = await apiWriteLimiter.check(request)
   if (limited) return limited
 
   const session = await auth()

@@ -224,14 +224,30 @@ export async function PATCH(
         WHERE id = ${id}
       `
     } else if (status === 'SHIPPED') {
-      await prisma.$executeRaw`
-        UPDATE orders 
-        SET status = ${status}::"OrderStatus", 
-            "deliveryUserId" = ${session.user.id},
-            "shippedAt" = NOW(),
-            "updatedAt" = NOW() 
-        WHERE id = ${id}
-      `
+      const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null
+      const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null
+
+      if (latVal !== null && lngVal !== null) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "deliveryUserId" = ${session.user.id},
+              "deliveryLat" = ${latVal},
+              "deliveryLng" = ${lngVal},
+              "shippedAt" = COALESCE("shippedAt", NOW()),
+              "updatedAt" = NOW() 
+          WHERE id = ${id}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "deliveryUserId" = ${session.user.id},
+              "shippedAt" = COALESCE("shippedAt", NOW()),
+              "updatedAt" = NOW() 
+          WHERE id = ${id}
+        `
+      }
     } else if (status === 'PACKED') {
       await prisma.$executeRaw`
         UPDATE orders 

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { apiReadLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
-  const limited = apiReadLimiter.check(request)
+  const limited = await apiReadLimiter.check(request)
   if (limited) return limited
 
   try {

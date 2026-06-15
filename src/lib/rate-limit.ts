@@ -61,15 +61,81 @@ export function rateLimit(options: RateLimitOptions = {}) {
   const bucket = new Map<string, TokenEntry>()
   tokenBuckets.set(bucketId, bucket)
 
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
+  const hasRedis = redisUrl && redisUrl !== 'placeholder' && redisToken && redisToken !== 'placeholder'
+
   return {
     /**
      * Check if the request is rate-limited.
      * Returns null if allowed, or a 429 NextResponse if limited.
      */
-    check(request: NextRequest): NextResponse | null {
+    async check(request: NextRequest): Promise<NextResponse | null> {
       const ip = getClientIp(request)
       const now = Date.now()
 
+      // 1. Try distributed Redis rate limiting if credentials exist
+      if (hasRedis) {
+        try {
+          const cleanUrl = redisUrl!.replace(/\/$/, '')
+          const key = `rate_limit:${bucketId}:${ip}`
+
+          const res = await fetch(`${cleanUrl}/pipeline`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${redisToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([
+              ['INCR', key],
+              ['TTL', key],
+            ]),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+            const count = parseInt(data[0].result)
+            const ttl = parseInt(data[1].result)
+
+            let resetAt = now + interval
+
+            if (count === 1) {
+              // Set expire in background asynchronously (non-blocking)
+              const expirySeconds = Math.ceil(interval / 1000)
+              fetch(`${cleanUrl}/expire/${key}/${expirySeconds}`, {
+                headers: { Authorization: `Bearer ${redisToken}` },
+              }).catch(() => {})
+            } else if (ttl > 0) {
+              resetAt = now + (ttl * 1000)
+            }
+
+            if (count > limit) {
+              const retryAfter = Math.ceil(Math.max(0, resetAt - now) / 1000)
+              return NextResponse.json(
+                {
+                  error: 'Too many requests. Please try again later.',
+                  retryAfter,
+                },
+                {
+                  status: 429,
+                  headers: {
+                    'Retry-After': String(retryAfter),
+                    'X-RateLimit-Limit': String(limit),
+                    'X-RateLimit-Remaining': '0',
+                    'X-RateLimit-Reset': String(resetAt),
+                  },
+                }
+              )
+            }
+
+            return null
+          }
+        } catch (err) {
+          console.warn('Redis rate limiting failed, falling back to local memory:', err)
+        }
+      }
+
+      // 2. Fallback local in-memory token bucket rate limiting
       const existing = bucket.get(ip)
 
       if (!existing || now > existing.resetAt) {
