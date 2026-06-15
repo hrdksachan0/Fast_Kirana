@@ -98,7 +98,7 @@ export function CartStickyBar() {
             </span>
             {savings > 0 ? (
               <span className="text-[9px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
-                You save {formatPrice(savings)} on this order
+                You save {formatPrice(savings)} on this order{hasFreeDelivery && ' • Free delivery'}
               </span>
             ) : !hasFreeDelivery ? (
               <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">

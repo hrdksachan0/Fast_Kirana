@@ -31,6 +31,7 @@ export function useCart() {
         triggerHaptic('success')
         toast.success('🎉 FREE Grocery delivery unlocked!', {
           id: 'free-delivery-unlocked-grocery',
+          duration: 2000,
         })
       }, 300)
     }
@@ -40,6 +41,7 @@ export function useCart() {
         triggerHaptic('success')
         toast.success('🎉 FREE Cafe delivery unlocked!', {
           id: 'free-delivery-unlocked-cafe',
+          duration: 2000,
         })
       }, 300)
     }

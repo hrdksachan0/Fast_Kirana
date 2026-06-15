@@ -924,3 +924,46 @@ button,
     @apply font-sans;
   }
 }
+
+/* ============================================
+   TOAST NOTIFICATION CUSTOM STYLES (SONNER)
+   ============================================ */
+
+/* Adjust toast position on mobile to float above sticky cart bar + bottom navigation */
+@media (max-width: 767px) {
+  [data-sonner-toaster] {
+    --y-offset: 120px !important;
+  }
+}
+
+/* Premium card aesthetics for success toasts */
+[data-sonner-toast] {
+  border-radius: 16px !important;
+  font-family: var(--font-sans) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04) !important;
+  padding: 12px 16px !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: rgba(244, 251, 247, 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(0, 177, 64, 0.15) !important;
+  color: #008f33 !important;
+}
+
+/* Ensure the close button fits inside the toast header on the right side */
+[data-sonner-toast] [data-close-button] {
+  right: 12px !important;
+  left: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  border: none !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: currentColor !important;
+  transition: background-color 0.2s ease !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
