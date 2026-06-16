@@ -12,11 +12,33 @@ interface DealsCurationHubProps {
 }
 
 export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: DealsCurationHubProps) {
-  const [activeCuration, setActiveCuration] = useState<'flash-deals' | 'best-in-town' | 'night-cravings'>('flash-deals')
+  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'night-cravings'>('all')
   const [activeCategory, setActiveCategory] = useState<string>('all')
 
+  // Combine products for "All Offers" curation without duplicates
+  const allProducts = useMemo(() => {
+    const combined = [...flashDeals, ...bestSellers, ...nightCravings]
+    const seen = new Set()
+    return combined.filter((p) => {
+      if (!p || !p.id) return false
+      if (seen.has(p.id)) return false
+      seen.add(p.id)
+      return true
+    })
+  }, [flashDeals, bestSellers, nightCravings])
+
   // Curation configurations
-  const curations = [
+  const curations = useMemo(() => [
+    {
+      id: 'all' as const,
+      title: 'All Products',
+      subtitle: '🔥 Mega collections',
+      image: '',
+      gradient: 'from-pink-600 via-purple-500 to-indigo-600',
+      iconColor: 'text-purple-500 bg-purple-500/10',
+      description: 'All deals categorized for easy scrolling.',
+      products: allProducts,
+    },
     {
       id: 'flash-deals' as const,
       title: 'Flash Deals',
@@ -47,11 +69,11 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       description: 'Snacks, ice creams & warm meals.',
       products: nightCravings,
     },
-  ]
+  ], [allProducts, flashDeals, bestSellers, nightCravings])
 
   // Category filters with visual representations
   const categoriesList = [
-    { id: 'all', label: 'All Items', emoji: '❤️' },
+    { id: 'all', label: 'All Products', emoji: '❤️' },
     { id: 'cafe', label: 'Zepto Cafe', emoji: '☕' },
     { id: 'fruits-vegetables', label: 'Fruits & Veg', emoji: '🥦' },
     { id: 'dairy-breakfast', label: 'Milk & Dairy', emoji: '🥛' },
@@ -154,8 +176,8 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         </div>
       </div>
 
-      {/* Curation Selectors Grid (Flash Deals, Best in Town, Night Cravings) */}
-      <div className="grid grid-cols-3 gap-2 px-1">
+      {/* Curation Selectors Grid (All, Flash Deals, Best Sellers, Night Cravings) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-1">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
@@ -166,7 +188,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 setActiveCategory('all') // Reset subcategory filter when switching curation type
               }}
               className={cn(
-                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-300 active:scale-95 cursor-pointer min-h-[88px] sm:min-h-[105px]',
+                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-300 active:scale-95 cursor-pointer min-h-[92px] sm:min-h-[105px]',
                 isActive
                   ? 'border-transparent text-white shadow-md'
                   : 'bg-card border-border hover:bg-muted text-text-primary hover:-translate-y-0.5'
@@ -181,16 +203,25 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 )}
               />
 
-              {/* 3D Illustration Graphic (Blends screen black-to-transparent) */}
-              <img
-                src={c.image}
-                alt={c.title}
-                className={cn(
-                  'absolute right-0.5 bottom-0.5 w-12 h-12 sm:w-14 sm:h-14 object-contain pointer-events-none transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 z-10',
-                  isActive ? 'opacity-95' : 'opacity-70 dark:opacity-85'
-                )}
-                style={{ mixBlendMode: 'screen' }}
-              />
+              {/* Illustration graphic or fallback icon */}
+              {c.image ? (
+                <img
+                  src={c.image}
+                  alt={c.title}
+                  className={cn(
+                    'absolute right-0.5 bottom-0.5 w-11 h-11 sm:w-14 sm:h-14 object-contain pointer-events-none transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 z-10',
+                    isActive ? 'opacity-95' : 'opacity-70 dark:opacity-85'
+                  )}
+                  style={{ mixBlendMode: 'screen' }}
+                />
+              ) : (
+                <ShoppingBag
+                  className={cn(
+                    'absolute -right-2.5 -bottom-2.5 w-14 h-14 sm:w-16 sm:h-16 stroke-[1.2] transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 z-10',
+                    isActive ? 'text-white/20' : 'text-zinc-200 dark:text-zinc-800/60'
+                  )}
+                />
+              )}
 
               {/* Top Row: Title */}
               <div className="relative z-20 flex justify-between items-start w-full">
@@ -203,8 +234,8 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
               </div>
 
               {/* Bottom Row: Subtitle / Discount text */}
-              <div className="relative z-20 w-full mt-auto max-w-[65%]">
-                <span className="block text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-white/70">
+              <div className="relative z-20 w-full mt-auto max-w-[75%]">
+                <span className="block text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-white/70">
                   {isActive ? 'Active Selection' : 'Tap to View'}
                 </span>
                 <span className={cn(
@@ -279,19 +310,21 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
             {groupedByCategory.map((group) => (
               <div key={group.category.id} className="space-y-2.5">
                 {/* Header */}
-                <div className="flex justify-between items-center px-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base select-none leading-none">{group.category.emoji}</span>
-                    <h3 className="text-xs sm:text-sm font-black text-text-primary tracking-tight">
+                <div className="flex justify-between items-center px-1 border-b border-border/40 pb-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-sm shadow-sm select-none leading-none border border-border/40">
+                      {group.category.emoji}
+                    </span>
+                    <h3 className="text-sm font-black text-text-primary tracking-tight">
                       {group.category.label}
                     </h3>
                   </div>
                   <button
                     onClick={() => setActiveCategory(group.category.id)}
-                    className="text-[10px] sm:text-xs font-black text-primary flex items-center gap-0.5 hover:opacity-80 cursor-pointer"
+                    className="text-[11px] font-black text-primary hover:text-primary-dark transition-colors flex items-center gap-0.5 select-none cursor-pointer"
                   >
-                    See All
-                    <ChevronRight size={10} strokeWidth={3} />
+                    <span>See All</span>
+                    <ChevronRight size={11} strokeWidth={3} />
                   </button>
                 </div>
 
