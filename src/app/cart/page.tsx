@@ -32,6 +32,7 @@ export default function CartPage() {
 
   const [taxRate, setTaxRate] = useState(TAX_RATE)
   const [miscFee, setMiscFee] = useState(0)
+  const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -42,6 +43,9 @@ export default function CartPage() {
         }
         if (data.misc_fee !== undefined) {
           setMiscFee(parseFloat(data.misc_fee))
+        }
+        if (data.misc_fee_label !== undefined) {
+          setMiscFeeLabel(data.misc_fee_label)
         }
       })
       .catch(err => console.error('Error fetching settings in cart page:', err))
@@ -466,7 +470,7 @@ export default function CartPage() {
 
               {miscFee > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Miscellaneous Additions</span>
+                  <span className="text-text-secondary">{miscFeeLabel}</span>
                   <span>₹{miscFee.toFixed(0)}</span>
                 </div>
               )}

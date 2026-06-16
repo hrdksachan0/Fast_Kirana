@@ -52,6 +52,7 @@ export default function CheckoutPage() {
   const [onlyCod, setOnlyCod] = useState(false)
   const [taxRate, setTaxRate] = useState(0.05)
   const [miscFee, setMiscFee] = useState(0.0)
+  const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -74,6 +75,9 @@ export default function CheckoutPage() {
         }
         if (data.misc_fee !== undefined) {
           setMiscFee(parseFloat(data.misc_fee))
+        }
+        if (data.misc_fee_label !== undefined) {
+          setMiscFeeLabel(data.misc_fee_label)
         }
       })
       .catch(err => console.error('Error fetching settings on checkout mount:', err))
@@ -1256,7 +1260,7 @@ export default function CheckoutPage() {
                 </div>
                 {miscFee > 0 && (
                   <div className="flex justify-between text-text-secondary">
-                    <span>Miscellaneous Additions</span>
+                    <span>{miscFeeLabel}</span>
                     <span>₹{miscFee.toFixed(0)}</span>
                   </div>
                 )}
@@ -1298,7 +1302,7 @@ export default function CheckoutPage() {
                 </div>
                 {miscFee > 0 && groceryCartItems.length === 0 && (
                   <div className="flex justify-between text-text-secondary">
-                    <span>Miscellaneous Additions</span>
+                    <span>{miscFeeLabel}</span>
                     <span>₹{miscFee.toFixed(0)}</span>
                   </div>
                 )}

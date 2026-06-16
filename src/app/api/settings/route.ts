@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   only_cod: 'false',
   tax_rate: '5',
   misc_fee: '0',
+  misc_fee_label: 'Miscellaneous Additions',
 }
 
 export async function GET() {

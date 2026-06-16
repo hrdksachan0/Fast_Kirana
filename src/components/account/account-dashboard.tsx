@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { formatPrice } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
@@ -217,9 +217,10 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                     </span>
                     <Link
                       href={`/order/${ord.id}/track`}
-                      className="text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
+                      className="text-[10px] font-black text-white bg-primary hover:bg-primary-dark px-3 py-1.5 rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1 select-none cursor-pointer"
                     >
                       Track Order
+                      <ArrowRight className="h-3 w-3 stroke-[2.8]" />
                     </Link>
                   </div>
                 </div>

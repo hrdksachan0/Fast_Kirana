@@ -28,6 +28,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [freshStockLoaded, setFreshStockLoaded] = useState('2 hrs ago')
   const [taxRate, setTaxRate] = useState('5')
   const [miscFee, setMiscFee] = useState('0')
+  const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
   const [cafeMenuSections, setCafeMenuSections] = useState<CafeMenuSection[]>(DEFAULT_CAFE_MENU_SECTIONS)
   
   // Section Editing Form States
@@ -69,6 +70,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.fresh_stock_loaded) setFreshStockLoaded(data.fresh_stock_loaded)
         if (data.tax_rate !== undefined) setTaxRate(data.tax_rate)
         if (data.misc_fee !== undefined) setMiscFee(data.misc_fee)
+        if (data.misc_fee_label !== undefined) setMiscFeeLabel(data.misc_fee_label)
         if (data.cafe_menu_sections) {
           try {
             const parsed = JSON.parse(data.cafe_menu_sections)
@@ -235,6 +237,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           fresh_stock_loaded: freshStockLoaded.trim(),
           tax_rate: taxRate.trim(),
           misc_fee: miscFee.trim(),
+          misc_fee_label: miscFeeLabel.trim(),
         }),
       })
 
@@ -463,6 +466,19 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       placeholder="e.g. 0"
                       value={miscFee}
                       onChange={(e) => setMiscFee(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Miscellaneous Fee Label */}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Miscellaneous Fee Label *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Packaging Charge"
+                      value={miscFeeLabel}
+                      onChange={(e) => setMiscFeeLabel(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                     />
                   </div>

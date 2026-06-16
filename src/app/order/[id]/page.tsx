@@ -62,6 +62,19 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     console.warn('Database connection error: failed to fetch companion order')
   }
 
+  // Fetch store settings for dynamic miscFeeLabel
+  let miscFeeLabel = 'Miscellaneous Additions'
+  try {
+    const setting = await prisma.storeSetting.findUnique({
+      where: { key: 'misc_fee_label' }
+    })
+    if (setting) {
+      miscFeeLabel = setting.value
+    }
+  } catch (error) {
+    console.warn('Database connection error: failed to fetch miscFeeLabel setting')
+  }
+
   const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
   const isCompanionCafe = companionOrder?.shopName === 'FastKirana Cafe Kitchen'
 
@@ -258,7 +271,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           </div>
           {order.miscFee > 0 && (
             <div className="flex justify-between">
-              <span className="text-text-secondary">Miscellaneous Additions</span>
+              <span className="text-text-secondary">{miscFeeLabel}</span>
               <span>{formatPrice(order.miscFee)}</span>
             </div>
           )}
