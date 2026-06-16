@@ -323,7 +323,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 px-1 pb-20">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1 pb-20">
           {filteredCategories.map((c) => {
             const config = categoryConfigs[c.slug] || {
               title: c.name,
@@ -351,96 +351,95 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
               <div
                 key={c.id}
                 className={cn(
-                  'group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-5 shadow-sm hover:-translate-y-1.5 transition-all duration-500',
+                  'group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 sm:p-4 shadow-sm hover:-translate-y-1.5 transition-all duration-500',
                   config.borderColor,
                   config.cardBg,
                   config.glowColor
                 )}
               >
                 {/* Large floating decorative emoji in background */}
-                <div className="absolute -right-4 -bottom-6 text-7xl select-none opacity-[0.06] dark:opacity-[0.03] rotate-12 transition-transform duration-700 group-hover:scale-125 group-hover:-rotate-12 pointer-events-none font-sans">
+                <div className="absolute -right-4 -bottom-6 text-7xl select-none opacity-[0.04] dark:opacity-[0.02] rotate-12 transition-transform duration-700 group-hover:scale-125 group-hover:-rotate-12 pointer-events-none font-sans">
                   {config.bgEmoji || '🛒'}
                 </div>
 
-                {/* Top Section: Title & Visual Image */}
-                <div className="flex items-start justify-between gap-3 relative z-10">
-                  <div className="flex flex-col text-left space-y-1 min-w-0 flex-1">
-                    {/* Badge */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-1 select-none">
+                <div className="flex flex-col space-y-3 relative z-10 w-full">
+                  {/* Big Image Section */}
+                  <Link
+                    href={destinationHref}
+                    className={cn(
+                      'relative w-full aspect-[4/3] rounded-xl overflow-hidden block border border-black/5 dark:border-white/5 shadow-sm bg-gradient-to-br',
+                      config.gradient
+                    )}
+                  >
+                    {/* Floating Badge in Top Left */}
+                    <div className="absolute top-1.5 left-1.5 z-20">
                       {itemCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1 bg-white/95 dark:bg-zinc-950/95 text-primary font-black text-[7px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                           <ShoppingBag size={8} strokeWidth={3} />
                           {itemCount} Items
                         </span>
                       ) : (
-                        <span className={cn("inline-flex items-center gap-1 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider", config.badgeBg)}>
+                        <span className={cn("inline-flex items-center gap-1 font-black text-[7px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm", config.badgeBg)}>
                           <Sparkles size={8} strokeWidth={3} />
                           {config.badgeText}
                         </span>
                       )}
                     </div>
 
-                    <h2 className={cn('text-base font-black tracking-tight leading-tight truncate', config.labelColor)}>
-                      {c.name}
-                    </h2>
-                    <span className="text-[11px] text-text-secondary font-bold truncate leading-none">
-                      {config.tagline}
-                    </span>
-
-                    {/* Shop Now Action */}
-                    <div className="pt-2.5">
-                      <Link
-                        href={destinationHref}
-                        className={cn(
-                          'inline-flex items-center gap-1 text-[9.5px] font-black px-3.5 py-1.5 rounded-full shadow-sm hover:scale-[1.03] transition-all duration-300 tracking-wider uppercase',
-                          config.btnBg
-                        )}
-                      >
-                        <span>Shop Now</span>
-                        <ChevronRight size={10} strokeWidth={3} className="transition-transform duration-300 group-hover:translate-x-0.5" />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Circular/Rounded Category Thumbnail Image Container */}
-                  <Link
-                    href={destinationHref}
-                    className={cn(
-                      'relative w-16 h-16 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center shrink-0 border border-white/60 dark:border-zinc-800 bg-gradient-to-br transition-all duration-500 group-hover:scale-105 group-hover:shadow-md',
-                      config.gradient
-                    )}
-                  >
                     {config.image ? (
                       <Image
                         src={config.image}
                         alt={c.name}
                         fill
-                        sizes="80px"
-                        className="object-cover p-1 transition-transform duration-500 group-hover:rotate-3"
+                        sizes="(max-width: 640px) 150px, 250px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <span className="text-3xl select-none leading-none">{config.emoji}</span>
+                      <div className="w-full h-full flex items-center justify-center text-4xl">{config.emoji}</div>
                     )}
                   </Link>
+
+                  {/* Title & Tagline info */}
+                  <div className="flex flex-col text-left min-w-0">
+                    <h2 className={cn('text-sm sm:text-base font-black tracking-tight leading-tight truncate', config.labelColor)}>
+                      {c.name}
+                    </h2>
+                    <span className="text-[10px] sm:text-[11px] text-text-secondary font-bold truncate leading-none mt-0.5">
+                      {config.tagline}
+                    </span>
+                  </div>
+
+                  {/* Shop Now Action */}
+                  <div className="w-full">
+                    <Link
+                      href={destinationHref}
+                      className={cn(
+                        'inline-flex items-center gap-1 text-[8.5px] sm:text-[9.5px] font-black px-3 py-1.5 rounded-full shadow-sm hover:scale-[1.03] transition-all duration-300 tracking-wider uppercase w-full justify-center',
+                        config.btnBg
+                      )}
+                    >
+                      <span>Shop Now</span>
+                      <ChevronRight size={10} strokeWidth={3} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                    </Link>
+                  </div>
                 </div>
 
-                {/* Bottom Section: Subcategories Quick Tags */}
+                {/* Bottom Section: Subcategories Quick Tags (Horizontal Scrollable) */}
                 {config.subcats.length > 0 && (
-                  <div className="relative z-10 flex flex-col pt-4 mt-4 border-t border-dashed border-border/80">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-text-muted mb-2 select-none">
+                  <div className="relative z-10 flex flex-col pt-3 mt-3 border-t border-dashed border-border/80 w-full">
+                    <span className="text-[8.5px] font-black uppercase tracking-wider text-text-muted mb-1.5 select-none text-left">
                       Popular Categories
                     </span>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1 snap-x select-none w-full">
                       {/* All / View All option */}
                       <Link
                         href={destinationHref}
                         className={cn(
-                          'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-black transition-all duration-200 active:scale-95 shadow-sm',
+                          'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[9px] font-black transition-all duration-200 active:scale-95 shadow-sm shrink-0 snap-start',
                           config.tagBg,
                           config.tagHover
                         )}
                       >
-                        <span>🛍️</span>
                         <span>All</span>
                       </Link>
                       {config.subcats.map((sub) => {
@@ -453,12 +452,11 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                             key={sub.id}
                             href={subcatHref}
                             className={cn(
-                              'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-black transition-all duration-200 active:scale-95 shadow-sm',
+                              'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[9px] font-black transition-all duration-200 active:scale-95 shadow-sm shrink-0 snap-start',
                               config.tagBg,
                               config.tagHover
                             )}
                           >
-                            <span>{sub.emoji}</span>
                             <span>{sub.name}</span>
                           </Link>
                         )

@@ -1,23 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { Zap } from 'lucide-react'
+import Image from 'next/image'
+import { ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function CafeSection() {
   const categories = [
-    { tag: 'all', title: 'All Menu', emoji: '🍽️' },
-    { tag: 'hot-beverage', title: 'Brews', emoji: '☕' },
-    { tag: 'hot-bite', title: 'Snacks', emoji: '🥟' },
-    { tag: 'sandwiches', title: 'Sandwiches', emoji: '🥪' },
-    { tag: 'frankie-rolls', title: 'Rolls', emoji: '🌯' },
-    { tag: 'chinese', title: 'Chinese', emoji: '🥡' },
-    { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝' },
-    { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪' },
-    { tag: 'rice-dishes', title: 'Rice', emoji: '🍚' },
+    { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+    { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
+    { tag: 'hot-bite', title: 'Snacks', emoji: '🥟', image: '/cafe_snacks_category.png' },
+    { tag: 'sandwiches', title: 'Sandwiches', emoji: '🥪', image: '/cafe_sandwiches_category.png' },
+    { tag: 'frankie-rolls', title: 'Rolls', emoji: '🌯', image: '/cafe_rolls_category.png' },
+    { tag: 'chinese', title: 'Chinese', emoji: '🥡', image: '/cafe_chinese_category.png' },
+    { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝', image: '/cafe_pasta_category.png' },
+    { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.png' },
+    { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.png' },
   ]
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       {/* Café Banner Card */}
       <Link href="/cafe" className="block group">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-900 via-amber-800 to-rose-900 p-4 md:p-5 flex items-center justify-between shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
@@ -39,18 +41,48 @@ export function CafeSection() {
         </div>
       </Link>
 
+      {/* Café Category Section Header */}
+      <div className="flex items-center justify-between px-1">
+        <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">
+          Trending Café Categories
+        </h4>
+        <Link href="/cafe" className="text-[11px] font-black text-rose-600 dark:text-rose-400 hover:opacity-85 flex items-center gap-0.5 select-none">
+          <span>See Menu</span>
+          <ChevronRight size={10} strokeWidth={3} />
+        </Link>
+      </div>
+
       {/* Café Menu Categories Horizontal Scrollbar */}
-      <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none px-1 select-none snap-x snap-mandatory scroll-smooth">
+      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none">
         {categories.map((cat) => {
           const href = cat.tag === 'all' ? '/cafe' : `/cafe?section=${cat.tag}`
           return (
             <Link
               key={cat.tag}
               href={href}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-[#faf6f0] dark:bg-[#1c120e] text-[#5d4037] dark:text-amber-200 border border-[#eddcd2]/50 dark:border-amber-950/20 hover:bg-[#eddcd2]/20 dark:hover:bg-[#2e1c15] transition-all shrink-0 whitespace-nowrap active:scale-95 shadow-sm snap-start"
+              className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
             >
-              <span>{cat.emoji}</span>
-              <span>{cat.title}</span>
+              {/* Circular image container */}
+              <div
+                className={cn(
+                  "w-[64px] h-[64px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] border border-transparent dark:border-white/[0.02] relative group-hover:scale-105 transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40"
+                )}
+              >
+                {cat.image ? (
+                  <Image
+                    src={cat.image}
+                    alt={cat.title}
+                    fill
+                    sizes="80px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <span className="text-3xl select-none leading-none">{cat.emoji}</span>
+                )}
+              </div>
+              <span className="text-[10px] font-black text-text-primary mt-2 truncate w-full group-hover:text-primary transition-colors">
+                {cat.title}
+              </span>
             </Link>
           )
         })}

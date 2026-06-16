@@ -34,11 +34,15 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       id: 'all' as const,
       title: 'All Products',
       subtitle: '🔥 Mega collections',
-      image: '',
-      gradient: 'from-pink-600 via-purple-500 to-indigo-600',
+      image: '/all_products_badge.png',
+      gradient: 'from-pink-650 via-purple-500 to-indigo-600',
       iconColor: 'text-purple-500 bg-purple-500/10',
       description: 'All deals categorized for easy scrolling.',
       products: allProducts,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(219,39,119,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(219,39,119,0.18)]',
+      inactiveBg: 'bg-pink-500/[0.02] border-pink-500/12 dark:bg-pink-950/[0.06] dark:border-pink-900/20 text-text-primary',
+      inactiveHover: 'hover:border-pink-500/35 hover:bg-pink-500/[0.06] dark:hover:border-pink-500/25',
+      accentColor: 'text-pink-600 dark:text-pink-400',
     },
     {
       id: 'flash-deals' as const,
@@ -49,6 +53,10 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       iconColor: 'text-amber-500 bg-amber-500/10',
       description: 'Grab deals before they expire!',
       products: flashDeals,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(249,115,22,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(249,115,22,0.18)]',
+      inactiveBg: 'bg-orange-500/[0.02] border-orange-500/12 dark:bg-orange-950/[0.06] dark:border-orange-900/20 text-text-primary',
+      inactiveHover: 'hover:border-orange-500/35 hover:bg-orange-500/[0.06] dark:hover:border-orange-500/25',
+      accentColor: 'text-orange-600 dark:text-orange-400',
     },
     {
       id: 'best-in-town' as const,
@@ -59,6 +67,10 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       iconColor: 'text-blue-500 bg-blue-500/10',
       description: 'Most loved items in your locality.',
       products: bestSellers,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(59,130,246,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(59,130,246,0.18)]',
+      inactiveBg: 'bg-blue-500/[0.02] border-blue-500/12 dark:bg-blue-950/[0.06] dark:border-blue-900/20 text-text-primary',
+      inactiveHover: 'hover:border-blue-500/35 hover:bg-blue-500/[0.06] dark:hover:border-blue-500/25',
+      accentColor: 'text-blue-600 dark:text-blue-400',
     },
     {
       id: 'night-cravings' as const,
@@ -69,18 +81,22 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       iconColor: 'text-purple-500 bg-purple-500/10',
       description: 'Snacks, ice creams & warm meals.',
       products: nightCravings,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(139,92,246,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(139,92,246,0.18)]',
+      inactiveBg: 'bg-purple-500/[0.02] border-purple-500/12 dark:bg-purple-950/[0.06] dark:border-purple-900/20 text-text-primary',
+      inactiveHover: 'hover:border-purple-500/35 hover:bg-purple-500/[0.06] dark:hover:border-purple-500/25',
+      accentColor: 'text-purple-600 dark:text-purple-400',
     },
   ], [allProducts, flashDeals, bestSellers, nightCravings])
 
-  // Category filters with visual representations
+  // Category filters with visual representations (real images instead of emojis)
   const categoriesList = [
-    { id: 'all', label: 'All Products', emoji: '❤️' },
-    { id: 'cafe', label: 'Cafe', emoji: '☕' },
-    { id: 'fruits-vegetables', label: 'Fruits & Veg', emoji: '🥦' },
-    { id: 'dairy-breakfast', label: 'Milk & Dairy', emoji: '🥛' },
-    { id: 'snacks-munchies', label: 'Snacks', emoji: '🍿' },
-    { id: 'beverages', label: 'Beverages', emoji: '🥤' },
-    { id: 'ice-cream', label: 'Ice-cream', emoji: '🍦' },
+    { id: 'all', label: 'All Products', emoji: '🛍️', image: '/all_products_category.png' },
+    { id: 'cafe', label: 'Cafe', emoji: '☕', image: '/cafe_category.png' },
+    { id: 'fruits-vegetables', label: 'Fruits & Veg', emoji: '🥦', image: '/fruits_vegetables_category.png' },
+    { id: 'dairy-breakfast', label: 'Milk & Dairy', emoji: '🥛', image: '/dairy_breakfast_category.png' },
+    { id: 'snacks-munchies', label: 'Snacks', emoji: '🍿', image: '/snacks_munchies_category.png' },
+    { id: 'beverages', label: 'Beverages', emoji: '🥤', image: '/beverages_category.png' },
+    { id: 'ice-cream', label: 'Ice-cream', emoji: '🍦', image: '/ice_cream_category.png' },
   ]
 
   // Active curation data
@@ -189,10 +205,10 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 setActiveCategory('all') // Reset subcategory filter when switching curation type
               }}
               className={cn(
-                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-300 active:scale-95 cursor-pointer min-h-[92px] sm:min-h-[105px]',
+                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-350 active:scale-[0.98] cursor-pointer min-h-[95px] sm:min-h-[110px] hover:-translate-y-0.5',
                 isActive
-                  ? 'border-transparent text-white shadow-md'
-                  : 'bg-card border-border hover:bg-muted text-text-primary hover:-translate-y-0.5'
+                  ? cn('border-transparent text-white', c.activeShadow)
+                  : cn(c.inactiveBg, c.inactiveHover)
               )}
             >
               {/* Background gradient on active state */}
@@ -210,10 +226,9 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                   src={c.image}
                   alt={c.title}
                   className={cn(
-                    'absolute right-0.5 bottom-0.5 w-11 h-11 sm:w-14 sm:h-14 object-contain pointer-events-none transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 z-10',
-                    isActive ? 'opacity-95' : 'opacity-70 dark:opacity-85'
+                    'absolute right-0.5 bottom-0.5 w-12 h-12 sm:w-16 sm:h-16 object-contain pointer-events-none transition-all duration-500 group-hover:scale-115 group-hover:rotate-3 z-10',
+                    isActive ? 'opacity-100' : 'opacity-85 dark:opacity-90'
                   )}
-                  style={{ mixBlendMode: 'screen' }}
                 />
               ) : (
                 <ShoppingBag
@@ -234,13 +249,16 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 </span>
               </div>
 
-              {/* Bottom Row: Subtitle / Discount text */}
-              <div className="relative z-20 w-full mt-auto max-w-[75%]">
-                <span className="block text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-white/70">
+              {/* Bottom Row: Subtitle & Translucent Status Badge */}
+              <div className="relative z-20 w-full mt-auto max-w-[75%] space-y-1 text-left">
+                <span className={cn(
+                  'inline-block text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full',
+                  isActive ? 'bg-white/20 text-white' : 'bg-muted text-text-muted'
+                )}>
                   {isActive ? 'Active Selection' : 'Tap to View'}
                 </span>
                 <span className={cn(
-                  'block text-[11px] sm:text-[13px] font-extrabold leading-tight tracking-tight mt-0.5 truncate',
+                  'block text-[11px] sm:text-[13px] font-extrabold leading-tight tracking-tight truncate mt-0.5',
                   isActive ? 'text-white' : 'text-text-primary'
                 )}>
                   {c.subtitle}
@@ -251,8 +269,8 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         })}
       </div>
 
-      {/* Horizontal Category Filters Row */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none px-1 select-none snap-x snap-mandatory scroll-smooth">
+      {/* Horizontal Category Filters Row (Circular thumbnails instead of pills) */}
+      <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none px-1 select-none snap-x snap-mandatory scroll-smooth">
         {categoriesList.map((cat) => {
           const isActive = activeCategory === cat.id
           // Count items under this category within current curation list
@@ -276,22 +294,47 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all shrink-0 whitespace-nowrap active:scale-95 shadow-sm snap-start border cursor-pointer',
-                isActive
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-card border-border/80 text-text-secondary hover:bg-muted'
-              )}
+              className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
             >
-              <span>{cat.emoji}</span>
-              <span>{cat.label}</span>
+              {/* Circular image container */}
+              <div
+                className={cn(
+                  "w-[60px] h-[60px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] border-2 relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40",
+                  isActive
+                    ? 'border-primary ring-2 ring-primary/20 scale-105'
+                    : 'border-transparent dark:border-white/[0.02] group-hover:scale-105'
+                )}
+              >
+                {cat.image ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.label}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-2xl select-none leading-none">
+                    {cat.emoji}
+                  </div>
+                )}
+
+                {/* Items count badge absolute on top right of the circle */}
+                <span className={cn(
+                  'absolute top-0 right-0 text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 leading-none shadow-sm z-20',
+                  isActive
+                    ? 'bg-primary text-white'
+                    : 'bg-muted-foreground/90 text-white'
+                )}>
+                  {itemsCount}
+                </span>
+              </div>
+
               <span className={cn(
-                'text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 leading-none',
+                "text-[10px] font-black mt-2 truncate w-full transition-colors leading-tight",
                 isActive
-                  ? 'bg-white/20 text-white'
-                  : 'bg-muted-foreground/15 text-text-secondary'
+                  ? 'text-primary'
+                  : 'text-text-primary group-hover:text-primary'
               )}>
-                {itemsCount}
+                {cat.label}
               </span>
             </button>
           )
@@ -313,9 +356,17 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 {/* Header */}
                 <div className="flex justify-between items-center px-1 border-b border-border/40 pb-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-sm shadow-sm select-none leading-none border border-border/40">
-                      {group.category.emoji}
-                    </span>
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden shadow-sm border border-border/40 relative bg-zinc-100 dark:bg-zinc-900 shrink-0">
+                      {group.category.image ? (
+                        <img
+                          src={group.category.image}
+                          alt={group.category.label}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs select-none leading-none">{group.category.emoji}</span>
+                      )}
+                    </div>
                     <h3 className="text-sm font-black text-text-primary tracking-tight">
                       {group.category.label}
                     </h3>
