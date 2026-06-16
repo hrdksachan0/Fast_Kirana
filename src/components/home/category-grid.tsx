@@ -1,8 +1,37 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
+
+const getCafeSectionImage = (tag: string) => {
+  const mapping: Record<string, string> = {
+    'hot-beverage': '/cafe_brews_category.png',
+    'hot-bite': '/cafe_snacks_category.png',
+    'sandwiches': '/cafe_sandwiches_category.png',
+    'frankie-rolls': '/cafe_rolls_category.png',
+    'chinese': '/cafe_chinese_category.png',
+    'italian-pasta': '/cafe_pasta_category.png',
+    'bombay-bites': '/cafe_bombay_bites_category.png',
+    'rice-dishes': '/cafe_rice_category.png',
+  }
+  return mapping[tag] || '/cafe_all_menu_category.png'
+}
+
+const getCafeSectionTitle = (tag: string) => {
+  const mapping: Record<string, string> = {
+    'hot-beverage': 'Brews',
+    'hot-bite': 'Snacks',
+    'sandwiches': 'Sandwiches',
+    'frankie-rolls': 'Rolls',
+    'chinese': 'Chinese',
+    'italian-pasta': 'Pasta',
+    'bombay-bites': 'Bombay Bites',
+    'rice-dishes': 'Rice',
+  }
+  return mapping[tag] || tag
+}
 import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, IceCream } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -35,6 +64,55 @@ const categoryPhotos: Record<string, string> = {
 }
 
 export function CategoryGrid({ categories }: CategoryGridProps) {
+  // Fetch settings dynamically to get latest cafe menu sections
+  const [cafeSections, setCafeSections] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        const customSectionsStr = data.cafe_menu_sections || data.CAFE_MENU_SECTIONS
+        if (customSectionsStr) {
+          try {
+            const parsed = JSON.parse(customSectionsStr)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCafeSections(parsed)
+            }
+          } catch(e) {}
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const displayCafeSections = cafeSections.length > 0 
+    ? cafeSections 
+    : [
+        { tag: 'hot-beverage', emoji: '☕' },
+        { tag: 'hot-bite', emoji: '🥟' },
+        { tag: 'sandwiches', emoji: '🥪' },
+        { tag: 'frankie-rolls', emoji: '🌯' },
+        { tag: 'chinese', emoji: '🥡' },
+        { tag: 'italian-pasta', emoji: '🍝' },
+        { tag: 'bombay-bites', emoji: '🥪' },
+        { tag: 'rice-dishes', emoji: '🍚' }
+      ]
+
+  const cafePseudoCategories = displayCafeSections.map((sec, idx) => ({
+    id: `cafe-section-${sec.tag}`,
+    name: getCafeSectionTitle(sec.tag),
+    slug: sec.tag,
+    imageUrl: getCafeSectionImage(sec.tag),
+    isCafeSection: true,
+    emoji: sec.emoji || '🍽️',
+    parentId: null,
+    sortOrder: 100 + idx
+  }))
+
+  const allDisplayCategories: Array<Category & { isCafeSection?: boolean; emoji?: string }> = [
+    ...categories.filter(c => c.slug !== 'cafe'),
+    ...cafePseudoCategories
+  ]
+
   // Map of category slugs to visual themes with glowing rings
   const colorMap: Record<string, { bg: string; text: string; gradient: string; ring: string }> = {
     'fruits-vegetables': { 
@@ -119,14 +197,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Mobile: Horizontal scrollable/sliding list */}
       <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth">
-        {categories
-          .filter((c) => c.slug !== 'cafe')
-          .map((category) => {
+        {allDisplayCategories.map((category) => {
             const config = mobileColorMap[category.slug] || {
-              bg: 'bg-zinc-50 dark:bg-white/5',
-              text: 'text-zinc-700 dark:text-zinc-300',
+              bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',
+              text: 'text-rose-500 dark:text-rose-450',
               label: category.name,
-              emoji: '🛒'
+              emoji: category.emoji || '🍽️'
             }
 
             return (
@@ -136,7 +212,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="w-[70px] shrink-0 snap-start"
               >
                 <Link
-                  href={`/category/${category.slug}`}
+                  href={category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
                   className="group flex flex-col items-center text-center cursor-pointer"
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
@@ -189,16 +265,14 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         Trending Categories
       </h2>
 
-      {/* Desktop: Grid layout (8 columns) */}
-      <div className="hidden md:grid grid-cols-8 gap-4 stagger-children">
-        {categories
-          .filter((category) => category.slug !== 'cafe')
-          .map((category) => {
+      {/* Desktop: Grid layout */}
+      <div className="hidden md:grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 gap-4 stagger-children">
+        {allDisplayCategories.map((category) => {
             const colors = colorMap[category.slug] || {
-              bg: 'bg-zinc-50 dark:bg-white/5',
-              text: 'text-zinc-500 dark:text-zinc-400',
-              gradient: 'from-zinc-100/30 to-zinc-50/10',
-              ring: 'group-hover:border-zinc-500/50',
+              bg: 'bg-rose-500/5 dark:bg-rose-950/10 hover:bg-rose-500/10',
+              text: 'text-rose-500 dark:text-rose-450',
+              gradient: 'from-rose-500/10 to-rose-50/5',
+              ring: 'group-hover:ring-rose-500/20 hover:border-rose-500/30',
             }
             const itemCount = category._count?.products ?? 0
             const IconComponent = iconMap[category.slug] || ShoppingBag
@@ -215,7 +289,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1 group"
               >
                 <Link
-                  href={`/category/${category.slug}`}
+                  href={category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
                   className="flex flex-col items-center text-center"
                 >
                   <div
@@ -251,7 +325,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     {category.name}
                   </span>
                   <span className="text-[10px] text-text-muted mt-0.5">
-                    {itemCount} items
+                    {category.isCafeSection ? 'Freshly Made' : `${itemCount} items`}
                   </span>
                 </Link>
               </motion.div>
