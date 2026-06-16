@@ -305,30 +305,30 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
   }, [categories, searchQuery, categoryConfigs])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header and Search Bar (matching screenshot layout) */}
-      <div className="flex items-center justify-between gap-4 py-2 px-1">
+      <div className="flex items-center justify-between gap-4 py-1.5 px-0.5">
         <div className="text-left">
           {/* Breadcrumbs */}
-          <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-4">
+          <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
             <Link href="/" className="hover:text-primary transition-colors">
               Home
             </Link>
-            <ChevronRight size={10} className="text-zinc-300 dark:text-zinc-700" />
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
             <span className="text-[#FF2E55] font-extrabold">Categories Directory</span>
           </nav>
 
-          <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center">
-            <span className="h-7 w-1.5 rounded-full bg-[#FF2E55] mr-3 inline-block shrink-0" />
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center">
+            <span className="h-6 w-1.2 rounded-full bg-[#FF2E55] mr-2 inline-block shrink-0" />
             Shop by Category
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-semibold mt-2 pl-4 max-w-md">
+          <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-semibold mt-1.5 pl-3.5 max-w-md leading-relaxed">
             Explore our curated catalog of groceries and hot café treats
           </p>
         </div>
         
         {/* Shopping Bag Image Banner */}
-        <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 select-none pointer-events-none hidden min-[375px]:block">
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 select-none pointer-events-none hidden min-[375px]:block">
           <Image
             src="/grocery_bag_banner.png"
             alt="Grocery Bag"
@@ -340,14 +340,14 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       </div>
 
       {/* Full-width Search Bar Input */}
-      <div className="relative w-full bg-white dark:bg-zinc-900/50 backdrop-blur-md rounded-2xl border border-zinc-250/80 dark:border-zinc-850/40 shadow-sm focus-within:ring-2 focus-within:ring-rose-500/10 focus-within:border-rose-500/30 transition-all duration-300 overflow-hidden group mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 transition-colors group-focus-within:text-[#FF2E55]" />
+      <div className="relative w-full bg-white dark:bg-zinc-900/50 backdrop-blur-md rounded-2xl border border-zinc-200/80 dark:border-zinc-850/40 shadow-xs focus-within:ring-2 focus-within:ring-rose-500/10 focus-within:border-rose-500/30 transition-all duration-300 overflow-hidden group">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-zinc-400 transition-colors group-focus-within:text-[#FF2E55]" />
         <input
           type="text"
           placeholder="Search categories..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-transparent border-0 pl-12 pr-4 py-4 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-0"
+          className="w-full bg-transparent border-0 pl-10.5 pr-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-0"
         />
       </div>
 
@@ -361,7 +361,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 px-1 pb-20">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-0.5 pb-16">
           {filteredCategories.map((c) => {
             const config = categoryConfigs[c.slug] || {
               title: c.name,
@@ -391,37 +391,37 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
               <motion.div
                 key={c.id}
                 whileHover={{ 
-                  y: -6, 
-                  scale: 1.015,
+                  y: -4, 
+                  scale: 1.012,
                   transition: { type: 'spring', stiffness: 300, damping: 20 }
                 }}
                 whileTap={{ scale: 0.985 }}
-                className="group relative flex flex-col justify-between overflow-hidden rounded-[32px] border p-4 sm:p-5 transition-all duration-300 bg-white dark:bg-zinc-950 border-zinc-150 dark:border-zinc-800/80 shadow-sm shadow-zinc-100/40 dark:shadow-none"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-[24px] sm:rounded-[32px] border p-3 sm:p-4.5 transition-all duration-300 bg-white dark:bg-zinc-950 border-zinc-150 dark:border-zinc-800/80 shadow-xs shadow-zinc-100/40 dark:shadow-none"
               >
                 {/* Large floating decorative emoji in background */}
                 <div className="absolute -right-4 -bottom-6 text-7xl select-none opacity-[0.06] dark:opacity-[0.03] rotate-12 transition-transform duration-700 group-hover:scale-130 group-hover:-rotate-12 pointer-events-none font-sans filter blur-[0.5px]">
                   {config.bgEmoji || '🛒'}
                 </div>
 
-                <div className="flex flex-col space-y-4 relative z-10 w-full">
+                <div className="flex flex-col space-y-3 relative z-10 w-full">
                   {/* Image Section inside Light Container */}
                   <Link
                     href={destinationHref}
-                    className="relative w-full aspect-square sm:aspect-[4/3] rounded-2xl overflow-hidden block border border-zinc-100 dark:border-zinc-900 bg-[#F8FAFC] dark:bg-zinc-900/40"
+                    className="relative w-full aspect-square sm:aspect-[4/3] rounded-xl overflow-hidden block border border-zinc-100 dark:border-zinc-900 bg-[#F8FAFC] dark:bg-zinc-900/40"
                   >
                     {/* Floating Badge in Top Left */}
-                    <div className="absolute top-2.5 left-2.5 z-20">
+                    <div className="absolute top-2 left-2 z-20">
                       {itemCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-white/95 dark:bg-zinc-950/95 text-[#FF2E55] font-extrabold text-[8.5px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-black/5">
-                          <ShoppingBag size={9} strokeWidth={3} />
+                        <span className="inline-flex items-center gap-1 bg-white/95 dark:bg-zinc-950/95 text-[#FF2E55] font-extrabold text-[8px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-black/5">
+                          <ShoppingBag size={8.5} strokeWidth={3} />
                           {itemCount} Items
                         </span>
                       ) : (
                         <span className={cn(
-                          "inline-flex items-center gap-1.5 font-bold text-[8.5px] sm:text-[9.5px] px-3 py-1 rounded-full uppercase tracking-wide", 
+                          "inline-flex items-center gap-1 font-bold text-[8px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wide shadow-sm", 
                           config.badgeBg
                         )}>
-                          {config.badgeIcon && <config.badgeIcon className="h-3 w-3 shrink-0" />}
+                          {config.badgeIcon && <config.badgeIcon className="h-2.5 w-2.5 shrink-0" />}
                           {config.badgeText}
                         </span>
                       )}
@@ -445,11 +445,11 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   </Link>
 
                   {/* Title & Tagline info */}
-                  <div className="flex flex-col text-left min-w-0 px-1">
-                    <h2 className={cn('text-lg sm:text-xl font-bold tracking-tight leading-tight truncate', config.labelColor)}>
+                  <div className="flex flex-col text-left min-w-0 px-0.5">
+                    <h2 className={cn('text-[14px] xs:text-[15.5px] sm:text-lg font-extrabold tracking-tight leading-tight truncate', config.labelColor)}>
                       {c.name}
                     </h2>
-                    <span className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium truncate leading-none mt-1.5">
+                    <span className="text-[10px] sm:text-[11.5px] text-zinc-400 dark:text-zinc-500 font-semibold truncate leading-none mt-1">
                       {config.tagline}
                     </span>
                   </div>
@@ -459,13 +459,13 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                     <Link
                       href={destinationHref}
                       className={cn(
-                        'flex items-center justify-between text-[11px] sm:text-xs font-bold px-4 py-3 rounded-2xl transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/5',
+                        'flex items-center justify-between text-[10px] sm:text-[11px] font-black px-3 py-2 sm:py-2.5 rounded-full transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/10 shadow-xs hover:shadow-md group/btn',
                         config.btnBg
                       )}
                     >
-                      <span className="flex-grow text-center pl-7 tracking-wider font-extrabold">SHOP NOW</span>
-                      <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                        <ChevronRight size={14} className={cn("stroke-[3.5]", config.btnArrowColor)} />
+                      <span className="flex-grow text-center pl-5 tracking-widest font-black">SHOP NOW</span>
+                      <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:translate-x-0.5">
+                        <ChevronRight size={12} className={cn("stroke-[3.5]", config.btnArrowColor)} />
                       </span>
                     </Link>
                   </div>
