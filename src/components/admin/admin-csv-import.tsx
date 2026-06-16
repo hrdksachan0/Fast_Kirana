@@ -101,7 +101,7 @@ const GROCERY_TEMPLATE_HEADERS = [
 
 const GROCERY_TEMPLATE_ROWS = [
   ['Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10', 'Aisle 2-B', ''],
-  ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '14', '12', '100', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20', 'Aisle 4-A', ''],
+  ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '', '', '', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20', 'Aisle 4-A', 'Single Pack:12:14:60 | 4-Pack:45:50:40'],
   ['Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15', 'Aisle 1-C', ''],
 ]
 
@@ -203,9 +203,74 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
       }
 
       if (!p.unit) errors.push({ row, field: 'Unit', message: 'Unit is required' })
-      if (!p.mrp || isNaN(parseFloat(p.mrp)) || parseFloat(p.mrp) <= 0) errors.push({ row, field: 'MRP', message: 'Valid MRP required' })
-      if (!p.price || isNaN(parseFloat(p.price)) || parseFloat(p.price) <= 0) errors.push({ row, field: 'Price', message: 'Valid Price required' })
-      if (parseFloat(p.price) > parseFloat(p.mrp)) errors.push({ row, field: 'Price', message: 'Price cannot exceed MRP' })
+
+      if (!p.variants || !p.variants.trim()) {
+        if (!p.mrp || isNaN(parseFloat(p.mrp)) || parseFloat(p.mrp) <= 0) {
+          errors.push({ row, field: 'MRP', message: 'Valid MRP required' })
+        }
+        if (!p.price || isNaN(parseFloat(p.price)) || parseFloat(p.price) <= 0) {
+          errors.push({ row, field: 'Price', message: 'Valid Price required' })
+        }
+        if (p.price && p.mrp && parseFloat(p.price) > parseFloat(p.mrp)) {
+          errors.push({ row, field: 'Price', message: 'Price cannot exceed MRP' })
+        }
+      } else {
+        // Validate variants format
+        const variantsStr = p.variants.trim()
+        if (variantsStr.startsWith('[') && variantsStr.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(variantsStr)
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+              errors.push({ row, field: 'Variants', message: 'Variants JSON must be a non-empty array' })
+            } else {
+              parsed.forEach((v, vIdx) => {
+                if (!v.name) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} is missing Name` })
+                if (typeof v.mrp !== 'number' || v.mrp <= 0) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid MRP` })
+                if (typeof v.price !== 'number' || v.price <= 0) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid Price` })
+                if (v.price > v.mrp) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) Price cannot exceed MRP` })
+              })
+            }
+          } catch (e) {
+            errors.push({ row, field: 'Variants', message: 'Invalid JSON format in Variants column' })
+          }
+        } else {
+          // Validate colon-and-pipe syntax: Name:Price:MRP:Stock | ...
+          const parts = variantsStr.split('|')
+          let hasValidVariant = false
+          for (let partIdx = 0; partIdx < parts.length; partIdx++) {
+            const part = parts[partIdx].trim()
+            if (!part) continue
+            const subparts = part.split(':')
+            if (subparts.length < 2) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} must have Name:Price (e.g. 500g:260)` })
+              continue
+            }
+            const vName = subparts[0]?.trim()
+            const vPrice = parseFloat(subparts[1])
+            const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
+            const vStock = subparts[3] ? parseInt(subparts[3]) : 0
+
+            if (!vName) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} Name cannot be empty` })
+            }
+            if (isNaN(vPrice) || vPrice <= 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid Price` })
+            }
+            if (isNaN(vMrp) || vMrp <= 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid MRP` })
+            } else if (vPrice > vMrp) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) Price cannot exceed MRP` })
+            }
+            if (isNaN(vStock) || vStock < 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid Stock` })
+            }
+            hasValidVariant = true
+          }
+          if (!hasValidVariant) {
+            errors.push({ row, field: 'Variants', message: 'No valid variants specified' })
+          }
+        }
+      }
     })
     return errors
   }, [categories, categoryNames, categorySlugs])
@@ -300,7 +365,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     if (parsedProducts.length === 0) return
 
     const criticalErrors = validationErrors.filter(
-      e => ['Name', 'Category', 'MRP', 'Price'].includes(e.field)
+      e => ['Name', 'Category', 'MRP', 'Price', 'Variants'].includes(e.field)
     )
     if (criticalErrors.length > 0) {
       toast.error(`Fix ${criticalErrors.length} critical errors before importing`)
@@ -349,7 +414,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
   }, [parsedProducts, validateProducts, importType])
 
   const errorCount = validationErrors.length
-  const criticalCount = validationErrors.filter(e => ['Name', 'Category', 'MRP', 'Price'].includes(e.field)).length
+  const criticalCount = validationErrors.filter(e => ['Name', 'Category', 'MRP', 'Price', 'Variants'].includes(e.field)).length
   const hasErrors = errorCount > 0
   const canImport = parsedProducts.length > 0 && criticalCount === 0 && !isImporting
 
@@ -471,6 +536,20 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
           </div>
         </div>
 
+        {/* Variants Format Helper */}
+        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3">
+          <p className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+            💡 Easy Variants Format (Optional):
+          </p>
+          <p className="text-[10px] text-text-secondary leading-relaxed">
+            Specify multiple sizes/weights using: <code className="bg-muted px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-bold">VariantName:Price:MRP:Stock</code>. Separate multiple variants using a pipe (<code className="bg-muted px-1 py-0.5 rounded font-bold">|</code>).
+            <br />
+            <span className="font-extrabold">Example:</span> <code className="bg-muted px-1.5 py-0.5 rounded text-text-primary font-mono text-[9px]">500g:260:280:50 | 1kg:500:540:30</code>
+            <br />
+            <span className="text-text-muted">If variants are specified, base Price, MRP, and Stock will be automatically calculated.</span>
+          </p>
+        </div>
+
         {/* Import Result */}
         <AnimatePresence>
           {importResult && (
@@ -572,6 +651,45 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
                   {parsedProducts.map((p, i) => {
                     const rowErrors = validationErrors.filter(e => e.row === i + 1)
                     const hasRowError = rowErrors.length > 0
+
+                    let displayMrp = p.mrp
+                    let displayPrice = p.price
+                    let displayStock = p.stock
+                    let isFromVariants = false
+
+                    if (p.variants && p.variants.trim()) {
+                      const vStr = p.variants.trim()
+                      if (vStr.startsWith('[') && vStr.endsWith(']')) {
+                        try {
+                          const parsed = JSON.parse(vStr)
+                          if (Array.isArray(parsed) && parsed.length > 0) {
+                            displayMrp = parsed[0].mrp?.toString()
+                            displayPrice = parsed[0].price?.toString()
+                            displayStock = parsed.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0).toString()
+                            isFromVariants = true
+                          }
+                        } catch(e) {}
+                      } else {
+                        try {
+                          const parts = vStr.split('|')
+                          const parsed = parts.map(part => {
+                            const sub = part.trim().split(':')
+                            return {
+                              price: parseFloat(sub[1]) || 0,
+                              mrp: sub[2] ? parseFloat(sub[2]) : (parseFloat(sub[1]) || 0),
+                              stock: sub[3] ? parseInt(sub[3]) : 0
+                            }
+                          }).filter(v => v.price > 0)
+                          if (parsed.length > 0) {
+                            displayMrp = parsed[0].mrp.toString()
+                            displayPrice = parsed[0].price.toString()
+                            displayStock = parsed.reduce((sum, v) => sum + v.stock, 0).toString()
+                            isFromVariants = true
+                          }
+                        } catch(e) {}
+                      }
+                    }
+
                     return (
                       <tr key={i} className={`${hasRowError ? 'bg-red-500/5' : 'hover:bg-muted/20'} transition-colors`}>
                         <td className="py-2 px-3 text-text-muted font-bold">{i + 1}</td>
@@ -582,9 +700,11 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
                           {p.category || <span className="text-red-500 italic">Missing</span>}
                         </td>
                         <td className="py-2 px-3 text-text-secondary font-semibold">{p.unit || '-'}</td>
-                        <td className="py-2 px-3 text-right font-bold">₹{p.mrp || '-'}</td>
-                        <td className="py-2 px-3 text-right font-bold text-accent">₹{p.price || '-'}</td>
-                        <td className="py-2 px-3 text-right font-semibold">{p.stock || '0'}</td>
+                        <td className="py-2 px-3 text-right font-bold">₹{displayMrp || '-'}</td>
+                        <td className="py-2 px-3 text-right font-bold text-accent">₹{displayPrice || '-'}</td>
+                        <td className="py-2 px-3 text-right font-semibold">
+                          {displayStock || '0'} {isFromVariants && <span className="text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1 py-0.5 rounded ml-0.5">V</span>}
+                        </td>
                         <td className="py-2 px-3 text-text-muted text-[10px] max-w-[120px] truncate">{p.tags || '-'}</td>
                         <td className="py-2 px-2">
                           <button

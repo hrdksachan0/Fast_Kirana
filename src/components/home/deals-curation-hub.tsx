@@ -490,7 +490,7 @@ export function DealsCurationHub({
   const curations = useMemo(() => [
     {
       id: 'all' as const,
-      title: 'Essentials',
+      title: 'All',
       subtitle: '🔥 Mega collections',
       icon: PremiumEssentialsIcon,
       gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
