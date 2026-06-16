@@ -253,9 +253,15 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <span>{order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-secondary">GST / Taxes (5%)</span>
+            <span className="text-text-secondary">GST / Taxes</span>
             <span>{formatPrice(order.taxes)}</span>
           </div>
+          {order.miscFee > 0 && (
+            <div className="flex justify-between">
+              <span className="text-text-secondary">Miscellaneous Additions</span>
+              <span>{formatPrice(order.miscFee)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-base font-black text-text-primary border-t border-border/40 pt-3 mt-3">
             <span>Amount Paid ({order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'COP' : 'COD') : order.paymentMethod})</span>
             <span className="text-primary">{formatPrice(order.total)}</span>

@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS = {
   delivered_today: '1,231+',
   fresh_stock_loaded: '2 hrs ago',
   only_cod: 'false',
+  tax_rate: '5',
+  misc_fee: '0',
 }
 
 export async function GET() {

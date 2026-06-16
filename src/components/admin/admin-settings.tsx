@@ -26,6 +26,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [avgDeliveryTime, setAvgDeliveryTime] = useState('8 min')
   const [deliveredToday, setDeliveredToday] = useState('1,231+')
   const [freshStockLoaded, setFreshStockLoaded] = useState('2 hrs ago')
+  const [taxRate, setTaxRate] = useState('5')
+  const [miscFee, setMiscFee] = useState('0')
   const [cafeMenuSections, setCafeMenuSections] = useState<CafeMenuSection[]>(DEFAULT_CAFE_MENU_SECTIONS)
   
   // Section Editing Form States
@@ -65,6 +67,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.avg_delivery_time) setAvgDeliveryTime(data.avg_delivery_time)
         if (data.delivered_today) setDeliveredToday(data.delivered_today)
         if (data.fresh_stock_loaded) setFreshStockLoaded(data.fresh_stock_loaded)
+        if (data.tax_rate !== undefined) setTaxRate(data.tax_rate)
+        if (data.misc_fee !== undefined) setMiscFee(data.misc_fee)
         if (data.cafe_menu_sections) {
           try {
             const parsed = JSON.parse(data.cafe_menu_sections)
@@ -203,7 +207,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim()) {
+    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim()) {
       toast.error('Please fill in all setting fields')
       return
     }
@@ -229,6 +233,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           avg_delivery_time: avgDeliveryTime.trim(),
           delivered_today: deliveredToday.trim(),
           fresh_stock_loaded: freshStockLoaded.trim(),
+          tax_rate: taxRate.trim(),
+          misc_fee: miscFee.trim(),
         }),
       })
 
@@ -420,6 +426,43 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       placeholder="e.g. 80.1688"
                       value={storeLng}
                       onChange={(e) => setStoreLng(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* GST/Tax & Miscellaneous Settings */}
+              <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2">
+                <h4 className="text-xs font-black text-text-primary mb-3">💰 GST/Taxes & Miscellaneous Fees Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* GST/Tax Rate */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">GST/Tax Rate (%) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="e.g. 5"
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Miscellaneous Fee */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Miscellaneous Fee / Additions (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g. 0"
+                      value={miscFee}
+                      onChange={(e) => setMiscFee(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                     />
                   </div>

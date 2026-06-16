@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -29,6 +29,23 @@ export default function CartPage() {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+
+  const [taxRate, setTaxRate] = useState(TAX_RATE)
+  const [miscFee, setMiscFee] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tax_rate !== undefined) {
+          setTaxRate(parseFloat(data.tax_rate) / 100)
+        }
+        if (data.misc_fee !== undefined) {
+          setMiscFee(parseFloat(data.misc_fee))
+        }
+      })
+      .catch(err => console.error('Error fetching settings in cart page:', err))
+  }, [])
 
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -99,8 +116,8 @@ export default function CartPage() {
   const cafeDeliveryFee = cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0
 
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
-  const taxes = (groceryAdjustedSubtotal - groceryDiscount) * TAX_RATE + (cafeAdjustedSubtotal - cafeDiscount) * TAX_RATE
-  const grandTotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount) + deliveryFee + taxes
+  const taxes = (groceryAdjustedSubtotal - groceryDiscount) * taxRate + (cafeAdjustedSubtotal - cafeDiscount) * taxRate
+  const grandTotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount) + deliveryFee + taxes + miscFee
 
   const handleCheckoutRedirect = () => {
     if (session) {
@@ -443,9 +460,16 @@ export default function CartPage() {
               </div>
 
               <div className="flex justify-between">
-                <span className="text-text-secondary">GST / Taxes (5%)</span>
+                <span className="text-text-secondary">GST / Taxes ({Math.round(taxRate * 100)}%)</span>
                 <span>₹{taxes.toFixed(0)}</span>
               </div>
+
+              {miscFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Miscellaneous Additions</span>
+                  <span>₹{miscFee.toFixed(0)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between text-base font-black text-text-primary border-t border-border/40 pt-3 mt-3">
                 <span>Grand Total</span>

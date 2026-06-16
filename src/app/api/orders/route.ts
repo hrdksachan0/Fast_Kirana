@@ -194,6 +194,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch store settings for dynamic tax and miscellaneous fee
+    const storeSettings = await prisma.storeSetting.findMany()
+    const settingsMap = storeSettings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
+    const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
+    const serverTaxRate = taxPercent / 100
+    const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
+
     // Calculate details for each order to create
     const ordersToCreate: any[] = []
 
@@ -201,8 +212,8 @@ export async function POST(request: NextRequest) {
       const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.dbProduct.price * item.quantity, 0)
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
-      const groceryTaxes = (grocerySubtotal - groceryDiscount) * TAX_RATE
-      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes
+      const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
+      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + serverMiscFee
 
       ordersToCreate.push({
         type: 'GROCERY',
@@ -210,6 +221,7 @@ export async function POST(request: NextRequest) {
         discount: groceryDiscount,
         deliveryFee: groceryDeliveryFee,
         taxes: groceryTaxes,
+        miscFee: serverMiscFee,
         total: groceryTotal,
         items: groceryItems,
       })
@@ -219,8 +231,10 @@ export async function POST(request: NextRequest) {
       const cafeSubtotal = cafeItems.reduce((sum, item) => sum + item.dbProduct.price * item.quantity, 0)
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
       const cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
-      const cafeTaxes = (cafeSubtotal - cafeDiscount) * TAX_RATE
-      const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes
+      const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
+      const groceryChargedMisc = groceryItems.length > 0
+      const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
+      const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + appliedMiscFee
 
       ordersToCreate.push({
         type: 'CAFE',
@@ -228,6 +242,7 @@ export async function POST(request: NextRequest) {
         discount: cafeDiscount,
         deliveryFee: cafeDeliveryFee,
         taxes: cafeTaxes,
+        miscFee: appliedMiscFee,
         total: cafeTotal,
         items: cafeItems,
       })
@@ -298,6 +313,7 @@ export async function POST(request: NextRequest) {
             discount: orderInfo.discount,
             deliveryFee: orderInfo.deliveryFee,
             taxes: orderInfo.taxes,
+            miscFee: orderInfo.miscFee || 0,
             total: orderInfo.total,
             paymentMethod: paymentMethod as PaymentMethod,
             paymentStatus,
@@ -480,7 +496,7 @@ export async function GET(request: NextRequest) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o.total,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
@@ -496,7 +512,7 @@ export async function GET(request: NextRequest) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o.total,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",

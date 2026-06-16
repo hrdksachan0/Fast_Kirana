@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o.total,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."deliveryMethod",
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o.total,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."deliveryMethod",

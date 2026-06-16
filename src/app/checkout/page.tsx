@@ -50,6 +50,8 @@ export default function CheckoutPage() {
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [onlyCod, setOnlyCod] = useState(false)
+  const [taxRate, setTaxRate] = useState(0.05)
+  const [miscFee, setMiscFee] = useState(0.0)
 
   useEffect(() => {
     fetch('/api/settings')
@@ -66,6 +68,12 @@ export default function CheckoutPage() {
         }
         if (data.only_cod !== undefined) {
           setOnlyCod(data.only_cod === 'true')
+        }
+        if (data.tax_rate !== undefined) {
+          setTaxRate(parseFloat(data.tax_rate) / 100)
+        }
+        if (data.misc_fee !== undefined) {
+          setMiscFee(parseFloat(data.misc_fee))
         }
       })
       .catch(err => console.error('Error fetching settings on checkout mount:', err))
@@ -238,8 +246,8 @@ export default function CheckoutPage() {
   const groceryB2BDiscount = 0
   const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
   const groceryDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
-  const groceryTaxes = groceryAdjustedSubtotal * TAX_RATE
-  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes
+  const groceryTaxes = groceryAdjustedSubtotal * taxRate
+  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + (groceryCartItems.length > 0 ? miscFee : 0)
 
   // Cafe Calculations
   const cafeSubtotal = cafeCartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
@@ -248,12 +256,12 @@ export default function CheckoutPage() {
   const cafeB2BDiscount = 0
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
   const cafeDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
-  const cafeTaxes = cafeAdjustedSubtotal * TAX_RATE
-  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes
+  const cafeTaxes = cafeAdjustedSubtotal * taxRate
+  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + (groceryCartItems.length === 0 ? miscFee : 0)
 
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
-  const taxes = adjustedSubtotal * TAX_RATE
-  const grandTotal = adjustedSubtotal + deliveryFee + taxes
+  const taxes = adjustedSubtotal * taxRate
+  const grandTotal = adjustedSubtotal + deliveryFee + taxes + miscFee
 
   // Fetch Saved Addresses
   useEffect(() => {
@@ -1243,9 +1251,15 @@ export default function CheckoutPage() {
                   </span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
-                  <span>GST / Taxes (5%)</span>
+                  <span>GST / Taxes ({Math.round(taxRate * 100)}%)</span>
                   <span>₹{groceryTaxes.toFixed(0)}</span>
                 </div>
+                {miscFee > 0 && (
+                  <div className="flex justify-between text-text-secondary">
+                    <span>Miscellaneous Additions</span>
+                    <span>₹{miscFee.toFixed(0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-text-primary font-bold border-t border-border/20 pt-1">
                   <span>Grocery Total</span>
                   <span>₹{groceryTotal.toFixed(0)}</span>
@@ -1279,9 +1293,15 @@ export default function CheckoutPage() {
                   </span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
-                  <span>GST / Taxes (5%)</span>
+                  <span>GST / Taxes ({Math.round(taxRate * 100)}%)</span>
                   <span>₹{cafeTaxes.toFixed(0)}</span>
                 </div>
+                {miscFee > 0 && groceryCartItems.length === 0 && (
+                  <div className="flex justify-between text-text-secondary">
+                    <span>Miscellaneous Additions</span>
+                    <span>₹{miscFee.toFixed(0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-text-primary font-bold border-t border-border/20 pt-1">
                   <span>Cafe Total</span>
                   <span>₹{cafeTotal.toFixed(0)}</span>

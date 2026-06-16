@@ -230,6 +230,8 @@ interface CafeStorefrontProps {
 
 export function CafeStorefront({ initialProducts, customSections }: CafeStorefrontProps) {
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const { items } = useCart()
+  const hasCartItems = items.length > 0
   // Swiggy dynamic navigation states
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
@@ -658,7 +660,9 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 30 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 md:hidden"
+            className={`fixed left-1/2 -translate-x-1/2 z-40 md:hidden ${
+              hasCartItems ? 'bottom-[124px]' : 'bottom-20'
+            }`}
           >
             <button
               onClick={() => setIsFloatingMenuOpen(true)}

@@ -68,6 +68,7 @@ export interface Order {
   discount: number
   deliveryFee: number
   taxes: number
+  miscFee: number
   total: number
   paymentMethod: string
   paymentStatus: string
