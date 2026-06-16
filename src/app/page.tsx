@@ -335,6 +335,7 @@ export default async function Home() {
       <DealsCurationHub
         flashDeals={flashDeals}
         bestSellers={bestSellers}
+        topPicks={topPicks}
         breakfastProducts={breakfastProducts}
         lunchProducts={lunchProducts}
         teaProducts={teaProducts}

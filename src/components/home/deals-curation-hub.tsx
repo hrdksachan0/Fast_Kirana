@@ -185,6 +185,31 @@ function PremiumTrendingIcon({ className }: { className?: string }) {
   )
 }
 
+function PremiumTrendingFlameIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <filter id="flame-sh" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="4.5" stdDeviation="3.5" flood-color="#F97316" flood-opacity="0.2" />
+        </filter>
+        <linearGradient id="flame-grad" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stop-color="#EA580C" />
+          <stop offset="50%" stop-color="#F97316" />
+          <stop offset="100%" stop-color="#FDE047" />
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill="#FFF7ED" />
+      <g filter="url(#flame-sh)">
+        {/* Outer/back flame */}
+        <path d="M50 16C50 16 34 32 34 52C34 64 42 72 50 72C58 72 66 64 66 52C66 32 50 16 50 16Z" fill="url(#flame-grad)" />
+        {/* Inner glowing flame */}
+        <path d="M50 30C50 30 40 42 40 56C40 64 44 68 50 68C56 68 60 64 60 56C60 42 50 30 50 30Z" fill="#FDE047" opacity="0.9" />
+        <path d="M50 42C50 42 45 50 45 60C45 64 47 66 50 66C53 66 55 64 55 60C55 50 50 42 50 42Z" fill="#FFFFFF" />
+      </g>
+    </svg>
+  )
+}
+
 function PremiumBreakfastIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -371,6 +396,7 @@ function PremiumLateNightIcon({ className }: { className?: string }) {
 interface DealsCurationHubProps {
   flashDeals: any[]
   bestSellers: any[]
+  topPicks: any[]
   breakfastProducts: any[]
   lunchProducts: any[]
   teaProducts: any[]
@@ -380,12 +406,13 @@ interface DealsCurationHubProps {
 export function DealsCurationHub({
   flashDeals,
   bestSellers,
+  topPicks,
   breakfastProducts,
   lunchProducts,
   teaProducts,
   nightProducts
 }: DealsCurationHubProps) {
-  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'dynamic-craving'>('all')
+  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'trending' | 'dynamic-craving'>('all')
   const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
   const [mounted, setMounted] = useState(false)
 
@@ -474,9 +501,9 @@ export function DealsCurationHub({
     }
   }, [currentHour, breakfastProducts, lunchProducts, teaProducts, nightProducts])
 
-  // Combine products for "All Products" curation dynamically to ensure they stay up-to-date
+  // Combine products for "All" curation dynamically to ensure they stay up-to-date
   const allProducts = useMemo(() => {
-    const combined = [...flashDeals, ...bestSellers, ...dynamicCravingConfig.products]
+    const combined = [...flashDeals, ...bestSellers, ...topPicks, ...dynamicCravingConfig.products]
     const seen = new Set()
     return combined.filter((p) => {
       if (!p || !p.id) return false
@@ -484,9 +511,9 @@ export function DealsCurationHub({
       seen.add(p.id)
       return true
     })
-  }, [flashDeals, bestSellers, dynamicCravingConfig.products])
+  }, [flashDeals, bestSellers, topPicks, dynamicCravingConfig.products])
 
-  // All curation options with refined, vibrant gradients
+  // All curation options linked directly to backend admin (isFlashDeal, isBestSeller, isTopPick)
   const curations = useMemo(() => [
     {
       id: 'all' as const,
@@ -502,7 +529,7 @@ export function DealsCurationHub({
     },
     {
       id: 'flash-deals' as const,
-      title: 'Lightning Deals',
+      title: 'Flash Deals',
       subtitle: '⚡ Instant discounts',
       icon: PremiumLightningDealsIcon,
       gradient: 'from-amber-500 via-orange-500 to-rose-500',
@@ -514,7 +541,7 @@ export function DealsCurationHub({
     },
     {
       id: 'best-in-town' as const,
-      title: 'Trending',
+      title: 'Best Sellers',
       subtitle: '🏆 Customer favorites',
       icon: PremiumTrendingIcon,
       gradient: 'from-blue-600 via-indigo-500 to-cyan-500',
@@ -525,9 +552,21 @@ export function DealsCurationHub({
       inactiveHover: 'hover:border-blue-500/20',
     },
     {
+      id: 'trending' as const,
+      title: 'Trending',
+      subtitle: '🔥 Popular in town',
+      icon: PremiumTrendingFlameIcon,
+      gradient: 'from-orange-600 via-amber-500 to-red-500',
+      activeBorderColor: '#F97316',
+      products: topPicks,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(249,115,22,0.22)]',
+      inactiveBg: 'bg-orange-500/[0.02]',
+      inactiveHover: 'hover:border-orange-500/20',
+    },
+    {
       ...dynamicCravingConfig
     }
-  ], [allProducts, flashDeals, bestSellers, dynamicCravingConfig])
+  ], [allProducts, flashDeals, bestSellers, topPicks, dynamicCravingConfig])
 
   // Active curation data
   const currentCuration = useMemo(() => {
