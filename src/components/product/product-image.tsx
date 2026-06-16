@@ -111,7 +111,9 @@ const unsplashMap: Record<string, string> = {
   'chai': 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=300&h=300&fit=crop&q=80',
   'samosa': 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=300&h=300&fit=crop&q=80',
   'sandwich': 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=300&h=300&fit=crop&q=80',
-  'momo': 'https://images.unsplash.com/photo-1625220194771-7ebedd0b48b0?w=300&h=300&fit=crop&q=80'
+  'momo': 'https://images.unsplash.com/photo-1625220194771-7ebedd0b48b0?w=300&h=300&fit=crop&q=80',
+  'vanilla': 'https://images.unsplash.com/photo-1570197780415-38a3f07a4145?w=300&h=300&fit=crop&q=80',
+  'icecream': 'https://images.unsplash.com/photo-1501443715940-a5350112401e?w=300&h=300&fit=crop&q=80'
 }
 
 interface ProductImageProps {

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
-import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
+import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, IceCream } from 'lucide-react'
 
 interface CategoryGridProps {
   categories: Category[]
@@ -18,6 +18,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   'household': Home,
   'bakery-biscuits': Croissant,
   'atta-rice-dal': Wheat,
+  'ice-cream': IceCream,
 }
 
 const categoryPhotos: Record<string, string> = {
@@ -29,6 +30,7 @@ const categoryPhotos: Record<string, string> = {
   'household': '/household_category.png',
   'bakery-biscuits': '/bakery_biscuits_category.png',
   'atta-rice-dal': '/atta_rice_dal_category.png',
+  'ice-cream': '/ice_cream_category.png',
 }
 
 // Generate a consistent item count (15-80) from a string
@@ -92,6 +94,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       gradient: 'from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-transparent', 
       ring: 'group-hover:border-yellow-500/50 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]' 
     },
+    'ice-cream': { 
+      bg: 'bg-teal-50 dark:bg-teal-500/5', 
+      text: 'text-teal-500 dark:text-teal-400', 
+      gradient: 'from-teal-100/30 to-teal-50/10 dark:from-teal-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-teal-500/50 group-hover:shadow-[0_0_15px_rgba(20,184,166,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]' 
+    },
   }
 
   const mobileColorMap: Record<string, { bg: string; text: string; label: string; emoji: string }> = {
@@ -103,6 +111,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'household': { bg: 'bg-[#e0f7fa] dark:bg-teal-950/20', text: 'text-[#00838f]', label: 'Home Care', emoji: '🧼' },
     'bakery-biscuits': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery', emoji: '🥐' },
     'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Staples', emoji: '🌾' },
+    'ice-cream': { bg: 'bg-[#e0f2f1] dark:bg-teal-950/20', text: 'text-[#00796b]', label: 'Ice Cream', emoji: '🍦' },
   }
 
   return (
@@ -110,7 +119,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       {/* Mobile Header: Shop by Categories + See all */}
       <div className="flex items-center justify-between mb-2.5 md:hidden px-1">
         <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-          Shop by Categories
+          Trending Categories
         </h2>
         <Link href="/category/fruits-vegetables" className="text-xs font-black text-primary hover:opacity-85">
           See all
@@ -167,7 +176,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       {/* Desktop Header */}
       <h2 className="hidden md:flex text-lg md:text-2xl font-black text-text-primary tracking-tight mb-4 px-1 items-center gap-2">
         <span className="h-5 w-1.5 rounded-full bg-primary animate-pulse-gentle" />
-        Shop by Category
+        Trending Categories
       </h2>
 
       {/* Desktop: Grid layout (8 columns) */}

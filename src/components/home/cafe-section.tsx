@@ -22,29 +22,49 @@ export function CafeSection() {
     <section className="space-y-4">
       {/* Café Banner Card */}
       <Link href="/cafe" className="block group">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-900 via-amber-800 to-rose-900 p-4 md:p-5 flex items-center justify-between shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl md:text-4xl select-none animate-float">☕</span>
-            <div className="text-left">
-              <h3 className="text-white font-extrabold text-sm md:text-base tracking-tight">FastKirana Café</h3>
-              <p className="text-amber-200/80 text-[10px] md:text-xs font-medium">Fresh sandwiches, pasta, shakes & more — order now!</p>
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-r from-zinc-950 via-stone-900 to-zinc-900 p-5 flex items-center justify-between shadow-xl transition-all duration-500 hover:border-amber-500/40 hover:shadow-amber-500/5 hover:-translate-y-0.5">
+          {/* Subtle animated light sweep */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+          
+          {/* Ambient glow in background */}
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full bg-amber-500/10 blur-3xl group-hover:bg-amber-500/15 transition-all duration-500" />
+          <div className="absolute -left-10 -top-10 w-32 h-32 rounded-full bg-rose-500/10 blur-2xl group-hover:bg-rose-500/15 transition-all duration-500" />
+
+          <div className="flex items-center gap-4 relative z-10">
+            {/* Elegant 3D Coffee Cup Container */}
+            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/10 to-rose-500/10 border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+              <span className="text-3xl select-none filter drop-shadow-[0_4px_8px_rgba(251,191,36,0.35)] animate-float">☕</span>
+              {/* Pulsing halo */}
+              <div className="absolute inset-0 rounded-2xl bg-amber-500/5 animate-pulse pointer-events-none" />
+            </div>
+            
+            <div className="text-left space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-200 to-orange-100 font-extrabold text-base tracking-tight group-hover:from-white group-hover:to-amber-200 transition-all duration-300">
+                  FastKirana Café
+                </h3>
+                <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Live Kitchen
+                </span>
+              </div>
+              <p className="text-stone-300 text-xs font-medium max-w-[280px] sm:max-w-md">
+                Freshly prepared sandwiches, pasta, shakes & more — delivered hot!
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 group-hover:bg-white/25 transition-all shrink-0">
-            <span className="text-white text-xs font-bold hidden sm:inline">Explore Menu</span>
-            <span className="text-white text-xs font-bold sm:hidden">Menu</span>
-            <svg className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+
+          <div className="relative z-10 flex items-center gap-2 bg-gradient-to-r from-amber-600 to-rose-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-[0_4px_12px_rgba(217,119,6,0.2)] group-hover:shadow-[0_6px_20px_rgba(217,119,6,0.4)] group-hover:scale-105 transition-all duration-300 shrink-0 border border-amber-400/20">
+            <span>Menu</span>
+            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" strokeWidth={3} />
           </div>
-          {/* Decorative circles */}
-          <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-white/5 rounded-full" />
         </div>
       </Link>
 
       {/* Café Category Section Header */}
       <div className="flex items-center justify-between px-1">
         <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">
-          Trending Café Categories
+          Cafe Categories
         </h4>
         <Link href="/cafe" className="text-[11px] font-black text-rose-600 dark:text-rose-400 hover:opacity-85 flex items-center gap-0.5 select-none">
           <span>See Menu</span>
