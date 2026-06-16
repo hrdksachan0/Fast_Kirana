@@ -578,21 +578,31 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                 <button
                   key={cat.tag}
                   onClick={() => scrollToCategory(cat.tag)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left ${
+                  className={cn(
+                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left relative z-10',
                     isActive
-                      ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                      ? 'text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
                       : 'text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                  }`}
+                  )}
                 >
+                  {/* Sliding active background */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeCafeCategoryDesktop"
+                      className="absolute inset-0 rounded-xl bg-rose-50 dark:bg-rose-950/20 -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="text-base shrink-0">{cat.emoji}</span>
                     <span className="text-xs truncate">{cat.title}</span>
                   </div>
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
+                  <span className={cn(
+                    'text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 relative z-20 transition-all duration-200',
                     isActive
                       ? 'bg-rose-500 text-white'
                       : 'bg-muted-foreground/10 text-text-secondary'
-                  }`}>
+                  )}>
                     {cat.count}
                   </span>
                 </button>
@@ -663,29 +673,41 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   key={cat.tag}
                   onClick={() => setActiveCategory(cat.tag)}
                   className={cn(
-                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none',
+                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
                     isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
                   )}
                 >
-                  {/* Left indicator bar */}
+                  {/* Sliding Left indicator bar */}
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full" />
+                    <motion.div
+                      layoutId="activeCafeCategoryMobileBar"
+                      className="absolute left-0 top-1/4 bottom-1/4 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full"
+                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                    />
                   )}
 
                   {/* Icon Card Container */}
                   <div
                     className={cn(
-                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)]',
+                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10',
                       isActive
-                        ? 'bg-rose-50 dark:bg-rose-950/15 border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
+                        ? 'border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
                         : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
                     )}
                   >
-                    <span className="text-2xl filter drop-shadow-sm select-none leading-none">{cat.emoji}</span>
+                    {/* Sliding active inner circle background */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeCafeCategoryMobileCircle"
+                        className="absolute inset-0 rounded-full bg-rose-50 dark:bg-rose-950/15 -z-10"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{cat.emoji}</span>
                   </div>
 
                   {/* Category Name */}
-                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5">
+                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5 relative z-20">
                     {cat.title}
                   </span>
                 </button>
