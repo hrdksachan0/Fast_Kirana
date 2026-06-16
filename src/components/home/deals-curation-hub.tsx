@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
-import { Sparkles, Zap, Trophy, Moon, ShoppingBag } from 'lucide-react'
+import { Sparkles, Zap, Trophy, Moon, ShoppingBag, ChevronRight } from 'lucide-react'
 
 interface DealsCurationHubProps {
   flashDeals: any[]
@@ -65,7 +65,50 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
     return curations.find((c) => c.id === activeCuration) || curations[0]
   }, [activeCuration, curations])
 
-  // Filter products by active category
+  // Group products by category buckets for category-wise display
+  const groupedByCategory = useMemo(() => {
+    const groups: { category: typeof categoriesList[0]; products: any[] }[] = []
+
+    categoriesList.forEach((cat) => {
+      if (cat.id === 'all') return
+
+      const catProducts = currentCuration.products.filter((p) => {
+        const slug = p.category?.slug || ''
+        const tags = p.tags?.map((t: string) => t.toLowerCase()) || []
+
+        if (cat.id === 'cafe') {
+          return slug === 'cafe' || tags.includes('cafe')
+        }
+        if (cat.id === 'fruits-vegetables') {
+          return slug === 'fruits-vegetables' || tags.includes('fruits') || tags.includes('vegetables')
+        }
+        if (cat.id === 'dairy-breakfast') {
+          return slug === 'dairy-breakfast' || tags.includes('dairy') || tags.includes('breakfast')
+        }
+        if (cat.id === 'snacks-munchies') {
+          return slug === 'snacks-munchies' || tags.includes('snacks') || tags.includes('munchies')
+        }
+        if (cat.id === 'beverages') {
+          return slug === 'beverages' || tags.includes('beverages') || tags.includes('beverage')
+        }
+        if (cat.id === 'ice-cream') {
+          return slug === 'ice-cream' || tags.includes('ice-cream') || tags.includes('icecream')
+        }
+        return slug === cat.id
+      })
+
+      if (catProducts.length > 0) {
+        groups.push({
+          category: cat,
+          products: catProducts,
+        })
+      }
+    })
+
+    return groups
+  }, [currentCuration, categoriesList])
+
+  // Filter products by active category (used for single category views)
   const filteredProducts = useMemo(() => {
     const baseProducts = currentCuration.products
     if (activeCategory === 'all') return baseProducts
@@ -223,19 +266,74 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         })}
       </div>
 
-      {/* Filtered Product Grid */}
-      {filteredProducts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none animate-fade-in">
-          <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-          <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
-          <p className="text-[10px] text-text-secondary mt-0.5">Please check other category filters or deal curations!</p>
-        </div>
+      {/* Filtered Product Grid or Scrollable Categories depending on active tab */}
+      {activeCategory === 'all' ? (
+        groupedByCategory.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none animate-fade-in">
+            <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+            <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
+            <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
+          </div>
+        ) : (
+          <div className="space-y-6 md:space-y-8 select-none">
+            {groupedByCategory.map((group) => (
+              <div key={group.category.id} className="space-y-2.5">
+                {/* Header */}
+                <div className="flex justify-between items-center px-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base select-none leading-none">{group.category.emoji}</span>
+                    <h3 className="text-xs sm:text-sm font-black text-text-primary tracking-tight">
+                      {group.category.label}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveCategory(group.category.id)}
+                    className="text-[10px] sm:text-xs font-black text-primary flex items-center gap-0.5 hover:opacity-80 cursor-pointer"
+                  >
+                    See All
+                    <ChevronRight size={10} strokeWidth={3} />
+                  </button>
+                </div>
+
+                {/* Horizontal Scroll Track on Mobile, Grid layout on Desktop */}
+                <div className="flex md:grid md:grid-cols-4 lg:grid-cols-6 gap-3 overflow-x-auto md:overflow-visible pb-3 pt-1 scrollbar-none snap-x snap-mandatory scroll-smooth -mx-4 px-4 md:-mx-0 md:px-0">
+                  {group.products.map((p) => (
+                    <div key={p.id} className="w-[145px] sm:w-[165px] md:w-auto shrink-0 snap-start">
+                      <ProductCard product={p} />
+                    </div>
+                  ))}
+                  {/* See All Card at the end of mobile scroll row */}
+                  <button
+                    onClick={() => setActiveCategory(group.category.id)}
+                    className="md:hidden w-[110px] sm:w-[130px] shrink-0 snap-start flex flex-col items-center justify-center border border-dashed border-border/85 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 p-3 min-h-[200px] hover:bg-muted/40 transition-colors select-none cursor-pointer"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+                      <ChevronRight size={16} strokeWidth={3} />
+                    </div>
+                    <span className="text-[10px] font-black text-text-primary">See All</span>
+                    <span className="text-[8px] font-bold text-text-secondary mt-0.5 truncate max-w-full">
+                      {group.category.label}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1 transition-all duration-300">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none animate-fade-in">
+            <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+            <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
+            <p className="text-[10px] text-text-secondary mt-0.5">Try selecting another category!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1 transition-all duration-300">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )
       )}
     </section>
   )
