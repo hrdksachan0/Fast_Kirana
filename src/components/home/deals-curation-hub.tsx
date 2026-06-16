@@ -14,7 +14,6 @@ interface DealsCurationHubProps {
 
 export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: DealsCurationHubProps) {
   const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'night-cravings'>('all')
-  const [activeCategory, setActiveCategory] = useState<string>('all')
 
   // Combine products for "All Products" curation without duplicates
   const allProducts = useMemo(() => {
@@ -76,68 +75,10 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
     },
   ], [allProducts, flashDeals, bestSellers, nightCravings])
 
-  // Category filters with real food photography images
-  const categoriesList = [
-    { id: 'all', label: 'All Products', emoji: '🛍️', image: '/all_products_category.png' },
-    { id: 'cafe', label: 'Cafe', emoji: '☕', image: '/cafe_category.png' },
-    { id: 'fruits-vegetables', label: 'Fruits & Veg', emoji: '🥦', image: '/fruits_vegetables_category.png' },
-    { id: 'dairy-breakfast', label: 'Milk & Dairy', emoji: '🥛', image: '/dairy_breakfast_category.png' },
-    { id: 'snacks-munchies', label: 'Snacks', emoji: '🍿', image: '/snacks_munchies_category.png' },
-    { id: 'beverages', label: 'Beverages', emoji: '🥤', image: '/beverages_category.png' },
-    { id: 'ice-cream', label: 'Ice-cream', emoji: '🍦', image: '/ice_cream_category.png' },
-  ]
-
   // Active curation data
   const currentCuration = useMemo(() => {
     return curations.find((c) => c.id === activeCuration) || curations[0]
   }, [activeCuration, curations])
-
-  // Group products by category buckets for category-wise display
-  const groupedByCategory = useMemo(() => {
-    const groups: { category: typeof categoriesList[0]; products: any[] }[] = []
-
-    categoriesList.forEach((cat) => {
-      if (cat.id === 'all') return
-
-      const catProducts = currentCuration.products.filter((p) => {
-        const slug = p.category?.slug || ''
-        const tags = p.tags?.map((t: string) => t.toLowerCase()) || []
-
-        if (cat.id === 'cafe') return slug === 'cafe' || tags.includes('cafe')
-        if (cat.id === 'fruits-vegetables') return slug === 'fruits-vegetables' || tags.includes('fruits') || tags.includes('vegetables')
-        if (cat.id === 'dairy-breakfast') return slug === 'dairy-breakfast' || tags.includes('dairy') || tags.includes('breakfast')
-        if (cat.id === 'snacks-munchies') return slug === 'snacks-munchies' || tags.includes('snacks') || tags.includes('munchies')
-        if (cat.id === 'beverages') return slug === 'beverages' || tags.includes('beverages') || tags.includes('beverage')
-        if (cat.id === 'ice-cream') return slug === 'ice-cream' || tags.includes('ice-cream') || tags.includes('icecream')
-        return slug === cat.id
-      })
-
-      if (catProducts.length > 0) {
-        groups.push({ category: cat, products: catProducts })
-      }
-    })
-
-    return groups
-  }, [currentCuration, categoriesList])
-
-  // Filter products by active category
-  const filteredProducts = useMemo(() => {
-    const baseProducts = currentCuration.products
-    if (activeCategory === 'all') return baseProducts
-
-    return baseProducts.filter((product) => {
-      const slug = product.category?.slug || ''
-      const tags = product.tags?.map((t: string) => t.toLowerCase()) || []
-
-      if (activeCategory === 'cafe') return slug === 'cafe' || tags.includes('cafe')
-      if (activeCategory === 'fruits-vegetables') return slug === 'fruits-vegetables' || tags.includes('fruits') || tags.includes('vegetables')
-      if (activeCategory === 'dairy-breakfast') return slug === 'dairy-breakfast' || tags.includes('dairy') || tags.includes('breakfast')
-      if (activeCategory === 'snacks-munchies') return slug === 'snacks-munchies' || tags.includes('snacks') || tags.includes('munchies')
-      if (activeCategory === 'beverages') return slug === 'beverages' || tags.includes('beverages') || tags.includes('beverage')
-      if (activeCategory === 'ice-cream') return slug === 'ice-cream' || tags.includes('ice-cream') || tags.includes('icecream')
-      return slug === activeCategory
-    })
-  }, [currentCuration, activeCategory])
 
   return (
     <section className="py-4 md:py-8 space-y-5">
@@ -163,7 +104,6 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
               key={c.id}
               onClick={() => {
                 setActiveCuration(c.id)
-                setActiveCategory('all')
               }}
               className={cn(
                 'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-300 active:scale-[0.98] cursor-pointer min-h-[95px] sm:min-h-[110px] hover:-translate-y-0.5',
@@ -230,138 +170,19 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         })}
       </div>
 
-      {/* Circular Category Filter Thumbnails */}
-      <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none px-1 select-none snap-x snap-mandatory scroll-smooth">
-        {categoriesList.map((cat) => {
-          const isActive = activeCategory === cat.id
-          const itemsCount = currentCuration.products.filter((p) => {
-            const slug = p.category?.slug || ''
-            const tags = p.tags?.map((t: string) => t.toLowerCase()) || []
-            if (cat.id === 'all') return true
-            if (cat.id === 'cafe') return slug === 'cafe' || tags.includes('cafe')
-            if (cat.id === 'fruits-vegetables') return slug === 'fruits-vegetables' || tags.includes('fruits') || tags.includes('vegetables')
-            if (cat.id === 'dairy-breakfast') return slug === 'dairy-breakfast' || tags.includes('dairy') || tags.includes('breakfast')
-            if (cat.id === 'snacks-munchies') return slug === 'snacks-munchies' || tags.includes('snacks') || tags.includes('munchies')
-            if (cat.id === 'beverages') return slug === 'beverages' || tags.includes('beverages') || tags.includes('beverage')
-            if (cat.id === 'ice-cream') return slug === 'ice-cream' || tags.includes('ice-cream') || tags.includes('icecream')
-            return slug === cat.id
-          }).length
-
-          if (itemsCount === 0 && cat.id !== 'all') return null
-
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
-            >
-              <div
-                className={cn(
-                  'w-[60px] h-[60px] mx-auto rounded-full overflow-hidden border-2 relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40',
-                  isActive
-                    ? 'border-primary ring-2 ring-primary/20 scale-105'
-                    : 'border-transparent group-hover:scale-105'
-                )}
-              >
-                {cat.image ? (
-                  <img
-                    src={cat.image}
-                    alt={cat.label}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl select-none">
-                    {cat.emoji}
-                  </div>
-                )}
-                <span className={cn(
-                  'absolute top-0 right-0 text-[8px] font-black px-1 py-0.5 rounded-full leading-none shadow-sm z-20',
-                  isActive ? 'bg-primary text-white' : 'bg-zinc-600/80 text-white'
-                )}>
-                  {itemsCount}
-                </span>
-              </div>
-              <span className={cn(
-                'text-[10px] font-black mt-2 truncate w-full transition-colors',
-                isActive ? 'text-primary' : 'text-text-primary group-hover:text-primary'
-              )}>
-                {cat.label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Product Display: grouped rows when All selected, flat grid when category selected */}
-      {activeCategory === 'all' ? (
-        groupedByCategory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-center p-4 shadow-sm select-none">
-            <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-            <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
-            <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
-          </div>
-        ) : (
-          <div className="space-y-6 md:space-y-8 select-none">
-            {groupedByCategory.map((group) => (
-              <div key={group.category.id} className="space-y-2.5">
-                <div className="flex justify-between items-center px-1 border-b border-border/40 pb-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden shadow-sm border border-border/40 bg-zinc-100 dark:bg-zinc-900 shrink-0">
-                      {group.category.image ? (
-                        <img src={group.category.image} alt={group.category.label} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs select-none leading-none">{group.category.emoji}</span>
-                      )}
-                    </div>
-                    <h3 className="text-sm font-black text-text-primary tracking-tight">
-                      {group.category.label}
-                    </h3>
-                  </div>
-                  <Link
-                    href={group.category.id === 'cafe' ? '/cafe' : `/category/${group.category.id}`}
-                    className="text-[11px] font-black text-rose-600 dark:text-rose-400 hover:opacity-85 transition-colors flex items-center gap-0.5 select-none"
-                  >
-                    <span>See All</span>
-                    <ChevronRight size={11} strokeWidth={3} />
-                  </Link>
-                </div>
-                <div className="flex md:grid md:grid-cols-4 lg:grid-cols-6 gap-3 overflow-x-auto md:overflow-visible pb-3 pt-1 scrollbar-none snap-x snap-mandatory scroll-smooth -mx-4 px-4 md:-mx-0 md:px-0">
-                  {group.products.map((p) => (
-                    <div key={p.id} className="w-[145px] sm:w-[165px] md:w-auto shrink-0 snap-start">
-                      <ProductCard product={p} />
-                    </div>
-                  ))}
-                  <Link
-                    href={group.category.id === 'cafe' ? '/cafe' : `/category/${group.category.id}`}
-                    className="md:hidden w-[110px] sm:w-[130px] shrink-0 snap-start flex flex-col items-center justify-center border border-dashed border-border/85 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 p-3 min-h-[200px] hover:bg-muted/40 transition-colors select-none text-center"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-2">
-                      <ChevronRight size={16} strokeWidth={3} />
-                    </div>
-                    <span className="text-[10px] font-black text-text-primary">See All</span>
-                    <span className="text-[8px] font-bold text-text-secondary mt-0.5 truncate max-w-full">
-                      {group.category.label}
-                    </span>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
+      {/* Product Display: flat grid of curation products */}
+      {currentCuration.products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-center p-4 shadow-sm select-none">
+          <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+          <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
+          <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
+        </div>
       ) : (
-        filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-center p-4 shadow-sm select-none">
-            <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-            <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
-            <p className="text-[10px] text-text-secondary mt-0.5">Try selecting another category!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1 transition-all duration-300">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )
+        <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1 transition-all duration-300">
+          {currentCuration.products.map((product) => (
+            <ProductCard product={product} key={product.id} />
+          ))}
+        </div>
       )}
     </section>
   )
