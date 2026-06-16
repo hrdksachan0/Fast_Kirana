@@ -499,7 +499,7 @@ export function CategoryPageClient({
       </div>
 
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
-      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 min-h-[calc(100vh-140px)]">
+      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 -mt-[96px] pt-[28px] min-h-[calc(100vh-64px)] bg-white dark:bg-zinc-950">
         {/* Mobile top category scrollbar (circular icons, like Zepto) */}
         <div 
           id="mobile-category-scrollbar"
@@ -541,7 +541,7 @@ export function CategoryPageClient({
         </div>
 
         {/* Mobile Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-[9px] font-black text-text-muted uppercase tracking-widest mt-3 mb-2 px-4 select-none">
+        <div className="flex items-center gap-1.5 text-[9px] font-black text-text-muted uppercase tracking-widest mt-2 mb-1.5 px-4 select-none">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <ChevronRight size={10} className="text-text-muted" />
           <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
@@ -552,7 +552,7 @@ export function CategoryPageClient({
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Redesigned into Sleek Rectangular Vertical Tabs */}
-          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-none sticky top-[56px] self-start backdrop-blur-md">
+          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[64px] self-start backdrop-blur-md">
             {subcategories.map((subcat) => {
               const isActive = subcat.id === activeSubcategoryId
               // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
@@ -613,10 +613,10 @@ export function CategoryPageClient({
           </aside>
 
           {/* Mobile Right Content Panel */}
-          <div className="flex-grow min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-220px)] px-3 py-3 space-y-3.5">
+          <div className="flex-grow min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-140px)] px-2 py-2 space-y-2.5">
             {/* Promo Subcategory Banner (Visual Highlight) */}
             <div className={cn(
-              'relative overflow-hidden rounded-2xl p-3.5 flex items-center justify-between border shadow-[0_4px_15px_rgba(0,0,0,0.02)] min-h-[92px] select-none',
+              'relative overflow-hidden rounded-xl p-3 flex items-center justify-between border shadow-[0_2px_10px_rgba(0,0,0,0.01)] min-h-[72px] select-none',
               activeBanner.gradient
             )}>
               {/* Decorative Circle Grid */}
@@ -624,10 +624,10 @@ export function CategoryPageClient({
               <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
               
               <div className="relative z-10 max-w-[65%] text-left">
-                <span className="inline-block bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
+                <span className="inline-block bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-0.5">
                   {activeBanner.title}
                 </span>
-                <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-1 select-none uppercase">
+                <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-0.5 select-none uppercase">
                   {activeSubcategory.name}
                 </h2>
                 <p className="text-[9.5px] font-extrabold text-zinc-500 dark:text-zinc-400 leading-none">
@@ -635,13 +635,13 @@ export function CategoryPageClient({
                 </p>
               </div>
 
-              <div className="relative z-10 shrink-0 text-4xl font-bold animate-float pr-2 filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.1)] leading-none">
+              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-1.5 filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.1)] leading-none">
                 {activeBanner.emoji}
               </div>
             </div>
 
             {/* Sorting & Filter Header in Right Panel */}
-            <div className="flex flex-col gap-2 border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
+            <div className="flex flex-col gap-1.5 border-b border-zinc-100 dark:border-zinc-900/50 pb-2.5">
               {/* Small Info Label */}
               <div className="flex justify-between items-center text-[9px] font-black text-text-muted uppercase tracking-widest px-0.5">
                 <span>{activeSubcategory.name}</span>
@@ -649,14 +649,14 @@ export function CategoryPageClient({
               </div>
 
               {/* Search Bar inside Right Panel */}
-              <div className="relative bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm overflow-hidden group">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+              <div className="relative bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 shadow-xs overflow-hidden group">
+                <Search className="absolute left-3 top-2 h-3 w-3 text-text-muted" />
                 <input
                   type="text"
                   placeholder={`Search in ${activeSubcategory.name}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-0 pl-9 pr-8 py-2 text-[10.5px] focus:outline-none focus:ring-0 font-bold text-text-primary placeholder:text-text-muted"
+                  className="w-full bg-transparent border-0 pl-8.5 pr-8 py-1.5 text-[10.5px] focus:outline-none focus:ring-0 font-bold text-text-primary placeholder:text-text-muted"
                 />
                 {searchQuery && (
                   <button

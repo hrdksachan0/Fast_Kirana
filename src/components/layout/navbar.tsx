@@ -38,6 +38,8 @@ const SEARCH_PLACEHOLDERS = [
 ]
 
 export function Navbar() {
+  const pathname = usePathname()
+  const isCategoryPage = pathname?.startsWith('/category/')
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
@@ -175,6 +177,7 @@ export function Navbar() {
       <nav
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b md:backdrop-blur-lg",
+          isCategoryPage ? "hidden md:block" : "",
           isScrolled
             ? "bg-white dark:bg-background border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5 md:bg-white/70 md:dark:bg-background/75"
             : "bg-white dark:bg-background border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5 md:bg-white/80 md:dark:bg-background/80"
