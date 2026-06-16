@@ -500,8 +500,49 @@ export function CategoryPageClient({
 
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
       <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 min-h-[calc(100vh-140px)]">
+        {/* Mobile top category scrollbar (circular icons, like Zepto) */}
+        <div 
+          id="mobile-category-scrollbar"
+          className="flex gap-4.5 overflow-x-auto pb-3 pt-2.5 scrollbar-none px-4 select-none w-full justify-start scroll-smooth snap-x snap-mandatory border-b border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950"
+        >
+          {categories.map((cat) => {
+            const isActive = cat.slug === activeCategory.slug
+            return (
+              <Link
+                key={cat.id}
+                id={`category-tab-${cat.slug}`}
+                href={`/category/${cat.slug}`}
+                className="group flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
+              >
+                {/* Circular image container */}
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all duration-300 border bg-zinc-50/50 dark:bg-zinc-900/40 relative z-10",
+                    isActive
+                      ? "border-rose-500 scale-105 shadow-sm"
+                      : "border-zinc-200/50 dark:border-zinc-800/40"
+                  )}
+                  style={isActive ? { boxShadow: '0 0 0 2px #E11D48' } : undefined}
+                >
+                  {cat.imageUrl && (cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http') || cat.imageUrl.startsWith('data:image/')) ? (
+                    <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <span className="text-xl leading-none">{cat.imageUrl || '🛒'}</span>
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[9px] font-black tracking-tight text-center leading-tight truncate w-[60px] transition-colors",
+                  isActive ? "text-rose-600 dark:text-rose-400 font-extrabold" : "text-text-secondary dark:text-zinc-400"
+                )}>
+                  {cat.name}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+
         {/* Mobile Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2.5 px-4 select-none">
+        <div className="flex items-center gap-1.5 text-[9px] font-black text-text-muted uppercase tracking-widest mt-3 mb-2 px-4 select-none">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <ChevronRight size={10} className="text-text-muted" />
           <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
@@ -513,7 +554,7 @@ export function CategoryPageClient({
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Subcategories */}
           {/* Mobile Left Sidebar: Subcategories */}
-          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/20 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start">
+          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-none sticky top-[56px] self-start backdrop-blur-md">
             {subcategories.map((subcat) => {
               const isActive = subcat.id === activeSubcategoryId
               return (
@@ -529,7 +570,7 @@ export function CategoryPageClient({
                   {isActive && (
                     <motion.div
                       layoutId="activeSubcategoryMobileBar"
-                      className="absolute left-0 top-1/4 bottom-1/4 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full"
+                      className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-rose-600 dark:bg-rose-500 rounded-r-full"
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     />
                   )}
@@ -537,25 +578,25 @@ export function CategoryPageClient({
                   {/* Icon Card Container */}
                   <div
                     className={cn(
-                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10',
+                      'w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_1.5px_4px_rgba(0,0,0,0.01)] relative z-10',
                       isActive
-                        ? 'border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
-                        : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
+                        ? 'border-rose-250 dark:border-rose-900/30 scale-[1.05] bg-white dark:bg-zinc-900'
+                        : 'bg-white/80 dark:bg-zinc-900/80 border-zinc-100 dark:border-zinc-800/80'
                     )}
                   >
                     {/* Sliding active inner circle background */}
                     {isActive && (
                       <motion.div
                         layoutId="activeSubcategoryMobileCircle"
-                        className="absolute inset-0 rounded-full bg-rose-50 dark:bg-rose-950/15 -z-10"
+                        className="absolute inset-0 rounded-full bg-rose-50/60 dark:bg-rose-950/20 -z-10"
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
+                    <span className="text-xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
                   </div>
 
                   {/* Subcategory Name */}
-                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5 relative z-20">
+                  <span className="text-[9.5px] leading-tight font-black px-1 tracking-tight select-none mt-0.5 relative z-20 uppercase">
                     {subcat.name}
                   </span>
                 </button>
@@ -564,50 +605,50 @@ export function CategoryPageClient({
           </aside>
 
           {/* Mobile Right Content Panel */}
-          <div className="flex-1 min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-160px)] px-3 py-3 space-y-3.5">
+          <div className="flex-grow min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-220px)] px-3 py-3 space-y-3.5">
             {/* Promo Subcategory Banner (Visual Highlight) */}
             <div className={cn(
-              'relative overflow-hidden rounded-2xl p-3 flex items-center justify-between border shadow-xs min-h-[92px] select-none',
+              'relative overflow-hidden rounded-2xl p-3 flex items-center justify-between border shadow-[0_4px_15px_rgba(0,0,0,0.02)] min-h-[92px] select-none',
               activeBanner.gradient
             )}>
               {/* Decorative Circle Grid */}
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
-              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/15 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/15 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
               
               <div className="relative z-10 max-w-[65%] text-left">
-                <span className="text-[8px] font-black tracking-widest text-[#d97706] dark:text-amber-400 block mb-0.5 uppercase">
+                <span className="text-[8px] font-black tracking-widest text-amber-600 dark:text-amber-400 block mb-0.5 uppercase">
                   {activeBanner.title}
                 </span>
-                <h2 className="text-xs font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-1 select-none">
+                <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-1 select-none uppercase">
                   {activeSubcategory.name}
                 </h2>
-                <p className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 leading-none">
+                <p className="text-[9.5px] font-extrabold text-zinc-500 dark:text-zinc-400 leading-none">
                   {activeBanner.subtitle}
                 </p>
               </div>
 
-              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-sm leading-none">
+              <div className="relative z-10 shrink-0 text-4xl font-bold animate-float pr-2 filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.1)] leading-none">
                 {activeBanner.emoji}
               </div>
             </div>
 
             {/* Sorting & Filter Header in Right Panel */}
-            <div className="flex flex-col gap-2 border-b border-zinc-100 dark:border-zinc-900 pb-3.5">
+            <div className="flex flex-col gap-2 border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
               {/* Small Info Label */}
-              <div className="flex justify-between items-center text-[9.5px] font-extrabold text-text-muted uppercase tracking-wider px-0.5">
-                <span>{activeSubcategory.name} Items</span>
+              <div className="flex justify-between items-center text-[9px] font-black text-text-muted uppercase tracking-widest px-0.5">
+                <span>{activeSubcategory.name}</span>
                 <span>{processedProducts.length} Products</span>
               </div>
 
               {/* Search Bar inside Right Panel */}
-              <div className="relative bg-muted/40 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 shadow-xs overflow-hidden group">
+              <div className="relative bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm overflow-hidden group">
                 <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
                 <input
                   type="text"
                   placeholder={`Search in ${activeSubcategory.name}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-0 pl-9 pr-8 py-2 text-[11px] focus:outline-none focus:ring-0 font-semibold text-text-primary placeholder:text-text-muted"
+                  className="w-full bg-transparent border-0 pl-9 pr-8 py-2 text-[10.5px] focus:outline-none focus:ring-0 font-bold text-text-primary placeholder:text-text-muted"
                 />
                 {searchQuery && (
                   <button
@@ -626,9 +667,9 @@ export function CategoryPageClient({
                   type="button"
                   onClick={() => setShowPriceFilter(!showPriceFilter)}
                   className={cn(
-                    'px-2.5 py-1.5 rounded-full border text-[9.5px] font-black flex items-center gap-1 transition-all select-none cursor-pointer shrink-0',
+                    'px-3 py-1.5 rounded-full border text-[9.5px] font-black flex items-center gap-1 transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight',
                     maxPrice < maxPriceOfCategory
-                      ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                      ? 'bg-rose-500 border-rose-500 text-white font-extrabold shadow-sm'
                       : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
                   )}
                 >
@@ -644,9 +685,9 @@ export function CategoryPageClient({
                       type="button"
                       onClick={() => setSort(opt.value)}
                       className={cn(
-                        'px-2.5 py-1.5 rounded-full border text-[9.5px] font-black transition-all select-none cursor-pointer shrink-0',
+                        'px-3 py-1.5 rounded-full border text-[9.5px] font-black transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight',
                         isActive
-                          ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                          ? 'bg-rose-500 border-rose-500 text-white font-extrabold shadow-sm'
                           : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
                       )}
                     >
@@ -672,7 +713,7 @@ export function CategoryPageClient({
                     className="w-full accent-rose-600 h-1 bg-muted rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between items-center text-[10px] font-black pt-1 border-t border-zinc-100 dark:border-zinc-800/40">
-                    <span className="text-text-muted">Showing up to:</span>
+                    <span className="text-text-muted uppercase tracking-wider text-[8px]">Showing up to:</span>
                     <span className="text-rose-600 dark:text-rose-400">₹{maxPrice}</span>
                   </div>
                 </div>
@@ -683,11 +724,11 @@ export function CategoryPageClient({
             {processedProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none">
                 <ShoppingBag className="h-6 w-6 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-                <h2 className="text-xs font-bold text-text-primary">No products found</h2>
+                <h2 className="text-xs font-bold text-text-primary uppercase tracking-tight">No products found</h2>
                 <p className="text-[10px] text-text-secondary mt-0.5">Check back later or change filters</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5 pb-20">
+              <div className="grid grid-cols-2 gap-2 pb-20">
                 {processedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
