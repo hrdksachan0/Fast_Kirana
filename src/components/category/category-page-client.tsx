@@ -499,7 +499,7 @@ export function CategoryPageClient({
       </div>
 
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
-      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 -mt-[96px] pt-[28px] min-h-[calc(100vh-64px)] bg-white dark:bg-zinc-950">
+      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 -mt-[44px] min-h-[calc(100vh-64px)] bg-white dark:bg-zinc-950">
         {/* Mobile top category scrollbar (circular icons, like Zepto) */}
         <div 
           id="mobile-category-scrollbar"
@@ -552,7 +552,7 @@ export function CategoryPageClient({
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Redesigned into Sleek Rectangular Vertical Tabs */}
-          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[64px] self-start backdrop-blur-md">
+          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[52px] self-start backdrop-blur-md">
             {subcategories.map((subcat) => {
               const isActive = subcat.id === activeSubcategoryId
               // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
