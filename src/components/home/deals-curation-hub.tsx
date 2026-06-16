@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
 import { Sparkles, Zap, Trophy, Moon, ShoppingBag, ChevronRight } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface DealsCurationHubProps {
   flashDeals: any[]
@@ -95,76 +96,47 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         </div>
       </div>
 
-      {/* Curation Selector Cards (2x2 grid) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-1">
+      {/* Premium Curation Tab Bar */}
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1.5 scrollbar-none px-1 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
             <button
               key={c.id}
-              onClick={() => {
-                setActiveCuration(c.id)
-              }}
+              onClick={() => setActiveCuration(c.id)}
               className={cn(
-                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left transition-all duration-300 active:scale-[0.98] cursor-pointer min-h-[95px] sm:min-h-[110px] hover:-translate-y-0.5',
+                'group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black transition-all duration-300 select-none cursor-pointer shrink-0 active:scale-95 snap-start outline-none border border-transparent z-10',
                 isActive
-                  ? cn('border-transparent text-white', c.activeShadow)
-                  : cn(c.inactiveBg, c.inactiveHover)
+                  ? 'text-white border-transparent'
+                  : 'bg-white dark:bg-zinc-900 text-text-secondary dark:text-zinc-400 border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-text-primary dark:hover:text-white'
               )}
             >
-              {/* Background gradient on active state */}
-              <div
-                className={cn(
-                  'absolute inset-0 bg-gradient-to-br transition-opacity duration-300 z-0',
-                  c.gradient,
-                  isActive ? 'opacity-100' : 'opacity-0'
-                )}
-              />
+              {/* Animated active sliding background */}
+              {isActive && (
+                <motion.div
+                  layoutId="activeCurationBackground"
+                  className={cn(
+                    'absolute inset-0 rounded-full bg-gradient-to-r -z-10 shadow-md',
+                    c.gradient,
+                    c.activeShadow
+                  )}
+                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                />
+              )}
 
-              {/* Illustration graphic or fallback icon */}
-              {c.image ? (
+              {/* 3D badge icon */}
+              {c.image && (
                 <img
                   src={c.image}
                   alt={c.title}
-                  className={cn(
-                    'absolute right-0.5 bottom-0.5 w-12 h-12 sm:w-16 sm:h-16 object-contain pointer-events-none transition-all duration-500 group-hover:scale-115 group-hover:rotate-3 z-10',
-                    isActive ? 'opacity-100' : 'opacity-85 dark:opacity-90'
-                  )}
-                />
-              ) : (
-                <ShoppingBag
-                  className={cn(
-                    'absolute -right-2.5 -bottom-2.5 w-14 h-14 sm:w-16 sm:h-16 stroke-[1.2] transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 z-10',
-                    isActive ? 'text-white/20' : 'text-zinc-200 dark:text-zinc-800/60'
-                  )}
+                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain pointer-events-none transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 relative"
                 />
               )}
 
-              {/* Top Row: Title */}
-              <div className="relative z-20 flex justify-between items-start w-full">
-                <span className={cn(
-                  'text-[10px] sm:text-xs font-black tracking-tight leading-none',
-                  isActive ? 'text-white/90' : 'text-text-secondary'
-                )}>
-                  {c.title}
-                </span>
-              </div>
-
-              {/* Bottom Row: Subtitle & Translucent Status Badge */}
-              <div className="relative z-20 w-full mt-auto max-w-[75%] space-y-1 text-left">
-                <span className={cn(
-                  'inline-block text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full',
-                  isActive ? 'bg-white/20 text-white' : 'bg-muted text-text-muted'
-                )}>
-                  {isActive ? 'Active Selection' : 'Tap to View'}
-                </span>
-                <span className={cn(
-                  'block text-[11px] sm:text-[13px] font-extrabold leading-tight tracking-tight truncate mt-0.5',
-                  isActive ? 'text-white' : 'text-text-primary'
-                )}>
-                  {c.subtitle}
-                </span>
-              </div>
+              {/* Tab Title Text */}
+              <span className="font-black tracking-tight select-none">
+                {c.title}
+              </span>
             </button>
           )
         })}
