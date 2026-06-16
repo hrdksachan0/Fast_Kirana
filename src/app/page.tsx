@@ -9,6 +9,7 @@ import { LastOrderBanner } from '@/components/home/last-order-banner'
 import { TimeSuggestions } from '@/components/home/time-suggestions'
 import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
+import { CafeSection } from '@/components/home/cafe-section'
 import { Category, Product } from '@/types'
 import { FlashDealsBanner } from '@/components/home/flash-deals-banner'
 import Link from 'next/link'
@@ -328,26 +329,8 @@ export default async function Home() {
       {/* Speed ticker strip */}
       <SpeedStrip />
 
-      {/* Cafe Banner - Quick Link */}
-      <Link href="/cafe" className="block group">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-900 via-amber-800 to-rose-900 p-4 md:p-5 flex items-center justify-between shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl md:text-4xl">☕</span>
-            <div>
-              <h3 className="text-white font-extrabold text-sm md:text-base tracking-tight">FastKirana Café</h3>
-              <p className="text-amber-200/80 text-[10px] md:text-xs font-medium">Fresh sandwiches, pasta, shakes & more — order now!</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/20 group-hover:bg-white/25 transition-all">
-            <span className="text-white text-xs font-bold hidden sm:inline">Explore Menu</span>
-            <span className="text-white text-xs font-bold sm:hidden">Menu</span>
-            <svg className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-          </div>
-          {/* Decorative circles */}
-          <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-white/5 rounded-full" />
-        </div>
-      </Link>
+      {/* Cafe Banner with sliding menu categories */}
+      <CafeSection />
 
       {/* Your Last Order - Track active or reorder */}
       <LastOrderBanner />
