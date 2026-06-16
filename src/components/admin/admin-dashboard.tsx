@@ -896,7 +896,7 @@ export function AdminDashboard({
       // Convert products array to CSV string matching the import headers
       // Headers: Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock
       const headers = [
-        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
+        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
       ]
       
       const csvRows = [headers.join(',')]
@@ -915,6 +915,7 @@ export function AdminDashboard({
           p.costPrice?.toString() || '0',
           p.minStock?.toString() || '10',
           p.location || '',
+          p.variants ? JSON.stringify(p.variants) : '',
         ]
 
         

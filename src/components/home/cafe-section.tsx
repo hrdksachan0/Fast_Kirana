@@ -4,8 +4,19 @@ import Link from 'next/link'
 import { Zap } from 'lucide-react'
 
 export function CafeSection() {
+  const categories = [
+    { tag: 'hot-beverage', title: 'Brews', emoji: '☕' },
+    { tag: 'hot-bite', title: 'Snacks', emoji: '🥟' },
+    { tag: 'sandwiches', title: 'Sandwiches', emoji: '🥪' },
+    { tag: 'frankie-rolls', title: 'Rolls', emoji: '🌯' },
+    { tag: 'chinese', title: 'Chinese', emoji: '🥡' },
+    { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝' },
+    { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪' },
+    { tag: 'rice-dishes', title: 'Rice', emoji: '🍚' },
+  ]
+
   return (
-    <section className="space-y-3">
+    <section className="space-y-3.5">
       {/* Café Banner Card */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-4 md:p-8 flex items-center justify-between min-h-[130px] md:min-h-[165px] shadow-[0_8px_30px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c]">
         {/* Background Decorative Glow */}
@@ -41,6 +52,20 @@ export function CafeSection() {
             className="object-contain max-h-[110px] md:max-h-[145px] lg:max-h-[165px] w-auto h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
           />
         </div>
+      </div>
+
+      {/* Café Menu Categories Horizontal Scrollbar */}
+      <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none px-1 select-none snap-x snap-mandatory scroll-smooth">
+        {categories.map((cat) => (
+          <Link
+            key={cat.tag}
+            href={`/cafe?section=${cat.tag}`}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-[#faf6f0] dark:bg-[#1c120e] text-[#5d4037] dark:text-amber-200 border border-[#eddcd2]/50 dark:border-amber-950/20 hover:bg-[#eddcd2]/20 dark:hover:bg-[#2e1c15] transition-all shrink-0 whitespace-nowrap active:scale-95 shadow-sm snap-start"
+          >
+            <span>{cat.emoji}</span>
+            <span>{cat.title}</span>
+          </Link>
+        ))}
       </div>
     </section>
   )

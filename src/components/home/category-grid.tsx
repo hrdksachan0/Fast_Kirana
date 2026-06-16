@@ -117,11 +117,10 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         </Link>
       </div>
 
-      {/* Mobile: 2x4 Grid layout */}
-      <div className="grid grid-cols-4 gap-x-2 gap-y-3 md:hidden px-1">
+      {/* Mobile: Horizontal scrollable/sliding list */}
+      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth">
         {categories
           .filter((c) => c.slug !== 'cafe')
-          .slice(0, 8)
           .map((category) => {
             const config = mobileColorMap[category.slug] || {
               bg: 'bg-zinc-50 dark:bg-white/5',
@@ -134,11 +133,11 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-full"
+                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
               >
                 {/* Pastel Rounded Card with Real Photo */}
                 <div
-                  className={`w-[68px] h-[68px] mx-auto rounded-2xl ${config.bg} overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                  className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
                 >
                   {categoryPhotos[category.slug] ? (
                     <Image

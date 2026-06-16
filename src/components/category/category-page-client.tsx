@@ -5,7 +5,169 @@ import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { Category, Product } from '@/types'
 import { cn } from '@/lib/utils'
-import { ShoppingBag, Search, X } from 'lucide-react'
+import { ShoppingBag, Search, X, ChevronRight } from 'lucide-react'
+
+interface Subcategory {
+  id: string
+  name: string
+  emoji: string
+  filterFn: (p: Product) => boolean
+}
+
+const getSubcategories = (categorySlug: string, products: Product[]): Subcategory[] => {
+  const list: Subcategory[] = [{ id: 'all', name: 'All', emoji: '🥬', filterFn: () => true }]
+
+  if (categorySlug === 'fruits-vegetables') {
+    list.push(
+      {
+        id: 'vegetables',
+        name: 'Fresh Vegetables',
+        emoji: '🥦',
+        filterFn: (p) => {
+          const name = p.name.toLowerCase()
+          const tags = p.tags?.map(t => t.toLowerCase()) || []
+          return tags.includes('cooking') || tags.includes('essential') || tags.includes('salad') || tags.includes('spicy') ||
+            /potato|onion|tomato|chilli|coriander|garlic|ginger|lemon|cucumber|cabbage|carrot|cauliflower|bhindi|okra|gourd|spinach|palak/.test(name)
+        }
+      },
+      {
+        id: 'fruits',
+        name: 'Fresh Fruits',
+        emoji: '🍎',
+        filterFn: (p) => {
+          const name = p.name.toLowerCase()
+          const tags = p.tags?.map(t => t.toLowerCase()) || []
+          return (tags.includes('fresh') && !/potato|onion|tomato|chilli|coriander|garlic|ginger|lemon|cucumber|cabbage|carrot|cauliflower|bhindi|okra|gourd|spinach|palak/.test(name)) || tags.includes('premium') ||
+            /banana|apple|mango|litchi|orange|grapes|pomegranate|watermelon|papaya|kiwi|pineapple/.test(name)
+        }
+      },
+      {
+        id: 'herbs-seasoning',
+        name: 'Leafy & Herbs',
+        emoji: '🌿',
+        filterFn: (p) => {
+          const name = p.name.toLowerCase()
+          return /coriander|mint|pudina|ginger|garlic|lemon|curry|leaf|chilli/.test(name)
+        }
+      },
+      {
+        id: 'premium',
+        name: 'Exotics & Premium',
+        emoji: '👑',
+        filterFn: (p) => p.tags?.map(t => t.toLowerCase()).includes('premium') || false
+      }
+    )
+  } else if (categorySlug === 'dairy-breakfast') {
+    list.push(
+      {
+        id: 'milk',
+        name: 'Milk & Curd',
+        emoji: '🥛',
+        filterFn: (p) => /milk|curd|taaza/i.test(p.name)
+      },
+      {
+        id: 'cheese-butter',
+        name: 'Cheese & Butter',
+        emoji: '🧀',
+        filterFn: (p) => /cheese|butter|paneer/i.test(p.name)
+      },
+      {
+        id: 'breakfast',
+        name: 'Breakfast',
+        emoji: '🥣',
+        filterFn: (p) => {
+          const tags = p.tags?.map(t => t.toLowerCase()) || []
+          return tags.includes('breakfast') || tags.includes('cereal') || /bread|egg|flakes/i.test(p.name)
+        }
+      }
+    )
+  } else if (categorySlug === 'snacks-munchies') {
+    list.push(
+      {
+        id: 'chips',
+        name: 'Chips & Crisps',
+        emoji: '🍟',
+        filterFn: (p) => /chips|pringles|lays|kurkure|puff/i.test(p.name)
+      },
+      {
+        id: 'biscuits',
+        name: 'Biscuits',
+        emoji: '🍪',
+        filterFn: (p) => /biscuit|cookie|oreo|fantasy/i.test(p.name)
+      },
+      {
+        id: 'chocolates',
+        name: 'Chocolates',
+        emoji: '🍫',
+        filterFn: (p) => /chocolate|dairy milk|5 star|kitkat/i.test(p.name)
+      },
+      {
+        id: 'namkeen',
+        name: 'Namkeen',
+        emoji: '🥨',
+        filterFn: (p) => /bhujia|namkeen|mixture/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'beverages') {
+    list.push(
+      {
+        id: 'cold-drinks',
+        name: 'Soft Drinks',
+        emoji: '🥤',
+        filterFn: (p) => /coca-cola|sprite|thumbs up|coke|soda|fanta|limca/i.test(p.name)
+      },
+      {
+        id: 'juices',
+        name: 'Juices & Drinks',
+        emoji: '🧃',
+        filterFn: (p) => /juice|frooti|paper boat|real/i.test(p.name)
+      },
+      {
+        id: 'tea-coffee',
+        name: 'Tea & Coffee',
+        emoji: '☕',
+        filterFn: (p) => /tea|coffee|nescafe|tata/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'personal-care') {
+    list.push(
+      {
+        id: 'bath',
+        name: 'Bath & Soap',
+        emoji: '🧼',
+        filterFn: (p) => /soap|dove|dettol|handwash|shower/i.test(p.name)
+      },
+      {
+        id: 'hair',
+        name: 'Hair Care',
+        emoji: '💇',
+        filterFn: (p) => /shampoo|oil|hair|parachute/i.test(p.name)
+      },
+      {
+        id: 'skin',
+        name: 'Skin Care',
+        emoji: '🧴',
+        filterFn: (p) => /lotion|face wash|cream|nivea|vaseline|himalaya/i.test(p.name)
+      }
+    )
+  } else {
+    const uniqueTags = Array.from(
+      new Set(products.flatMap((p) => p.tags || []))
+    ).filter((t) => !['cafe', 'popular', 'essential', 'daily'].includes(t.toLowerCase()))
+
+    uniqueTags.slice(0, 4).forEach((tag) => {
+      const name = tag.charAt(0).toUpperCase() + tag.slice(1)
+      list.push({
+        id: tag.toLowerCase(),
+        name,
+        emoji: '📦',
+        filterFn: (p) => p.tags?.map(t => t.toLowerCase()).includes(tag.toLowerCase()) || false
+      })
+    })
+  }
+
+  return list
+}
 
 interface CategoryPageClientProps {
   categories: Category[]
@@ -24,6 +186,7 @@ export function CategoryPageClient({
   const [sort, setSort] = useState<string>('popularity')
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'nonveg'>('all')
   const [showPriceFilter, setShowPriceFilter] = useState(false)
+  const [activeSubcategoryId, setActiveSubcategoryId] = useState('all')
 
   const maxPriceOfCategory = useMemo(() => {
     if (initialProducts.length === 0) return 1000
@@ -32,10 +195,11 @@ export function CategoryPageClient({
 
   const [maxPrice, setMaxPrice] = useState<number>(1000)
 
-  // Reset maxPrice when switching categories
+  // Reset maxPrice & subcategory when switching categories
   useEffect(() => {
     setMaxPrice(maxPriceOfCategory)
-  }, [maxPriceOfCategory])
+    setActiveSubcategoryId('all')
+  }, [maxPriceOfCategory, activeCategory.slug])
 
   // Center active category tab on mobile horizontal scroll bar on mount
   useEffect(() => {
@@ -64,9 +228,19 @@ export function CategoryPageClient({
     { label: 'Big Discounts', value: 'discount-desc' },
   ]
 
+  const subcategories = useMemo(() => {
+    return getSubcategories(activeCategory.slug, initialProducts)
+  }, [activeCategory.slug, initialProducts])
+
   // Filter and sort products in memory
   const processedProducts = useMemo(() => {
     let result = [...initialProducts]
+
+    // 0. Filter by subcategory
+    const activeSub = subcategories.find((s) => s.id === activeSubcategoryId)
+    if (activeSub) {
+      result = result.filter(activeSub.filterFn)
+    }
 
     // 1. Filter by search query
     if (searchQuery.trim()) {
@@ -109,89 +283,99 @@ export function CategoryPageClient({
     return result
   }, [initialProducts, searchQuery, vegFilter, maxPrice, sort])
 
+  const categoryBanners: Record<string, { gradient: string; title: string; subtitle: string; emoji: string }> = {
+    'fruits-vegetables': {
+      gradient: 'from-[#fffbeb] via-[#f0fdf4] to-[#ecfdf5] dark:from-amber-950/10 dark:via-emerald-950/10 dark:to-emerald-900/10 border-emerald-100/20 dark:border-emerald-950/10',
+      title: 'SUMMER SPECIAL',
+      subtitle: 'BEST DEALS • Order Now',
+      emoji: '🥭',
+    },
+    'dairy-breakfast': {
+      gradient: 'from-[#f0f9ff] via-[#eff6ff] to-[#eef2ff] dark:from-sky-950/10 dark:via-blue-950/10 dark:to-indigo-900/10 border-blue-100/20 dark:border-blue-950/10',
+      title: 'MORNING FRESH',
+      subtitle: 'Milk, Butter & Eggs',
+      emoji: '🥛',
+    },
+    'snacks-munchies': {
+      gradient: 'from-[#fffbeb] via-[#fff5f5] to-[#fff1f2] dark:from-amber-950/10 dark:via-red-950/10 dark:to-rose-900/10 border-red-100/20 dark:border-red-950/10',
+      title: 'SNACK O\'CLOCK',
+      subtitle: 'Crunchy Munchies & Treats',
+      emoji: '🍿',
+    },
+    'beverages': {
+      gradient: 'from-[#faf5ff] via-[#fdf2f8] to-[#eef2ff] dark:from-purple-950/10 dark:via-pink-950/10 dark:to-indigo-900/10 border-purple-100/20 dark:border-purple-950/10',
+      title: 'STAY HYDRATED',
+      subtitle: 'Cool Drinks & Juices',
+      emoji: '🥤',
+    },
+  }
+
+  const activeBanner = categoryBanners[activeCategory.slug] || {
+    gradient: 'from-[#fafafa] via-[#f5f5f5] to-[#f4f4f5] dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-950 border-border/20 dark:border-zinc-800/10',
+    title: activeCategory.name.toUpperCase(),
+    subtitle: 'Fresh Deals in Ghatampur',
+    emoji: '🛒',
+  }
+
+  const activeSubcategory = subcategories.find((s) => s.id === activeSubcategoryId) || subcategories[0]
+
   return (
-    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Desktop Left Sidebar: Categories Navigation */}
-        <aside className="hidden md:block w-64 flex-shrink-0 border border-border bg-card p-4 rounded-2xl h-fit sticky top-[96px] shadow-sm">
-          <h3 className="font-bold text-text-primary text-base mb-4 px-2">Categories</h3>
-          <div className="space-y-1.5">
-            {categories.map((cat) => {
-              const isActive = cat.slug === activeCategory.slug
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.slug}`}
-                  className={cn(
-                    'flex items-center gap-3 w-full px-3 py-2 text-sm font-semibold rounded-xl transition-all duration-200 group',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm scale-[1.02]'
-                      : 'text-text-secondary hover:bg-muted hover:text-text-primary'
-                  )}
-                >
-                  <span className="h-5 w-5 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={cat.name}>
-                    {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
-                      <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded" />
-                    ) : (
-                      <span className="text-base leading-none">{cat.imageUrl || '🛒'}</span>
-                    )}
-                  </span>
-                  <span className="truncate">{cat.name}</span>
-                  <span
+    <div className="container mx-auto px-2 min-h-[calc(100vh-140px)] py-4 max-w-7xl">
+      {/* -------------------- DESKTOP LAYOUT -------------------- */}
+      <div className="hidden md:flex flex-col gap-6">
+        {/* Desktop Breadcrumbs */}
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-text-muted">
+          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+          <ChevronRight size={12} className="text-text-muted" />
+          <span className="font-extrabold text-primary">{activeCategory.name}</span>
+        </div>
+
+        <div className="flex gap-6">
+          {/* Desktop Left Sidebar: Categories Navigation */}
+          <aside className="w-64 flex-shrink-0 border border-border bg-card p-4 rounded-2xl h-fit sticky top-[96px] shadow-sm">
+            <h3 className="font-bold text-text-primary text-base mb-4 px-2">Categories</h3>
+            <div className="space-y-1.5">
+              {categories.map((cat) => {
+                const isActive = cat.slug === activeCategory.slug
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/category/${cat.slug}`}
                     className={cn(
-                      'ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded-full border transition-colors shrink-0',
+                      'flex items-center gap-3 w-full px-3 py-2 text-sm font-semibold rounded-xl transition-all duration-200 group',
                       isActive
-                        ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/10'
-                        : 'bg-muted text-text-secondary border-border group-hover:bg-background group-hover:text-text-primary'
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-[1.02]'
+                        : 'text-text-secondary hover:bg-muted hover:text-text-primary'
                     )}
                   >
-                    {countsMap[cat.id] || 0}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-        </aside>
-
-        {/* Right Section: Header and Product Grid */}
-        <main className="flex-grow space-y-6">
-          {/* Mobile Category Horizontal Scrollbar */}
-          <div id="mobile-category-scrollbar" className="md:hidden overflow-x-auto flex gap-2 pb-2 scrollbar-hide">
-            {categories.map((cat) => {
-              const isActive = cat.slug === activeCategory.slug
-              return (
-                <Link
-                  key={cat.id}
-                  id={`category-tab-${cat.slug}`}
-                  href={`/category/${cat.slug}`}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border whitespace-nowrap flex-shrink-0 transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card text-text-secondary border-border hover:bg-muted'
-                  )}
-                >
-                  <span className="h-4 w-4 flex items-center justify-center shrink-0 overflow-hidden">
-                    {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
-                      <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded-sm" />
-                    ) : (
-                      <span className="text-xs leading-none">{cat.imageUrl || '🛒'}</span>
-                    )}
-                  </span>
-                  <span>
-                    {cat.name}{' '}
-                    <span className="opacity-80 font-normal">
-                      ({countsMap[cat.id] || 0})
+                    <span className="h-5 w-5 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={cat.name}>
+                      {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
+                        <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded" />
+                      ) : (
+                        <span className="text-base leading-none">{cat.imageUrl || '🛒'}</span>
+                      )}
                     </span>
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
+                    <span className="truncate">{cat.name}</span>
+                    <span
+                      className={cn(
+                        'ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded-full border transition-colors shrink-0',
+                        isActive
+                          ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/10'
+                          : 'bg-muted text-text-secondary border-border group-hover:bg-background group-hover:text-text-primary'
+                      )}
+                    >
+                      {countsMap[cat.id] || 0}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </aside>
 
-          {/* Category Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-4">
-            <div>
+          {/* Desktop Right Section: Header and Product Grid */}
+          <main className="flex-grow space-y-6">
+            {/* Category Header */}
+            <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <div className="flex items-center gap-3">
                 <span className="h-10 w-10 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={activeCategory.name}>
                   {activeCategory.imageUrl && (activeCategory.imageUrl.startsWith('data:image/') || activeCategory.imageUrl.startsWith('/') || activeCategory.imageUrl.startsWith('http')) ? (
@@ -205,87 +389,76 @@ export function CategoryPageClient({
                     {activeCategory.name}
                   </h1>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    Showing {processedProducts.length} of {initialProducts.length}{' '}
-                    products
+                    Showing {processedProducts.length} of {initialProducts.length} products
                   </p>
+                </div>
+              </div>
+
+              {/* Sorting Actions */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-text-secondary">Sort By:</span>
+                <div className="flex gap-1 bg-muted p-1 rounded-xl">
+                  {sortOptions.map((opt) => {
+                    const isActive = sort === opt.value
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setSort(opt.value)}
+                        className={cn(
+                          'px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap cursor-pointer',
+                          isActive
+                            ? 'bg-card text-text-primary shadow-sm'
+                            : 'text-text-secondary hover:text-text-primary'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
 
-            {/* Sorting Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-text-secondary hidden sm:inline">
-                Sort By:
-              </span>
-              <div className="flex overflow-x-auto gap-1 bg-muted p-1 rounded-xl scrollbar-none w-full sm:w-auto">
-                {sortOptions.map((opt) => {
-                  const isActive = sort === opt.value
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => setSort(opt.value)}
-                      className={cn(
-                        'px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer',
-                        isActive
-                          ? 'bg-card text-text-primary shadow-sm'
-                          : 'text-text-secondary hover:text-text-primary'
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Search Bar and Dynamic Filters Row */}
-          <div className="space-y-3">
-            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-              {/* Search Bar */}
+            {/* Search Bar and Dynamic Filters */}
+            <div className="flex gap-3 items-center">
               <div className="relative flex-1 max-w-md bg-card rounded-xl border border-border shadow-sm overflow-hidden group">
-                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-text-muted transition-colors group-focus-within:text-primary" />
+                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-text-muted" />
                 <input
                   type="text"
                   placeholder={`Search in ${activeCategory.name}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-0 pl-10 pr-10 py-3 text-xs focus:outline-none focus:ring-0 font-semibold text-text-primary placeholder:text-text-muted"
+                  className="w-full bg-transparent border-0 pl-10 pr-10 py-3 text-xs focus:outline-none focus:ring-0 font-semibold text-text-primary"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-3 p-0.5 hover:bg-muted text-text-secondary hover:text-text-primary rounded-full transition-colors"
+                    className="absolute right-3 top-3 p-0.5 hover:bg-muted text-text-secondary rounded-full"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Dynamic Filter Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none select-none">
-                <button
-                  type="button"
-                  onClick={() => setShowPriceFilter(!showPriceFilter)}
-                  className={cn(
-                    'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
-                    maxPrice < maxPriceOfCategory
-                      ? 'bg-primary/10 border-primary/30 text-primary font-extrabold shadow-sm'
-                      : 'bg-card border-border hover:bg-muted text-text-secondary'
-                  )}
-                >
-                  <span className="text-[10px] font-black">₹</span>
-                  <span>Under ₹{maxPrice}</span>
-                  <span className={cn('text-[9px] transition-transform duration-200', showPriceFilter ? 'rotate-180' : '')}>▼</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowPriceFilter(!showPriceFilter)}
+                className={cn(
+                  'px-3.5 py-2 rounded-full border text-xs font-black flex items-center gap-1.5 transition-all select-none cursor-pointer',
+                  maxPrice < maxPriceOfCategory
+                    ? 'bg-primary/10 border-primary/30 text-primary font-extrabold'
+                    : 'bg-card border-border hover:bg-muted text-text-secondary'
+                )}
+              >
+                <span>Under ₹{maxPrice}</span>
+                <span className={cn('text-[9px] transition-transform duration-200', showPriceFilter ? 'rotate-180' : '')}>▼</span>
+              </button>
             </div>
 
-            {/* Price Limit Slider Panel */}
             {showPriceFilter && (
-              <div className="bg-card border border-border/60 p-4 rounded-2xl shadow-sm space-y-3 max-w-xs animate-slide-down text-left">
+              <div className="bg-card border border-border/60 p-4 rounded-2xl shadow-sm space-y-3 max-w-xs text-left animate-slide-down">
                 <div className="flex justify-between text-[10px] font-black text-text-muted uppercase tracking-wider">
                   <span>Min: ₹0</span>
                   <span>Max: ₹{maxPriceOfCategory}</span>
@@ -298,37 +471,209 @@ export function CategoryPageClient({
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                   className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
                 />
-                <div className="flex justify-between items-center text-xs font-bold pt-1 border-t border-border/30">
-                  <span className="text-text-muted">Show products up to:</span>
-                  <span className="text-primary font-extrabold">₹{maxPrice}</span>
+              </div>
+            )}
+
+            {processedProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 border border-dashed border-border bg-card rounded-2xl text-center p-6 shadow-sm">
+                <ShoppingBag className="h-8 w-8 text-muted-foreground mb-4 animate-pulse-gentle" />
+                <h2 className="text-base font-bold text-text-primary">No products found</h2>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
+                {processedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+
+      {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
+      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 min-h-[calc(100vh-140px)]">
+        {/* Mobile Breadcrumbs */}
+        <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2.5 px-4 select-none">
+          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+          <ChevronRight size={10} className="text-text-muted" />
+          <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
+          <ChevronRight size={10} className="text-text-muted" />
+          <span className="font-extrabold text-primary truncate max-w-[80px]">{activeSubcategory.name}</span>
+        </div>
+
+        {/* Main Split Area */}
+        <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
+          {/* Mobile Left Sidebar: Subcategories */}
+          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/20 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start">
+            {subcategories.map((subcat) => {
+              const isActive = subcat.id === activeSubcategoryId
+              return (
+                <button
+                  key={subcat.id}
+                  onClick={() => setActiveSubcategoryId(subcat.id)}
+                  className={cn(
+                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none',
+                    isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  {/* Left indicator bar */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full" />
+                  )}
+
+                  {/* Icon Card Container */}
+                  <div
+                    className={cn(
+                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)]',
+                      isActive
+                        ? 'bg-rose-50 dark:bg-rose-950/15 border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
+                    )}
+                  >
+                    <span className="text-2xl filter drop-shadow-sm select-none leading-none">{subcat.emoji}</span>
+                  </div>
+
+                  {/* Subcategory Name */}
+                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5">
+                    {subcat.name}
+                  </span>
+                </button>
+              )
+            })}
+          </aside>
+
+          {/* Mobile Right Content Panel */}
+          <div className="flex-1 min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-160px)] px-3 py-3 space-y-3.5">
+            {/* Promo Subcategory Banner (Visual Highlight) */}
+            <div className={cn(
+              'relative overflow-hidden rounded-2xl p-3 flex items-center justify-between border shadow-xs min-h-[92px] select-none',
+              activeBanner.gradient
+            )}>
+              {/* Decorative Circle Grid */}
+              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              
+              <div className="relative z-10 max-w-[65%] text-left">
+                <span className="text-[8px] font-black tracking-widest text-[#d97706] dark:text-amber-400 block mb-0.5 uppercase">
+                  {activeBanner.title}
+                </span>
+                <h2 className="text-xs font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-1 select-none">
+                  {activeSubcategory.name}
+                </h2>
+                <p className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 leading-none">
+                  {activeBanner.subtitle}
+                </p>
+              </div>
+
+              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-sm leading-none">
+                {activeBanner.emoji}
+              </div>
+            </div>
+
+            {/* Sorting & Filter Header in Right Panel */}
+            <div className="flex flex-col gap-2 border-b border-zinc-100 dark:border-zinc-900 pb-3.5">
+              {/* Small Info Label */}
+              <div className="flex justify-between items-center text-[9.5px] font-extrabold text-text-muted uppercase tracking-wider px-0.5">
+                <span>{activeSubcategory.name} Items</span>
+                <span>{processedProducts.length} Products</span>
+              </div>
+
+              {/* Search Bar inside Right Panel */}
+              <div className="relative bg-muted/40 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 shadow-xs overflow-hidden group">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder={`Search in ${activeSubcategory.name}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent border-0 pl-9 pr-8 py-2 text-[11px] focus:outline-none focus:ring-0 font-semibold text-text-primary placeholder:text-text-muted"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2 p-0.5 hover:bg-muted text-text-secondary rounded-full"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Sort / Filter row */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none select-none pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPriceFilter(!showPriceFilter)}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-full border text-[9.5px] font-black flex items-center gap-1 transition-all select-none cursor-pointer shrink-0',
+                    maxPrice < maxPriceOfCategory
+                      ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
+                  )}
+                >
+                  <span>Under ₹{maxPrice}</span>
+                  <span className={cn('text-[7.5px] transition-transform duration-200', showPriceFilter ? 'rotate-180' : '')}>▼</span>
+                </button>
+
+                {sortOptions.slice(0, 3).map((opt) => {
+                  const isActive = sort === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSort(opt.value)}
+                      className={cn(
+                        'px-2.5 py-1.5 rounded-full border text-[9.5px] font-black transition-all select-none cursor-pointer shrink-0',
+                        isActive
+                          ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
+                      )}
+                    >
+                      {opt.label.replace('Price: ', '')}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Price range inside mobile right panel */}
+              {showPriceFilter && (
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800/60 p-3.5 rounded-2xl shadow-xs space-y-2 text-left animate-slide-down">
+                  <div className="flex justify-between text-[8px] font-black text-text-muted uppercase tracking-wider">
+                    <span>Min: ₹0</span>
+                    <span>Max: ₹{maxPriceOfCategory}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={maxPriceOfCategory}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                    className="w-full accent-rose-600 h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between items-center text-[10px] font-black pt-1 border-t border-zinc-100 dark:border-zinc-800/40">
+                    <span className="text-text-muted">Showing up to:</span>
+                    <span className="text-rose-600 dark:text-rose-400">₹{maxPrice}</span>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* Mobile Product Grid */}
+            {processedProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none">
+                <ShoppingBag className="h-6 w-6 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+                <h2 className="text-xs font-bold text-text-primary">No products found</h2>
+                <p className="text-[10px] text-text-secondary mt-0.5">Check back later or change filters</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 pb-20">
+                {processedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
             )}
           </div>
-
-          {/* Products Catalog Grid */}
-          {processedProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 border border-dashed border-border bg-card rounded-2xl text-center p-6 shadow-sm">
-              <div className="w-16 h-16 bg-muted/40 rounded-full flex items-center justify-center mx-auto text-muted-foreground mb-4">
-                <ShoppingBag className="h-8 w-8 animate-pulse-gentle" />
-              </div>
-              <h2 className="text-base font-bold text-text-primary">
-                No products found
-              </h2>
-              <p className="text-xs text-text-secondary mt-1">
-                {searchQuery
-                  ? 'Try adjusting your search keywords to find what you are looking for.'
-                  : 'We are currently restocking this category. Please check back soon!'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-              {processedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </main>
+        </div>
       </div>
     </div>
   )

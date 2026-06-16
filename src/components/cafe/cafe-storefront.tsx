@@ -11,6 +11,8 @@ import { useUIStore } from '@/stores/ui-store'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { ProductImage } from '@/components/product/product-image'
 import { Button } from '@/components/ui/button'
+import { useSearchParams } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 
@@ -233,10 +235,23 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const { items } = useCart()
   const hasCartItems = items.length > 0
   // Swiggy dynamic navigation states
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get('section')
+  
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
   const [navbarHeight, setNavbarHeight] = useState<number>(96)
+
+  // Parse section query parameter on mount and scroll to it
+  useEffect(() => {
+    if (sectionParam) {
+      const timer = setTimeout(() => {
+        scrollToCategory(sectionParam)
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [sectionParam])
 
   // Map products to categories
   const mappedProducts = useMemo(() => {
@@ -501,158 +516,229 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     }
   }
 
+  const currentActiveTag = activeCategory || menuCategories[0]?.tag || ''
+  const activeSection = categorySections.sections.find(s => s.tag === currentActiveTag)
+  const activeSectionProducts = activeSection ? activeSection.products : (currentActiveTag === 'more' ? categorySections.moreItems : [])
+  const activeSectionTitle = activeSection ? activeSection.title : (currentActiveTag === 'more' ? 'More Specials' : '')
+  const activeSectionEmoji = activeSection ? activeSection.emoji : (currentActiveTag === 'more' ? '🍽️' : '')
+  const activeSectionDescription = activeSection ? activeSection.description : (currentActiveTag === 'more' ? 'Additional cafe items and specials' : '')
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6 md:space-y-8 relative">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
-        <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
-        <ChevronRight size={14} className="text-text-muted" />
-        <span className="font-bold text-rose-600">FastKirana Cafe ☕</span>
-      </nav>
+    <div className="container mx-auto px-4 py-6 max-w-7xl relative">
+      {/* -------------------- DESKTOP LAYOUT -------------------- */}
+      <div className="hidden md:flex flex-col gap-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
+          <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
+          <ChevronRight size={14} className="text-text-muted" />
+          <span className="font-bold text-rose-600">FastKirana Cafe ☕</span>
+        </nav>
 
-      {/* Hero Cafe Banner (Consistent with landing page design) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-4 md:p-8 flex items-center justify-between min-h-[130px] md:min-h-[165px] shadow-[0_8px_30px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c]">
-        {/* Background Decorative Glow */}
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/15 dark:bg-amber-500/10 blur-[50px] pointer-events-none animate-pulse-gentle" />
-        
-        {/* Left Content */}
-        <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1.5">
-              <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent font-black">Café</span>
-              <span className="text-base animate-float">☕</span>
-            </h1>
+        {/* Hero Cafe Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-4 md:p-8 flex items-center justify-between min-h-[130px] md:min-h-[165px] shadow-[0_8px_30px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c]">
+          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/15 dark:bg-amber-500/10 blur-[50px] pointer-events-none animate-pulse-gentle" />
+          <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1.5">
+                <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent font-black">Café</span>
+                <span className="text-base animate-float">☕</span>
+              </h1>
+            </div>
+            <span className="inline-flex text-[8px] md:text-[10px] font-black bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-full px-2.5 py-0.5 tracking-wider uppercase mb-1">
+              Freshly Prepared. Fast Delivered.
+            </span>
+            <p className="text-[10px] md:text-xs text-white/70 leading-snug font-semibold max-w-[320px]">
+              Coffee, Beverages, South Indian, Chinese & more from your favorite café.
+            </p>
           </div>
-          <span className="inline-flex text-[8px] md:text-[10px] font-black bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-full px-2.5 py-0.5 tracking-wider uppercase mb-1">
-            Freshly Prepared. Fast Delivered.
+          <div className="absolute right-4 md:right-8 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
+            <img
+              src="/cafe_banner.png"
+              alt="South Indian and Chinese Cafe Specials"
+              className="object-contain max-h-[110px] md:max-h-[145px] lg:max-h-[165px] w-auto h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
+            />
+          </div>
+        </div>
+
+        {/* Split layout: Sidebar categories for desktop */}
+        <div className="flex gap-8 items-start">
+          <aside 
+            style={{ 
+              top: `${navbarHeight + 16}px`, 
+              maxHeight: `calc(100vh - ${navbarHeight + 40}px)` 
+            }}
+            className="w-64 shrink-0 sticky overflow-y-auto pr-2 border-r border-border/40 space-y-1 scrollbar-none py-1"
+          >
+            <div className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider px-3 mb-2">
+              Menu Categories
+            </div>
+            {menuCategories.map((cat) => {
+              const isActive = activeCategory === cat.tag
+              return (
+                <button
+                  key={cat.tag}
+                  onClick={() => scrollToCategory(cat.tag)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left ${
+                    isActive
+                      ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
+                      : 'text-text-secondary hover:bg-muted/40 hover:text-text-primary'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-base shrink-0">{cat.emoji}</span>
+                    <span className="text-xs truncate">{cat.title}</span>
+                  </div>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
+                    isActive
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-muted-foreground/10 text-text-secondary'
+                  }`}>
+                    {cat.count}
+                  </span>
+                </button>
+              )
+            })}
+          </aside>
+
+          {/* Desktop Categories Content */}
+          <div className="flex-1 space-y-10">
+            {categorySections.sections.map((section) => (
+              <section key={section.tag} id={`category-section-${section.tag}`} className="space-y-4 pt-2 scroll-mt-24">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-xl">{section.emoji}</span>
+                  <div>
+                    <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">{section.title}</h2>
+                    <p className="text-xs text-text-secondary">{section.description}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                  {section.products.map((p: any) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {categorySections.moreItems.length > 0 && (
+              <section id="category-section-more" className="space-y-4 pt-2 scroll-mt-24">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-xl">🍽️</span>
+                  <div>
+                    <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More Specials</h2>
+                    <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                  {categorySections.moreItems.map((p: any) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
+      <div className="md:hidden flex flex-col -mx-4 min-h-[calc(100vh-140px)]">
+        {/* Mobile Breadcrumbs */}
+        <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2.5 px-4 select-none">
+          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+          <ChevronRight size={10} className="text-text-muted" />
+          <span className="text-rose-600">FastKirana Cafe ☕</span>
+          <ChevronRight size={10} className="text-text-muted" />
+          <span className="font-extrabold text-primary truncate max-w-[100px]">
+            {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
           </span>
-          <p className="text-[10px] md:text-xs text-white/70 leading-snug font-semibold max-w-[320px]">
-            Coffee, Beverages, South Indian, Chinese & more from your favorite café.
-          </p>
         </div>
 
-        {/* Right Content: Food Image */}
-        <div className="absolute right-4 md:right-8 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
-          <img
-            src="/cafe_banner.png"
-            alt="South Indian and Chinese Cafe Specials"
-            className="object-contain max-h-[110px] md:max-h-[145px] lg:max-h-[165px] w-auto h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
-          />
-        </div>
-      </div>
+        {/* Main Split Area */}
+        <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
+          {/* Mobile Left Sidebar: Categories */}
+          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/20 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start">
+            {menuCategories.map((cat) => {
+              const isActive = currentActiveTag === cat.tag
+              return (
+                <button
+                  key={cat.tag}
+                  onClick={() => setActiveCategory(cat.tag)}
+                  className={cn(
+                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none',
+                    isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  {/* Left indicator bar */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full" />
+                  )}
 
-      {/* -------------------- STICKY CATEGORY NAVIGATION TAB BAR (Mobile Only) -------------------- */}
-      <div 
-        id="mobile-category-sticky-bar"
-        style={{ top: `${navbarHeight}px` }}
-        className="sticky md:hidden z-30 bg-background/95 backdrop-blur-md border-b border-border/80 py-2.5 -mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-none shadow-sm select-none transition-all duration-300"
-      >
-        {menuCategories.map((cat) => {
-          const isActive = activeCategory === cat.tag
-          return (
-            <button
-              key={cat.tag}
-              id={`category-tab-${cat.tag}`}
-              onClick={() => scrollToCategory(cat.tag)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black shrink-0 whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                isActive
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-500/10 border border-rose-500'
-                  : 'bg-muted/30 text-text-secondary border border-border/60 hover:bg-muted/60'
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              <span>{cat.title}</span>
-              <span className={`text-[9px] px-1 py-0.5 rounded-full ${
-                isActive ? 'bg-white/20 text-white' : 'bg-muted-foreground/10 text-text-secondary'
-              }`}>
-                {cat.count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+                  {/* Icon Card Container */}
+                  <div
+                    className={cn(
+                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)]',
+                      isActive
+                        ? 'bg-rose-50 dark:bg-rose-950/15 border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
+                    )}
+                  >
+                    <span className="text-2xl filter drop-shadow-sm select-none leading-none">{cat.emoji}</span>
+                  </div>
 
-      {/* Split layout: Sidebar categories for desktop, main content on right */}
-      <div className="flex gap-8 items-start">
-        {/* Desktop Vertical Sidebar (Swiggy Style) */}
-        <aside 
-          style={{ 
-            top: `${navbarHeight + 16}px`, 
-            maxHeight: `calc(100vh - ${navbarHeight + 40}px)` 
-          }}
-          className="hidden md:block w-64 shrink-0 sticky overflow-y-auto pr-2 border-r border-border/40 space-y-1 scrollbar-none py-1"
-        >
-          <div className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider px-3 mb-2">
-            Menu Categories
-          </div>
-          {menuCategories.map((cat) => {
-            const isActive = activeCategory === cat.tag
-            return (
-              <button
-                key={cat.tag}
-                onClick={() => scrollToCategory(cat.tag)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left ${
-                  isActive
-                    ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
-                    : 'text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-base shrink-0">{cat.emoji}</span>
-                  <span className="text-xs truncate">{cat.title}</span>
-                </div>
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
-                  isActive
-                    ? 'bg-rose-500 text-white'
-                    : 'bg-muted-foreground/10 text-text-secondary'
-                }`}>
-                  {cat.count}
+                  {/* Category Name */}
+                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5">
+                    {cat.title}
+                  </span>
+                </button>
+              )
+            })}
+          </aside>
+
+          {/* Mobile Right Content Panel */}
+          <div className="flex-1 min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-160px)] px-3 py-3 space-y-3.5">
+            {/* Cafe Banner inside Mobile Right Panel */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_4px_15px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c] select-none">
+              <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-amber-500/10 blur-[30px] pointer-events-none" />
+              <div className="relative z-10 max-w-[65%] text-left">
+                <span className="text-[8px] font-black tracking-widest text-[#f59e0b] dark:text-amber-400 block mb-0.5 uppercase">
+                  FASTKIRANA CAFÉ
                 </span>
-              </button>
-            )
-          })}
-        </aside>
-
-        {/* Categories Main Content Area */}
-        <div className="flex-1 space-y-10 md:space-y-12">
-          {categorySections.sections.map((section) => (
-            <section key={section.tag} id={`category-section-${section.tag}`} className="space-y-4 pt-2 scroll-mt-24">
-              <div className="flex items-center gap-2 px-1">
-                <span className="text-xl">{section.emoji}</span>
-                <div>
-                  <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">{section.title}</h2>
-                  <p className="text-xs text-text-secondary">{section.description}</p>
-                </div>
+                <h2 className="text-xs font-black text-white tracking-tight leading-tight mb-1 select-none">
+                  {activeSectionTitle || 'Fresh Specials'}
+                </h2>
+                <p className="text-[9px] font-bold text-white/60 leading-none">
+                  Prepared Fresh & Delivered Fast
+                </p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                {section.products.map((p: any) => (
+              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-sm leading-none">
+                {activeSectionEmoji}
+              </div>
+            </div>
+
+            {/* Title / Info row */}
+            <div className="flex justify-between items-center text-[9.5px] font-extrabold text-text-muted uppercase tracking-wider px-0.5 border-b border-zinc-100 dark:border-zinc-900 pb-2">
+              <span>{activeSectionTitle || 'More Specials'} Menu</span>
+              <span>{activeSectionProducts.length} Items</span>
+            </div>
+
+            {/* Mobile Cafe Product Grid */}
+            {activeSectionProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none">
+                <MenuIcon className="h-6 w-6 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+                <h2 className="text-xs font-bold text-text-primary">Restocking items</h2>
+                <p className="text-[10px] text-text-secondary mt-0.5">Please check back in a few minutes!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 pb-20">
+                {activeSectionProducts.map((p: any) => (
                   <ProductCard key={p.id} product={p} />
                 ))}
               </div>
-            </section>
-          ))}
-
-          {/* Catch-all More from Cafe */}
-          {categorySections.moreItems.length > 0 && (
-            <section id="category-section-more" className="space-y-4 pt-2 scroll-mt-24">
-              <div className="flex items-center gap-2 px-1">
-                <span className="text-xl">🍽️</span>
-                <div>
-                  <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More Specials</h2>
-                  <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                {categorySections.moreItems.map((p: any) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-            </section>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* -------------------- FLOATING MENU BUTTON (Swiggy Style) -------------------- */}
+      {/* Floating Swiggy MENU Drawer (Preserved for desktop/fallback support if needed) */}
       <AnimatePresence>
         {showFloatingMenuBtn && (
           <motion.div
@@ -675,11 +761,10 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         )}
       </AnimatePresence>
 
-      {/* FLOATING QUICK MENU DRAWER */}
+      {/* Floating Menu Drawer Backdrop/Popup */}
       <AnimatePresence>
         {isFloatingMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -687,8 +772,6 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs cursor-pointer"
               onClick={() => setIsFloatingMenuOpen(false)}
             />
-
-            {/* Menu Popup */}
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -696,9 +779,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
               className="fixed bottom-0 left-0 right-0 z-50 max-h-[60vh] bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col mx-auto max-w-sm"
             >
-              {/* Drawer indicator */}
               <div className="w-12 h-1.5 bg-muted/60 rounded-full mx-auto my-3 shrink-0" />
-
               <div className="px-5 pb-3 border-b border-border/50 flex justify-between items-center shrink-0">
                 <span className="text-xs font-black uppercase text-text-muted tracking-wider">Jump to Section</span>
                 <button
@@ -708,15 +789,17 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   <X className="h-4 w-4" />
                 </button>
               </div>
-
-              {/* List of categories */}
               <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
                 {menuCategories.map((cat) => {
-                  const isActive = activeCategory === cat.tag
+                  const isActive = currentActiveTag === cat.tag
                   return (
                     <button
                       key={cat.tag}
-                      onClick={() => scrollToCategory(cat.tag)}
+                      onClick={() => {
+                        setActiveCategory(cat.tag)
+                        setIsFloatingMenuOpen(false)
+                        scrollToCategory(cat.tag)
+                      }}
                       className={`w-full flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer ${
                         isActive
                           ? 'bg-rose-500/10 text-rose-500 font-extrabold border border-rose-500/20'

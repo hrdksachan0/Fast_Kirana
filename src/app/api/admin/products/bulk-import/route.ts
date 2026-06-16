@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
           : []
         const costPrice = parseFloat(item.costPrice) || 0
 
+        let productVariants = null
+        if (item.variants && item.variants.trim()) {
+          try {
+            productVariants = JSON.parse(item.variants)
+          } catch (e) {
+            console.warn(`Failed to parse variants for product ${item.name}:`, e)
+          }
+        }
+
         const product = await prisma.product.create({
           data: {
             name: item.name.trim(),
@@ -128,6 +137,7 @@ export async function POST(request: NextRequest) {
             costPrice,
             minStock: parseInt(item.minStock) || 10,
             location: item.location?.trim() || null,
+            variants: productVariants || undefined,
           },
           include: { category: true },
         })

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { CafeStorefront } from '@/components/cafe/cafe-storefront'
+import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,8 @@ export default async function CafePage() {
   }
 
   return (
-    <CafeStorefront initialProducts={dbCafeProducts} customSections={customMenuSections || undefined} />
+    <Suspense fallback={<div className="container mx-auto px-4 py-20 text-center font-extrabold text-text-muted">Loading FastKirana Café...</div>}>
+      <CafeStorefront initialProducts={dbCafeProducts} customSections={customMenuSections || undefined} />
+    </Suspense>
   )
 }
