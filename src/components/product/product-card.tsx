@@ -211,7 +211,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
-          <div className="absolute left-1 top-1 z-10 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff9800] dark:from-[#ff5722] dark:to-[#ff9800] px-1.5 py-0.5 text-[7px] min-[375px]:text-[8.5px] font-black text-white shadow-md whitespace-nowrap pointer-events-none select-none">
+          <div className="absolute left-0 top-0 z-10 rounded-tl-xl rounded-br-lg bg-[#FF2E55] px-2 py-0.5 text-[9px] min-[375px]:text-[10px] font-extrabold text-white shadow-sm whitespace-nowrap pointer-events-none select-none">
             {resolvedDiscount}% OFF
           </div>
         )}

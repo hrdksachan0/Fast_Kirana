@@ -68,8 +68,49 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const mrp = parseFloat(item.mrp)
-        const price = parseFloat(item.price)
+        let productVariants = null
+        if (item.variants && item.variants.trim()) {
+          const variantsStr = item.variants.trim()
+          if (variantsStr.startsWith('[') && variantsStr.endsWith(']')) {
+            try {
+              productVariants = JSON.parse(variantsStr)
+            } catch (e) {
+              console.warn(`Failed to parse variants JSON for product ${item.name}:`, e)
+            }
+          } else {
+            try {
+              const parts = variantsStr.split('|')
+              const parsed: any[] = []
+              for (const part of parts) {
+                const trimmedPart = part.trim()
+                if (!trimmedPart) continue
+                const subparts = trimmedPart.split(':')
+                const vName = subparts[0]?.trim()
+                const vPrice = parseFloat(subparts[1]) || 0
+                const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
+                const vStock = subparts[3] ? parseInt(subparts[3]) : 0
+
+                if (vName) {
+                  parsed.push({
+                    name: vName,
+                    price: vPrice,
+                    mrp: vMrp,
+                    stock: vStock
+                  })
+                }
+              }
+              if (parsed.length > 0) {
+                productVariants = parsed
+              }
+            } catch (e) {
+              console.warn(`Failed to parse variants text for product ${item.name}:`, e)
+            }
+          }
+        }
+
+        const mrp = productVariants && productVariants.length > 0 ? productVariants[0].mrp : parseFloat(item.mrp)
+        const price = productVariants && productVariants.length > 0 ? productVariants[0].price : parseFloat(item.price)
+        const stock = productVariants && productVariants.length > 0 ? productVariants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) : (parseInt(item.stock) || 0)
 
         if (isNaN(mrp) || mrp <= 0) {
           results.errors.push(`Row ${rowNum} (${item.name}): Invalid MRP`)
@@ -104,21 +145,11 @@ export async function POST(request: NextRequest) {
         }
         existingSlugs.add(slug)
 
-        const stock = parseInt(item.stock) || 0
         const discount = mrp > price ? Math.max(0, Math.round(((mrp - price) / mrp) * 100)) : 0
         const tags = item.tags
           ? item.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
           : []
         const costPrice = parseFloat(item.costPrice) || 0
-
-        let productVariants = null
-        if (item.variants && item.variants.trim()) {
-          try {
-            productVariants = JSON.parse(item.variants)
-          } catch (e) {
-            console.warn(`Failed to parse variants for product ${item.name}:`, e)
-          }
-        }
 
         const product = await prisma.product.create({
           data: {
