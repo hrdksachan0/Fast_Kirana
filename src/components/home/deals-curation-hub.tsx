@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
 import { ShoppingBag } from 'lucide-react'
@@ -76,7 +77,7 @@ export function DealsCurationHub({
         liveTag: '🍛 Lunch Mode',
       }
     }
-    // 4 PM - 8 PM: Snack O\'Clock
+    // 4 PM - 8 PM: Snack O'Clock
     else if (currentHour >= 16 && currentHour < 20) {
       return {
         id: 'dynamic-craving' as const,
@@ -164,6 +165,24 @@ export function DealsCurationHub({
   const currentCuration = useMemo(() => {
     return curations.find((c) => c.id === activeCuration) || curations[0]
   }, [activeCuration, curations])
+
+  // Group products of the active curation by their category dynamically
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, { categoryName: string; categorySlug: string; products: any[] }> = {}
+    currentCuration.products.forEach((product) => {
+      const categoryName = product.category?.name || 'Other Essentials'
+      const categorySlug = product.category?.slug || ''
+      if (!groups[categoryName]) {
+        groups[categoryName] = {
+          categoryName,
+          categorySlug,
+          products: [],
+        }
+      }
+      groups[categoryName].products.push(product)
+    })
+    return Object.values(groups)
+  }, [currentCuration])
 
   return (
     <section className="relative py-6 md:py-10 space-y-6 rounded-3xl overflow-hidden px-4 md:px-6 transition-all duration-500 border border-zinc-100/80 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/20 backdrop-blur-md shadow-sm">
@@ -265,7 +284,7 @@ export function DealsCurationHub({
         })}
       </div>
 
-      {/* Product Display Grid */}
+      {/* Category-grouped Product Display Grid */}
       <div className="relative min-h-[250px] w-full">
         <AnimatePresence mode="wait">
           <motion.div
@@ -283,9 +302,47 @@ export function DealsCurationHub({
                 <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
-                {currentCuration.products.map((product) => (
-                  <ProductCard product={product} key={product.id} />
+              <div className="space-y-6">
+                {groupedProducts.map((group) => (
+                  <div key={group.categoryName} className="space-y-2.5">
+                    {/* Category Subheader */}
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs sm:text-sm font-black text-text-primary tracking-tight">
+                          {group.categoryName}
+                        </h3>
+                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800/80 text-[9px] font-bold text-text-secondary">
+                          {group.products.length} {group.products.length === 1 ? 'item' : 'items'}
+                        </span>
+                      </div>
+                      
+                      {/* Interactive See All link */}
+                      <Link
+                        href={group.categorySlug ? `/categories/${group.categorySlug}` : '/categories'}
+                        className="group/btn inline-flex items-center gap-0.5 text-[10px] sm:text-xs font-black text-primary hover:text-primary-hover transition-colors select-none"
+                      >
+                        See All
+                        <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-0.5 font-normal">
+                          →
+                        </span>
+                      </Link>
+                    </div>
+
+                    {/* Category Products Horizontal Snap Track */}
+                    <div 
+                      className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4 scroll-smooth snap-x snap-mandatory"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {group.products.map((product) => (
+                        <div 
+                          key={product.id} 
+                          className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0 snap-start"
+                        >
+                          <ProductCard product={product} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
