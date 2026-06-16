@@ -5,6 +5,7 @@ import { ChevronRight, Menu as MenuIcon, X, Plus, Minus, Check } from 'lucide-re
 import { Product } from '@/types'
 import { ProductCard } from '@/components/product/product-card'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
@@ -552,11 +553,16 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
             </p>
           </div>
           <div className="absolute right-4 md:right-8 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
-            <img
-              src="/cafe_banner.png"
-              alt="South Indian and Chinese Cafe Specials"
-              className="object-contain max-h-[110px] md:max-h-[145px] lg:max-h-[165px] w-auto h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
-            />
+            <div className="relative w-full h-[110px] md:h-[145px] lg:h-[165px]">
+              <Image
+                src="/cafe_banner.png"
+                alt="South Indian and Chinese Cafe Specials"
+                fill
+                sizes="(max-width: 768px) 35vw, 300px"
+                className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
+                priority
+              />
+            </div>
           </div>
         </div>
 

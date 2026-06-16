@@ -1,6 +1,6 @@
 let cachedSettings: any = null
 let lastFetched: number = 0
-const CACHE_TTL = 10000 // 10 seconds
+const CACHE_TTL = 180000 // 3 minutes
 
 export function getCachedSettings() {
   const now = Date.now()

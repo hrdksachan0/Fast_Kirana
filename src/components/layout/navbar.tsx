@@ -8,8 +8,15 @@ import { playCartPop } from '@/lib/audio'
 import { useCartStore } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { usePathname } from 'next/navigation'
-import { LocationPicker } from '@/components/shared/location-picker'
-import { SearchOverlay } from '@/components/shared/search-overlay'
+import dynamic from 'next/dynamic'
+
+const LocationPicker = dynamic(() => import('@/components/shared/location-picker').then(mod => mod.LocationPicker), {
+  ssr: false
+})
+const SearchOverlay = dynamic(() => import('@/components/shared/search-overlay').then(mod => mod.SearchOverlay), {
+  ssr: false
+})
+
 import { Logo } from '@/components/layout/logo'
 import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -139,8 +146,8 @@ export function Navbar() {
     // Initial fetch
     fetchStatus()
 
-    // Setup polling every 10 seconds for dynamic updates without page reload
-    const interval = setInterval(fetchStatus, 10000)
+    // Setup polling every 25 seconds for dynamic updates without page reload
+    const interval = setInterval(fetchStatus, 25000)
 
     return () => clearInterval(interval)
   }, [hydrateLocation, setStoreStatus, setSelectedLocation, setUserCoords])

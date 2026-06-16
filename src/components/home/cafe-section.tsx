@@ -1,12 +1,51 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+const getCafeSectionImage = (tag: string) => {
+  const mapping: Record<string, string> = {
+    'hot-beverage': '/cafe_brews_category.png',
+    'hot-bite': '/cafe_snacks_category.png',
+    'sandwiches': '/cafe_sandwiches_category.png',
+    'frankie-rolls': '/cafe_rolls_category.png',
+    'chinese': '/cafe_chinese_category.png',
+    'italian-pasta': '/cafe_pasta_category.png',
+    'bombay-bites': '/cafe_bombay_bites_category.png',
+    'rice-dishes': '/cafe_rice_category.png',
+  }
+  return mapping[tag] || null
+}
+
+const getShortTitle = (tag: string, fullTitle: string) => {
+  const customMapping: Record<string, string> = {
+    'hot-beverage': 'Brews',
+    'hot-bite': 'Snacks',
+    'sandwiches': 'Sandwiches',
+    'frankie-rolls': 'Rolls',
+    'chinese': 'Chinese',
+    'italian-pasta': 'Pasta',
+    'bombay-bites': 'Bombay',
+    'rice-dishes': 'Rice',
+    'shakes': 'Shakes',
+    'mocktails': 'Mocktails',
+    'cold-coffee': 'Coffee',
+    'south-indian': 'South Indian',
+    'bakery': 'Bakery',
+    'chilled': 'Cold Drinks',
+    'pizza': 'Pizza',
+    'burgers': 'Burgers',
+    'garlic-bread': 'Garlic Bread',
+    'desserts': 'Desserts',
+  }
+  return customMapping[tag] || fullTitle
+}
+
 export function CafeSection() {
-  const categories = [
+  const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
     { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
     { tag: 'hot-bite', title: 'Snacks', emoji: '🥟', image: '/cafe_snacks_category.png' },
@@ -16,7 +55,33 @@ export function CafeSection() {
     { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝', image: '/cafe_pasta_category.png' },
     { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.png' },
     { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.png' },
-  ]
+  ])
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        const customSectionsStr = data.cafe_menu_sections || data.CAFE_MENU_SECTIONS
+        if (customSectionsStr) {
+          try {
+            const parsed = JSON.parse(customSectionsStr)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const mapped = parsed.map((sec: any) => ({
+                tag: sec.tag,
+                title: getShortTitle(sec.tag, sec.title),
+                emoji: sec.emoji || '🍽️',
+                image: getCafeSectionImage(sec.tag)
+              }))
+              setCategories([
+                { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+                ...mapped
+              ])
+            }
+          } catch (e) {}
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <section className="space-y-4">
@@ -94,7 +159,9 @@ export function CafeSection() {
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
-                  <span className="text-3xl select-none leading-none">{cat.emoji}</span>
+                  <div className="w-full h-full flex items-center justify-center bg-amber-500/10 dark:bg-amber-500/5 backdrop-blur-md rounded-full shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-amber-500/15">
+                    <span className="text-3xl select-none leading-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">{cat.emoji}</span>
+                  </div>
                 )}
               </div>
               <span className="text-[10px] font-black text-text-primary mt-2 truncate w-full group-hover:text-primary transition-colors">

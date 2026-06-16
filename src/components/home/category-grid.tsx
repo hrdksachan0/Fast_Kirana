@@ -29,6 +29,16 @@ const getCafeSectionTitle = (tag: string) => {
     'italian-pasta': 'Pasta',
     'bombay-bites': 'Bombay Bites',
     'rice-dishes': 'Rice',
+    'shakes': 'Shakes',
+    'mocktails': 'Mocktails',
+    'cold-coffee': 'Coffee',
+    'south-indian': 'South Indian',
+    'bakery': 'Bakery',
+    'chilled': 'Cold Drinks',
+    'pizza': 'Pizza',
+    'burgers': 'Burgers',
+    'garlic-bread': 'Garlic Bread',
+    'desserts': 'Desserts',
   }
   return mapping[tag] || tag
 }

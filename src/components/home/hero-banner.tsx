@@ -51,10 +51,13 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   if (currentBanner.imageUrl) {
     return (
       <div className="relative w-full h-full">
-        <img
+        <Image
           src={currentBanner.imageUrl}
           alt={currentBanner.title}
-          className="w-full h-full object-cover pointer-events-none"
+          fill
+          sizes="(max-width: 768px) 100vw, 1200px"
+          className="object-cover pointer-events-none"
+          priority
         />
         {currentBanner.code && (
           <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10">
