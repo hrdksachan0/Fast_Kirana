@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
 import { Sparkles, Zap, Trophy, Moon, ShoppingBag, ChevronRight } from 'lucide-react'
@@ -319,13 +320,13 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                       {group.category.label}
                     </h3>
                   </div>
-                  <button
-                    onClick={() => setActiveCategory(group.category.id)}
-                    className="text-[11px] font-black text-primary hover:text-primary-dark transition-colors flex items-center gap-0.5 select-none cursor-pointer"
+                  <Link
+                    href={group.category.id === 'cafe' ? '/cafe' : `/category/${group.category.id}`}
+                    className="text-[11px] font-black text-rose-600 dark:text-rose-400 hover:opacity-85 transition-colors flex items-center gap-0.5 select-none cursor-pointer"
                   >
                     <span>See All</span>
                     <ChevronRight size={11} strokeWidth={3} />
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Horizontal Scroll Track on Mobile, Grid layout on Desktop */}
@@ -336,18 +337,18 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                     </div>
                   ))}
                   {/* See All Card at the end of mobile scroll row */}
-                  <button
-                    onClick={() => setActiveCategory(group.category.id)}
-                    className="md:hidden w-[110px] sm:w-[130px] shrink-0 snap-start flex flex-col items-center justify-center border border-dashed border-border/85 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 p-3 min-h-[200px] hover:bg-muted/40 transition-colors select-none cursor-pointer"
+                  <Link
+                    href={group.category.id === 'cafe' ? '/cafe' : `/category/${group.category.id}`}
+                    className="md:hidden w-[110px] sm:w-[130px] shrink-0 snap-start flex flex-col items-center justify-center border border-dashed border-border/85 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 p-3 min-h-[200px] hover:bg-muted/40 transition-colors select-none cursor-pointer text-center"
                   >
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+                    <div className="h-8 w-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-2">
                       <ChevronRight size={16} strokeWidth={3} />
                     </div>
                     <span className="text-[10px] font-black text-text-primary">See All</span>
                     <span className="text-[8px] font-bold text-text-secondary mt-0.5 truncate max-w-full">
                       {group.category.label}
                     </span>
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
