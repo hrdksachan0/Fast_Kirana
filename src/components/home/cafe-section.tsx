@@ -32,7 +32,7 @@ export function CafeSection() {
           />
 
           {/* Premium dark gradient overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent z-10" />
 
           {/* Subtle light sweep reflection */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10" />
@@ -50,7 +50,7 @@ export function CafeSection() {
                   Live Kitchen
                 </span>
               </div>
-              <p className="text-zinc-350 text-[10px] sm:text-xs font-semibold leading-relaxed max-w-[200px] sm:max-w-md">
+              <p className="text-zinc-100 text-[10px] sm:text-xs font-semibold leading-relaxed max-w-[200px] sm:max-w-md">
                 Freshly prepared sandwiches, rolls, Chinese, Italian pasta & beverages — delivered hot!
               </p>
             </div>
