@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
 import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, IceCream } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface CategoryGridProps {
   categories: Category[]
@@ -31,16 +32,6 @@ const categoryPhotos: Record<string, string> = {
   'bakery-biscuits': '/bakery_biscuits_category.png',
   'atta-rice-dal': '/atta_rice_dal_category.png',
   'ice-cream': '/ice_cream_category.png',
-}
-
-// Generate a consistent item count (15-80) from a string
-function getItemCount(name: string): number {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash << 5) - hash + name.charCodeAt(i)
-    hash |= 0 // Convert to 32bit integer
-  }
-  return 15 + (Math.abs(hash) % 66) // Range: 15-80
 }
 
 export function CategoryGrid({ categories }: CategoryGridProps) {
@@ -139,36 +130,41 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             }
 
             return (
-              <Link
+              <motion.div
                 key={category.id}
-                href={`/category/${category.slug}`}
-                className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
+                whileTap={{ scale: 0.93, rotate: -1.5 }}
+                className="w-[70px] shrink-0 snap-start"
               >
-                {/* Pastel Rounded Card with Real Photo */}
-                <div
-                  className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="group flex flex-col items-center text-center cursor-pointer"
                 >
-                  {categoryPhotos[category.slug] ? (
-                    <Image
-                      src={categoryPhotos[category.slug]}
-                      alt={config.label}
-                      fill
-                      sizes="100px"
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-3xl select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                        {config.emoji}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {/* Category Label */}
-                <span className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 mt-2 leading-tight tracking-tight line-clamp-1">
-                  {config.label}
-                </span>
-              </Link>
+                  {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
+                  <div
+                    className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                  >
+                    {categoryPhotos[category.slug] ? (
+                      <Image
+                        src={categoryPhotos[category.slug]}
+                        alt={config.label}
+                        fill
+                        sizes="100px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-full">
+                        <span className="text-3xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                          {config.emoji}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Category Label */}
+                  <span className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 mt-2 leading-tight tracking-tight line-clamp-1">
+                    {config.label}
+                  </span>
+                </Link>
+              </motion.div>
             )
           })}
       </div>
@@ -181,59 +177,72 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Desktop: Grid layout (8 columns) */}
       <div className="hidden md:grid grid-cols-8 gap-4 stagger-children">
-
         {categories
           .filter((category) => category.slug !== 'cafe')
           .map((category) => {
-          const colors = colorMap[category.slug] || {
-            bg: 'bg-zinc-50 dark:bg-white/5',
-            text: 'text-zinc-500 dark:text-zinc-400',
-            gradient: 'from-zinc-100/30 to-zinc-50/10',
-            ring: 'group-hover:border-zinc-500/50',
-          }
-          const itemCount = category._count?.products ?? 0
-          const IconComponent = iconMap[category.slug] || ShoppingBag
+            const colors = colorMap[category.slug] || {
+              bg: 'bg-zinc-50 dark:bg-white/5',
+              text: 'text-zinc-500 dark:text-zinc-400',
+              gradient: 'from-zinc-100/30 to-zinc-50/10',
+              ring: 'group-hover:border-zinc-500/50',
+            }
+            const itemCount = category._count?.products ?? 0
+            const IconComponent = iconMap[category.slug] || ShoppingBag
 
-          return (
-            <Link
-              key={category.id}
-              href={`/category/${category.slug}`}
-              className="group flex flex-col items-center text-center p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1"
-            >
-              <div
-                className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${colors.ring} overflow-hidden relative`}
+            return (
+              <motion.div
+                key={category.id}
+                whileHover={{ 
+                  scale: 1.05, 
+                  rotate: 1.5,
+                  transition: { type: 'spring', stiffness: 300, damping: 15 } 
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1 group"
               >
-                {categoryPhotos[category.slug] ? (
-                  <Image
-                    src={categoryPhotos[category.slug]}
-                    alt={category.name}
-                    fill
-                    sizes="80px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                  />
-                ) : category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
-                  <Image
-                    src={category.imageUrl}
-                    alt={category.name}
-                    fill
-                    sizes="80px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                  />
-                ) : category.imageUrl && category.imageUrl.length < 5 ? (
-                  <span className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none">{category.imageUrl}</span>
-                ) : (
-                  <IconComponent className={`h-7 w-7 ${colors.text} transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`} />
-                )}
-              </div>
-              <span className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight line-clamp-2">
-                {category.name}
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5">
-                {itemCount} items
-              </span>
-            </Link>
-          )
-        })}
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div
+                    className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:shadow-lg ${colors.ring} overflow-hidden relative`}
+                  >
+                    {categoryPhotos[category.slug] ? (
+                      <Image
+                        src={categoryPhotos[category.slug]}
+                        alt={category.name}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    ) : category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                      <Image
+                        src={category.imageUrl}
+                        alt={category.name}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    ) : category.imageUrl && category.imageUrl.length < 5 ? (
+                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-2xl">
+                        <span className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">{category.imageUrl}</span>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-2xl">
+                        <IconComponent className={`h-7 w-7 ${colors.text} transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`} />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight line-clamp-2">
+                    {category.name}
+                  </span>
+                  <span className="text-[10px] text-text-muted mt-0.5">
+                    {itemCount} items
+                  </span>
+                </Link>
+              </motion.div>
+            )
+          })}
       </div>
     </section>
   )

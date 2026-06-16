@@ -665,12 +665,13 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Categories */}
-          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/20 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start">
+          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950/70 backdrop-blur-md py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start shadow-sm">
             {menuCategories.map((cat) => {
               const isActive = currentActiveTag === cat.tag
               return (
-                <button
+                <motion.button
                   key={cat.tag}
+                  whileTap={{ scale: 0.93 }}
                   onClick={() => setActiveCategory(cat.tag)}
                   className={cn(
                     'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
@@ -681,7 +682,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   {isActive && (
                     <motion.div
                       layoutId="activeCafeCategoryMobileBar"
-                      className="absolute left-0 top-1/4 bottom-1/4 w-[4px] bg-rose-600 dark:bg-rose-500 rounded-r-full"
+                      className="absolute left-0 top-1/4 bottom-1/4 w-[4px] bg-rose-500 dark:bg-rose-400 rounded-r-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     />
                   )}
@@ -691,7 +692,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                     className={cn(
                       'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10',
                       isActive
-                        ? 'border-rose-200/50 dark:border-rose-900/30 scale-[1.05]'
+                        ? 'border-rose-400/80 dark:border-rose-500/50 scale-[1.05] shadow-[0_0_12px_rgba(244,63,94,0.25)]'
                         : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
                     )}
                   >
@@ -699,7 +700,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                     {isActive && (
                       <motion.div
                         layoutId="activeCafeCategoryMobileCircle"
-                        className="absolute inset-0 rounded-full bg-rose-50 dark:bg-rose-950/15 -z-10"
+                        className="absolute inset-0 rounded-full bg-rose-50/70 dark:bg-rose-950/20 -z-10"
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
@@ -710,7 +711,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5 relative z-20">
                     {cat.title}
                   </span>
-                </button>
+                </motion.button>
               )
             })}
           </aside>
@@ -718,20 +719,21 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           {/* Mobile Right Content Panel */}
           <div className="flex-1 min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-160px)] px-3 py-3 space-y-3.5">
             {/* Cafe Banner inside Mobile Right Panel */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_4px_15px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c] select-none">
-              <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-amber-500/10 blur-[30px] pointer-events-none" />
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1d0e0a] via-[#120805] to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_0_20px_rgba(244,63,94,0.12)] border border-rose-950/40 select-none">
+              <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-rose-500/15 blur-[25px] pointer-events-none animate-pulse-gentle" />
+              <div className="absolute -bottom-10 -left-10 w-24 h-24 rounded-full bg-amber-500/10 blur-[25px] pointer-events-none" />
               <div className="relative z-10 max-w-[65%] text-left">
-                <span className="text-[8px] font-black tracking-widest text-[#f59e0b] dark:text-amber-400 block mb-0.5 uppercase">
-                  FASTKIRANA CAFÉ
+                <span className="text-[8.5px] font-black tracking-widest text-rose-400 dark:text-rose-300 block mb-0.5 uppercase">
+                  ⚡ FASTKIRANA CAFÉ
                 </span>
                 <h2 className="text-xs font-black text-white tracking-tight leading-tight mb-1 select-none">
                   {activeSectionTitle || 'Fresh Specials'}
                 </h2>
-                <p className="text-[9px] font-bold text-white/60 leading-none">
+                <p className="text-[9px] font-bold text-zinc-400 leading-none">
                   Prepared Fresh & Delivered Fast
                 </p>
               </div>
-              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-sm leading-none">
+              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-[0_0_10px_rgba(244,63,94,0.4)] leading-none">
                 {activeSectionEmoji}
               </div>
             </div>
