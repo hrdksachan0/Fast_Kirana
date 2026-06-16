@@ -75,7 +75,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
   // Category filters with visual representations
   const categoriesList = [
     { id: 'all', label: 'All Products', emoji: '❤️' },
-    { id: 'cafe', label: 'Zepto Cafe', emoji: '☕' },
+    { id: 'cafe', label: 'Cafe', emoji: '☕' },
     { id: 'fruits-vegetables', label: 'Fruits & Veg', emoji: '🥦' },
     { id: 'dairy-breakfast', label: 'Milk & Dairy', emoji: '🥛' },
     { id: 'snacks-munchies', label: 'Snacks', emoji: '🍿' },
