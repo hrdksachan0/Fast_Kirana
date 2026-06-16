@@ -21,7 +21,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       id: 'flash-deals' as const,
       title: 'Flash Deals',
       subtitle: '⚡ Instant discounts',
-      emoji: '⚡',
+      image: '/flash_deals_badge.png',
       gradient: 'from-orange-500 via-amber-500 to-rose-500',
       iconColor: 'text-amber-500 bg-amber-500/10',
       description: 'Grab deals before they expire!',
@@ -31,7 +31,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       id: 'best-in-town' as const,
       title: 'Best Sellers',
       subtitle: '🏆 Customer favorites',
-      emoji: '🏆',
+      image: '/best_sellers_badge.png',
       gradient: 'from-blue-600 via-indigo-500 to-violet-600',
       iconColor: 'text-blue-500 bg-blue-500/10',
       description: 'Most loved items in your locality.',
@@ -41,7 +41,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       id: 'night-cravings' as const,
       title: 'Night Cravings',
       subtitle: '🌙 Midnight munchies',
-      emoji: '🌙',
+      image: '/night_cravings_badge.png',
       gradient: 'from-purple-800 via-rose-700 to-amber-800',
       iconColor: 'text-purple-500 bg-purple-500/10',
       description: 'Snacks, ice creams & warm meals.',
@@ -138,21 +138,29 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 )}
               />
 
-              {/* Top Row: Title + Emoji */}
-              <div className="relative z-10 flex justify-between items-start w-full">
+              {/* 3D Illustration Graphic (Blends screen black-to-transparent) */}
+              <img
+                src={c.image}
+                alt={c.title}
+                className={cn(
+                  'absolute right-0.5 bottom-0.5 w-12 h-12 sm:w-14 sm:h-14 object-contain pointer-events-none transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 z-10',
+                  isActive ? 'opacity-95' : 'opacity-70 dark:opacity-85'
+                )}
+                style={{ mixBlendMode: 'screen' }}
+              />
+
+              {/* Top Row: Title */}
+              <div className="relative z-20 flex justify-between items-start w-full">
                 <span className={cn(
                   'text-[10px] sm:text-xs font-black tracking-tight leading-none',
                   isActive ? 'text-white/90' : 'text-text-secondary'
                 )}>
                   {c.title}
                 </span>
-                <span className="text-sm sm:text-lg select-none leading-none animate-float">
-                  {c.emoji}
-                </span>
               </div>
 
               {/* Bottom Row: Subtitle / Discount text */}
-              <div className="relative z-10 w-full mt-auto">
+              <div className="relative z-20 w-full mt-auto max-w-[65%]">
                 <span className="block text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-white/70">
                   {isActive ? 'Active Selection' : 'Tap to View'}
                 </span>

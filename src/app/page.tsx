@@ -356,9 +356,6 @@ export default async function Home() {
 
       <FlashDealsBanner />
 
-      {/* Contextual Time of Day Suggestions */}
-      <TimeSuggestions products={suggestionProducts} />
-
       {/* Trending in Town with Social Proof */}
       <TrendingSection products={topPicks} />
 
