@@ -77,6 +77,84 @@ interface AdminDashboardProps {
 
 type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
 
+const PRODUCT_TEMPLATES = [
+  {
+    id: 'fresh_produce',
+    label: '🥬 Fresh Produce',
+    description: 'Fruits & Veggies',
+    categoryName: 'Fruits & Vegetables',
+    unit: '1 kg',
+    minStock: 20,
+    tags: 'fresh, fruits, vegetables'
+  },
+  {
+    id: 'grocery_essential',
+    label: '🥤 Grocery Essential',
+    description: 'Packaged foods, staples',
+    categoryName: 'Atta, Rice & Dal',
+    unit: '1 pc',
+    minStock: 10,
+    tags: 'essential, grocery'
+  },
+  {
+    id: 'cafe_snack',
+    label: '☕ Cafe Snack',
+    description: 'Fresh cafe items',
+    categoryName: 'FastKirana Cafe',
+    unit: '1 plate',
+    minStock: 5,
+    tags: 'cafe, freshlyprepared'
+  },
+  {
+    id: 'household_personal',
+    label: '🧴 Household Needs',
+    description: 'Soaps, cleaners, detergents',
+    categoryName: 'Household Needs',
+    unit: '1 Pack',
+    minStock: 5,
+    tags: 'cleaning, household'
+  }
+] as const
+
+const HUB_CONFIG = [
+  {
+    key: 'insights',
+    label: 'Business Insights & AI',
+    description: 'Analytics, forecasting, and financial reports',
+    icon: TrendingUp,
+    color: 'from-blue-500/10 to-cyan-500/10',
+    activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
+    tabs: ['analytics', 'forecast', 'reports'] as const
+  },
+  {
+    key: 'fulfillment',
+    label: 'Ops & Fulfillment',
+    description: 'Live tracker, orders, customers, and reviews',
+    icon: Zap,
+    color: 'from-amber-500/10 to-orange-500/10',
+    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
+    tabs: ['liveops', 'orders', 'users', 'reviews', 'alerts'] as const
+  },
+  {
+    key: 'catalog',
+    label: 'Catalog & Inventory',
+    description: 'Products, categories, GRN stock, and bulk update',
+    icon: Package,
+    color: 'from-emerald-500/10 to-teal-500/10',
+    activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
+    tabs: ['products', 'categories', 'inward', 'bulk-update'] as const
+  },
+  {
+    key: 'marketing',
+    label: 'Marketing & Settings',
+    description: 'Banners, coupons, notifications, and settings',
+    icon: Ticket,
+    color: 'from-rose-500/10 to-pink-500/10',
+    activeBorder: 'border-rose-500/60 ring-2 ring-rose-500/20',
+    tabs: ['banners', 'flash-deals', 'coupons', 'push-notifications', 'settings'] as const
+  }
+] as const
+
 export function AdminDashboard({
   initialOrders,
   initialProducts,
@@ -88,6 +166,19 @@ export function AdminDashboard({
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
+  const [activeHub, setActiveHub] = useState<'insights' | 'fulfillment' | 'catalog' | 'marketing'>('insights')
+
+  // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
+  useEffect(() => {
+    const parentHub = HUB_CONFIG.find((hub) =>
+      (hub.tabs as readonly string[]).includes(activeTab)
+    )
+    if (parentHub && parentHub.key !== activeHub) {
+      setActiveHub(parentHub.key)
+    }
+  }, [activeTab, activeHub])
+
+
   
   // States for Orders
   const [orders, setOrders] = useState(initialOrders)
@@ -510,6 +601,34 @@ export function AdminDashboard({
     imageUrl: '',
     sortOrder: '0',
   })
+
+  // Apply template pre-fill values to add product form
+  const applyProductTemplate = (templateId: string) => {
+    const template = PRODUCT_TEMPLATES.find((t) => t.id === templateId)
+    if (!template) return
+
+    let categoryId = ''
+    if (template.categoryName === 'FastKirana Cafe') {
+      const cafeCat = categories.find((c) => c.slug === 'cafe')
+      categoryId = cafeCat?.id || ''
+      handleNewProductTypeChange('cafe')
+    } else {
+      const matchedCat = categories.find(
+        (c) => c.name.toLowerCase().trim() === template.categoryName.toLowerCase().trim()
+      )
+      categoryId = matchedCat?.id || categories.find((c) => c.slug !== 'cafe')?.id || ''
+      handleNewProductTypeChange('grocery')
+    }
+
+    setNewProduct((prev) => ({
+      ...prev,
+      categoryId,
+      unit: template.unit,
+      minStock: template.minStock.toString(),
+      tags: template.tags,
+    }))
+    toast.success(`Applied ${template.label} template!`)
+  }
   
   // Modal Edit states for Categories
   const [editingCategory, setEditingCategory] = useState<any | null>(null)
@@ -1771,33 +1890,78 @@ export function AdminDashboard({
         </motion.div>
       )}
 
-      {/* Navigation tabs */}
-      <div className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative">
-        {tabConfig.map((tab) => {
-          const TabIcon = tab.icon
-          const isActive = activeTab === tab.key
+      {/* Consolidated Operational Hub Selection Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {HUB_CONFIG.map((hub) => {
+          const HubIcon = hub.icon
+          const isActive = activeHub === hub.key
           return (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer select-none ${
+              key={hub.key}
+              type="button"
+              onClick={() => {
+                setActiveHub(hub.key)
+                setActiveTab(hub.tabs[0])
+              }}
+              className={`relative text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden select-none ${
                 isActive
-                  ? 'text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
+                  ? `bg-gradient-to-br ${hub.color} ${hub.activeBorder} shadow-md`
+                  : 'bg-card hover:bg-muted/40 border-border/50 shadow-sm hover:shadow-md'
               }`}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="activeTabBackground"
-                  className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-lg -z-10"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                />
-              )}
-              <TabIcon className="h-3.5 w-3.5 z-10" />
-              <span className="z-10">{tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}</span>
+              {/* Dynamic decorative background glow */}
+              <div className={`absolute right-0 bottom-0 -mr-6 -mb-6 h-16 w-16 rounded-full bg-gradient-to-br ${hub.color} blur-lg opacity-40 transition-transform duration-500 ${isActive ? 'scale-150' : 'scale-100'}`} />
+              
+              <div className="flex items-center gap-3.5 relative z-10">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-text-secondary'
+                }`}>
+                  <HubIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-text-primary">{hub.label}</h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5 line-clamp-1">{hub.description}</p>
+                </div>
+              </div>
             </button>
           )
         })}
+      </div>
+
+      {/* Sub-Tab Navigation inside active Hub */}
+      <div className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative">
+        {(() => {
+          const activeHubData = HUB_CONFIG.find(h => h.key === activeHub)
+          const activeHubSubTabs = activeHubData 
+            ? tabConfig.filter(tab => (activeHubData.tabs as readonly string[]).includes(tab.key)) 
+            : []
+          
+          return activeHubSubTabs.map((tab) => {
+            const TabIcon = tab.icon
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer select-none ${
+                  isActive
+                    ? 'text-primary'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBackground"
+                    className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-lg -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <TabIcon className="h-3.5 w-3.5 z-10" />
+                <span className="z-10">{tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}</span>
+              </button>
+            )
+          })
+        })()}
       </div>
 
       <AnimatePresence mode="wait">
@@ -2146,6 +2310,26 @@ export function AdminDashboard({
                   >
                     <span>☕</span> Café Item
                   </button>
+                </div>
+              </div>
+
+              {/* Preset Product Templates */}
+              <div className="bg-muted/30 border border-border/40 rounded-xl p-3 space-y-2">
+                <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider block">
+                  ⚡ Frictionless Presets (Pre-fill Form):
+                </span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {PRODUCT_TEMPLATES.map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => applyProductTemplate(tmpl.id)}
+                      className="flex flex-col items-start p-2 bg-card hover:bg-muted/60 border border-border/50 rounded-xl text-left cursor-pointer transition-colors"
+                    >
+                      <span className="text-[11px] font-black text-text-primary">{tmpl.label}</span>
+                      <span className="text-[9px] text-text-secondary truncate w-full mt-0.5">{tmpl.description}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

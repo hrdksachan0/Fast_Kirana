@@ -143,7 +143,15 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   <div
                     className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
                   >
-                    {categoryPhotos[category.slug] ? (
+                    {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                      <Image
+                        src={category.imageUrl}
+                        alt={config.label}
+                        fill
+                        sizes="100px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : categoryPhotos[category.slug] ? (
                       <Image
                         src={categoryPhotos[category.slug]}
                         alt={config.label}
@@ -151,6 +159,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         sizes="100px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
+                    ) : category.imageUrl && category.imageUrl.length < 5 ? (
+                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-full">
+                        <span className="text-3xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                          {category.imageUrl}
+                        </span>
+                      </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-full">
                         <span className="text-3xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
@@ -207,17 +221,17 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   <div
                     className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:shadow-lg ${colors.ring} overflow-hidden relative`}
                   >
-                    {categoryPhotos[category.slug] ? (
+                    {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                       <Image
-                        src={categoryPhotos[category.slug]}
+                        src={category.imageUrl}
                         alt={category.name}
                         fill
                         sizes="80px"
                         className="object-cover transition-transform duration-300 group-hover:scale-110"
                       />
-                    ) : category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                    ) : categoryPhotos[category.slug] ? (
                       <Image
-                        src={category.imageUrl}
+                        src={categoryPhotos[category.slug]}
                         alt={category.name}
                         fill
                         sizes="80px"
