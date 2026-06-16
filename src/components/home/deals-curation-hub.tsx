@@ -121,25 +121,25 @@ export function DealsCurationHub({
     })
   }, [flashDeals, bestSellers, dynamicCravingConfig.products])
 
-  // All curation options
+  // All curation options with refined, vibrant gradients
   const curations = useMemo(() => [
     {
       id: 'all' as const,
       title: 'All Products',
       subtitle: '🔥 Mega collections',
       image: '/all_products_badge.png',
-      gradient: 'from-pink-600 via-purple-500 to-indigo-600',
+      gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
       products: allProducts,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(219,39,119,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(219,39,119,0.18)]',
-      inactiveBg: 'bg-pink-500/[0.02] border-pink-500/10 dark:bg-pink-950/[0.06] dark:border-pink-900/20 text-text-primary',
-      inactiveHover: 'hover:border-pink-500/30 hover:bg-pink-500/[0.06] dark:hover:border-pink-500/20',
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(99,102,241,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(99,102,241,0.18)]',
+      inactiveBg: 'bg-indigo-500/[0.02] border-indigo-500/10 dark:bg-indigo-950/[0.06] dark:border-indigo-900/20 text-text-primary',
+      inactiveHover: 'hover:border-indigo-500/30 hover:bg-indigo-500/[0.06] dark:hover:border-indigo-500/20',
     },
     {
       id: 'flash-deals' as const,
       title: 'Flash Deals',
       subtitle: '⚡ Instant discounts',
       image: '/flash_deals_badge.png',
-      gradient: 'from-orange-500 via-amber-500 to-rose-500',
+      gradient: 'from-amber-500 via-orange-500 to-rose-500',
       products: flashDeals,
       activeShadow: 'shadow-[0_12px_25px_-5px_rgba(249,115,22,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(249,115,22,0.18)]',
       inactiveBg: 'bg-orange-500/[0.02] border-orange-500/10 dark:bg-orange-950/[0.06] dark:border-orange-900/20 text-text-primary',
@@ -150,9 +150,9 @@ export function DealsCurationHub({
       title: 'Best Sellers',
       subtitle: '🏆 Customer favorites',
       image: '/best_sellers_badge.png',
-      gradient: 'from-blue-600 via-indigo-500 to-violet-600',
+      gradient: 'from-blue-600 via-indigo-500 to-cyan-500',
       products: bestSellers,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(59,130,246,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(59,130,246,0.18)]',
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(37,99,235,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(37,99,235,0.18)]',
       inactiveBg: 'bg-blue-500/[0.02] border-blue-500/10 dark:bg-blue-950/[0.06] dark:border-blue-900/20 text-text-primary',
       inactiveHover: 'hover:border-blue-500/30 hover:bg-blue-500/[0.06] dark:hover:border-blue-500/20',
     },
@@ -238,47 +238,76 @@ export function DealsCurationHub({
         )}
       </div>
 
-      {/* Premium Curation Tab Bar */}
-      <div className="flex items-center gap-2.5 overflow-x-auto pb-2.5 pt-1.5 scrollbar-none px-1 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory">
+      {/* Premium Curation Tab Bar: Redesigned into Liquid-Glass Bubbles */}
+      <div className="flex items-center gap-5 sm:gap-8 overflow-x-auto pb-4 pt-2.5 scrollbar-none px-1 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
             <button
               key={c.id}
               onClick={() => setActiveCuration(c.id)}
-              className={cn(
-                'group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black transition-all duration-300 select-none cursor-pointer shrink-0 active:scale-95 snap-start outline-none border border-transparent z-10',
-                isActive
-                  ? 'text-white border-transparent'
-                  : 'bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md text-text-secondary dark:text-zinc-400 border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:text-text-primary dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700'
-              )}
+              className="group flex flex-col items-center gap-2 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
             >
-              {/* Animated active sliding background */}
-              {isActive && (
-                <motion.div
-                  layoutId="activeCurationBackground"
-                  className={cn(
-                    'absolute inset-0 rounded-full bg-gradient-to-r -z-10',
-                    c.gradient,
-                    c.activeShadow
-                  )}
-                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                />
-              )}
+              {/* Glossy Liquid-Glassmorphic Bubble */}
+              <motion.div
+                animate={isActive ? { y: [0, -3, 0] } : { y: 0 }}
+                transition={isActive ? { repeat: Infinity, duration: 3.5, ease: 'easeInOut' } : undefined}
+                className={cn(
+                  'relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all duration-300 border overflow-hidden backdrop-blur-lg',
+                  isActive
+                    ? 'border-white/40 dark:border-white/10 scale-105 shadow-lg shadow-black/[0.05]'
+                    : 'bg-white/40 dark:bg-zinc-900/40 border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:scale-102 shadow-sm shadow-black/[0.01]'
+                )}
+              >
+                {/* 3D Glossy reflection overlays simulating a liquid glass dome */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none rounded-full" />
+                <div className="absolute top-[1.5px] left-1/2 -translate-x-1/2 w-4/5 h-2/5 bg-gradient-to-b from-white/25 to-transparent blur-[0.5px] rounded-full pointer-events-none" />
+                <div className="absolute inset-[1px] border border-white/25 dark:border-white/5 rounded-full pointer-events-none" />
 
-              {/* 3D badge icon */}
-              {c.image && (
-                <img
-                  src={c.image}
-                  alt={c.title}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain pointer-events-none transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 relative"
-                />
-              )}
+                {/* Fluid background color blob inside the liquid glass */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeCurationCircle"
+                    className={cn(
+                      'absolute inset-0 rounded-full bg-gradient-to-tr -z-10 opacity-90',
+                      c.gradient
+                    )}
+                    transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+                  />
+                )}
 
-              {/* Tab Title Text */}
-              <span className="font-black tracking-tight select-none">
+                {/* Floating 3D badge icon inside the liquid bubble */}
+                {c.image && (
+                  <img
+                    src={c.image}
+                    alt={c.title}
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain pointer-events-none transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 relative z-10 filter drop-shadow-[0_2.5px_6px_rgba(0,0,0,0.15)]"
+                  />
+                )}
+              </motion.div>
+
+              {/* Title Text Centered Below */}
+              <span
+                className={cn(
+                  'text-[10px] sm:text-xs font-black tracking-tight transition-colors duration-300 max-w-[80px] sm:max-w-[100px] text-center line-clamp-2 leading-tight',
+                  isActive
+                    ? 'text-text-primary dark:text-white font-extrabold'
+                    : 'text-text-secondary dark:text-zinc-400 group-hover:text-text-primary dark:group-hover:text-white'
+                )}
+              >
                 {c.title}
               </span>
+
+              {/* Bottom active underline indicator bar */}
+              <div className="relative h-1 w-6 rounded-full overflow-hidden mt-0.5">
+                {isActive && (
+                  <motion.div
+                    layoutId="activeCurationUnderline"
+                    className={cn('absolute inset-0 bg-gradient-to-r', c.gradient)}
+                    transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+                  />
+                )}
+              </div>
             </button>
           )
         })}
