@@ -10,6 +10,7 @@ import { TimeSuggestions } from '@/components/home/time-suggestions'
 import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
 import { CafeSection } from '@/components/home/cafe-section'
+import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { Category, Product } from '@/types'
 import { FlashDealsBanner } from '@/components/home/flash-deals-banner'
 import Link from 'next/link'
@@ -25,6 +26,7 @@ export default async function Home() {
   let bestSellersRaw: any[] = []
   let suggestionsRaw: any[] = []
   let topPicksRaw: any[] = []
+  let nightCravingsRaw: any[] = []
 
   // 1. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
   const istOffset = 5.5 * 60 * 60 * 1000
@@ -119,6 +121,7 @@ export default async function Home() {
       flashRes,
       sellersRes,
       suggestionsRes,
+      nightCravingsRes,
     ] = await Promise.all([
       prisma.promoBanner.findMany({
         where: { isActive: true },
@@ -151,37 +154,44 @@ export default async function Home() {
             { isFlashDeal: true },
             { discount: { gt: 10 } }
           ],
-          NOT: [
-            { tags: { has: 'cafe' } },
-            { category: { slug: 'cafe' } },
-          ]
         },
         orderBy: [
           { isFlashDeal: 'desc' },
           { discount: 'desc' }
         ],
-        take: 10,
+        take: 16,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch flash deals:', err); return []; }),
       prisma.product.findMany({
         where: {
           isAvailable: true,
-          NOT: [
-            { tags: { has: 'cafe' } },
-            { category: { slug: 'cafe' } },
-          ]
         },
         orderBy: [
           { isBestSeller: 'desc' },
           { createdAt: 'desc' }
         ],
-        take: 12,
+        take: 16,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
       prisma.product.findMany({
         where: suggestionWhereClause,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch time suggestions:', err); return []; }),
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          OR: [
+            { category: { slug: { in: ['cafe', 'beverages', 'ice-cream'] } } },
+            { tags: { hasSome: ['snacks', 'drinks', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood'] } }
+          ]
+        },
+        orderBy: [
+          { isBestSeller: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        take: 24,
+        select: productSelect,
+      }).catch((err) => { console.warn('Failed to fetch night cravings:', err); return []; }),
     ])
 
     promoBanners = bannersRes
@@ -190,6 +200,7 @@ export default async function Home() {
     flashDealsRaw = flashRes
     bestSellersRaw = sellersRes
     suggestionsRaw = suggestionsRes
+    nightCravingsRaw = nightCravingsRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -317,6 +328,7 @@ export default async function Home() {
   const flashDeals = flashDealsRaw.map(mapProduct)
   const bestSellers = bestSellersRaw.map(mapProduct)
   const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
+  const nightCravings = nightCravingsRaw.map(mapProduct)
 
   return (
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
@@ -335,17 +347,11 @@ export default async function Home() {
       {/* Your Last Order - Track active or reorder */}
       <LastOrderBanner />
 
-      {/* Flash Deals Row */}
-      <ProductScrollSection
-        title="Flash Deals"
-        subtitle="Instant discounts on daily cravings"
-        products={flashDeals}
-        rightElement={
-          <div key="flash-deals-countdown-timer" className="flex items-center gap-2">
-            <span className="text-xs font-bold text-text-secondary">Ends in:</span>
-            <CountdownTimer />
-          </div>
-        }
+      {/* Deals & Curations Hub */}
+      <DealsCurationHub
+        flashDeals={flashDeals}
+        bestSellers={bestSellers}
+        nightCravings={nightCravings}
       />
 
       <FlashDealsBanner />
@@ -362,21 +368,6 @@ export default async function Home() {
         subtitle="Highly rated and popular in your neighborhood"
         products={topPicks}
       />
-
-      {/* Best Sellers Grid */}
-      <section className="py-2.5 md:py-6">
-        <h2 className="text-lg md:text-2xl font-bold text-text-primary tracking-tight mb-2 px-1">
-          Best Sellers
-        </h2>
-        <p className="text-xs md:text-sm text-text-secondary mb-3 md:mb-6 px-1">
-          Our customer favorites
-        </p>
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
 
       {/* Value Proposition Grid */}
       <DeliveryBanner />
