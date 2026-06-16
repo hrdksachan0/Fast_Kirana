@@ -289,29 +289,29 @@ export function CategoryPageClient({
     }
 
     return result
-  }, [initialProducts, searchQuery, vegFilter, maxPrice, sort])
+  }, [initialProducts, searchQuery, vegFilter, maxPrice, sort, activeSubcategoryId, subcategories])
 
   const categoryBanners: Record<string, { gradient: string; title: string; subtitle: string; emoji: string }> = {
     'fruits-vegetables': {
-      gradient: 'from-[#fffbeb] via-[#f0fdf4] to-[#ecfdf5] dark:from-amber-950/10 dark:via-emerald-950/10 dark:to-emerald-900/10 border-emerald-100/20 dark:border-emerald-950/10',
-      title: 'SUMMER SPECIAL',
-      subtitle: 'BEST DEALS • Order Now',
-      emoji: '🥭',
+      gradient: 'from-[#EAFDF4] via-white to-[#F0FDF4] dark:from-emerald-950/15 dark:to-zinc-950 border-emerald-100/10 dark:border-emerald-950/10',
+      title: 'FARM DIRECT',
+      subtitle: '100% Farm-Fresh Organic',
+      emoji: '🥬',
     },
     'dairy-breakfast': {
-      gradient: 'from-[#f0f9ff] via-[#eff6ff] to-[#eef2ff] dark:from-sky-950/10 dark:via-blue-950/10 dark:to-indigo-900/10 border-blue-100/20 dark:border-blue-950/10',
-      title: 'MORNING FRESH',
-      subtitle: 'Milk, Butter & Eggs',
+      gradient: 'from-[#EEF2FF] via-white to-[#EFF6FF] dark:from-blue-950/15 dark:to-zinc-950 border-blue-100/10 dark:border-blue-950/10',
+      title: 'FRESH DAILY',
+      subtitle: 'Chilled Dairy & Bread Essentials',
       emoji: '🥛',
     },
     'snacks-munchies': {
-      gradient: 'from-[#fffbeb] via-[#fff5f5] to-[#fff1f2] dark:from-amber-950/10 dark:via-red-950/10 dark:to-rose-900/10 border-red-100/20 dark:border-red-950/10',
-      title: 'SNACK O\'CLOCK',
-      subtitle: 'Crunchy Munchies & Treats',
+      gradient: 'from-[#FFF7ED] via-white to-[#FFFBEB] dark:from-orange-950/15 dark:to-zinc-950 border-orange-100/10 dark:border-orange-950/10',
+      title: 'SNACK TIME',
+      subtitle: 'Crunchy & Sweet Treats',
       emoji: '🍿',
     },
     'beverages': {
-      gradient: 'from-[#faf5ff] via-[#fdf2f8] to-[#eef2ff] dark:from-purple-950/10 dark:via-pink-950/10 dark:to-indigo-900/10 border-purple-100/20 dark:border-purple-950/10',
+      gradient: 'from-[#FAF5FF] via-white to-[#FDF2F8] dark:from-purple-950/15 dark:to-zinc-950 border-purple-100/10 dark:border-purple-950/10',
       title: 'STAY HYDRATED',
       subtitle: 'Cool Drinks & Juices',
       emoji: '🥤',
@@ -319,7 +319,7 @@ export function CategoryPageClient({
   }
 
   const activeBanner = categoryBanners[activeCategory.slug] || {
-    gradient: 'from-[#fafafa] via-[#f5f5f5] to-[#f4f4f5] dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-950 border-border/20 dark:border-zinc-800/10',
+    gradient: 'from-[#fafafa] via-white to-[#f4f4f5] dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-950 border-border/20 dark:border-zinc-800/10',
     title: activeCategory.name.toUpperCase(),
     subtitle: 'Fresh Deals in Ghatampur',
     emoji: '🛒',
@@ -414,7 +414,7 @@ export function CategoryPageClient({
                         type="button"
                         onClick={() => setSort(opt.value)}
                         className={cn(
-                          'px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap cursor-pointer',
+                          'transparent px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap cursor-pointer border-0 outline-none',
                           isActive
                             ? 'bg-card text-text-primary shadow-sm'
                             : 'text-text-secondary hover:text-text-primary'
@@ -503,7 +503,7 @@ export function CategoryPageClient({
         {/* Mobile top category scrollbar (circular icons, like Zepto) */}
         <div 
           id="mobile-category-scrollbar"
-          className="flex gap-4.5 overflow-x-auto pb-3 pt-2.5 scrollbar-none px-4 select-none w-full justify-start scroll-smooth snap-x snap-mandatory border-b border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950"
+          className="flex gap-4 overflow-x-auto pb-3 pt-3 scrollbar-none px-4 select-none w-full justify-start scroll-smooth snap-x snap-mandatory border-b border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950"
         >
           {categories.map((cat) => {
             const isActive = cat.slug === activeCategory.slug
@@ -517,12 +517,11 @@ export function CategoryPageClient({
                 {/* Circular image container */}
                 <div
                   className={cn(
-                    "w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all duration-300 border bg-zinc-50/50 dark:bg-zinc-900/40 relative z-10",
+                    "w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all duration-300 border relative z-10",
                     isActive
-                      ? "border-rose-500 scale-105 shadow-sm"
-                      : "border-zinc-200/50 dark:border-zinc-800/40"
+                      ? "border-rose-600 dark:border-rose-500 bg-rose-50/30 dark:bg-rose-950/10 scale-105 shadow-xs"
+                      : "border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20"
                   )}
-                  style={isActive ? { boxShadow: '0 0 0 2px #E11D48' } : undefined}
                 >
                   {cat.imageUrl && (cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http') || cat.imageUrl.startsWith('data:image/')) ? (
                     <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -531,8 +530,8 @@ export function CategoryPageClient({
                   )}
                 </div>
                 <span className={cn(
-                  "text-[9px] font-black tracking-tight text-center leading-tight truncate w-[60px] transition-colors",
-                  isActive ? "text-rose-600 dark:text-rose-400 font-extrabold" : "text-text-secondary dark:text-zinc-400"
+                  "text-[10px] tracking-tight text-center leading-tight line-clamp-2 w-[76px] transition-colors",
+                  isActive ? "text-rose-600 dark:text-rose-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium"
                 )}>
                   {cat.name}
                 </span>
@@ -552,52 +551,61 @@ export function CategoryPageClient({
 
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
-          {/* Mobile Left Sidebar: Subcategories */}
-          {/* Mobile Left Sidebar: Subcategories */}
-          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-none sticky top-[56px] self-start backdrop-blur-md">
+          {/* Mobile Left Sidebar: Redesigned into Sleek Rectangular Vertical Tabs */}
+          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-none sticky top-[56px] self-start backdrop-blur-md">
             {subcategories.map((subcat) => {
               const isActive = subcat.id === activeSubcategoryId
+              // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
+              const formattedName = subcat.name
+                .toLowerCase()
+                .split(' ')
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ')
+
               return (
                 <button
                   key={subcat.id}
                   onClick={() => setActiveSubcategoryId(subcat.id)}
                   className={cn(
-                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
-                    isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
+                    'w-full flex flex-col items-center text-center gap-1 py-3 px-1.5 relative transition-all cursor-pointer select-none z-10 outline-none border-0 bg-transparent',
+                    isActive ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 dark:text-zinc-400'
                   )}
                 >
                   {/* Sliding Left indicator bar */}
                   {isActive && (
                     <motion.div
                       layoutId="activeSubcategoryMobileBar"
-                      className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-rose-600 dark:bg-rose-500 rounded-r-full"
+                      className="absolute left-0 top-2 bottom-2 w-[3.5px] bg-[#FF2E55] rounded-r-full"
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     />
                   )}
 
-                  {/* Icon Card Container */}
+                  {/* Rectangular Card Container */}
                   <div
                     className={cn(
-                      'w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_1.5px_4px_rgba(0,0,0,0.01)] relative z-10',
+                      'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border relative z-10 shadow-[0_2px_8px_rgba(0,0,0,0.01)]',
                       isActive
-                        ? 'border-rose-250 dark:border-rose-900/30 scale-[1.05] bg-white dark:bg-zinc-900'
-                        : 'bg-white/80 dark:bg-zinc-900/80 border-zinc-100 dark:border-zinc-800/80'
+                        ? 'border-zinc-200 dark:border-zinc-800 scale-[1.05] bg-white dark:bg-zinc-900 shadow-sm'
+                        : 'bg-white/80 dark:bg-zinc-900/60 border-zinc-100 dark:border-zinc-900/60'
                     )}
                   >
-                    {/* Sliding active inner circle background */}
+                    {/* Sliding active inner background */}
                     {isActive && (
                       <motion.div
                         layoutId="activeSubcategoryMobileCircle"
-                        className="absolute inset-0 rounded-full bg-rose-50/60 dark:bg-rose-950/20 -z-10"
+                        className="absolute inset-0 rounded-2xl bg-rose-50/10 dark:bg-rose-950/5 -z-10"
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <span className="text-xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
+                    <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
                   </div>
 
                   {/* Subcategory Name */}
-                  <span className="text-[9.5px] leading-tight font-black px-1 tracking-tight select-none mt-0.5 relative z-20 uppercase">
-                    {subcat.name}
+                  <span className={cn(
+                    "text-[9.5px] leading-tight px-0.5 tracking-tight select-none mt-1.5 relative z-20 text-center line-clamp-2 max-w-[80px]",
+                    isActive ? "font-extrabold text-rose-600 dark:text-rose-450" : "font-semibold text-zinc-500 dark:text-zinc-400"
+                  )}>
+                    {formattedName}
                   </span>
                 </button>
               )
@@ -608,15 +616,15 @@ export function CategoryPageClient({
           <div className="flex-grow min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-220px)] px-3 py-3 space-y-3.5">
             {/* Promo Subcategory Banner (Visual Highlight) */}
             <div className={cn(
-              'relative overflow-hidden rounded-2xl p-3 flex items-center justify-between border shadow-[0_4px_15px_rgba(0,0,0,0.02)] min-h-[92px] select-none',
+              'relative overflow-hidden rounded-2xl p-3.5 flex items-center justify-between border shadow-[0_4px_15px_rgba(0,0,0,0.02)] min-h-[92px] select-none',
               activeBanner.gradient
             )}>
               {/* Decorative Circle Grid */}
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/15 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
-              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/15 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
+              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 dark:bg-white/5 rounded-full blur-xs pointer-events-none" />
               
               <div className="relative z-10 max-w-[65%] text-left">
-                <span className="text-[8px] font-black tracking-widest text-amber-600 dark:text-amber-400 block mb-0.5 uppercase">
+                <span className="inline-block bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
                   {activeBanner.title}
                 </span>
                 <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight mb-1 select-none uppercase">
@@ -667,10 +675,10 @@ export function CategoryPageClient({
                   type="button"
                   onClick={() => setShowPriceFilter(!showPriceFilter)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full border text-[9.5px] font-black flex items-center gap-1 transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight',
+                    'px-3 py-1.5 rounded-full border text-[10px] font-bold flex items-center gap-1 transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight shadow-xs',
                     maxPrice < maxPriceOfCategory
-                      ? 'bg-rose-500 border-rose-500 text-white font-extrabold shadow-sm'
-                      : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
+                      ? 'bg-[#FF2E55] border-[#FF2E55] text-white font-extrabold shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800/40 hover:bg-muted text-zinc-500 dark:text-zinc-400'
                   )}
                 >
                   <span>Under ₹{maxPrice}</span>
@@ -685,10 +693,10 @@ export function CategoryPageClient({
                       type="button"
                       onClick={() => setSort(opt.value)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full border text-[9.5px] font-black transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight',
+                        'px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all select-none cursor-pointer shrink-0 uppercase tracking-tight shadow-xs border-0 outline-none',
                         isActive
-                          ? 'bg-rose-500 border-rose-500 text-white font-extrabold shadow-sm'
-                          : 'bg-white dark:bg-zinc-900 border-zinc-200/50 dark:border-zinc-800/40 hover:bg-muted text-text-secondary'
+                          ? 'bg-[#FF2E55] border-[#FF2E55] text-white font-extrabold shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800/40 hover:bg-muted text-zinc-500 dark:text-zinc-400'
                       )}
                     >
                       {opt.label.replace('Price: ', '')}
