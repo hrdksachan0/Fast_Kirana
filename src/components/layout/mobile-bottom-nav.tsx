@@ -26,7 +26,7 @@ export function MobileBottomNav() {
     {
       label: 'Categories',
       icon: LayoutGrid,
-      href: '/category/fruits-vegetables',
+      href: '/category',
       active: pathname.startsWith('/category'),
     },
     {

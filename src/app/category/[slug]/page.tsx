@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { CategoryPageClient } from '@/components/category/category-page-client'
 import { Category, Product } from '@/types'
+import { Suspense } from 'react'
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -89,18 +90,20 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }))
 
   return (
-    <CategoryPageClient
-      categories={categories}
-      initialProducts={products}
-      activeCategory={{
-        id: activeCategory.id,
-        name: activeCategory.name,
-        slug: activeCategory.slug,
-        imageUrl: activeCategory.imageUrl,
-        parentId: activeCategory.parentId,
-        sortOrder: activeCategory.sortOrder,
-      }}
-      countsMap={countsMap}
-    />
+    <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>
+      <CategoryPageClient
+        categories={categories}
+        initialProducts={products}
+        activeCategory={{
+          id: activeCategory.id,
+          name: activeCategory.name,
+          slug: activeCategory.slug,
+          imageUrl: activeCategory.imageUrl,
+          parentId: activeCategory.parentId,
+          sortOrder: activeCategory.sortOrder,
+        }}
+        countsMap={countsMap}
+      />
+    </Suspense>
   )
 }

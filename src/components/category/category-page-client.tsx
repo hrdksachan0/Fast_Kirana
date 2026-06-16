@@ -6,6 +6,7 @@ import { ProductCard } from '@/components/product/product-card'
 import { Category, Product } from '@/types'
 import { cn } from '@/lib/utils'
 import { ShoppingBag, Search, X, ChevronRight } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 interface Subcategory {
   id: string
@@ -182,6 +183,8 @@ export function CategoryPageClient({
   activeCategory,
   countsMap,
 }: CategoryPageClientProps) {
+  const searchParams = useSearchParams()
+  const subcatParam = searchParams.get('subcat')
   const [searchQuery, setSearchQuery] = useState('')
   const [sort, setSort] = useState<string>('popularity')
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'nonveg'>('all')
@@ -198,8 +201,12 @@ export function CategoryPageClient({
   // Reset maxPrice & subcategory when switching categories
   useEffect(() => {
     setMaxPrice(maxPriceOfCategory)
-    setActiveSubcategoryId('all')
-  }, [maxPriceOfCategory, activeCategory.slug])
+    if (subcatParam) {
+      setActiveSubcategoryId(subcatParam)
+    } else {
+      setActiveSubcategoryId('all')
+    }
+  }, [maxPriceOfCategory, activeCategory.slug, subcatParam])
 
   // Center active category tab on mobile horizontal scroll bar on mount
   useEffect(() => {
