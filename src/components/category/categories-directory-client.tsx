@@ -53,18 +53,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🥦',
       image: '/fruits_vegetables_category.png',
       gradient: 'from-emerald-500/10 to-emerald-500/5',
-      borderColor: 'border-emerald-100/50 dark:border-emerald-900/20',
-      labelColor: 'text-[#059669] dark:text-emerald-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#029664] dark:text-emerald-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: '100% Farm-Fresh Organic',
       tagBg: 'bg-emerald-500/[0.03] dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-300',
       tagHover: 'hover:border-emerald-450 dark:hover:border-emerald-700 hover:bg-emerald-500/[0.08]',
       badgeText: 'Farm Direct',
-      badgeBg: 'bg-[#EAFDF4] text-[#059669] dark:bg-emerald-950/40 dark:text-emerald-350 border border-emerald-500/10',
+      badgeBg: 'bg-[#E8F8F0] text-[#029664] dark:bg-emerald-950/40 dark:text-emerald-350',
       badgeIcon: Leaf,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(16,185,129,0.05)] hover:border-emerald-500/20',
-      btnBg: 'bg-[#059669] hover:bg-[#047857]',
-      btnArrowColor: 'text-[#059669]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(2,150,100,0.04)]',
+      btnBg: 'bg-[#029664] hover:bg-[#028054]',
+      btnArrowColor: 'text-[#029664]',
       bgEmoji: '🥦',
       subcats: [
         { id: 'vegetables', name: 'Vegetables', emoji: '🥦' },
@@ -77,18 +77,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🥛',
       image: '/dairy_breakfast_category.png',
       gradient: 'from-blue-500/10 to-blue-500/5',
-      borderColor: 'border-blue-100/50 dark:border-blue-900/20',
-      labelColor: 'text-[#1D4ED8] dark:text-blue-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#2563EB] dark:text-blue-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Chilled Dairy & Bread Essentials',
       tagBg: 'bg-blue-500/[0.03] dark:bg-blue-950/20 text-blue-850 dark:text-blue-300',
       tagHover: 'hover:border-blue-450 dark:hover:border-blue-700 hover:bg-blue-500/[0.08]',
       badgeText: 'Fresh Daily',
-      badgeBg: 'bg-[#EFF6FF] text-[#1D4ED8] dark:bg-blue-950/40 dark:text-blue-355 border border-blue-500/10',
+      badgeBg: 'bg-[#EEF2FF] text-[#2563EB] dark:bg-blue-950/40 dark:text-blue-355',
       badgeIcon: Sparkles,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(59,130,246,0.05)] hover:border-blue-500/20',
-      btnBg: 'bg-[#1D4ED8] hover:bg-[#1E40AF]',
-      btnArrowColor: 'text-[#1D4ED8]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(37,99,235,0.04)]',
+      btnBg: 'bg-[#2563EB] hover:bg-[#1D4ED8]',
+      btnArrowColor: 'text-[#2563EB]',
       bgEmoji: '🥛',
       subcats: [
         { id: 'milk', name: 'Milk & Curd', emoji: '🥛' },
@@ -101,18 +101,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🍿',
       image: '/snacks_munchies_category.png',
       gradient: 'from-amber-500/10 to-amber-500/5',
-      borderColor: 'border-amber-100/50 dark:border-amber-900/20',
-      labelColor: 'text-[#D97706] dark:text-amber-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#EA580C] dark:text-orange-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Crunchy & Sweet Treats',
       tagBg: 'bg-amber-500/[0.03] dark:bg-amber-950/20 text-amber-850 dark:text-amber-300',
       tagHover: 'hover:border-amber-450 dark:hover:border-amber-700 hover:bg-amber-500/[0.08]',
       badgeText: 'Snack Time',
-      badgeBg: 'bg-[#FFF7ED] text-[#D97706] dark:bg-amber-950/40 dark:text-amber-355 border border-amber-500/10',
+      badgeBg: 'bg-[#FFF7ED] text-[#EA580C] dark:bg-amber-950/40 dark:text-amber-355',
       badgeIcon: Zap,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(245,158,11,0.05)] hover:border-amber-500/20',
-      btnBg: 'bg-[#D97706] hover:bg-[#B45309]',
-      btnArrowColor: 'text-[#D97706]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.04)]',
+      btnBg: 'bg-[#EA580C] hover:bg-[#D97706]',
+      btnArrowColor: 'text-[#EA580C]',
       bgEmoji: '🍿',
       subcats: [
         { id: 'chips', name: 'Chips & Crisps', emoji: '🍟' },
@@ -126,16 +126,16 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🥤',
       image: '/beverages_category.png',
       gradient: 'from-purple-500/10 to-purple-500/5',
-      borderColor: 'border-purple-100/50 dark:border-purple-900/20',
-      labelColor: 'text-[#7C3AED] dark:text-purple-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#7C3AED] dark:text-purple-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Soft Drinks & Coolers',
       tagBg: 'bg-purple-500/[0.03] dark:bg-purple-950/20 text-purple-850 dark:text-purple-300',
       tagHover: 'hover:border-purple-450 dark:hover:border-purple-700 hover:bg-purple-500/[0.08]',
       badgeText: 'Beverages',
-      badgeBg: 'bg-[#FAF5FF] text-[#7C3AED] dark:bg-purple-950/40 dark:text-purple-355 border border-purple-500/10',
+      badgeBg: 'bg-[#FAF5FF] text-[#7C3AED] dark:bg-purple-950/40 dark:text-purple-355',
       badgeIcon: Coffee,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(139,92,246,0.05)] hover:border-purple-500/20',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(124,58,237,0.04)]',
       btnBg: 'bg-[#7C3AED] hover:bg-[#6D28D9]',
       btnArrowColor: 'text-[#7C3AED]',
       bgEmoji: '🥤',
@@ -150,16 +150,16 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🧴',
       image: '/personal_care_category.png',
       gradient: 'from-pink-500/10 to-pink-500/5',
-      borderColor: 'border-pink-100/50 dark:border-pink-900/20',
-      labelColor: 'text-[#DB2777] dark:text-pink-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#DB2777] dark:text-pink-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Bath, Soaps & Hair Care',
       tagBg: 'bg-pink-500/[0.03] dark:bg-pink-950/20 text-pink-855 dark:text-pink-300',
       tagHover: 'hover:border-pink-450 dark:hover:border-pink-700 hover:bg-pink-500/[0.08]',
       badgeText: 'Care & Beauty',
-      badgeBg: 'bg-[#FDF2F8] text-[#DB2777] dark:bg-pink-950/40 dark:text-pink-350 border border-pink-500/10',
+      badgeBg: 'bg-[#FDF2F8] text-[#DB2777] dark:bg-pink-950/40 dark:text-pink-350',
       badgeIcon: Sparkles,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(236,72,153,0.05)] hover:border-pink-500/20',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(219,39,119,0.04)]',
       btnBg: 'bg-[#DB2777] hover:bg-[#BE185D]',
       btnArrowColor: 'text-[#DB2777]',
       bgEmoji: '🧴',
@@ -174,18 +174,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🧼',
       image: '/household_category.png',
       gradient: 'from-teal-500/10 to-teal-500/5',
-      borderColor: 'border-teal-100/50 dark:border-teal-900/20',
-      labelColor: 'text-[#0F766E] dark:text-teal-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#0D9488] dark:text-teal-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Cleaning & Detergents',
       tagBg: 'bg-teal-500/[0.03] dark:bg-teal-950/20 text-teal-855 dark:text-teal-300',
       tagHover: 'hover:border-teal-450 dark:hover:border-teal-700 hover:bg-teal-500/[0.08]',
       badgeText: 'Household',
-      badgeBg: 'bg-[#F0FDFA] text-[#0F766E] dark:bg-teal-950/40 dark:text-teal-350 border border-teal-500/10',
+      badgeBg: 'bg-[#F0FDFA] text-[#0D9488] dark:bg-teal-950/40 dark:text-teal-350',
       badgeIcon: Home,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(20,184,166,0.05)] hover:border-teal-500/20',
-      btnBg: 'bg-[#0F766E] hover:bg-[#0D9488]',
-      btnArrowColor: 'text-[#0F766E]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(13,148,136,0.04)]',
+      btnBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
+      btnArrowColor: 'text-[#0D9488]',
       bgEmoji: '🧼',
       subcats: [
         { id: 'cleaners', name: 'Cleaners', emoji: '🧹' },
@@ -198,18 +198,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🥐',
       image: '/bakery_biscuits_category.png',
       gradient: 'from-orange-500/10 to-orange-500/5',
-      borderColor: 'border-orange-100/50 dark:border-orange-900/20',
-      labelColor: 'text-[#C2410C] dark:text-orange-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#EA580C] dark:text-orange-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Fresh Bread, Cakes & Rusks',
       tagBg: 'bg-orange-500/[0.03] dark:bg-orange-950/20 text-orange-855 dark:text-orange-305',
       tagHover: 'hover:border-orange-455 dark:hover:border-orange-700 hover:bg-orange-500/[0.08]',
       badgeText: 'Oven Fresh',
-      badgeBg: 'bg-[#FFF7ED] text-[#C2410C] dark:bg-orange-950/40 dark:text-orange-355 border border-orange-500/10',
+      badgeBg: 'bg-[#FFF7ED] text-[#EA580C] dark:bg-orange-950/40 dark:text-orange-355',
       badgeIcon: Flame,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(249,115,22,0.05)] hover:border-orange-500/20',
-      btnBg: 'bg-[#C2410C] hover:bg-[#A04000]',
-      btnArrowColor: 'text-[#C2410C]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.04)]',
+      btnBg: 'bg-[#EA580C] hover:bg-[#C2410C]',
+      btnArrowColor: 'text-[#EA580C]',
       bgEmoji: '🥐',
       subcats: [
         { id: 'bread', name: 'Fresh Bread', emoji: '🍞' },
@@ -221,18 +221,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🌾',
       image: '/atta_rice_dal_category.png',
       gradient: 'from-yellow-500/10 to-yellow-500/5',
-      borderColor: 'border-yellow-100/50 dark:border-yellow-900/20',
-      labelColor: 'text-[#854D0E] dark:text-yellow-450 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#B45309] dark:text-yellow-450',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Premium Dals & Atta Grains',
       tagBg: 'bg-yellow-500/[0.03] dark:bg-yellow-950/20 text-yellow-850 dark:text-yellow-300',
       tagHover: 'hover:border-yellow-450 dark:hover:border-yellow-700 hover:bg-yellow-500/[0.08]',
       badgeText: 'Pantry Staples',
-      badgeBg: 'bg-[#FEF9C3] text-[#854D0E] dark:bg-yellow-950/40 dark:text-yellow-355 border border-yellow-500/10',
+      badgeBg: 'bg-[#FEF9C3] text-[#B45309] dark:bg-yellow-950/40 dark:text-yellow-355',
       badgeIcon: ShoppingBag,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(234,179,8,0.05)] hover:border-yellow-500/20',
-      btnBg: 'bg-[#854D0E] hover:bg-[#713F12]',
-      btnArrowColor: 'text-[#854D0E]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(180,83,9,0.04)]',
+      btnBg: 'bg-[#B45309] hover:bg-[#9A3412]',
+      btnArrowColor: 'text-[#B45309]',
       bgEmoji: '🌾',
       subcats: [
         { id: 'atta-flours', name: 'Atta Flours', emoji: '🌾' },
@@ -245,18 +245,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '🍦',
       image: '/ice_cream_category.png',
       gradient: 'from-sky-500/10 to-sky-500/5',
-      borderColor: 'border-sky-100/50 dark:border-sky-900/20',
-      labelColor: 'text-[#0369A1] dark:text-sky-400 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#0284C7] dark:text-sky-400',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Sweet Frozen Treats & Cups',
       tagBg: 'bg-sky-500/[0.03] dark:bg-sky-950/20 text-sky-855 dark:text-sky-305',
       tagHover: 'hover:border-sky-400 dark:hover:border-sky-700 hover:bg-sky-500/[0.08]',
       badgeText: 'Frozen Delights',
-      badgeBg: 'bg-[#F0F9FF] text-[#0369A1] dark:bg-sky-950/40 dark:text-sky-350 border border-sky-500/10',
+      badgeBg: 'bg-[#F0F9FF] text-[#0284C7] dark:bg-sky-950/40 dark:text-sky-350',
       badgeIcon: Sparkles,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(3,105,161,0.05)] hover:border-sky-500/20',
-      btnBg: 'bg-[#0369A1] hover:bg-[#0284C7]',
-      btnArrowColor: 'text-[#0369A1]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(2,132,199,0.04)]',
+      btnBg: 'bg-[#0284C7] hover:bg-[#0369A1]',
+      btnArrowColor: 'text-[#0284C7]',
       bgEmoji: '🍦',
       subcats: [
         { id: 'cones', name: 'Cones & Bars', emoji: '🍦' },
@@ -268,18 +268,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       emoji: '☕',
       image: '/cafe_category.png',
       gradient: 'from-amber-500/10 to-amber-500/5',
-      borderColor: 'border-amber-900/20 dark:border-amber-900/25',
-      labelColor: 'text-[#854D0E] dark:text-amber-250 font-extrabold',
+      borderColor: 'border-zinc-150 dark:border-zinc-800/40',
+      labelColor: 'text-[#D97706] dark:text-amber-250',
       cardBg: 'bg-white dark:bg-zinc-950',
       tagline: 'Freshly Prepared Hot Meals',
       tagBg: 'bg-amber-500/[0.03] dark:bg-amber-950/20 text-amber-850 dark:text-amber-300',
       tagHover: 'hover:border-amber-400 dark:hover:border-amber-700 hover:bg-amber-500/[0.08]',
       badgeText: 'Hot Cafe',
-      badgeBg: 'bg-[#FFFBEB] text-[#854D0E] dark:bg-amber-950/40 dark:text-amber-305 border border-amber-500/10',
+      badgeBg: 'bg-[#FFFBEB] text-[#D97706] dark:bg-amber-950/40 dark:text-amber-305',
       badgeIcon: Coffee,
-      glowColor: 'hover:shadow-[0_15px_30px_-5px_rgba(120,53,4,0.05)] hover:border-amber-500/20',
-      btnBg: 'bg-[#854D0E] hover:bg-[#713F12]',
-      btnArrowColor: 'text-[#854D0E]',
+      glowColor: 'hover:shadow-[0_12px_24px_rgba(217,119,6,0.04)]',
+      btnBg: 'bg-[#D97706] hover:bg-[#B45309]',
+      btnArrowColor: 'text-[#D97706]',
       bgEmoji: '☕',
       subcats: [
         { id: 'hot-beverage', name: 'Brews', emoji: '☕' },
@@ -361,7 +361,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-5 px-1 pb-20">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 px-1 pb-20">
           {filteredCategories.map((c) => {
             const config = categoryConfigs[c.slug] || {
               title: c.name,
@@ -396,11 +396,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   transition: { type: 'spring', stiffness: 300, damping: 20 }
                 }}
                 whileTap={{ scale: 0.985 }}
-                className={cn(
-                  'group relative flex flex-col justify-between overflow-hidden rounded-[24px] border p-4 shadow-sm hover:shadow-[0_12px_30px_rgba(0,0,0,0.04)] transition-all duration-300 bg-white dark:bg-zinc-950 border-zinc-200/60 dark:border-zinc-800/40',
-                  config.borderColor,
-                  config.glowColor
-                )}
+                className="group relative flex flex-col justify-between overflow-hidden rounded-[32px] border p-4 sm:p-5 transition-all duration-300 bg-white dark:bg-zinc-950 border-zinc-150 dark:border-zinc-800/80 shadow-sm shadow-zinc-100/40 dark:shadow-none"
               >
                 {/* Large floating decorative emoji in background */}
                 <div className="absolute -right-4 -bottom-6 text-7xl select-none opacity-[0.06] dark:opacity-[0.03] rotate-12 transition-transform duration-700 group-hover:scale-130 group-hover:-rotate-12 pointer-events-none font-sans filter blur-[0.5px]">
@@ -411,18 +407,18 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   {/* Image Section inside Light Container */}
                   <Link
                     href={destinationHref}
-                    className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden block border border-zinc-150/40 dark:border-zinc-900/50 bg-[#F8FAFC] dark:bg-zinc-900/10"
+                    className="relative w-full aspect-square sm:aspect-[4/3] rounded-2xl overflow-hidden block border border-zinc-100 dark:border-zinc-900 bg-[#F8FAFC] dark:bg-zinc-900/40"
                   >
                     {/* Floating Badge in Top Left */}
                     <div className="absolute top-2.5 left-2.5 z-20">
                       {itemCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-white/95 dark:bg-zinc-950/95 text-[#FF2E55] font-extrabold text-[8px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-black/5">
+                        <span className="inline-flex items-center gap-1 bg-white/95 dark:bg-zinc-950/95 text-[#FF2E55] font-extrabold text-[8.5px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-black/5">
                           <ShoppingBag size={9} strokeWidth={3} />
                           {itemCount} Items
                         </span>
                       ) : (
                         <span className={cn(
-                          "inline-flex items-center gap-1 font-extrabold text-[8px] sm:text-[9.5px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-black/[0.03]", 
+                          "inline-flex items-center gap-1.5 font-bold text-[8.5px] sm:text-[9.5px] px-3 py-1 rounded-full uppercase tracking-wide", 
                           config.badgeBg
                         )}>
                           {config.badgeIcon && <config.badgeIcon className="h-3 w-3 shrink-0" />}
@@ -437,7 +433,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                         alt={c.name}
                         fill
                         sizes="(max-width: 640px) 150px, 250px"
-                        className="object-contain p-4 transition-transform duration-700 ease-out group-hover:scale-108"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -450,10 +446,10 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
 
                   {/* Title & Tagline info */}
                   <div className="flex flex-col text-left min-w-0 px-1">
-                    <h2 className={cn('text-sm sm:text-base font-extrabold tracking-tight leading-tight truncate', config.labelColor)}>
+                    <h2 className={cn('text-lg sm:text-xl font-bold tracking-tight leading-tight truncate', config.labelColor)}>
                       {c.name}
                     </h2>
-                    <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 font-bold truncate leading-none mt-1.5">
+                    <span className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium truncate leading-none mt-1.5">
                       {config.tagline}
                     </span>
                   </div>
@@ -463,13 +459,13 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                     <Link
                       href={destinationHref}
                       className={cn(
-                        'flex items-center justify-between text-[10px] sm:text-xs font-black px-4 py-2.5 rounded-full shadow-sm transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/10',
+                        'flex items-center justify-between text-[11px] sm:text-xs font-bold px-4 py-3 rounded-2xl transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/5',
                         config.btnBg
                       )}
                     >
-                      <span className="flex-grow text-center pl-4 tracking-wider">Shop Now</span>
-                      <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm ml-2">
-                        <ChevronRight size={12} className={cn("stroke-[3]", config.btnArrowColor || 'text-primary')} />
+                      <span className="flex-grow text-center pl-7 tracking-wider font-extrabold">SHOP NOW</span>
+                      <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                        <ChevronRight size={14} className={cn("stroke-[3.5]", config.btnArrowColor)} />
                       </span>
                     </Link>
                   </div>
