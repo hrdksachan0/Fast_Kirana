@@ -1,24 +1,116 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { useState, useMemo, useEffect } from 'react'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
-import { Sparkles, Zap, Trophy, Moon, ShoppingBag, ChevronRight } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { ShoppingBag } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface DealsCurationHubProps {
   flashDeals: any[]
   bestSellers: any[]
-  nightCravings: any[]
+  breakfastProducts: any[]
+  lunchProducts: any[]
+  teaProducts: any[]
+  nightProducts: any[]
 }
 
-export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: DealsCurationHubProps) {
-  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'night-cravings'>('all')
+export function DealsCurationHub({
+  flashDeals,
+  bestSellers,
+  breakfastProducts,
+  lunchProducts,
+  teaProducts,
+  nightProducts
+}: DealsCurationHubProps) {
+  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'dynamic-craving'>('all')
+  const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
+  const [mounted, setMounted] = useState(false)
 
-  // Combine products for "All Products" curation without duplicates
+  useEffect(() => {
+    setMounted(true)
+    const getISTHour = () => {
+      const serverTime = new Date()
+      // Indian Standard Time is UTC + 5.5 hours
+      const istTime = new Date(serverTime.getTime() + (serverTime.getTimezoneOffset() * 60000) + (5.5 * 60 * 60 * 1000))
+      return istTime.getHours()
+    }
+    setCurrentHour(getISTHour())
+    
+    // Periodically update the hour to keep the dynamic experience synced
+    const interval = setInterval(() => {
+      setCurrentHour(getISTHour())
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Dynamic Craving configuration based on current hour
+  const dynamicCravingConfig = useMemo(() => {
+    // 6 AM - 11 AM: Breakfast Club
+    if (currentHour >= 6 && currentHour < 11) {
+      return {
+        id: 'dynamic-craving' as const,
+        title: 'Breakfast Club',
+        subtitle: '🍳 Morning starts',
+        image: '/breakfast_deals_badge.png',
+        gradient: 'from-amber-400 via-orange-500 to-yellow-500',
+        products: breakfastProducts,
+        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(245,158,11,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(245,158,11,0.18)]',
+        inactiveBg: 'bg-amber-500/[0.02] border-amber-500/10 dark:bg-amber-950/[0.06] dark:border-amber-900/20 text-text-primary',
+        inactiveHover: 'hover:border-amber-500/30 hover:bg-amber-500/[0.06] dark:hover:border-amber-500/20',
+        liveTag: '🍳 Breakfast Mode',
+      }
+    }
+    // 11 AM - 4 PM: Lunch Specials
+    else if (currentHour >= 11 && currentHour < 16) {
+      return {
+        id: 'dynamic-craving' as const,
+        title: 'Lunch Specials',
+        subtitle: '🍛 Lunch meals',
+        image: '/lunch_deals_badge.png',
+        gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
+        products: lunchProducts,
+        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(16,185,129,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(16,185,129,0.18)]',
+        inactiveBg: 'bg-emerald-500/[0.02] border-emerald-500/10 dark:bg-emerald-950/[0.06] dark:border-emerald-900/20 text-text-primary',
+        inactiveHover: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.06] dark:hover:border-emerald-500/20',
+        liveTag: '🍛 Lunch Mode',
+      }
+    }
+    // 4 PM - 8 PM: Snack O\'Clock
+    else if (currentHour >= 16 && currentHour < 20) {
+      return {
+        id: 'dynamic-craving' as const,
+        title: 'Snack O\'Clock',
+        subtitle: '☕ Tea snacks',
+        image: '/tea_deals_badge.png',
+        gradient: 'from-rose-500 via-orange-500 to-amber-600',
+        products: teaProducts,
+        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(244,63,94,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(244,63,94,0.18)]',
+        inactiveBg: 'bg-rose-500/[0.02] border-rose-500/10 dark:bg-rose-950/[0.06] dark:border-rose-900/20 text-text-primary',
+        inactiveHover: 'hover:border-rose-500/30 hover:bg-rose-500/[0.06] dark:hover:border-rose-500/20',
+        liveTag: '☕ Snacks Mode',
+      }
+    }
+    // 8 PM - 5 AM: Night Cravings
+    else {
+      return {
+        id: 'dynamic-craving' as const,
+        title: 'Night Cravings',
+        subtitle: '🌙 Midnight cravings',
+        image: '/night_cravings_badge.png',
+        gradient: 'from-purple-800 via-rose-700 to-amber-800',
+        products: nightProducts,
+        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(139,92,246,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(139,92,246,0.18)]',
+        inactiveBg: 'bg-purple-500/[0.02] border-purple-500/10 dark:bg-purple-950/[0.06] dark:border-purple-900/20 text-text-primary',
+        inactiveHover: 'hover:border-purple-500/30 hover:bg-purple-500/[0.06] dark:hover:border-purple-500/20',
+        liveTag: '🌙 Cravings Mode',
+      }
+    }
+  }, [currentHour, breakfastProducts, lunchProducts, teaProducts, nightProducts])
+
+  // Combine products for "All Products" curation dynamically to ensure they stay up-to-date
   const allProducts = useMemo(() => {
-    const combined = [...flashDeals, ...bestSellers, ...nightCravings]
+    const combined = [...flashDeals, ...bestSellers, ...dynamicCravingConfig.products]
     const seen = new Set()
     return combined.filter((p) => {
       if (!p || !p.id) return false
@@ -26,9 +118,9 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       seen.add(p.id)
       return true
     })
-  }, [flashDeals, bestSellers, nightCravings])
+  }, [flashDeals, bestSellers, dynamicCravingConfig.products])
 
-  // Curation configurations
+  // All curation options
   const curations = useMemo(() => [
     {
       id: 'all' as const,
@@ -64,17 +156,9 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
       inactiveHover: 'hover:border-blue-500/30 hover:bg-blue-500/[0.06] dark:hover:border-blue-500/20',
     },
     {
-      id: 'night-cravings' as const,
-      title: 'Night Cravings',
-      subtitle: '🌙 Midnight munchies',
-      image: '/night_cravings_badge.png',
-      gradient: 'from-purple-800 via-rose-700 to-amber-800',
-      products: nightCravings,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(139,92,246,0.35)] dark:shadow-[0_12px_25px_-5px_rgba(139,92,246,0.18)]',
-      inactiveBg: 'bg-purple-500/[0.02] border-purple-500/10 dark:bg-purple-950/[0.06] dark:border-purple-900/20 text-text-primary',
-      inactiveHover: 'hover:border-purple-500/30 hover:bg-purple-500/[0.06] dark:hover:border-purple-500/20',
-    },
-  ], [allProducts, flashDeals, bestSellers, nightCravings])
+      ...dynamicCravingConfig
+    }
+  ], [allProducts, flashDeals, bestSellers, dynamicCravingConfig])
 
   // Active curation data
   const currentCuration = useMemo(() => {
@@ -82,22 +166,61 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
   }, [activeCuration, curations])
 
   return (
-    <section className="py-4 md:py-8 space-y-5">
-      {/* Dynamic Hub Title */}
-      <div className="flex items-center gap-2 px-1">
-        <span className="h-5.5 w-1.5 rounded-full bg-primary animate-pulse-gentle shrink-0" />
-        <div>
-          <h2 className="text-base md:text-xl font-black text-text-primary tracking-tight">
-            Special Curations Hub
-          </h2>
-          <p className="text-[10px] md:text-xs text-text-secondary font-bold">
-            Specially compiled deals & cravings categories
-          </p>
+    <section className="relative py-6 md:py-10 space-y-6 rounded-3xl overflow-hidden px-4 md:px-6 transition-all duration-500 border border-zinc-100/80 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/20 backdrop-blur-md shadow-sm">
+      {/* Dynamic ambient background glow */}
+      <div 
+        className={cn(
+          "absolute inset-0 -z-20 opacity-[0.03] dark:opacity-[0.07] bg-gradient-to-tr transition-all duration-700 blur-[80px]",
+          currentCuration.gradient
+        )}
+      />
+      {/* Localized glows */}
+      <div 
+        className={cn(
+          "absolute -top-10 -left-10 w-48 h-48 rounded-full -z-20 opacity-[0.04] dark:opacity-[0.08] bg-gradient-to-br transition-all duration-700 blur-[60px]",
+          currentCuration.gradient
+        )}
+      />
+      <div 
+        className={cn(
+          "absolute -bottom-10 -right-10 w-48 h-48 rounded-full -z-20 opacity-[0.04] dark:opacity-[0.08] bg-gradient-to-tl transition-all duration-700 blur-[60px]",
+          currentCuration.gradient
+        )}
+      />
+
+      {/* Dynamic Hub Title & Vibe Tag */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+        <div className="flex items-center gap-2.5">
+          <span className={cn(
+            "h-6 w-1.5 rounded-full bg-gradient-to-b shrink-0 transition-all duration-500",
+            currentCuration.gradient
+          )} />
+          <div>
+            <h2 className="text-base md:text-xl font-black text-text-primary tracking-tight">
+              Special Curations Hub
+            </h2>
+            <p className="text-[10px] md:text-xs text-text-secondary font-bold">
+              Specially compiled deals & cravings categories
+            </p>
+          </div>
         </div>
+
+        {/* Pulse timezone mode indicator */}
+        {mounted && (
+          <div className="flex items-center self-start sm:self-center">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black text-white bg-gradient-to-r shadow-sm border border-white/10 select-none animate-pulse-gentle transition-all duration-500",
+              dynamicCravingConfig.gradient
+            )}>
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping shrink-0" />
+              {dynamicCravingConfig.liveTag} Active
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Premium Curation Tab Bar */}
-      <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1.5 scrollbar-none px-1 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory">
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-2.5 pt-1.5 scrollbar-none px-1 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
@@ -108,7 +231,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 'group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black transition-all duration-300 select-none cursor-pointer shrink-0 active:scale-95 snap-start outline-none border border-transparent z-10',
                 isActive
                   ? 'text-white border-transparent'
-                  : 'bg-white dark:bg-zinc-900 text-text-secondary dark:text-zinc-400 border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-text-primary dark:hover:text-white'
+                  : 'bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md text-text-secondary dark:text-zinc-400 border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:text-text-primary dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700'
               )}
             >
               {/* Animated active sliding background */}
@@ -116,7 +239,7 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
                 <motion.div
                   layoutId="activeCurationBackground"
                   className={cn(
-                    'absolute inset-0 rounded-full bg-gradient-to-r -z-10 shadow-md',
+                    'absolute inset-0 rounded-full bg-gradient-to-r -z-10',
                     c.gradient,
                     c.activeShadow
                   )}
@@ -142,20 +265,33 @@ export function DealsCurationHub({ flashDeals, bestSellers, nightCravings }: Dea
         })}
       </div>
 
-      {/* Product Display: flat grid of curation products */}
-      {currentCuration.products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-center p-4 shadow-sm select-none">
-          <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-          <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
-          <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1 transition-all duration-300">
-          {currentCuration.products.map((product) => (
-            <ProductCard product={product} key={product.id} />
-          ))}
-        </div>
-      )}
+      {/* Product Display Grid */}
+      <div className="relative min-h-[250px] w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCuration}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="w-full"
+          >
+            {currentCuration.products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-center p-4 shadow-sm select-none">
+                <ShoppingBag className="h-7 w-7 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
+                <h3 className="text-xs font-bold text-text-primary">No deals available</h3>
+                <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
+                {currentCuration.products.map((product) => (
+                  <ProductCard product={product} key={product.id} />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </section>
   )
 }

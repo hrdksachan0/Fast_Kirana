@@ -24,65 +24,11 @@ export default async function Home() {
   let trendingOrderItems: any[] = []
   let flashDealsRaw: any[] = []
   let bestSellersRaw: any[] = []
-  let suggestionsRaw: any[] = []
   let topPicksRaw: any[] = []
-  let nightCravingsRaw: any[] = []
-
-  // 1. Fetch smart time suggestions dynamically depending on current hour in Indian Standard Time (IST / UTC+5.5)
-  const istOffset = 5.5 * 60 * 60 * 1000
-  const serverTime = new Date()
-  const istTime = new Date(serverTime.getTime() + (serverTime.getTimezoneOffset() * 60000) + istOffset)
-  const currentHour = istTime.getHours()
-
-  let suggestionWhereClause: any = { isAvailable: true }
-
-  if (currentHour >= 6 && currentHour < 11) {
-    // Breakfast Essentials: dairy-breakfast category or breakfast/dairy tags
-    suggestionWhereClause = {
-      isAvailable: true,
-      OR: [
-        { tags: { has: 'breakfast' } },
-        { tags: { has: 'dairy' } },
-        { category: { slug: 'dairy-breakfast' } },
-      ],
-    }
-  } else if (currentHour >= 11 && currentHour < 16) {
-    // Lunch Time Picks: staples or atta-rice-dal category
-    suggestionWhereClause = {
-      isAvailable: true,
-      OR: [
-        { tags: { has: 'staples' } },
-        { category: { slug: 'atta-rice-dal' } },
-      ],
-    }
-  } else if (currentHour >= 16 && currentHour < 20) {
-    // Snack O'Clock: snacks/munchies category or snacks tag
-    suggestionWhereClause = {
-      isAvailable: true,
-      OR: [
-        { tags: { has: 'snacks' } },
-        { category: { slug: 'snacks-munchies' } },
-      ],
-    }
-  } else {
-    // Late Night Cravings (8 PM - 5 AM): Admin explicitly marked 'late-night' tag, or category/tag fallbacks
-    suggestionWhereClause = {
-      isAvailable: true,
-      OR: [
-        { tags: { has: 'late-night' } }, // Admin explicitly selected night craving items
-        { tags: { has: 'snacks' } },
-        { tags: { has: 'beverages' } },
-        { category: { slug: 'snacks-munchies' } },
-        { category: { slug: 'beverages' } },
-      ],
-    }
-  }
-
-  // Ensure Cafe items do not leak into general grocery suggestions
-  suggestionWhereClause.NOT = [
-    { tags: { has: 'cafe' } },
-    { category: { slug: 'cafe' } },
-  ]
+  let breakfastRaw: any[] = []
+  let lunchRaw: any[] = []
+  let teaRaw: any[] = []
+  let nightRaw: any[] = []
 
   const productSelect = {
     id: true,
@@ -120,8 +66,10 @@ export default async function Home() {
       trendingRes,
       flashRes,
       sellersRes,
-      suggestionsRes,
-      nightCravingsRes,
+      breakfastRes,
+      lunchRes,
+      teaRes,
+      nightRes,
     ] = await Promise.all([
       prisma.promoBanner.findMany({
         where: { isActive: true },
@@ -174,15 +122,57 @@ export default async function Home() {
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
       prisma.product.findMany({
-        where: suggestionWhereClause,
+        where: {
+          isAvailable: true,
+          OR: [
+            { tags: { has: 'breakfast' } },
+            { tags: { has: 'dairy' } },
+            { category: { slug: 'dairy-breakfast' } },
+          ],
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ],
+        },
+        take: 16,
         select: productSelect,
-      }).catch((err) => { console.warn('Failed to fetch time suggestions:', err); return []; }),
+      }).catch((err) => { console.warn('Failed to fetch breakfast deals:', err); return []; }),
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          OR: [
+            { tags: { has: 'staples' } },
+            { category: { slug: 'atta-rice-dal' } },
+          ],
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ],
+        },
+        take: 16,
+        select: productSelect,
+      }).catch((err) => { console.warn('Failed to fetch lunch deals:', err); return []; }),
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          OR: [
+            { tags: { has: 'snacks' } },
+            { category: { slug: 'snacks-munchies' } },
+          ],
+          NOT: [
+            { tags: { has: 'cafe' } },
+            { category: { slug: 'cafe' } },
+          ],
+        },
+        take: 16,
+        select: productSelect,
+      }).catch((err) => { console.warn('Failed to fetch tea deals:', err); return []; }),
       prisma.product.findMany({
         where: {
           isAvailable: true,
           OR: [
             { category: { slug: { in: ['cafe', 'beverages', 'ice-cream'] } } },
-            { tags: { hasSome: ['snacks', 'drinks', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood'] } }
+            { tags: { hasSome: ['snacks', 'drinks', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night'] } }
           ]
         },
         orderBy: [
@@ -199,8 +189,10 @@ export default async function Home() {
     trendingOrderItems = trendingRes
     flashDealsRaw = flashRes
     bestSellersRaw = sellersRes
-    suggestionsRaw = suggestionsRes
-    nightCravingsRaw = nightCravingsRes
+    breakfastRaw = breakfastRes
+    lunchRaw = lunchRes
+    teaRaw = teaRes
+    nightRaw = nightRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -277,16 +269,6 @@ export default async function Home() {
     }
   }
 
-  // Sort suggestions: Put products matching preferred tag first
-  const preferredTag = currentHour >= 20 || currentHour < 6 ? 'late-night' : (currentHour >= 6 && currentHour < 11 ? 'breakfast' : '')
-  if (preferredTag && suggestionsRaw.length > 0) {
-    suggestionsRaw.sort((a: any, b: any) => {
-      const aPref = a.tags.includes(preferredTag) ? 1 : 0
-      const bPref = b.tags.includes(preferredTag) ? 1 : 0
-      return bPref - aPref // 1 comes before 0
-    })
-  }
-
   // Map database categories to UI schema
   const categories: Category[] = categoriesRaw.map((c) => ({
     id: c.id,
@@ -327,8 +309,10 @@ export default async function Home() {
   const topPicks = topPicksRaw.map(mapProduct)
   const flashDeals = flashDealsRaw.map(mapProduct)
   const bestSellers = bestSellersRaw.map(mapProduct)
-  const suggestionProducts = suggestionsRaw.slice(0, 15).map(mapProduct)
-  const nightCravings = nightCravingsRaw.map(mapProduct)
+  const breakfastProducts = breakfastRaw.map(mapProduct)
+  const lunchProducts = lunchRaw.map(mapProduct)
+  const teaProducts = teaRaw.map(mapProduct)
+  const nightProducts = nightRaw.map(mapProduct)
 
   return (
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
@@ -351,7 +335,10 @@ export default async function Home() {
       <DealsCurationHub
         flashDeals={flashDeals}
         bestSellers={bestSellers}
-        nightCravings={nightCravings}
+        breakfastProducts={breakfastProducts}
+        lunchProducts={lunchProducts}
+        teaProducts={teaProducts}
+        nightProducts={nightProducts}
       />
 
       <FlashDealsBanner />
