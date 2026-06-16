@@ -293,6 +293,14 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                 {/* Bottom Section: Subcategories Quick Tags */}
                 {config.subcats.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-3 mt-3 border-t border-dashed border-border/80">
+                    {/* All / View All option */}
+                    <Link
+                      href={destinationHref}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-muted text-[10px] font-black text-text-secondary border border-border/40 hover:text-text-primary transition-all active:scale-95"
+                    >
+                      <span>🛍️</span>
+                      <span>All</span>
+                    </Link>
                     {config.subcats.map((sub) => {
                       const subcatHref = isCafe
                         ? `/cafe?section=${sub.id}`
