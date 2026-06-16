@@ -184,6 +184,7 @@ model Product {
   @@index([isFlashDeal])
   @@index([isBestSeller])
   @@index([isTopPick])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -266,6 +267,10 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([deliveryUserId])
+  @@index([assignedPickerId])
+  @@index([assignedChefId])
+  @@index([createdAt])
   @@map("orders")
 }
 

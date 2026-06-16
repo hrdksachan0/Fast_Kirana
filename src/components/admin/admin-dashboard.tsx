@@ -91,6 +91,8 @@ export function AdminDashboard({
   
   // States for Orders
   const [orders, setOrders] = useState(initialOrders)
+  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders)
+  const [orderRefreshKey, setOrderRefreshKey] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [isChimeMuted, setIsChimeMuted] = useState(false)
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL')
@@ -249,15 +251,15 @@ export function AdminDashboard({
 
   // Real-time EventSource listener for new orders and live updates
   useEffect(() => {
-    const fetchOrdersList = async () => {
+    const fetchLiveOrdersList = async () => {
       try {
         const res = await fetch('/api/orders?all=true')
         if (res.ok) {
           const data = await res.json()
-          setOrders(data)
+          setLiveOrders(data)
         }
       } catch (err) {
-        console.error('Failed to poll orders:', err)
+        console.error('Failed to poll live orders:', err)
       }
     }
 
@@ -270,10 +272,12 @@ export function AdminDashboard({
           console.log('SSE: New order received:', data.orderId)
           toast.success(`🛎️ New Order Received: #${data.orderId.slice(0, 8)}`)
           playNewOrderChime()
-          fetchOrdersList() // Refresh orders list instantly
+          fetchLiveOrdersList() // Refresh live orders list instantly
+          setOrderRefreshKey(prev => prev + 1) // Refresh paginated order table
         } else if (data.type === 'status-change') {
           console.log('SSE: Order status changed:', data.orderId, data.status)
-          fetchOrdersList() // Refresh list on any status change
+          fetchLiveOrdersList() // Refresh live orders list
+          setOrderRefreshKey(prev => prev + 1) // Refresh paginated order table
         }
       } catch (err) {
         console.error('Failed to parse SSE message:', err)
@@ -285,7 +289,10 @@ export function AdminDashboard({
     }
 
     // Fallback polling every 30 seconds
-    const interval = setInterval(fetchOrdersList, 30000)
+    const interval = setInterval(fetchLiveOrdersList, 30000)
+
+    // Initial load of live orders list
+    fetchLiveOrdersList()
 
     return () => {
       sse.close()
@@ -297,7 +304,7 @@ export function AdminDashboard({
   useEffect(() => {
     if (isChimeMuted) return
 
-    const delayedOrdersCount = orders.filter((order) => {
+    const delayedOrdersCount = liveOrders.filter((order) => {
       if (order.status === 'PENDING') {
         const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
         const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
@@ -329,10 +336,10 @@ export function AdminDashboard({
     // Play periodically every 20 seconds
     const chimeInterval = setInterval(playWarningChime, 20000)
     return () => clearInterval(chimeInterval)
-  }, [orders, isChimeMuted])
+  }, [liveOrders, isChimeMuted])
 
   // Filter delayed orders
-  const delayedOrders = orders.filter((order) => {
+  const delayedOrders = liveOrders.filter((order) => {
     if (order.status === 'PENDING') {
       const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
       const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
@@ -569,7 +576,7 @@ export function AdminDashboard({
     }
     fetchOrders()
     return () => { active = false }
-  }, [orderPage, orderStatusFilter, orderSearchQuery])
+  }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey])
 
   // Fetch paginated/filtered products
   useEffect(() => {
@@ -3841,7 +3848,7 @@ export function AdminDashboard({
         <div className="animate-fade-in">
           <AdminAnalytics
             products={allProducts}
-            orders={orders}
+            orders={liveOrders}
             categories={categories}
             stats={{
               revenue: stats.revenue,
