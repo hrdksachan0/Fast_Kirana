@@ -63,7 +63,136 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }))
   }
 
-  const suggestions = [
+  // Get dynamic suggestions (trending/popular items in DB)
+  let dynamicSuggestions: { label: string; query: string }[] = []
+  try {
+    // 1. Group by order items to find top ordered products
+    const trendingOrderItems = await (prisma.orderItem.groupBy as any)({
+      by: ['productId'],
+      _sum: {
+        quantity: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc',
+        },
+      },
+      take: 12,
+    }).catch(() => [])
+
+    const trendingProductIds = trendingOrderItems
+      .map((item: any) => item.productId)
+      .filter((id: any): id is string => id !== null)
+
+    const whereClause = {
+      isAvailable: true,
+      NOT: [
+        { tags: { has: 'cafe' } },
+        { category: { slug: 'cafe' } }
+      ]
+    }
+
+    const featuredProducts = await prisma.product.findMany({
+      where: {
+        ...whereClause,
+        OR: [
+          { isTopPick: true },
+          { isBestSeller: true },
+          { id: { in: trendingProductIds } }
+        ]
+      },
+      select: {
+        name: true,
+      },
+      take: 10
+    })
+
+    let finalSuggestions = [...featuredProducts]
+
+    if (finalSuggestions.length < 10) {
+      const existingNames = finalSuggestions.map(p => p.name)
+      const popularProducts = await prisma.product.findMany({
+        where: {
+          ...whereClause,
+          tags: { has: 'popular' },
+          name: { notIn: existingNames }
+        },
+        select: {
+          name: true,
+        },
+        take: 10 - finalSuggestions.length
+      })
+      finalSuggestions = [...finalSuggestions, ...popularProducts]
+    }
+
+    if (finalSuggestions.length < 10) {
+      const existingNames = finalSuggestions.map(p => p.name)
+      const anyProducts = await prisma.product.findMany({
+        where: {
+          ...whereClause,
+          name: { notIn: existingNames }
+        },
+        select: {
+          name: true,
+        },
+        take: 10 - finalSuggestions.length
+      })
+      finalSuggestions = [...finalSuggestions, ...anyProducts]
+    }
+
+    const emojiMap: Record<string, string> = {
+      milk: '🥛',
+      bread: '🍞',
+      onion: '🧅',
+      potato: '🥔',
+      tomato: '🍅',
+      chips: '🍿',
+      tea: '☕',
+      chai: '☕',
+      atta: '🌾',
+      maggi: '🍜',
+      soap: '🧼',
+      butter: '🧈',
+      egg: '🥚',
+      eggs: '🥚',
+      rice: '🌾',
+      paneer: '🧀',
+      coke: '🥤',
+      cola: '🥤',
+      biscuit: '🍪',
+      biscuits: '🍪',
+      chocolate: '🍫',
+      oil: '🛢️',
+      ghee: '🥛',
+      curd: '🥛',
+      cheese: '🧀',
+      salt: '🧂',
+      sugar: '🍬',
+      coffee: '☕',
+      water: '💧',
+      juice: '🧃',
+      soda: '🥤',
+    }
+
+    dynamicSuggestions = finalSuggestions.map(p => {
+      const nameLower = p.name.toLowerCase()
+      let emoji = ''
+      for (const [key, value] of Object.entries(emojiMap)) {
+        if (nameLower.includes(key)) {
+          emoji = ` ${value}`
+          break
+        }
+      }
+      return {
+        label: `${p.name}${emoji}`,
+        query: p.name.trim()
+      }
+    })
+  } catch (err) {
+    console.warn('Failed to load dynamic suggestions on search page:', err)
+  }
+
+  const suggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [
     { label: 'Milk 🥛', query: 'milk' },
     { label: 'Bread 🍞', query: 'bread' },
     { label: 'Onion 🧅', query: 'onion' },
