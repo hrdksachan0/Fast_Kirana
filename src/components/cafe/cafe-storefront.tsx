@@ -14,6 +14,7 @@ import { ProductImage } from '@/components/product/product-image'
 import { Button } from '@/components/ui/button'
 import { useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { triggerHaptic } from '@/lib/haptic'
 
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 
@@ -104,6 +105,7 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('light')
     addItem(cartProduct)
     setShowAdded(true)
     setTimeout(() => setShowAdded(false), 600)
@@ -112,12 +114,14 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('light')
     updateQuantity(product.id, product.name, quantity + 1)
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('medium')
     updateQuantity(product.id, product.name, quantity - 1)
   }
 
@@ -247,24 +251,26 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
                 transition={{ duration: 0.15 }}
                 className="flex h-full w-full items-center justify-between rounded bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-md overflow-hidden transition-all duration-300"
               >
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.82 }}
                   onClick={handleDecrement}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-2.5 w-2.5 stroke-[3]" />
-                </button>
+                </motion.button>
                 <span className="w-5 sm:w-6 shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
                   {quantity}
                 </span>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.82 }}
                   onClick={handleIncrement}
                   disabled={quantity >= resolvedStock || quantity >= 10 || !cafeOpen}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                   aria-label="Increase quantity"
                 >
                   <Plus className="h-2.5 w-2.5 stroke-[3]" />
-                </button>
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -291,6 +297,8 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
   const [navbarHeight, setNavbarHeight] = useState<number>(96)
+  const [foodPreference, setFoodPreference] = useState<'all' | 'veg' | 'nonveg'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Parse section query parameter on mount and scroll to it
   useEffect(() => {
@@ -435,10 +443,48 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     }
   }, [mappedProducts])
 
+  // Filtered categories and products based on user food preference (Veg/Non-Veg) and search query
+  const filteredCategorySections = useMemo(() => {
+    const filterFn = (p: any) => {
+      // Veg/Non-Veg filter
+      if (foodPreference !== 'all') {
+        const tagsLower = p.tags?.map((t: string) => t.toLowerCase()) || []
+        const isNonVeg = tagsLower.includes('nonveg') || tagsLower.includes('non-veg') || tagsLower.includes('chicken') || tagsLower.includes('egg')
+        const matchesPref = foodPreference === 'veg' ? !isNonVeg : isNonVeg
+        if (!matchesPref) return false
+      }
+
+      // Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim()
+        const matchesName = p.name.toLowerCase().includes(query)
+        const matchesDesc = p.description?.toLowerCase().includes(query) || false
+        const matchesTags = p.tags?.some((t: string) => t.toLowerCase().includes(query)) || false
+        if (!matchesName && !matchesDesc && !matchesTags) return false
+      }
+
+      return true
+    }
+
+    const filteredSections = categorySections.sections
+      .map(sec => ({
+        ...sec,
+        products: sec.products.filter(filterFn)
+      }))
+      .filter(sec => sec.products.length > 0)
+
+    const filteredMoreItems = categorySections.moreItems.filter(filterFn)
+
+    return {
+      sections: filteredSections,
+      moreItems: filteredMoreItems
+    }
+  }, [categorySections, foodPreference, searchQuery])
+
   // Swiggy categories catalog list (combining grouped and dynamic ones)
   const menuCategories = useMemo(() => {
     const list = []
-    categorySections.sections.forEach(sec => {
+    filteredCategorySections.sections.forEach(sec => {
       const predef = (customSections || DEFAULT_CAFE_MENU_SECTIONS).find(c => c.tag === sec.tag) as any
       list.push({
         tag: sec.tag,
@@ -448,17 +494,17 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         count: sec.products.length
       })
     })
-    if (categorySections.moreItems.length > 0) {
+    if (filteredCategorySections.moreItems.length > 0) {
       list.push({
         tag: 'more',
         title: 'More Specials',
         emoji: '🍽️',
         image: '/cafe_all_menu_category.png',
-        count: categorySections.moreItems.length
+        count: filteredCategorySections.moreItems.length
       })
     }
     return list
-  }, [categorySections, customSections])
+  }, [filteredCategorySections, customSections])
 
   // Scroll tracker logic
   useEffect(() => {
@@ -484,7 +530,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       const idPrefix = isMobile ? 'mobile-category-section-' : 'category-section-'
 
       // Dynamic tags sections
-      categorySections.sections.forEach(sec => {
+      filteredCategorySections.sections.forEach(sec => {
         const el = document.getElementById(`${idPrefix}${sec.tag}`)
         if (el && scrollPosition >= el.offsetTop) {
           currentActive = sec.tag
@@ -514,7 +560,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     // Initialize active state on mount
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [categorySections, menuCategories])
+  }, [filteredCategorySections, menuCategories])
 
   // Auto-scroll vertical sidebar (on mobile) to center active tag button (debounced by 150ms to prevent jittering when scrolling fast)
   useEffect(() => {
@@ -567,8 +613,8 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   }
 
   const currentActiveTag = activeCategory || menuCategories[0]?.tag || ''
-  const activeSection = categorySections.sections.find(s => s.tag === currentActiveTag)
-  const activeSectionProducts = activeSection ? activeSection.products : (currentActiveTag === 'more' ? categorySections.moreItems : [])
+  const activeSection = filteredCategorySections.sections.find(s => s.tag === currentActiveTag)
+  const activeSectionProducts = activeSection ? activeSection.products : (currentActiveTag === 'more' ? filteredCategorySections.moreItems : [])
   const activeSectionTitle = activeSection ? activeSection.title : (currentActiveTag === 'more' ? 'More Specials' : '')
   const activeSectionEmoji = activeSection ? activeSection.emoji : (currentActiveTag === 'more' ? '🍽️' : '')
   const activeSectionDescription = activeSection ? activeSection.description : (currentActiveTag === 'more' ? 'Additional cafe items and specials' : '')
@@ -680,8 +726,64 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           </aside>
 
           {/* Desktop Categories Content */}
-          <div className="flex-1 space-y-10">
-            {categorySections.sections.map((section) => (
+          <div className="flex-1 space-y-8">
+            {/* Desktop Filters & Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-card border border-border/50 rounded-2xl p-4 shadow-sm select-none mb-2">
+              {/* Veg / Non Veg filters */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-black tracking-wider transition-all duration-200 cursor-pointer active:scale-95",
+                    foodPreference === 'veg'
+                      ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_8px_rgba(34,197,94,0.15)]"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  <span className="flex h-3 w-3 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
+                  </span>
+                  VEG ONLY
+                </button>
+
+                <button
+                  onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-black tracking-wider transition-all duration-200 cursor-pointer active:scale-95",
+                    foodPreference === 'nonveg'
+                      ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)]"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  <span className="flex h-3 w-3 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
+                    <span className="h-1.5 w-1.5 rotate-45 bg-red-600" />
+                  </span>
+                  NON-VEG ONLY
+                </button>
+              </div>
+
+              {/* Café Search Input */}
+              <div className="relative flex-1 max-w-sm">
+                <input
+                  type="text"
+                  placeholder="Search in Cafe Menu..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-9 pl-9 pr-8 text-xs font-semibold bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border/80 focus:border-rose-500/30 rounded-xl focus:outline-none transition-all"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs select-none">🔍</span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-muted-foreground/15 hover:bg-muted-foreground/25 text-text-secondary text-[9px] font-black cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredCategorySections.sections.map((section) => (
               <section key={section.tag} id={`category-section-${section.tag}`} className="space-y-4 pt-2 scroll-mt-24">
                 <div className="flex items-center gap-2 px-1">
                   <span className="text-xl">{section.emoji}</span>
@@ -698,7 +800,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               </section>
             ))}
 
-            {categorySections.moreItems.length > 0 && (
+            {filteredCategorySections.moreItems.length > 0 && (
               <section id="category-section-more" className="space-y-4 pt-2 scroll-mt-24">
                 <div className="flex items-center gap-2 px-1">
                   <span className="text-xl">🍽️</span>
@@ -708,11 +810,25 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                  {categorySections.moreItems.map((p: any) => (
+                  {filteredCategorySections.moreItems.map((p: any) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
                 </div>
               </section>
+            )}
+
+            {filteredCategorySections.sections.length === 0 && filteredCategorySections.moreItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
+                <span className="text-4xl animate-bounce-gentle">🥗</span>
+                <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
+                <p className="text-xs text-text-secondary max-w-[280px] mt-1">Try switching the preference filters or clear your search query.</p>
+                <button
+                  onClick={() => { setFoodPreference('all'); setSearchQuery('') }}
+                  className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  Show All Items
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -821,8 +937,64 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               </div>
             </div>
 
+            {/* Mobile Filters & Search Bar */}
+            <div className="space-y-2.5 pb-1 select-none">
+              {/* Veg / Non Veg toggles */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
+                  className={cn(
+                    "flex items-center gap-1.2 px-2.5 py-1.5 rounded-xl border text-[9px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
+                    foodPreference === 'veg'
+                      ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_6px_rgba(34,197,94,0.15)]"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
+                  )}
+                >
+                  <span className="flex h-2.5 w-2.5 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
+                    <span className="h-1 w-1 rounded-full bg-green-600" />
+                  </span>
+                  VEG ONLY
+                </button>
+
+                <button
+                  onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
+                  className={cn(
+                    "flex items-center gap-1.2 px-2.5 py-1.5 rounded-xl border text-[9px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
+                    foodPreference === 'nonveg'
+                      ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_6px_rgba(239,68,68,0.15)]"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
+                  )}
+                >
+                  <span className="flex h-2.5 w-2.5 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
+                    <span className="h-1 w-1 rotate-45 bg-red-600" />
+                  </span>
+                  NON-VEG ONLY
+                </button>
+              </div>
+
+              {/* Café Search Input */}
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Search Cafe Menu..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-8.5 pl-8.5 pr-8 text-[11px] font-semibold bg-muted/30 border border-border/80 focus:border-rose-500/20 rounded-xl focus:outline-none transition-all"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[11px] select-none">🔍</span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 rounded-full flex items-center justify-center bg-muted-foreground/15 text-text-secondary text-[8px] font-black cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Render Category Sections Vertically */}
-            {categorySections.sections.map((section) => (
+            {filteredCategorySections.sections.map((section) => (
               <section 
                 key={section.tag} 
                 id={`mobile-category-section-${section.tag}`} 
@@ -853,7 +1025,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
             ))}
 
             {/* Render More Specials section if it exists */}
-            {categorySections.moreItems.length > 0 && (
+            {filteredCategorySections.moreItems.length > 0 && (
               <section 
                 id="mobile-category-section-more" 
                 className="space-y-3 pt-1 scroll-mt-24 pb-20"
@@ -862,7 +1034,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   <span className="text-base filter drop-shadow-sm select-none">🍽️</span>
                   <div className="flex items-baseline justify-between w-full">
                     <h3 className="text-[11px] font-black text-text-primary uppercase tracking-wider">More Specials</h3>
-                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{categorySections.moreItems.length} Items</span>
+                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{filteredCategorySections.moreItems.length} Items</span>
                   </div>
                 </div>
 
@@ -873,13 +1045,27 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   viewport={{ once: true, margin: "-10% 0px" }}
                   className="grid grid-cols-2 gap-2.5"
                 >
-                  {categorySections.moreItems.map((p: any) => (
+                  {filteredCategorySections.moreItems.map((p: any) => (
                     <motion.div key={p.id} variants={itemVariants} className="h-full">
                       <ProductCard product={p} />
                     </motion.div>
                   ))}
                 </motion.div>
               </section>
+            )}
+
+            {filteredCategorySections.sections.length === 0 && filteredCategorySections.moreItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
+                <span className="text-4xl animate-bounce-gentle">🥗</span>
+                <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
+                <p className="text-xs text-text-secondary max-w-[240px] mt-1">Try switching the preference filters or clear your search query.</p>
+                <button
+                  onClick={() => { setFoodPreference('all'); setSearchQuery('') }}
+                  className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  Show All Items
+                </button>
+              </div>
             )}
           </div>
         </div>

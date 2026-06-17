@@ -11,6 +11,7 @@ import { ProductImage } from '@/components/product/product-image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePushNotification } from '@/hooks/use-push-notification'
 import { toast } from 'sonner'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface ProductCardProps {
   product: Product
@@ -138,6 +139,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('light')
     
     if (hasVariants) {
       setActiveVariantProduct(product)
@@ -163,6 +165,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('light')
     if (hasVariants) {
       setActiveVariantProduct(product)
     } else {
@@ -173,6 +176,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    triggerHaptic('medium')
     if (hasVariants) {
       setActiveVariantProduct(product)
     } else {
@@ -351,24 +355,26 @@ export function ProductCard({ product }: ProductCardProps) {
                 transition={{ duration: 0.15 }}
                 className="flex h-full w-full items-center justify-between rounded-md bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-sm overflow-hidden transition-all duration-300"
               >
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.82 }}
                   onClick={handleDecrement}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
-                </button>
+                </motion.button>
                 <span className="w-4 min-[375px]:w-5 sm:w-7 shrink-0 flex items-center justify-center text-[9px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
                   {quantity}
                 </span>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.82 }}
                   onClick={handleIncrement}
                   disabled={quantity >= resolvedStock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                   aria-label="Increase quantity"
                 >
-                  <Plus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
-                </button>
+                  <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
