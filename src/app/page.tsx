@@ -2,17 +2,14 @@ import { prisma } from '@/lib/prisma'
 import { HeroBanner } from '@/components/home/hero-banner'
 import { CategoryGrid } from '@/components/home/category-grid'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
-import { ProductScrollSection } from '@/components/product/product-scroll-section'
 import { ProductCard } from '@/components/product/product-card'
 import { CountdownTimer } from '@/components/shared/countdown-timer'
 import { LastOrderBanner } from '@/components/home/last-order-banner'
 import { TimeSuggestions } from '@/components/home/time-suggestions'
-import { TrendingSection } from '@/components/home/trending-section'
 import { SpeedStrip } from '@/components/home/speed-strip'
 import { CafeSection } from '@/components/home/cafe-section'
 import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { Category, Product } from '@/types'
-import { FlashDealsBanner } from '@/components/home/flash-deals-banner'
 import Link from 'next/link'
 
 import { unstable_cache } from 'next/cache'
@@ -104,6 +101,10 @@ const getCachedFlashDeals = unstable_cache(
           { isFlashDeal: true },
           { discount: { gt: 10 } }
         ],
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
+        ]
       },
       orderBy: [
         { isFlashDeal: 'desc' },
@@ -122,6 +123,10 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
+        ]
       },
       orderBy: [
         { isBestSeller: 'desc' },
@@ -476,17 +481,7 @@ export default async function Home() {
         nightProducts={nightProducts}
       />
 
-      <FlashDealsBanner />
 
-      {/* Trending in Town with Social Proof */}
-      <TrendingSection products={topPicks} />
-
-      {/* Top Picks Row */}
-      <ProductScrollSection
-        title="Top Picks"
-        subtitle="Highly rated and popular in your neighborhood"
-        products={topPicks}
-      />
 
       {/* Value Proposition Grid */}
       <DeliveryBanner />

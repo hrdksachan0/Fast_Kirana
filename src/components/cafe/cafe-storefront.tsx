@@ -271,6 +271,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   // Parse section query parameter on mount and scroll to it
   useEffect(() => {
     if (sectionParam) {
+      setActiveCategory(sectionParam)
       const timer = setTimeout(() => {
         scrollToCategory(sectionParam)
       }, 400)
@@ -697,7 +698,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       </div>
 
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
-      <div className="md:hidden flex flex-col -mx-4 min-h-[calc(100vh-140px)]">
+      <div id="mobile-cafe-layout-root" className="md:hidden flex flex-col -mx-4 min-h-[calc(100vh-140px)]">
         {/* Mobile Breadcrumbs */}
         <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2.5 px-4 select-none">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
@@ -719,7 +720,19 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                 <motion.button
                   key={cat.tag}
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => setActiveCategory(cat.tag)}
+                  onClick={() => {
+                    setActiveCategory(cat.tag)
+                    const el = document.getElementById('mobile-cafe-layout-root')
+                    if (el) {
+                      const navbarEl = document.querySelector('nav')
+                      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
+                      const offsetPosition = el.offsetTop - currentNavbarHeight - 8
+                      window.scrollTo({
+                        top: offsetPosition >= 0 ? offsetPosition : 0,
+                        behavior: 'smooth'
+                      })
+                    }
+                  }}
                   className={cn(
                     'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
                     isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
@@ -774,7 +787,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           </aside>
 
           {/* Mobile Right Content Panel */}
-          <div className="flex-1 min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-160px)] px-3 py-3 space-y-3.5">
+          <div className="flex-1 min-w-0 bg-background px-3 py-3 space-y-3.5">
             {/* Cafe Banner inside Mobile Right Panel */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1d0e0a] via-[#120805] to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_0_20px_rgba(244,63,94,0.12)] border border-rose-950/40 select-none">
               <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-rose-500/15 blur-[25px] pointer-events-none animate-pulse-gentle" />
