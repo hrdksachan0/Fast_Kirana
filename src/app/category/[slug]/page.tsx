@@ -8,7 +8,7 @@ interface CategoryPageProps {
   params: Promise<{ slug: string }>
 }
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
