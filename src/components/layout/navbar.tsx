@@ -143,13 +143,8 @@ export function Navbar() {
         .catch(err => console.error('Error loading store status/location in navbar:', err))
     }
 
-    // Initial fetch
+    // Initial fetch only (no periodic background polling to save database CPU limits)
     fetchStatus()
-
-    // Setup polling every 25 seconds for dynamic updates without page reload
-    const interval = setInterval(fetchStatus, 25000)
-
-    return () => clearInterval(interval)
   }, [hydrateLocation, setStoreStatus, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {
