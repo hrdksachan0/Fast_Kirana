@@ -79,9 +79,10 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     window.history.pushState(null, '', url.toString())
   }
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' })
+  const handleSignOut = async () => {
+    await signOut({ redirect: false })
     toast.success('Signed out successfully!')
+    window.location.href = '/'
   }
 
   const handleDeleteAddress = async (id: string) => {
