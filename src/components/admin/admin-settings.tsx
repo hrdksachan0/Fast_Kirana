@@ -5,6 +5,31 @@ import { toast } from 'sonner'
 import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, Coffee, Plus, Trash2, Edit2, ArrowUp, ArrowDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
+import Image from 'next/image'
+
+const getCafeSectionImage = (tag: string) => {
+  const mapping: Record<string, string> = {
+    'hot-beverage': '/cafe_brews_category.png',
+    'hot-bite': '/cafe_snacks_category.png',
+    'sandwiches': '/cafe_sandwiches_category.png',
+    'frankie-rolls': '/cafe_rolls_category.png',
+    'chinese': '/cafe_chinese_category.png',
+    'italian-pasta': '/cafe_pasta_category.png',
+    'bombay-bites': '/cafe_bombay_bites_category.png',
+    'rice-dishes': '/cafe_rice_category.png',
+    'shakes': '/cafe_shakes_category.png',
+    'mocktails': '/cafe_mocktails_category.png',
+    'cold-coffee': '/cafe_coffee_category.png',
+    'south-indian': '/cafe_south_indian_category.png',
+    'chilled': '/cafe_cold_drinks_category.png',
+    'bakery': '/bakery_biscuits_category.png',
+    'pizza': '/cafe_pizza_category.png',
+    'burgers': '/cafe_burgers_category.png',
+    'garlic-bread': '/cafe_garlic_bread_category.png',
+    'desserts': '/cafe_desserts_category.png',
+  }
+  return mapping[tag] || null
+}
 
 interface AdminSettingsProps {
   onSettingsSaved?: () => void
@@ -711,7 +736,22 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                 className="p-3 border border-border bg-muted/10 rounded-xl flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-2xl h-10 w-10 flex items-center justify-center rounded-lg bg-background border shrink-0">{sec.emoji}</span>
+                  <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center bg-background border shrink-0 relative">
+                    {(() => {
+                      const image = (sec as any).imageUrl || (sec as any).image || getCafeSectionImage(sec.tag)
+                      return image ? (
+                        <Image
+                          src={image}
+                          alt={sec.title}
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl leading-none select-none">{sec.emoji}</span>
+                      )
+                    })()}
+                  </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <strong className="text-xs text-text-primary font-extrabold">{sec.title}</strong>
