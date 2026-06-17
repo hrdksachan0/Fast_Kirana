@@ -41,6 +41,30 @@ const getCafeSectionImage = (tag: string) => {
   return mapping[tag] || null
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+      delayChildren: 0.02
+    }
+  }
+} as const
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      type: 'spring', 
+      stiffness: 220, 
+      damping: 18 
+    } 
+  }
+} as const
+
 interface CafeProductRowProps {
   product: any
   cafeOpen: boolean
@@ -442,11 +466,6 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       // Determine if floating menu button should appear (after scrolling past hero banner)
       setShowFloatingMenuBtn(window.scrollY > 250)
 
-      // Only track active categories based on scroll position on desktop (width >= 768)
-      if (window.innerWidth < 768) {
-        return
-      }
-
       const navbarEl = document.querySelector('nav')
       const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
       
@@ -461,17 +480,19 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       const scrollPosition = window.scrollY + headerOffset
 
       let currentActive = ''
+      const isMobile = window.innerWidth < 768
+      const idPrefix = isMobile ? 'mobile-category-section-' : 'category-section-'
 
       // Dynamic tags sections
       categorySections.sections.forEach(sec => {
-        const el = document.getElementById(`category-section-${sec.tag}`)
+        const el = document.getElementById(`${idPrefix}${sec.tag}`)
         if (el && scrollPosition >= el.offsetTop) {
           currentActive = sec.tag
         }
       })
 
       // More specials section
-      const moreEl = document.getElementById('category-section-more')
+      const moreEl = document.getElementById(`${idPrefix}more`)
       if (moreEl && scrollPosition >= moreEl.offsetTop) {
         currentActive = 'more'
       }
@@ -495,23 +516,26 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     return () => window.removeEventListener('scroll', handleScroll)
   }, [categorySections, menuCategories])
 
-  // Auto-scroll horizontal category bar to center active tag button (debounced by 150ms to prevent jittering when scrolling fast)
+  // Auto-scroll vertical sidebar (on mobile) to center active tag button (debounced by 150ms to prevent jittering when scrolling fast)
   useEffect(() => {
     if (!activeCategory) return
 
     const timeoutId = setTimeout(() => {
-      const activeTabEl = document.getElementById(`category-tab-${activeCategory}`)
-      const containerEl = document.getElementById('mobile-category-sticky-bar')
-      if (activeTabEl && containerEl) {
-        const containerWidth = containerEl.clientWidth
-        const tabOffsetLeft = activeTabEl.offsetLeft
-        const tabWidth = activeTabEl.clientWidth
-        const targetScrollLeft = tabOffsetLeft - (containerWidth / 2) + (tabWidth / 2)
-        
-        containerEl.scrollTo({
-          left: targetScrollLeft,
-          behavior: 'smooth'
-        })
+      const isMobile = window.innerWidth < 768
+      if (isMobile) {
+        const activeTabEl = document.getElementById(`mobile-category-tab-${activeCategory}`)
+        const containerEl = document.getElementById('mobile-cafe-sidebar')
+        if (activeTabEl && containerEl) {
+          const containerHeight = containerEl.clientHeight
+          const tabOffsetTop = activeTabEl.offsetTop
+          const tabHeight = activeTabEl.clientHeight
+          const targetScrollTop = tabOffsetTop - (containerHeight / 2) + (tabHeight / 2)
+          
+          containerEl.scrollTo({
+            top: targetScrollTop,
+            behavior: 'smooth'
+          })
+        }
       }
     }, 150)
 
@@ -520,19 +544,15 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
 
   // Smooth scroll handler
   const scrollToCategory = (tag: string) => {
-    const el = document.getElementById(`category-section-${tag}`)
+    const isMobile = window.innerWidth < 768
+    const idPrefix = isMobile ? 'mobile-category-section-' : 'category-section-'
+    const el = document.getElementById(`${idPrefix}${tag}`)
+    
     if (el) {
       const navbarEl = document.querySelector('nav')
       const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
       
-      const isMobile = window.innerWidth < 768
-      let stickyBarHeight = 0
-      if (isMobile) {
-        const stickyBarEl = document.getElementById('mobile-category-sticky-bar')
-        stickyBarHeight = stickyBarEl ? stickyBarEl.getBoundingClientRect().height : 44
-      }
-
-      const headerOffset = currentNavbarHeight + stickyBarHeight + 8
+      const headerOffset = currentNavbarHeight + 8
       const elementPosition = el.offsetTop
       const offsetPosition = elementPosition - headerOffset
 
@@ -714,26 +734,18 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Categories */}
-          <aside className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950/70 backdrop-blur-md py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start shadow-sm">
+          <aside 
+            id="mobile-cafe-sidebar" 
+            className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950/70 backdrop-blur-md py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start shadow-sm"
+          >
             {menuCategories.map((cat) => {
               const isActive = currentActiveTag === cat.tag
               return (
                 <motion.button
                   key={cat.tag}
+                  id={`mobile-category-tab-${cat.tag}`}
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => {
-                    setActiveCategory(cat.tag)
-                    const el = document.getElementById('mobile-cafe-layout-root')
-                    if (el) {
-                      const navbarEl = document.querySelector('nav')
-                      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
-                      const offsetPosition = el.offsetTop - currentNavbarHeight - 8
-                      window.scrollTo({
-                        top: offsetPosition >= 0 ? offsetPosition : 0,
-                        behavior: 'smooth'
-                      })
-                    }
-                  }}
+                  onClick={() => scrollToCategory(cat.tag)}
                   className={cn(
                     'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
                     isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
@@ -788,9 +800,9 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           </aside>
 
           {/* Mobile Right Content Panel */}
-          <div className="flex-1 min-w-0 bg-background px-3 py-3 space-y-3.5">
+          <div className="flex-1 min-w-0 bg-background px-3 py-3 space-y-4">
             {/* Cafe Banner inside Mobile Right Panel */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1d0e0a] via-[#120805] to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_0_20px_rgba(244,63,94,0.12)] border border-rose-950/40 select-none">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1d0e0a] via-[#120805] to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_0_20px_rgba(244,63,94,0.12)] border border-rose-950/40 select-none mb-2">
               <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-rose-500/15 blur-[25px] pointer-events-none animate-pulse-gentle" />
               <div className="absolute -bottom-10 -left-10 w-24 h-24 rounded-full bg-amber-500/10 blur-[25px] pointer-events-none" />
               <div className="relative z-10 max-w-[65%] text-left">
@@ -809,25 +821,65 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               </div>
             </div>
 
-            {/* Title / Info row */}
-            <div className="flex justify-between items-center text-[9.5px] font-extrabold text-text-muted uppercase tracking-wider px-0.5 border-b border-zinc-100 dark:border-zinc-900 pb-2">
-              <span>{activeSectionTitle || 'More Specials'} Menu</span>
-              <span>{activeSectionProducts.length} Items</span>
-            </div>
+            {/* Render Category Sections Vertically */}
+            {categorySections.sections.map((section) => (
+              <section 
+                key={section.tag} 
+                id={`mobile-category-section-${section.tag}`} 
+                className="space-y-3 pt-1 scroll-mt-24"
+              >
+                <div className="flex items-center gap-1.5 px-0.5 pt-2 pb-1.5 border-b border-zinc-100 dark:border-zinc-900/60">
+                  <span className="text-base filter drop-shadow-sm select-none">{section.emoji}</span>
+                  <div className="flex items-baseline justify-between w-full">
+                    <h3 className="text-[11px] font-black text-text-primary uppercase tracking-wider">{section.title}</h3>
+                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{section.products.length} Items</span>
+                  </div>
+                </div>
 
-            {/* Mobile Cafe Product Grid */}
-            {activeSectionProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/5 rounded-2xl text-center p-4 shadow-sm select-none">
-                <MenuIcon className="h-6 w-6 text-muted-foreground/60 mb-2 animate-pulse-gentle" />
-                <h2 className="text-xs font-bold text-text-primary">Restocking items</h2>
-                <p className="text-[10px] text-text-secondary mt-0.5">Please check back in a few minutes!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2.5 pb-20">
-                {activeSectionProducts.map((p: any) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
+                <motion.div 
+                  variants={containerVariants}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-10% 0px" }}
+                  className="grid grid-cols-2 gap-2.5"
+                >
+                  {section.products.map((p: any) => (
+                    <motion.div key={p.id} variants={itemVariants} className="h-full">
+                      <ProductCard product={p} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
+            ))}
+
+            {/* Render More Specials section if it exists */}
+            {categorySections.moreItems.length > 0 && (
+              <section 
+                id="mobile-category-section-more" 
+                className="space-y-3 pt-1 scroll-mt-24 pb-20"
+              >
+                <div className="flex items-center gap-1.5 px-0.5 pt-2 pb-1.5 border-b border-zinc-100 dark:border-zinc-900/60">
+                  <span className="text-base filter drop-shadow-sm select-none">🍽️</span>
+                  <div className="flex items-baseline justify-between w-full">
+                    <h3 className="text-[11px] font-black text-text-primary uppercase tracking-wider">More Specials</h3>
+                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{categorySections.moreItems.length} Items</span>
+                  </div>
+                </div>
+
+                <motion.div 
+                  variants={containerVariants}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-10% 0px" }}
+                  className="grid grid-cols-2 gap-2.5"
+                >
+                  {categorySections.moreItems.map((p: any) => (
+                    <motion.div key={p.id} variants={itemVariants} className="h-full">
+                      <ProductCard product={p} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
             )}
           </div>
         </div>
