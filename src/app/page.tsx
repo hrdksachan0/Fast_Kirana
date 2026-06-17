@@ -29,6 +29,7 @@ export default async function Home() {
   let lunchRaw: any[] = []
   let teaRaw: any[] = []
   let nightRaw: any[] = []
+  let settingsRaw: any[] = []
 
   const productSelect = {
     id: true,
@@ -70,6 +71,7 @@ export default async function Home() {
       lunchRes,
       teaRes,
       nightRes,
+      settingsRes,
     ] = await Promise.all([
       prisma.promoBanner.findMany({
         where: { isActive: true },
@@ -182,6 +184,13 @@ export default async function Home() {
         take: 24,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch night cravings:', err); return []; }),
+      prisma.storeSetting.findMany({
+        where: {
+          key: {
+            in: ['avg_delivery_time', 'delivered_today', 'fresh_stock_loaded', 'happy_families']
+          }
+        }
+      }).catch((err) => { console.warn('Failed to fetch settings:', err); return []; }),
     ])
 
     promoBanners = bannersRes
@@ -193,6 +202,7 @@ export default async function Home() {
     lunchRaw = lunchRes
     teaRaw = teaRes
     nightRaw = nightRes
+    settingsRaw = settingsRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -314,6 +324,16 @@ export default async function Home() {
   const teaProducts = teaRaw.map(mapProduct)
   const nightProducts = nightRaw.map(mapProduct)
 
+  const settingsMap: Record<string, string> = {
+    avg_delivery_time: '8 min',
+    delivered_today: '1,231+',
+    fresh_stock_loaded: '2 hrs ago',
+    happy_families: '5,000+',
+  }
+  settingsRaw.forEach((s) => {
+    settingsMap[s.key] = s.value
+  })
+
   return (
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
       {/* Shop Categories Circular List */}
@@ -323,7 +343,12 @@ export default async function Home() {
       <HeroBanner initialBanners={promoBanners} />
 
       {/* Speed ticker strip */}
-      <SpeedStrip />
+      <SpeedStrip
+        avgDelivery={settingsMap.avg_delivery_time}
+        deliveredCount={settingsMap.delivered_today}
+        freshStock={settingsMap.fresh_stock_loaded}
+        happyFamilies={settingsMap.happy_families}
+      />
 
       {/* Cafe Banner with sliding menu categories */}
       <CafeSection />

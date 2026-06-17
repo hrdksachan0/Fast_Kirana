@@ -1,6 +1,3 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import { Zap, Package, Leaf, Heart } from 'lucide-react'
 
 interface SpeedStat {
@@ -10,30 +7,19 @@ interface SpeedStat {
   value: string
 }
 
-export function SpeedStrip() {
-  const [avgDelivery, setAvgDelivery] = useState('8 min')
-  const [deliveredCount, setDeliveredCount] = useState('1,231+')
-  const [freshStock, setFreshStock] = useState('2 hrs ago')
-  const [happyFamilies, setHappyFamilies] = useState('5,000+')
+interface SpeedStripProps {
+  avgDelivery?: string
+  deliveredCount?: string
+  freshStock?: string
+  happyFamilies?: string
+}
 
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/settings')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.avg_delivery_time) setAvgDelivery(data.avg_delivery_time)
-          if (data.delivered_today) setDeliveredCount(data.delivered_today)
-          if (data.fresh_stock_loaded) setFreshStock(data.fresh_stock_loaded)
-          if (data.happy_families) setHappyFamilies(data.happy_families)
-        }
-      } catch (err) {
-        console.error('Failed to load SpeedStrip settings:', err)
-      }
-    }
-    loadSettings()
-  }, [])
-
+export function SpeedStrip({
+  avgDelivery = '8 min',
+  deliveredCount = '1,231+',
+  freshStock = '2 hrs ago',
+  happyFamilies = '5,000+',
+}: SpeedStripProps) {
   const stats: SpeedStat[] = [
     { icon: Zap, iconColor: 'text-amber-500 fill-amber-500/10', label: 'Avg Delivery', value: avgDelivery },
     { icon: Package, iconColor: 'text-blue-500 fill-blue-500/10', label: 'Delivered Today', value: deliveredCount },
