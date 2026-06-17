@@ -58,6 +58,7 @@ const AdminCsvImport = dynamic(() => import('./admin-csv-import').then((mod) => 
 const AdminPushNotifications = dynamic(() => import('./admin-push-notifications').then((mod) => mod.AdminPushNotifications), { ssr: false })
 const AdminPromotions = dynamic(() => import('./admin-promotions').then((mod) => mod.AdminPromotions), { ssr: false })
 const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod.AdminForecast), { ssr: false })
+const AdminCafeSections = dynamic(() => import('./admin-cafe-sections').then((mod) => mod.AdminCafeSections), { ssr: false })
 
 interface AdminDashboardProps {
   initialOrders: any[]
@@ -133,7 +134,7 @@ const HUB_CONFIG = [
     icon: Zap,
     color: 'from-amber-500/10 to-orange-500/10',
     activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['liveops', 'orders', 'users', 'reviews', 'alerts'] as const
+    tabs: ['liveops', 'orders', 'users', 'reviews'] as const
   },
   {
     key: 'catalog',
@@ -142,7 +143,7 @@ const HUB_CONFIG = [
     icon: Package,
     color: 'from-emerald-500/10 to-teal-500/10',
     activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['products', 'categories', 'inward', 'bulk-update'] as const
+    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update'] as const
   },
   {
     key: 'marketing',
@@ -594,6 +595,7 @@ export function AdminDashboard({
 
   // States for Categories
   const [categories, setCategories] = useState(initialCategories)
+  const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe'>('grocery')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [newCategory, setNewCategory] = useState({
@@ -1740,14 +1742,14 @@ export function AdminDashboard({
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
     { key: 'liveops', label: 'Live Ops Tracker', icon: Zap },
     { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
-    { key: 'alerts', label: 'Alerts', icon: AlertCircle, count: stats.lowStockCount },
+    { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
     { key: 'reports', label: 'Reports', icon: FileText },
     { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'products', label: 'Products', icon: Package, count: productTotal },
-    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
-    { key: 'users', label: 'Customers', icon: Users, count: userTotal },
+    { key: 'categories', label: 'Categories & Café Sections', icon: Layers, count: categories.length },
+    { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
@@ -3116,196 +3118,226 @@ export function AdminDashboard({
       {activeTab === 'categories' && (
         <div className="space-y-6 animate-fade-in">
           
-          {/* Controls header */}
-          <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border shadow-sm">
-            <div>
-              <h3 className="font-extrabold text-text-primary text-base">Store Categories</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5">Control category grouping and listing sort orders.</p>
-            </div>
-            
+          {/* Sub-view toggle buttons */}
+          <div className="flex gap-2 border-b border-border/40 pb-3">
             <button
-              onClick={() => setShowAddCategory(!showAddCategory)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all"
+              onClick={() => setCategorySubView('grocery')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                categorySubView === 'grocery'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-card border-border hover:bg-muted text-text-secondary'
+              }`}
             >
-              <PlusCircle className="h-4 w-4" />
-              Add New Category
+              📦 Grocery Categories
+            </button>
+            <button
+              onClick={() => setCategorySubView('cafe')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                categorySubView === 'cafe'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-card border-border hover:bg-muted text-text-secondary'
+              }`}
+            >
+              ☕ Café Menu Sections
             </button>
           </div>
 
-          {/* Add Category Form */}
-          {showAddCategory && (
-            <form 
-              onSubmit={handleCreateCategory}
-              className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 max-w-md animate-slide-up"
-            >
-              <div className="border-b border-border/60 pb-2">
-                <h4 className="font-extrabold text-text-primary text-sm">Add Category Details</h4>
+          {categorySubView === 'grocery' ? (
+            <div className="space-y-6">
+              {/* Controls header */}
+              <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border shadow-sm">
+                <div>
+                  <h3 className="font-extrabold text-text-primary text-base">Store Categories</h3>
+                  <p className="text-[10px] text-text-secondary mt-0.5">Control category grouping and listing sort orders.</p>
+                </div>
+                
+                <button
+                  onClick={() => setShowAddCategory(!showAddCategory)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Add New Category
+                </button>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Gourmet Sweets"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+              {/* Add Category Form */}
+              {showAddCategory && (
+                <form 
+                  onSubmit={handleCreateCategory}
+                  className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 max-w-md animate-slide-up"
+                >
+                  <div className="border-b border-border/60 pb-2">
+                    <h4 className="font-extrabold text-text-primary text-sm">Add Category Details</h4>
+                  </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Image / Icon</label>
-                  <div className="flex items-center gap-3 bg-muted/10 p-3 rounded-xl border border-dashed border-border/80">
-                    <div className="relative h-12 w-12 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shrink-0">
-                      {newCategory.imageUrl && (newCategory.imageUrl.startsWith('data:image/') || newCategory.imageUrl.startsWith('/') || newCategory.imageUrl.startsWith('http')) ? (
-                        <img src={newCategory.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                      ) : newCategory.imageUrl && newCategory.imageUrl.length < 5 ? (
-                        <span className="text-xl">{newCategory.imageUrl}</span>
-                      ) : (
-                        <span className="text-lg text-text-secondary">📁</span>
-                      )}
-                      
-                      {newCategory.imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setNewCategory({ ...newCategory, imageUrl: '' })}
-                          className="absolute -top-1 -right-1 bg-discount text-white rounded-full p-0.5 shadow hover:bg-discount/90 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Gourmet Sweets"
+                        value={newCategory.name}
+                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
                     </div>
-                    
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <label className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all">
-                          Upload Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageFileChange('new', e)}
-                            className="hidden"
-                          />
-                        </label>
-                        <span className="text-[9px] text-text-secondary">Max size 2MB</span>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Image / Icon</label>
+                      <div className="flex items-center gap-3 bg-muted/10 p-3 rounded-xl border border-dashed border-border/80">
+                        <div className="relative h-12 w-12 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shrink-0">
+                          {newCategory.imageUrl && (newCategory.imageUrl.startsWith('data:image/') || newCategory.imageUrl.startsWith('/') || newCategory.imageUrl.startsWith('http')) ? (
+                            <img src={newCategory.imageUrl} alt="Preview" className="h-full w-full object-cover" />
+                          ) : newCategory.imageUrl && newCategory.imageUrl.length < 5 ? (
+                            <span className="text-xl">{newCategory.imageUrl}</span>
+                          ) : (
+                            <span className="text-lg text-text-secondary">📁</span>
+                          )}
+                          
+                          {newCategory.imageUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setNewCategory({ ...newCategory, imageUrl: '' })}
+                              className="absolute -top-1 -right-1 bg-discount text-white rounded-full p-0.5 shadow hover:bg-discount/90 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all">
+                              Upload Photo
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageFileChange('new', e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-[9px] text-text-secondary">Max size 2MB</span>
+                          </div>
+                          
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Or type Emoji (e.g. 🍫)"
+                              value={newCategory.imageUrl.startsWith('data:image/') ? '' : newCategory.imageUrl}
+                              onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
+                              className="w-full px-2.5 py-1 text-[11px] rounded-lg border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Or type Emoji (e.g. 🍫)"
-                          value={newCategory.imageUrl.startsWith('data:image/') ? '' : newCategory.imageUrl}
-                          onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
-                          className="w-full px-2.5 py-1 text-[11px] rounded-lg border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                        />
-                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 9"
+                        value={newCategory.sortOrder}
+                        onChange={(e) => setNewCategory({ ...newCategory, sortOrder: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      />
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 9"
-                    value={newCategory.sortOrder}
-                    onChange={(e) => setNewCategory({ ...newCategory, sortOrder: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
+                  <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCategory(false)}
+                      className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreatingCategory}
+                      className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all"
+                    >
+                      {isCreatingCategory ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Category'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Categories list table */}
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
+                        <th className="py-3 px-4">Icon</th>
+                        <th className="py-3 px-4">Category Name</th>
+                        <th className="py-3 px-4">Slug Identifier</th>
+                        <th className="py-3 px-4 text-center">Sort Order</th>
+                        <th className="py-3 px-4 text-center">Items Stocked</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
+                      {categories.map((c) => (
+                        <tr key={c.id} className="hover:bg-muted/30">
+                          <td className="py-3 px-4">
+                            <span className="h-8 w-8 bg-muted/50 border flex items-center justify-center rounded-lg overflow-hidden">
+                              {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
+                                <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
+                              ) : c.imageUrl && c.imageUrl.length < 5 ? (
+                                <span className="text-base">{c.imageUrl}</span>
+                              ) : (
+                                <span className="text-base">📦</span>
+                              )}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-bold text-sm text-text-primary">{c.name}</td>
+                          <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
+                          <td className="py-3 px-4 text-center font-bold">{c.sortOrder}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                              {c._count?.products || 0} Products
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => startEditingCategory(c)}
+                                className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCategory(c.id)}
+                                disabled={deletingCategoryId === c.id}
+                                className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center"
+                              >
+                                {deletingCategoryId === c.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddCategory(false)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCategory}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all"
-                >
-                  {isCreatingCategory ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Category'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Categories list table */}
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                    <th className="py-3 px-4">Icon</th>
-                    <th className="py-3 px-4">Category Name</th>
-                    <th className="py-3 px-4">Slug Identifier</th>
-                    <th className="py-3 px-4 text-center">Sort Order</th>
-                    <th className="py-3 px-4 text-center">Items Stocked</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-                  {categories.map((c) => (
-                    <tr key={c.id} className="hover:bg-muted/30">
-                      <td className="py-3 px-4">
-                        <span className="h-8 w-8 bg-muted/50 border flex items-center justify-center rounded-lg overflow-hidden">
-                          {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
-                            <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
-                          ) : c.imageUrl && c.imageUrl.length < 5 ? (
-                            <span className="text-base">{c.imageUrl}</span>
-                          ) : (
-                            <span className="text-base">📦</span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-sm text-text-primary">{c.name}</td>
-                      <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
-                      <td className="py-3 px-4 text-center font-bold">{c.sortOrder}</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold">
-                          {c._count?.products || 0} Products
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => startEditingCategory(c)}
-                            className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCategory(c.id)}
-                            disabled={deletingCategoryId === c.id}
-                            className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center"
-                          >
-                            {deletingCategoryId === c.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          </div>
+          ) : (
+            <AdminCafeSections onSectionsSaved={fetchSettings} />
+          )}
 
         </div>
       )}
