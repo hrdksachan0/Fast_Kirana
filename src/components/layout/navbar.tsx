@@ -178,10 +178,10 @@ export function Navbar() {
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b md:backdrop-blur-lg",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-lg",
           isScrolled
-            ? "bg-white dark:bg-background border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5 md:bg-white/70 md:dark:bg-background/75"
-            : "bg-white dark:bg-background border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5 md:bg-white/80 md:dark:bg-background/80"
+            ? "bg-white/80 dark:bg-background/75 border-zinc-200/30 dark:border-white/[0.06] shadow-md py-1.5"
+            : "bg-white/90 dark:bg-background/85 border-zinc-100/40 dark:border-white/[0.04] shadow-sm py-2.5"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">
@@ -235,12 +235,17 @@ export function Navbar() {
                 onClick={() => setSearchOpen(true)}
                 className="w-full relative cursor-pointer group"
               >
-                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
+                <Search size={isScrolled ? 13 : 15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-all duration-300" />
                 <input
                   type="text"
                   placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                   readOnly
-                  className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-1.5 pl-10 pr-4 text-[11px] font-black placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 shadow-sm"
+                  className={cn(
+                    "w-full cursor-pointer rounded-full border transition-all duration-300 shadow-sm focus:outline-none placeholder:text-zinc-400/80",
+                    isScrolled
+                      ? "border-zinc-200/60 dark:border-white/[0.08] bg-white/50 dark:bg-black/40 py-1.25 pl-9 pr-4 text-[10px] font-black"
+                      : "border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-1.5 pl-10 pr-4 text-[11px] font-black"
+                  )}
                 />
               </div>
             )}

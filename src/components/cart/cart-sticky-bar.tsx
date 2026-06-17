@@ -69,56 +69,57 @@ export function CartStickyBar() {
   const hasFreeDelivery = needsForFreeDelivery <= 0
 
   return (
-    <div className="fixed bottom-[56px] left-0 right-0 z-30 bg-[#f4fbf7] dark:bg-zinc-950 border-t border-[#e2f0e7] dark:border-zinc-800/30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] md:hidden animate-slide-up">
+    <div className="fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden">
       {/* Integrated delivery progress bar at top edge */}
       {!hasFreeDelivery && (
-        <div className="w-full h-0.5 bg-[#e2f0e7] dark:bg-zinc-800/30">
+        <div className="w-full h-[3px] bg-emerald-700/30">
           <div
-            className="h-full bg-[#00b140] transition-all duration-500"
+            className="h-full bg-white transition-all duration-500"
             style={{ width: `${deliveryProgress}%` }}
           />
         </div>
       )}
 
       {/* Main content row */}
-      <div className="flex items-center justify-between px-3.5 py-2">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
-          {/* Cart Icon Container with Red Badge */}
-          <div onClick={toggleCart} className="relative h-9 w-9 bg-[#00b140]/10 dark:bg-emerald-950/20 text-[#00b140] rounded-full flex items-center justify-center cursor-pointer shrink-0">
-            <ShoppingBag className="h-4.5 w-4.5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-black text-white shadow-sm border border-white dark:border-zinc-950">
+          {/* Cart Icon Container with White/Emerald Theme */}
+          <div onClick={toggleCart} className="relative h-9 w-9 bg-white/20 text-white rounded-xl flex items-center justify-center cursor-pointer shrink-0">
+            <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-sm border border-emerald-500">
               {totalItems}
             </span>
           </div>
 
           {/* Pricing and Savings details */}
           <div className="text-left flex flex-col justify-center">
-            <span className="text-[11px] font-black text-zinc-800 dark:text-zinc-100 leading-tight">
+            <span className="text-xs font-black text-white leading-tight">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
             </span>
             {savings > 0 ? (
-              <span className="text-[9px] font-black text-[#00b140] leading-none mt-0.5 animate-pulse-gentle">
-                You save {formatPrice(savings)} on this order{hasFreeDelivery && ' • Free delivery'}
+              <span className="text-[10px] font-bold text-emerald-100 leading-none mt-0.5 flex items-center gap-1">
+                <Zap className="h-3 w-3 fill-amber-300 stroke-none animate-pulse-gentle" />
+                Saved {formatPrice(savings)}
               </span>
             ) : !hasFreeDelivery ? (
-              <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">
-                Add {formatPrice(needsForFreeDelivery)} for free delivery
+              <span className="text-[10px] font-medium text-emerald-100 leading-none mt-0.5">
+                Add {formatPrice(needsForFreeDelivery)} for Free Delivery
               </span>
             ) : (
-              <span className="text-[9px] font-bold text-zinc-500 leading-none mt-0.5">
-                Free delivery on this order
+              <span className="text-[10px] font-bold text-emerald-100 leading-none mt-0.5">
+                🎉 Free Delivery Applied
               </span>
             )}
           </div>
         </div>
 
-        {/* View Cart Button */}
+        {/* High Contrast Proceed / Checkout Pill */}
         <button
           onClick={toggleCart}
-          className="bg-[#00b140] hover:bg-[#009b35] text-white text-[11px] font-black px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
+          className="bg-white text-[#00b140] hover:bg-zinc-50 text-[11px] font-black px-4.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer tracking-tight"
         >
-          View Cart
-          <ArrowRight className="h-3 w-3 stroke-[2.5]" />
+          Proceed to Cart
+          <ArrowRight className="h-3.5 w-3.5 stroke-[3]" />
         </button>
       </div>
     </div>
