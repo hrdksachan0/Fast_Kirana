@@ -439,6 +439,14 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   // Scroll tracker logic
   useEffect(() => {
     const handleScroll = () => {
+      // Determine if floating menu button should appear (after scrolling past hero banner)
+      setShowFloatingMenuBtn(window.scrollY > 250)
+
+      // Only track active categories based on scroll position on desktop (width >= 768)
+      if (window.innerWidth < 768) {
+        return
+      }
+
       const navbarEl = document.querySelector('nav')
       const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
       
@@ -449,15 +457,8 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         return prev
       })
 
-      // Get sticky categories bar height if on mobile
-      const stickyBarEl = document.getElementById('mobile-category-sticky-bar')
-      const stickyBarHeight = stickyBarEl ? stickyBarEl.getBoundingClientRect().height : 44
-
-      const headerOffset = currentNavbarHeight + (window.innerWidth < 768 ? stickyBarHeight : 0) + 16
+      const headerOffset = currentNavbarHeight + 16
       const scrollPosition = window.scrollY + headerOffset
-      
-      // Determine if floating menu button should appear (after scrolling past hero banner)
-      setShowFloatingMenuBtn(window.scrollY > 250)
 
       let currentActive = ''
 
