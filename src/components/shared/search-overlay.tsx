@@ -51,6 +51,42 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
 
+  const [categories, setCategories] = useState<any[]>(() =>
+    CATEGORIES.map((c) => ({
+      name: c.name,
+      slug: c.slug,
+      imageUrl: c.emoji,
+    }))
+  )
+  const [trendingSearches, setTrendingSearches] = useState<string[]>(() => [...TRENDING_SEARCHES])
+
+  useEffect(() => {
+    if (open) {
+      // Fetch categories
+      fetch('/api/categories')
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setCategories(data)
+          }
+        })
+        .catch((err) => console.error('Failed to fetch categories:', err))
+
+      // Fetch trending searches (products)
+      fetch('/api/products?trending=true')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && Array.isArray(data.products)) {
+            const words = data.products.map((p: any) => p.name.trim())
+            if (words.length > 0) {
+              setTrendingSearches(words)
+            }
+          }
+        })
+        .catch((err) => console.error('Failed to fetch trending searches:', err))
+    }
+  }, [open])
+
   const toggleVoiceSearch = () => {
     if (isListening) {
       if (recognitionRef.current) {
@@ -484,7 +520,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       </h3>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {TRENDING_SEARCHES.map((term) => (
+                      {trendingSearches.map((term) => (
                         <button
                           key={term}
                           onClick={() => handleTrendingClick(term)}
@@ -506,11 +542,16 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
-                      {CATEGORIES.map((category) => {
+                      {categories.map((category) => {
                         const colors = CATEGORY_COLORS[category.slug] || {
                           bg: 'bg-zinc-50',
                           gradient: 'from-zinc-100 to-zinc-50',
                         }
+                        const hasImage = category.imageUrl && (
+                          category.imageUrl.startsWith('data:image/') ||
+                          category.imageUrl.startsWith('/') ||
+                          category.imageUrl.startsWith('http')
+                        )
                         return (
                           <button
                             key={category.slug}
@@ -518,11 +559,19 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                             className="flex flex-col items-center gap-1.5 flex-shrink-0 group cursor-pointer"
                           >
                             <div
-                              className={`flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br ${colors.gradient} shadow-sm group-hover:scale-110 transition-transform duration-300`}
+                              className={`flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br ${colors.gradient} shadow-sm group-hover:scale-110 transition-transform duration-300 overflow-hidden relative`}
                             >
-                              <span className="text-2xl" role="img" aria-label={category.name}>
-                                {category.emoji}
-                              </span>
+                              {hasImage ? (
+                                <img
+                                  src={category.imageUrl}
+                                  alt={category.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-2xl" role="img" aria-label={category.name}>
+                                  {category.imageUrl && category.imageUrl.length < 5 ? category.imageUrl : '🛒'}
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] font-bold text-text-primary group-hover:text-primary transition-colors text-center leading-tight w-16 line-clamp-2">
                               {category.name}

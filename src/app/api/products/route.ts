@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100') // default to larger limit for admin viewing
     const skip = (page - 1) * limit
     const includeUnavailable = searchParams.get('admin') === 'true'
+    const trending = searchParams.get('trending') === 'true'
 
     let isAdmin = false
     if (includeUnavailable) {
@@ -80,6 +81,90 @@ export async function GET(request: NextRequest) {
           sortOrder: true,
         }
       }
+    }
+
+    if (trending) {
+      let trendingOrderItems: any[] = []
+      try {
+        trendingOrderItems = await (prisma.orderItem.groupBy as any)({
+          by: ['productId'],
+          _sum: {
+            quantity: true,
+          },
+          orderBy: {
+            _sum: {
+              quantity: 'desc',
+            },
+          },
+          take: 12,
+        })
+      } catch (err) {
+        console.warn('Failed to fetch trending order items in API:', err)
+      }
+
+      const trendingProductIds = trendingOrderItems
+        .map((item) => item.productId)
+        .filter((id): id is string => id !== null)
+
+      const whereClause: Prisma.ProductWhereInput = {
+        isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
+        ]
+      }
+
+      const featuredProducts = await prisma.product.findMany({
+        where: {
+          ...whereClause,
+          OR: [
+            { isTopPick: true },
+            { isBestSeller: true },
+            { id: { in: trendingProductIds } }
+          ]
+        },
+        select: productSelect,
+        take: 12
+      })
+
+      let finalProducts = [...featuredProducts]
+
+      if (finalProducts.length < 8) {
+        const existingIds = finalProducts.map(p => p.id)
+        const popularProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            tags: { has: 'popular' },
+            id: { notIn: existingIds }
+          },
+          select: productSelect,
+          take: 8 - finalProducts.length
+        })
+        finalProducts = [...finalProducts, ...popularProducts]
+      }
+
+      if (finalProducts.length < 8) {
+        const existingIds = finalProducts.map(p => p.id)
+        const anyProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            id: { notIn: existingIds }
+          },
+          select: productSelect,
+          take: 8 - finalProducts.length
+        })
+        finalProducts = [...finalProducts, ...anyProducts]
+      }
+
+      return NextResponse.json({
+        products: finalProducts.slice(0, 8),
+        pagination: {
+          total: finalProducts.length,
+          page: 1,
+          limit: 8,
+          totalPages: 1
+        }
+      })
     }
 
     let products: any[] = []
