@@ -297,8 +297,8 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const [showFloatingMenuBtn, setShowFloatingMenuBtn] = useState<boolean>(false)
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
   const [navbarHeight, setNavbarHeight] = useState<number>(96)
-  const [foodPreference, setFoodPreference] = useState<'all' | 'veg' | 'nonveg'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [foodPreference, setFoodPreference] = useState<'all' | 'veg' | 'nonveg'>('all')
 
   // Parse section query parameter on mount and scroll to it
   useEffect(() => {
@@ -443,24 +443,24 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     }
   }, [mappedProducts])
 
-  // Filtered categories and products based on user food preference (Veg/Non-Veg) and search query
+  // Filtered categories and products based on user search query and food preference
   const filteredCategorySections = useMemo(() => {
     const filterFn = (p: any) => {
-      // Veg/Non-Veg filter
+      // 1. Food preference filter
       if (foodPreference !== 'all') {
         const tagsLower = p.tags?.map((t: string) => t.toLowerCase()) || []
         const isNonVeg = tagsLower.includes('nonveg') || tagsLower.includes('non-veg') || tagsLower.includes('chicken') || tagsLower.includes('egg')
-        const matchesPref = foodPreference === 'veg' ? !isNonVeg : isNonVeg
-        if (!matchesPref) return false
+        if (foodPreference === 'veg' && isNonVeg) return false
+        if (foodPreference === 'nonveg' && !isNonVeg) return false
       }
 
-      // Search query filter
+      // 2. Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim()
         const matchesName = p.name.toLowerCase().includes(query)
         const matchesDesc = p.description?.toLowerCase().includes(query) || false
         const matchesTags = p.tags?.some((t: string) => t.toLowerCase().includes(query)) || false
-        if (!matchesName && !matchesDesc && !matchesTags) return false
+        return matchesName || matchesDesc || matchesTags
       }
 
       return true
@@ -479,7 +479,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       sections: filteredSections,
       moreItems: filteredMoreItems
     }
-  }, [categorySections, foodPreference, searchQuery])
+  }, [categorySections, searchQuery, foodPreference])
 
   // Swiggy categories catalog list (combining grouped and dynamic ones)
   const menuCategories = useMemo(() => {
@@ -728,40 +728,43 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           {/* Desktop Categories Content */}
           <div className="flex-1 space-y-8">
             {/* Desktop Filters & Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-card border border-border/50 rounded-2xl p-4 shadow-sm select-none mb-2">
-              {/* Veg / Non Veg filters */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-black tracking-wider transition-all duration-200 cursor-pointer active:scale-95",
-                    foodPreference === 'veg'
-                      ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_8px_rgba(34,197,94,0.15)]"
-                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary hover:text-text-primary"
-                  )}
-                >
-                  <span className="flex h-3 w-3 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
-                  </span>
-                  VEG ONLY
-                </button>
+            <div className="flex justify-between items-center bg-card border border-border/50 rounded-2xl p-4 shadow-sm select-none mb-2">
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-extrabold text-text-primary uppercase tracking-wider">Cafe Menu</span>
+                
+                {/* Veg / Non Veg toggles */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
+                      foodPreference === 'veg'
+                        ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_6px_rgba(34,197,94,0.15)]"
+                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
+                    )}
+                  >
+                    <span className="flex h-2.5 w-2.5 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
+                      <span className="h-1 w-1 rounded-full bg-green-600" />
+                    </span>
+                    VEG ONLY
+                  </button>
 
-                <button
-                  onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-black tracking-wider transition-all duration-200 cursor-pointer active:scale-95",
-                    foodPreference === 'nonveg'
-                      ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)]"
-                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary hover:text-text-primary"
-                  )}
-                >
-                  <span className="flex h-3 w-3 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
-                    <span className="h-1.5 w-1.5 rotate-45 bg-red-600" />
-                  </span>
-                  NON-VEG ONLY
-                </button>
+                  <button
+                    onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
+                      foodPreference === 'nonveg'
+                        ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_6px_rgba(239,68,68,0.15)]"
+                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
+                    )}
+                  >
+                    <span className="flex h-2.5 w-2.5 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
+                      <span className="h-1 w-1 rotate-45 bg-red-600" />
+                    </span>
+                    NON-VEG ONLY
+                  </button>
+                </div>
               </div>
-
               {/* Café Search Input */}
               <div className="relative flex-1 max-w-sm">
                 <input
