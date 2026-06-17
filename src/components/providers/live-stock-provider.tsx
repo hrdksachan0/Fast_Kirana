@@ -1,7 +1,7 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { useCartStore } from '@/stores/cart-store'
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import { useCartStore, CartProduct } from '@/stores/cart-store'
 
 interface LiveProductState {
   price: number
@@ -23,7 +23,7 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
   const registryRef = useRef<Record<string, number>>({})
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const triggerBatchFetch = () => {
+  const triggerBatchFetch = useCallback(() => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
 
     fetchTimeoutRef.current = setTimeout(async () => {
@@ -70,24 +70,24 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to fetch live stock:', err)
       }
     }, 150) // 150ms debounce window to batch mount calls
-  }
+  }, [])
 
-  const registerProduct = (id: string) => {
+  const registerProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0
     registryRef.current[id] = currentCount + 1
     if (currentCount === 0) {
       triggerBatchFetch()
     }
-  }
+  }, [triggerBatchFetch])
 
-  const unregisterProduct = (id: string) => {
+  const unregisterProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0
     if (currentCount <= 1) {
       delete registryRef.current[id]
     } else {
       registryRef.current[id] = currentCount - 1
     }
-  }
+  }, [])
 
   // Background polling effect (every 30 seconds)
   useEffect(() => {
@@ -106,7 +106,7 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', handleFocus)
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
     }
-  }, [])
+  }, [triggerBatchFetch])
 
   return (
     <LiveStockContext.Provider value={{ liveStock, registerProduct, unregisterProduct }}>

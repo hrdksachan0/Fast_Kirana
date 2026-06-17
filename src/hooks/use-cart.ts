@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useCartStore, CartProduct } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { toast } from 'sonner'
@@ -9,11 +10,12 @@ import { playCartPop } from '@/lib/audio'
 import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
 
 export function useCart() {
-  const store = useCartStore()
+  const items = useCartStore((s) => s.items)
 
-  const checkFreeDeliveryUnlock = (action: () => void) => {
-    const prevItems = [...store.items]
-    const getCategorySubtotal = (itemsList: typeof store.items, checkCafe: boolean) => 
+  const checkFreeDeliveryUnlock = useCallback((action: () => void) => {
+    const storeState = useCartStore.getState()
+    const prevItems = [...storeState.items]
+    const getCategorySubtotal = (itemsList: typeof storeState.items, checkCafe: boolean) => 
       itemsList.filter((item) => isCafeProduct(item.product) === checkCafe)
                .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
 
@@ -45,9 +47,9 @@ export function useCart() {
         })
       }, 300)
     }
-  }
+  }, [])
 
-  const addItem = (product: CartProduct) => {
+  const addItem = useCallback((product: CartProduct) => {
     const { groceryMartOpen, cafeOpen } = useUIStore.getState()
     const isCafe = isCafeProduct(product)
     
@@ -67,8 +69,9 @@ export function useCart() {
       return
     }
 
-    const limit = isCafeProduct(product) ? 10 : 5
-    const currentQty = store.getItemQuantity(product.id)
+    const storeState = useCartStore.getState()
+    const limit = isCafe ? 10 : 5
+    const currentQty = storeState.getItemQuantity(product.id)
     if (currentQty >= limit) {
       triggerHaptic('warning')
       toast.error(`Maximum limit of ${limit} units reached for ${product.name}`, {
@@ -78,21 +81,22 @@ export function useCart() {
     }
 
     checkFreeDeliveryUnlock(() => {
-      store.addItem(product)
+      useCartStore.getState().addItem(product)
     })
     playCartPop()
     triggerHaptic('light')
     toast.success(`${product.name} added to cart`, {
       id: `cart-add-${product.id}`,
     })
-  }
+  }, [checkFreeDeliveryUnlock])
 
-  const updateQuantity = (productId: string, name: string, quantity: number) => {
-    const currentQty = store.getItemQuantity(productId)
+  const updateQuantity = useCallback((productId: string, name: string, quantity: number) => {
+    const storeState = useCartStore.getState()
+    const currentQty = storeState.getItemQuantity(productId)
 
     if (quantity > currentQty) {
       const { groceryMartOpen, cafeOpen } = useUIStore.getState()
-      const item = store.items.find((i) => i.product.id === productId)
+      const item = storeState.items.find((i) => i.product.id === productId)
       if (item) {
         const limit = isCafeProduct(item.product) ? 10 : 5
         if (quantity > limit) {
@@ -122,7 +126,7 @@ export function useCart() {
     }
 
     checkFreeDeliveryUnlock(() => {
-      store.updateQuantity(productId, quantity)
+      useCartStore.getState().updateQuantity(productId, quantity)
     })
     if (quantity > currentQty) {
       playCartPop()
@@ -142,29 +146,31 @@ export function useCart() {
         id: `cart-qty-${productId}`,
       })
     }
-  }
+  }, [checkFreeDeliveryUnlock])
 
-  const removeItem = (productId: string, name: string) => {
+  const removeItem = useCallback((productId: string, name: string) => {
     checkFreeDeliveryUnlock(() => {
-      store.removeItem(productId)
+      useCartStore.getState().removeItem(productId)
     })
     triggerHaptic('medium')
     toast.success(`${name} removed from cart`, {
       id: `cart-remove-${productId}`,
     })
-  }
+  }, [checkFreeDeliveryUnlock])
+
+  const storeState = useCartStore.getState()
 
   return {
-    items: store.items,
+    items,
     addItem,
     removeItem,
     updateQuantity,
-    clearCart: store.clearCart,
-    getItemQuantity: store.getItemQuantity,
-    getTotalItems: store.getTotalItems,
-    getSubtotal: store.getSubtotal,
-    getMrpTotal: store.getMrpTotal,
-    getSavings: store.getSavings,
-    updateCartProduct: store.updateCartProduct,
+    clearCart: useCartStore((s) => s.clearCart),
+    getItemQuantity: useCartStore((s) => s.getItemQuantity),
+    getTotalItems: useCartStore((s) => s.getTotalItems),
+    getSubtotal: useCartStore((s) => s.getSubtotal),
+    getMrpTotal: useCartStore((s) => s.getMrpTotal),
+    getSavings: useCartStore((s) => s.getSavings),
+    updateCartProduct: useCartStore((s) => s.updateCartProduct),
   }
 }

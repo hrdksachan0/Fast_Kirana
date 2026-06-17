@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
@@ -24,6 +25,15 @@ export async function GET(request: NextRequest) {
     if (includeUnavailable) {
       const session = await auth()
       isAdmin = session?.user?.role === 'ADMIN'
+    }
+
+    // Cache check for typo-tolerant searches
+    const cacheKey = `search:${search || ''}:${category || ''}:${sort || ''}:${page}:${limit}:${isAdmin}`
+    if (search) {
+      const cached = getCachedSearch(cacheKey)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
     }
 
     const where: Prisma.ProductWhereInput = {}
@@ -256,7 +266,7 @@ export async function GET(request: NextRequest) {
       total = dbTotal
     }
 
-    return NextResponse.json({
+    const responseData = {
       products,
       pagination: {
         total,
@@ -264,7 +274,13 @@ export async function GET(request: NextRequest) {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    })
+    }
+
+    if (search) {
+      setCachedSearch(cacheKey, responseData)
+    }
+
+    return NextResponse.json(responseData)
   } catch (error: any) {
     console.error('Products API Error:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
