@@ -70,7 +70,7 @@ export function CafeSection() {
                 tag: sec.tag,
                 title: getShortTitle(sec.tag, sec.title),
                 emoji: sec.emoji || '🍽️',
-                image: getCafeSectionImage(sec.tag)
+                image: sec.imageUrl || sec.image || getCafeSectionImage(sec.tag)
               }))
               setCategories([
                 { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
