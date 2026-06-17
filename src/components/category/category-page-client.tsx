@@ -329,6 +329,17 @@ export function CategoryPageClient({
 
   return (
     <div className="container mx-auto px-2 min-h-[calc(100vh-140px)] py-4 max-w-7xl">
+      <div id="fastkirana-client-debug" data-debug={JSON.stringify({
+        initialProductsLength: initialProducts?.length,
+        processedProductsLength: processedProducts?.length,
+        activeSubcategoryId,
+        maxPrice,
+        maxPriceOfCategory,
+        vegFilter,
+        sort,
+        searchQuery,
+        subcategories: subcategories.map(s => s.id),
+      })} style={{ display: 'none' }} />
       {/* -------------------- DESKTOP LAYOUT -------------------- */}
       <div className="hidden md:flex flex-col gap-6">
         {/* Desktop Breadcrumbs */}
