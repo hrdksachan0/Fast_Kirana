@@ -203,23 +203,11 @@ export function CafeSection() {
         })
       }
 
-      if (finalCategories.length > 0) {
-        setCategories([
-          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
-          ...finalCategories
-        ])
-      } else if (dbProducts.length === 0) {
-        const defaultMapped = PREDEFINED_CATEGORIES.map(cat => ({
-          tag: cat.tag,
-          title: getShortTitle(cat.tag, cat.title),
-          emoji: cat.emoji || '🍽️',
-          image: cat.imageUrl || cat.image || getCafeSectionImage(cat.tag)
-        }))
-        setCategories([
-          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
-          ...defaultMapped
-        ])
-      }
+      // Only show categories that have products in the database
+      setCategories([
+        { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+        ...finalCategories
+      ])
     })
     .catch(() => {})
     .finally(() => {
