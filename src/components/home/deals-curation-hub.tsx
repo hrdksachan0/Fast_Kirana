@@ -637,8 +637,11 @@ export function DealsCurationHub({
               <div
                 className={cn(
                   'relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
-                  'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
+                  isActive
+                    ? 'shadow-md border-solid scale-105'
+                    : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
                 )}
+                style={isActive ? { borderColor: c.activeBorderColor, boxShadow: `0 0 16px ${c.activeBorderColor}25` } : {}}
               >
                 {/* Premium Vector inline SVG icon */}
                 {c.icon && (
@@ -663,7 +666,8 @@ export function DealsCurationHub({
                 {isActive && (
                   <motion.div
                     layoutId="activeCurationUnderline"
-                    className="absolute inset-0 bg-[#FF2E55]"
+                    className="absolute inset-0"
+                    style={{ backgroundColor: c.activeBorderColor }}
                     transition={{ type: 'spring', stiffness: 280, damping: 24 }}
                   />
                 )}

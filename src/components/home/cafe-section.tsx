@@ -242,8 +242,11 @@ export function CafeSection() {
                   Cafe
                   <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-amber-350 group-hover:translate-x-1.5 transition-transform duration-300 stroke-[3.5] self-center" />
                 </h3>
-                <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-inner">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-inner">
+                  <span className="relative flex h-1.5 w-1.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  </span>
                   Live Kitchen
                 </span>
               </div>

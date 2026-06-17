@@ -15,6 +15,7 @@ export async function GET() {
     })
     return NextResponse.json(addresses)
   } catch (error) {
+    console.error('Error in GET /api/addresses:', error)
     return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 })
   }
 }
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(address)
   } catch (error) {
+    console.error('Error in POST /api/addresses:', error)
     return NextResponse.json({ error: 'Failed to create address' }, { status: 500 })
   }
 }
@@ -93,6 +95,7 @@ export async function DELETE(request: Request) {
     await prisma.address.delete({ where: { id } })
     return NextResponse.json({ message: 'Address deleted successfully' })
   } catch (error) {
+    console.error('Error in DELETE /api/addresses:', error)
     return NextResponse.json({ error: 'Failed to delete address' }, { status: 500 })
   }
 }
