@@ -33,6 +33,10 @@ const getCafeSectionImage = (tag: string) => {
     'south-indian': '/cafe_south_indian_category.png',
     'chilled': '/cafe_cold_drinks_category.png',
     'bakery': '/bakery_biscuits_category.png',
+    'pizza': '/cafe_pizza_category.png',
+    'burgers': '/cafe_burgers_category.png',
+    'garlic-bread': '/cafe_garlic_bread_category.png',
+    'desserts': '/cafe_desserts_category.png',
   }
   return mapping[tag] || null
 }
