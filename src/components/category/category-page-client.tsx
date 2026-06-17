@@ -329,6 +329,17 @@ export function CategoryPageClient({
 
   return (
     <div className="container mx-auto px-2 min-h-[calc(100vh-140px)] py-4 max-w-7xl">
+      <div className="bg-rose-600 text-white p-3 mb-4 text-xs font-mono rounded-xl shadow-md z-50 relative">
+        [FASTKIRANA CLIENT DEBUG] 
+        <br />• initialProducts: {initialProducts?.length}
+        <br />• processedProducts: {processedProducts?.length}
+        <br />• activeCategory: {activeCategory?.slug}
+        <br />• activeSubcategory: {activeSubcategoryId}
+        <br />• vegFilter: {vegFilter}
+        <br />• maxPrice: {maxPrice}
+        <br />• maxPriceOfCategory: {maxPriceOfCategory}
+        <br />• isClient: {typeof window !== 'undefined' ? 'YES' : 'NO'}
+      </div>
       <div id="fastkirana-client-debug" data-debug={JSON.stringify({
         initialProductsLength: initialProducts?.length,
         processedProductsLength: processedProducts?.length,
