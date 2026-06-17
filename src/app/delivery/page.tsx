@@ -475,17 +475,26 @@ export default function DeliveryDashboard() {
         resolve(null)
         return
       }
+
+      // Safety fallback timeout to prevent geolocation queries from hanging the console indefinitely
+      const safetyTimeout = setTimeout(() => {
+        console.warn('[Geolocation] Safety timeout fired, resolving coordinates to null')
+        resolve(null)
+      }, 3500)
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          clearTimeout(safetyTimeout)
           resolve({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           })
         },
         () => {
+          clearTimeout(safetyTimeout)
           resolve(null)
         },
-        { enableHighAccuracy: true, timeout: 6000 }
+        { enableHighAccuracy: true, timeout: 3000 }
       )
     })
   }
