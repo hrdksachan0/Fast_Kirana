@@ -269,21 +269,21 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-background md:inset-x-auto md:left-1/2 md:top-8 md:bottom-auto md:w-[640px] md:-translate-x-1/2 md:rounded-2xl md:max-h-[85vh] md:shadow-elevated md:border md:border-border"
+            className="fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl md:inset-x-auto md:left-1/2 md:top-8 md:bottom-auto md:w-[640px] md:-translate-x-1/2 md:rounded-2xl md:max-h-[85vh] md:shadow-[0_20px_50px_rgba(0,0,0,0.15)] md:border md:border-zinc-200/80 md:dark:border-white/[0.06]"
           >
             {/* Top: Search bar */}
-            <div className="flex items-center gap-3 p-4 border-b border-border">
+            <div className="flex items-center gap-3 p-4 border-b border-zinc-200/60 dark:border-white/[0.05]">
               <form onSubmit={handleSubmit} className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-zinc-400 dark:text-zinc-500" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search for groceries, brands..."
-                  className="w-full pl-10 pr-12 py-3 bg-muted/50 border border-border rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all font-semibold"
+                  className="w-full pl-10 pr-12 py-3 bg-zinc-50/60 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-white/[0.08] rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:bg-white/80 focus:dark:bg-black/45 focus:border-primary/45 focus:ring-4 focus:ring-primary/5 transition-all font-bold shadow-inner"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : (
@@ -294,7 +294,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                         "h-7 w-7 rounded-lg flex items-center justify-center transition-all cursor-pointer",
                         isListening
                           ? "bg-red-500/10 text-red-500 animate-pulse-gentle"
-                          : "text-text-muted hover:bg-muted-foreground/10 hover:text-text-primary"
+                          : "text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:text-text-primary"
                       )}
                       title="Voice Search"
                     >
@@ -305,10 +305,10 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
               </form>
               <button
                 onClick={onClose}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-text-primary transition-colors flex-shrink-0 cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-150/70 dark:bg-zinc-900/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-800 text-text-primary transition-colors flex-shrink-0 cursor-pointer"
                 aria-label="Close search"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -380,7 +380,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                             </button>
 
                             {/* Right: Inline Quick ADD button */}
-                            <div className="relative h-8 w-16 sm:w-20 flex-shrink-0">
+                            <div className="relative h-8 w-18 sm:w-22 flex-shrink-0">
                               {product.variants && Array.isArray(product.variants) && product.variants.length > 0 ? (
                                 <button
                                   onClick={(e) => {
@@ -388,7 +388,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                     e.stopPropagation()
                                     setActiveVariantProduct(product)
                                   }}
-                                  className="w-full h-full border border-[#2e7d32] bg-white text-[#2e7d32] hover:bg-[#2e7d32] hover:text-white text-[10px] sm:text-xs font-black rounded-lg transition-all flex items-center justify-center cursor-pointer shadow-sm animate-pulse-gentle"
+                                  className="w-full h-full border border-primary/60 bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[10px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs animate-pulse-gentle"
                                 >
                                   Options
                                 </button>
@@ -396,12 +396,12 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                 <button
                                   onClick={(e) => handleAddProduct(e, product)}
                                   disabled={product.stock <= 0 || isStoreClosed}
-                                  className="w-full h-full border border-[#2e7d32] bg-white text-[#2e7d32] hover:bg-[#2e7d32] hover:text-white text-[10px] sm:text-xs font-black rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="w-full h-full border border-primary bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[11px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
                                 >
                                   {product.stock <= 0 ? 'Out' : isStoreClosed ? 'Closed' : '+ ADD'}
                                 </button>
                               ) : (
-                                <div className="flex h-full w-full items-center justify-between rounded-lg bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold overflow-hidden shadow-sm">
+                                <div className="flex h-full w-full items-center justify-between rounded-xl bg-gradient-to-r from-primary to-[#009b35] text-white font-extrabold overflow-hidden shadow-xs">
                                   <button
                                     onClick={() => updateQuantity(product.id, product.name, quantity - 1)}
                                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
@@ -465,9 +465,9 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                               setQuery(term)
                               handleSearch(term)
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-text-primary hover:bg-primary/5 hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-200 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-zinc-200/80 dark:border-white/[0.08] bg-zinc-50/50 dark:bg-white/[0.03] text-xs font-semibold text-text-primary hover:bg-primary/5 hover:border-primary/35 hover:text-primary active:scale-95 transition-all duration-300 cursor-pointer shadow-xs"
                           >
-                            <History className="h-3 w-3 text-text-muted" />
+                            <History className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
                             <span>{term}</span>
                           </button>
                         ))}
@@ -488,7 +488,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                         <button
                           key={term}
                           onClick={() => handleTrendingClick(term)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium text-text-primary hover:bg-primary/5 hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-200 cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-zinc-200/80 dark:border-white/[0.08] bg-zinc-50/50 dark:bg-white/[0.03] text-xs font-bold text-text-primary hover:bg-primary/5 hover:border-primary/35 hover:text-primary active:scale-95 transition-all duration-300 cursor-pointer shadow-xs"
                         >
                           <span className="text-xs">🔥</span>
                           <span>{term}</span>
