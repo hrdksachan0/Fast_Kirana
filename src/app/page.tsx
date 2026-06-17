@@ -107,7 +107,7 @@ export default async function Home() {
           { isFlashDeal: 'desc' },
           { discount: 'desc' }
         ],
-        take: 16,
+        take: 48,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch flash deals:', err); return []; }),
       prisma.product.findMany({
@@ -118,7 +118,7 @@ export default async function Home() {
           { isBestSeller: 'desc' },
           { createdAt: 'desc' }
         ],
-        take: 16,
+        take: 48,
         select: productSelect,
       }).catch((err) => { console.warn('Failed to fetch best sellers:', err); return []; }),
       prisma.product.findMany({

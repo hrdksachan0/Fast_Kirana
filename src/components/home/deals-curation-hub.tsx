@@ -707,7 +707,7 @@ export function DealsCurationHub({
                       
                       {/* Interactive See All link */}
                       <Link
-                        href={group.categorySlug ? `/categories/${group.categorySlug}` : '/categories'}
+                        href={group.categorySlug ? `/category/${group.categorySlug}` : '/category'}
                         className="group/btn inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#FF2E55] hover:text-[#e02447] transition-colors select-none"
                       >
                         See All
