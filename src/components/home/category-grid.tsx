@@ -183,7 +183,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="w-[70px] shrink-0 snap-start"
               >
                 <Link
-                  href={category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
                   className="group flex flex-col items-center text-center cursor-pointer"
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
@@ -260,7 +260,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1 group"
               >
                 <Link
-                  href={category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
                   className="flex flex-col items-center text-center"
                 >
                   <div
