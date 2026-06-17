@@ -71,57 +71,11 @@ const categoryPhotos: Record<string, string> = {
   'bakery-biscuits': '/bakery_biscuits_category.png',
   'atta-rice-dal': '/atta_rice_dal_category.png',
   'ice-cream': '/ice_cream_category.png',
+  'cafe': '/cafe_category.png',
 }
 
 export function CategoryGrid({ categories }: CategoryGridProps) {
-  // Fetch settings dynamically to get latest cafe menu sections
-  const [cafeSections, setCafeSections] = useState<any[]>([])
-
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        const customSectionsStr = data.cafe_menu_sections || data.CAFE_MENU_SECTIONS
-        if (customSectionsStr) {
-          try {
-            const parsed = JSON.parse(customSectionsStr)
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setCafeSections(parsed)
-            }
-          } catch(e) {}
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  const displayCafeSections = cafeSections.length > 0 
-    ? cafeSections 
-    : [
-        { tag: 'hot-beverage', emoji: '☕' },
-        { tag: 'hot-bite', emoji: '🥟' },
-        { tag: 'sandwiches', emoji: '🥪' },
-        { tag: 'frankie-rolls', emoji: '🌯' },
-        { tag: 'chinese', emoji: '🥡' },
-        { tag: 'italian-pasta', emoji: '🍝' },
-        { tag: 'bombay-bites', emoji: '🥪' },
-        { tag: 'rice-dishes', emoji: '🍚' }
-      ]
-
-  const cafePseudoCategories = displayCafeSections.map((sec, idx) => ({
-    id: `cafe-section-${sec.tag}`,
-    name: getCafeSectionTitle(sec.tag),
-    slug: sec.tag,
-    imageUrl: getCafeSectionImage(sec.tag),
-    isCafeSection: true,
-    emoji: sec.emoji || '🍽️',
-    parentId: null,
-    sortOrder: 100 + idx
-  }))
-
-  const allDisplayCategories: Array<Category & { isCafeSection?: boolean; emoji?: string }> = [
-    ...categories.filter(c => c.slug !== 'cafe'),
-    ...cafePseudoCategories
-  ]
+  const allDisplayCategories: Array<Category & { isCafeSection?: boolean; emoji?: string }> = categories
 
   // Map of category slugs to visual themes with glowing rings
   const colorMap: Record<string, { bg: string; text: string; gradient: string; ring: string }> = {
@@ -179,6 +133,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       gradient: 'from-teal-100/30 to-teal-50/10 dark:from-teal-500/10 dark:to-transparent', 
       ring: 'group-hover:border-teal-500/50 group-hover:shadow-[0_0_15px_rgba(20,184,166,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]' 
     },
+    'cafe': { 
+      bg: 'bg-amber-50 dark:bg-amber-500/5', 
+      text: 'text-amber-500 dark:text-amber-400', 
+      gradient: 'from-amber-100/30 to-amber-50/10 dark:from-amber-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]' 
+    },
   }
 
   const mobileColorMap: Record<string, { bg: string; text: string; label: string; emoji: string }> = {
@@ -191,6 +151,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'bakery-biscuits': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery', emoji: '🥐' },
     'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Staples', emoji: '🌾' },
     'ice-cream': { bg: 'bg-[#e0f2f1] dark:bg-teal-950/20', text: 'text-[#00796b]', label: 'Ice Cream', emoji: '🍦' },
+    'cafe': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Cafe', emoji: '☕' },
   }
 
   return (
