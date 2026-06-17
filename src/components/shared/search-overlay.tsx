@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff } from 'lucide-react'
-import { CATEGORIES } from '@/lib/constants'
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { ProductImage } from '@/components/product/product-image'
@@ -17,17 +16,6 @@ interface SearchOverlayProps {
   open: boolean
   onClose: () => void
 }
-
-const TRENDING_SEARCHES = [
-  'Amul Butter',
-  'Maggi',
-  'Coca-Cola',
-  'Bread',
-  'Eggs',
-  'Rice',
-  'Paneer',
-  'Onion',
-]
 
 // Map category slugs to visual colors
 const CATEGORY_COLORS: Record<string, { bg: string; gradient: string }> = {
@@ -51,41 +39,33 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
 
-  const [categories, setCategories] = useState<any[]>(() =>
-    CATEGORIES.map((c) => ({
-      name: c.name,
-      slug: c.slug,
-      imageUrl: c.emoji,
-    }))
-  )
-  const [trendingSearches, setTrendingSearches] = useState<string[]>(() => [...TRENDING_SEARCHES])
+  const [categories, setCategories] = useState<any[]>([])
+  const [trendingSearches, setTrendingSearches] = useState<string[]>([])
 
   useEffect(() => {
-    if (open) {
-      // Fetch categories
-      fetch('/api/categories')
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setCategories(data)
-          }
-        })
-        .catch((err) => console.error('Failed to fetch categories:', err))
+    // Fetch categories
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCategories(data)
+        }
+      })
+      .catch((err) => console.error('Failed to fetch categories:', err))
 
-      // Fetch trending searches (products)
-      fetch('/api/products?trending=true')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && Array.isArray(data.products)) {
-            const words = data.products.map((p: any) => p.name.trim())
-            if (words.length > 0) {
-              setTrendingSearches(words)
-            }
+    // Fetch trending searches (products)
+    fetch('/api/products?trending=true')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.products)) {
+          const words = data.products.map((p: any) => p.name.trim())
+          if (words.length > 0) {
+            setTrendingSearches(words)
           }
-        })
-        .catch((err) => console.error('Failed to fetch trending searches:', err))
-    }
-  }, [open])
+        }
+      })
+      .catch((err) => console.error('Failed to fetch trending searches:', err))
+  }, [])
 
   const toggleVoiceSearch = () => {
     if (isListening) {
