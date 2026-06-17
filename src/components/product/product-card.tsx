@@ -187,7 +187,11 @@ export function ProductCard({ product }: ProductCardProps) {
   const savings = resolvedMrp - resolvedPrice
 
   return (
-    <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-400 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 md:hover:-translate-y-1.5 md:hover:scale-[1.01] active:scale-[0.98] md:active:scale-[1.01]">
+    <motion.div
+      whileHover={{ y: -6, scale: 1.015, transition: { type: 'spring', stiffness: 350, damping: 18 } }}
+      whileTap={{ scale: 0.97 }}
+      className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-300 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 cursor-pointer"
+    >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
@@ -380,6 +384,6 @@ export function ProductCard({ product }: ProductCardProps) {
           </AnimatePresence>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -81,32 +81,32 @@ export function CartStickyBar() {
       )}
 
       {/* Main content row */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-3.5 py-2">
+        <div className="flex items-center gap-2.5">
           {/* Cart Icon Container with White/Emerald Theme */}
-          <div onClick={toggleCart} className="relative h-9 w-9 bg-white/20 text-white rounded-xl flex items-center justify-center cursor-pointer shrink-0">
-            <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-sm border border-emerald-500">
+          <div onClick={toggleCart} className="relative h-8 w-8 bg-white/20 text-white rounded-lg flex items-center justify-center cursor-pointer shrink-0">
+            <ShoppingBag className="h-4.5 w-4.5 stroke-[2]" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white shadow-sm border border-emerald-500">
               {totalItems}
             </span>
           </div>
 
           {/* Pricing and Savings details */}
           <div className="text-left flex flex-col justify-center">
-            <span className="text-xs font-black text-white leading-tight">
+            <span className="text-[11px] font-black text-white leading-tight">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
             </span>
             {savings > 0 ? (
-              <span className="text-[10px] font-bold text-emerald-100 leading-none mt-0.5 flex items-center gap-1">
-                <Zap className="h-3 w-3 fill-amber-300 stroke-none animate-pulse-gentle" />
+              <span className="text-[9px] font-bold text-emerald-100 leading-none mt-0.5 flex items-center gap-1">
+                <Zap className="h-2.5 w-2.5 fill-amber-300 stroke-none animate-pulse-gentle" />
                 Saved {formatPrice(savings)}
               </span>
             ) : !hasFreeDelivery ? (
-              <span className="text-[10px] font-medium text-emerald-100 leading-none mt-0.5">
+              <span className="text-[9px] font-medium text-emerald-100 leading-none mt-0.5">
                 Add {formatPrice(needsForFreeDelivery)} for Free Delivery
               </span>
             ) : (
-              <span className="text-[10px] font-bold text-emerald-100 leading-none mt-0.5">
+              <span className="text-[9px] font-bold text-emerald-100 leading-none mt-0.5">
                 🎉 Free Delivery Applied
               </span>
             )}
@@ -116,10 +116,10 @@ export function CartStickyBar() {
         {/* High Contrast Proceed / Checkout Pill */}
         <button
           onClick={toggleCart}
-          className="bg-white text-[#00b140] hover:bg-zinc-50 text-[11px] font-black px-4.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer tracking-tight"
+          className="bg-white text-[#00b140] hover:bg-zinc-50 text-[10px] font-black px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm active:scale-95 transition-all cursor-pointer tracking-tight"
         >
           Proceed to Cart
-          <ArrowRight className="h-3.5 w-3.5 stroke-[3]" />
+          <ArrowRight className="h-3 w-3 stroke-[3]" />
         </button>
       </div>
     </div>

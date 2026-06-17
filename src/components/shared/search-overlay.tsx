@@ -200,7 +200,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       } finally {
         setLoading(false)
       }
-    }, 300)
+    }, 150)
 
     return () => clearTimeout(handler)
   }, [query])
@@ -284,7 +284,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ type: 'spring', damping: 26, stiffness: 210 }}
             className="fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl md:inset-x-auto md:left-1/2 md:top-8 md:bottom-auto md:w-[640px] md:-translate-x-1/2 md:rounded-2xl md:max-h-[85vh] md:shadow-[0_20px_50px_rgba(0,0,0,0.15)] md:border md:border-zinc-200/80 md:dark:border-white/[0.06]"
           >
             {/* Top: Search bar */}
@@ -417,7 +417,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   {product.stock <= 0 ? 'Out' : isStoreClosed ? 'Closed' : '+ ADD'}
                                 </button>
                               ) : (
-                                <div className="flex h-full w-full items-center justify-between rounded-xl bg-gradient-to-r from-primary to-[#009b35] text-white font-extrabold overflow-hidden shadow-xs">
+                                <div className="flex h-full w-full items-center justify-between rounded-xl bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-extrabold overflow-hidden shadow-xs">
                                   <button
                                     onClick={() => updateQuantity(product.id, product.name, quantity - 1)}
                                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
@@ -425,7 +425,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   >
                                     <Minus className="h-3 w-3 stroke-[3]" />
                                   </button>
-                                  <span className="w-5 sm:w-6 shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-black select-none">
+                                  <span className="w-5 sm:w-6 shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
                                     {quantity}
                                   </span>
                                   <button

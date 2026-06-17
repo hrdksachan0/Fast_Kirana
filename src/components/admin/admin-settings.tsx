@@ -29,6 +29,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [taxRate, setTaxRate] = useState('5')
   const [miscFee, setMiscFee] = useState('0')
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
+  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
+  const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
+  const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
+  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -60,6 +64,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.tax_rate !== undefined) setTaxRate(data.tax_rate)
         if (data.misc_fee !== undefined) setMiscFee(data.misc_fee)
         if (data.misc_fee_label !== undefined) setMiscFeeLabel(data.misc_fee_label)
+        if (data.contact_phone) setContactPhone(data.contact_phone)
+        if (data.contact_email) setContactEmail(data.contact_email)
+        if (data.contact_timings) setContactTimings(data.contact_timings)
+        if (data.contact_address) setContactAddress(data.contact_address)
       } catch (err: any) {
         console.error(err)
         toast.error('Could not fetch store settings')
@@ -75,7 +83,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim()) {
+    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim()) {
       toast.error('Please fill in all setting fields')
       return
     }
@@ -104,6 +112,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           tax_rate: taxRate.trim(),
           misc_fee: miscFee.trim(),
           misc_fee_label: miscFeeLabel.trim(),
+          contact_phone: contactPhone.trim(),
+          contact_email: contactEmail.trim(),
+          contact_timings: contactTimings.trim(),
+          contact_address: contactAddress.trim(),
         }),
       })
 
@@ -368,6 +380,58 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       value={storeLng}
                       onChange={(e) => setStoreLng(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Contact Phone */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Phone *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. +91 70544 70303"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Contact Email */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Email *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. help@fastkirana.com"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Contact Timings */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Timings *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 6 AM - 12 AM"
+                      value={contactTimings}
+                      onChange={(e) => setContactTimings(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
+
+                  {/* Contact Address */}
+                  <div className="md:col-span-3 space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. NH34, Ghatampur, Kanpur Nagar"
+                      value={contactAddress}
+                      onChange={(e) => setContactAddress(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                     />
                   </div>
                 </div>

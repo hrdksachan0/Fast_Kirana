@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
+import { motion } from 'framer-motion'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -271,40 +272,60 @@ export function CafeSection() {
 
       {/* Café Menu Categories Horizontal Scrollbar */}
       <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none">
-        {categories.map((cat) => {
-          const href = cat.tag === 'all' ? '/cafe' : `/cafe?section=${cat.tag}`
-          return (
-            <Link
-              key={cat.tag}
-              href={href}
-              className="group flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all w-[70px] shrink-0 snap-start"
+        {isLoading ? (
+          Array.from({ length: 8 }).map((_, idx) => (
+            <div
+              key={`skeleton-${idx}`}
+              className="flex flex-col items-center text-center w-[70px] shrink-0 snap-start animate-pulse"
             >
-              {/* Circular image container */}
-              <div
-                className={cn(
-                  "w-[64px] h-[64px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] border border-transparent dark:border-white/[0.02] relative group-hover:scale-105 transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40"
-                )}
+              {/* Circular skeleton */}
+              <div className="w-[64px] h-[64px] mx-auto rounded-full bg-zinc-200 dark:bg-zinc-800/40 relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 dark:before:via-white/5 before:to-transparent" />
+              {/* Text skeleton */}
+              <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800/40 rounded-md mt-2.5 relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 dark:before:via-white/5 before:to-transparent" />
+            </div>
+          ))
+        ) : (
+          categories.map((cat) => {
+            const href = cat.tag === 'all' ? '/cafe' : `/cafe?section=${cat.tag}`
+            return (
+              <motion.div
+                key={cat.tag}
+                whileHover={{ y: -4, scale: 1.03, transition: { type: 'spring', stiffness: 300, damping: 15 } }}
+                whileTap={{ scale: 0.95 }}
+                className="w-[70px] shrink-0 snap-start"
               >
-                {cat.image ? (
-                  <Image
-                    src={cat.image}
-                    alt={cat.title}
-                    fill
-                    sizes="80px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-amber-500/10 dark:bg-amber-500/5 backdrop-blur-md rounded-full shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-amber-500/15">
-                    <span className="text-3xl select-none leading-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">{cat.emoji}</span>
+                <Link
+                  href={href}
+                  className="group flex flex-col items-center text-center cursor-pointer"
+                >
+                  {/* Circular image container */}
+                  <div
+                    className={cn(
+                      "w-[64px] h-[64px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] border border-transparent dark:border-white/[0.02] relative group-hover:scale-105 transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40"
+                    )}
+                  >
+                    {cat.image ? (
+                      <Image
+                        src={cat.image}
+                        alt={cat.title}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-amber-500/10 dark:bg-amber-500/5 backdrop-blur-md rounded-full shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-amber-500/15">
+                        <span className="text-3xl select-none leading-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">{cat.emoji}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <span className="text-[10px] font-black text-text-primary mt-2 truncate w-full group-hover:text-primary transition-colors">
-                {cat.title}
-              </span>
-            </Link>
-          )
-        })}
+                  <span className="text-[10px] font-black text-text-primary mt-2 truncate w-full group-hover:text-primary transition-colors">
+                    {cat.title}
+                  </span>
+                </Link>
+              </motion.div>
+            )
+          })
+        )}
       </div>
     </section>
   )

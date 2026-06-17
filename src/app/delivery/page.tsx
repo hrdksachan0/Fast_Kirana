@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatPhone } from '@/lib/utils'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
@@ -1081,12 +1081,12 @@ export default function DeliveryDashboard() {
                         </div>
                         <div>
                           <div className="text-xs font-bold text-text-primary">{order.user.name || 'Customer'}</div>
-                          <div className="text-[10px] text-text-secondary">{order.user.phone || 'No phone'}</div>
+                          <div className="text-[10px] text-text-secondary">{formatPhone(order.user.phone) || 'No phone'}</div>
                         </div>
                       </div>
                       {order.user.phone && (
                         <a
-                          href={`tel:${order.user.phone}`}
+                          href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
                           className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95"
                         >
                           <Phone className="h-4.5 w-4.5" />

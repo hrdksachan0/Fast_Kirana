@@ -27,6 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Delivery address is required' }, { status: 400 })
     }
 
+    // Fetch contact phone from settings for the STORE_PICKUP address
+    const contactSetting = await prisma.storeSetting.findUnique({
+      where: { key: 'contact_phone' }
+    })
+    const defaultSupportPhone = contactSetting?.value || '+917054470303'
+
     // 1. Resolve address
     let finalAddressId = addressId
     if (deliveryMethod === 'PICKUP') {
@@ -44,7 +50,7 @@ export async function POST(request: NextRequest) {
             area: 'Kanpur Nagar',
             city: 'Kanpur',
             pincode: '209206',
-            phone: '+917054470303',
+            phone: defaultSupportPhone,
           }
         })
       }
@@ -321,7 +327,7 @@ export async function POST(request: NextRequest) {
             deliveryMethod,
             isB2B,
             shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
-            shopPhone: orderInfo.type === 'CAFE' ? '+91 70544 70303' : shopPhone,
+            shopPhone: orderInfo.type === 'CAFE' ? (settingsMap['contact_phone'] || '+91 70544 70303') : shopPhone,
             items: {
               create: orderItemsData.map((item: any) => ({
                 productId: item.productId,

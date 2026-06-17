@@ -4,19 +4,29 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
+import { formatPhone } from '@/lib/utils'
 
 export function Footer() {
-  const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
+  const [trustedText, setTrustedText] = useState<string | null>(null)
+  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
+  const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
+  const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
+  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
 
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
-        if (data.trusted_text) {
-          setTrustedText(data.trusted_text)
-        }
+        setTrustedText(data.trusted_text || '✨ Trusted by 5,000+ families in your town')
+        if (data.contact_phone) setContactPhone(data.contact_phone)
+        if (data.contact_email) setContactEmail(data.contact_email)
+        if (data.contact_timings) setContactTimings(data.contact_timings)
+        if (data.contact_address) setContactAddress(data.contact_address)
       })
-      .catch((err) => console.error('Failed to load settings in footer:', err))
+      .catch((err) => {
+        console.error('Failed to load settings in footer:', err)
+        setTrustedText('✨ Trusted by 5,000+ families in your town')
+      })
   }, [])
 
   return (
@@ -24,8 +34,12 @@ export function Footer() {
       {/* Social proof strip */}
       <div className="bg-accent/10 border-b border-accent/20">
         <div className="mx-auto max-w-7xl px-4 py-3 text-center">
-          <p className="text-sm font-bold text-accent">
-            {trustedText}
+          <p className="text-sm font-bold text-accent min-h-[20px] flex items-center justify-center">
+            {trustedText === null ? (
+              <span className="inline-block h-4 w-52 animate-pulse bg-accent/20 rounded-md" />
+            ) : (
+              trustedText
+            )}
           </p>
         </div>
       </div>
@@ -99,16 +113,16 @@ export function Footer() {
             <h4 className="text-sm font-semibold mb-4 text-gray-300 uppercase tracking-wider">Contact</h4>
             <ul className="space-y-2.5">
               <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Phone size={14} className="shrink-0" /> +91 70544 70303
+                <Phone size={14} className="shrink-0" /> {formatPhone(contactPhone)}
               </li>
               <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Mail size={14} className="shrink-0" /> help@fastkirana.com
+                <Mail size={14} className="shrink-0" /> {contactEmail}
               </li>
               <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Clock size={14} className="shrink-0" /> 6 AM - 12 AM
+                <Clock size={14} className="shrink-0" /> {contactTimings}
               </li>
               <li className="flex items-center gap-2 text-sm text-gray-400">
-                <MapPin size={14} className="shrink-0" /> NH34, Ghatampur, Kanpur Nagar
+                <MapPin size={14} className="shrink-0" /> {contactAddress}
               </li>
             </ul>
           </div>

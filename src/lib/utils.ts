@@ -23,3 +23,14 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
   }
   return url
 }
+
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return ''
+  const trimmed = phone.trim()
+  if (trimmed.startsWith('wa-') && trimmed.includes('@')) {
+    const phoneDigits = trimmed.split('@')[0].replace('wa-', '')
+    return `+91 ${phoneDigits}`
+  }
+  return trimmed
+}
+

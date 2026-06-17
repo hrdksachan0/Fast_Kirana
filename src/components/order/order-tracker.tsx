@@ -20,7 +20,7 @@ import {
   Camera,
   Home,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatPhone } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface OrderItem {
@@ -75,6 +75,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const [packingStep, setPackingStep] = useState(0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
+  const [supportPhone, setSupportPhone] = useState('+91 70544 70303')
 
   const statusSteps = order.deliveryMethod === 'PICKUP' ? [
     { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
@@ -90,13 +91,14 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     { status: 'DELIVERED', label: 'Delivered', desc: 'Groceries delivered to your door!', icon: Check },
   ]
 
-  // Fetch store coordinates from settings on mount
+  // Fetch store coordinates and support phone from settings on mount
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data.store_lat) setStoreLat(parseFloat(data.store_lat))
         if (data.store_lng) setStoreLng(parseFloat(data.store_lng))
+        if (data.contact_phone) setSupportPhone(data.contact_phone)
       })
       .catch(err => console.error('Error fetching settings in order-tracker:', err))
   }, [])
@@ -361,7 +363,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
               </div>
             </div>
             {order.shopPhone && (
-              <a href={`tel:${order.shopPhone}`} className="text-primary hover:underline font-black flex items-center gap-1.5 shrink-0">
+              <a href={`tel:${formatPhone(order.shopPhone).replace(/\s+/g, '')}`} className="text-primary hover:underline font-black flex items-center gap-1.5 shrink-0">
                 <Phone className="h-3.5 w-3.5" /> Support Hotline
               </a>
             )}
@@ -371,11 +373,11 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
         {/* Support Call Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <a
-            href="tel:+917054470303"
+            href={`tel:${formatPhone(supportPhone).replace(/\s+/g, '')}`}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
           >
             <Phone className="h-4 w-4" />
-            Call Store Support (+91 70544 70303)
+            Call Store Support ({formatPhone(supportPhone)})
           </a>
           {order.deliveryMethod === 'PICKUP' && (
             <a
@@ -540,7 +542,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
               </div>
             </div>
             <a
-              href="tel:+917054470303"
+              href={`tel:${formatPhone(supportPhone).replace(/\s+/g, '')}`}
               className="flex items-center justify-center h-9 w-9 bg-accent/10 text-accent rounded-full hover:bg-accent/20 transition-colors"
               aria-label="Call Rider"
             >

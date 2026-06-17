@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn, isCafeProduct } from '@/lib/utils'
+import { cn, isCafeProduct, formatPhone } from '@/lib/utils'
 import {
   MapPin,
   ShoppingBag,
@@ -53,6 +53,8 @@ export default function CheckoutPage() {
   const [taxRate, setTaxRate] = useState(0.05)
   const [miscFee, setMiscFee] = useState(0.0)
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
+  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
+  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -78,6 +80,12 @@ export default function CheckoutPage() {
         }
         if (data.misc_fee_label !== undefined) {
           setMiscFeeLabel(data.misc_fee_label)
+        }
+        if (data.contact_phone) {
+          setContactPhone(data.contact_phone)
+        }
+        if (data.contact_address) {
+          setContactAddress(data.contact_address)
         }
       })
       .catch(err => console.error('Error fetching settings on checkout mount:', err))
@@ -420,7 +428,7 @@ export default function CheckoutPage() {
           isB2B: false,
           scheduledSlot,
           shopName: 'FastKirana Dark Store',
-          shopPhone: '+91 70544 70303',
+          shopPhone: contactPhone,
         }),
       })
 
@@ -530,7 +538,7 @@ export default function CheckoutPage() {
           isB2B: false,
           scheduledSlot,
           shopName: 'FastKirana Dark Store',
-          shopPhone: '+91 70544 70303',
+          shopPhone: contactPhone,
         }),
       })
 
@@ -740,10 +748,10 @@ export default function CheckoutPage() {
                     <div>
                       <h4 className="text-sm font-bold text-text-primary">FastKirana Ghatampur Hub</h4>
                       <p className="text-xs text-text-secondary leading-relaxed mt-1">
-                        NH34, Ghatampur, Kanpur Nagar
+                        {contactAddress}
                       </p>
                       <p className="text-xs text-text-secondary mt-1">
-                        Pin: 209206 | Phone: <span className="font-semibold text-primary">+91 70544 70303</span>
+                        Pin: 209206 | Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
                       </p>
                       <div className="mt-3 text-[10px] text-accent font-bold bg-accent/10 px-2 py-1 rounded inline-block">
                         ✓ Self-Pickup Selected: No delivery charge
@@ -791,7 +799,7 @@ export default function CheckoutPage() {
                           </p>
                           {addr.phone && (
                             <p className="text-[10px] text-text-secondary mt-1 font-extrabold flex items-center gap-1">
-                              <span>📞</span> Phone: {addr.phone}
+                              <span>📞</span> Phone: {formatPhone(addr.phone)}
                             </p>
                           )}
                         </div>

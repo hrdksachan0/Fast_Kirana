@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { ChevronRight, Menu as MenuIcon, X, Plus, Minus, Check } from 'lucide-react'
 import { Product } from '@/types'
 import { ProductCard } from '@/components/product/product-card'
@@ -298,7 +298,22 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
   const [navbarHeight, setNavbarHeight] = useState<number>(96)
   const [searchQuery, setSearchQuery] = useState('')
-  const [foodPreference, setFoodPreference] = useState<'all' | 'veg' | 'nonveg'>('all')
+
+  const isScrollingRef = useRef(false)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Measure and update navbar height only on mount and window resize (prevents layout thrashing on scroll)
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      const navbarEl = document.querySelector('nav')
+      if (navbarEl) {
+        setNavbarHeight(navbarEl.getBoundingClientRect().height)
+      }
+    }
+    updateNavbarHeight()
+    window.addEventListener('resize', updateNavbarHeight)
+    return () => window.removeEventListener('resize', updateNavbarHeight)
+  }, [])
 
   // Parse section query parameter on mount and scroll to it
   useEffect(() => {
@@ -443,18 +458,10 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     }
   }, [mappedProducts])
 
-  // Filtered categories and products based on user search query and food preference
+  // Filtered categories and products based on user search query
   const filteredCategorySections = useMemo(() => {
     const filterFn = (p: any) => {
-      // 1. Food preference filter
-      if (foodPreference !== 'all') {
-        const tagsLower = p.tags?.map((t: string) => t.toLowerCase()) || []
-        const isNonVeg = tagsLower.includes('nonveg') || tagsLower.includes('non-veg') || tagsLower.includes('chicken') || tagsLower.includes('egg')
-        if (foodPreference === 'veg' && isNonVeg) return false
-        if (foodPreference === 'nonveg' && !isNonVeg) return false
-      }
-
-      // 2. Search query filter
+      // Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim()
         const matchesName = p.name.toLowerCase().includes(query)
@@ -479,7 +486,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       sections: filteredSections,
       moreItems: filteredMoreItems
     }
-  }, [categorySections, searchQuery, foodPreference])
+  }, [categorySections, searchQuery])
 
   // Swiggy categories catalog list (combining grouped and dynamic ones)
   const menuCategories = useMemo(() => {
@@ -506,23 +513,31 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     return list
   }, [filteredCategorySections, customSections])
 
-  // Scroll tracker logic
+  // Scroll spy scrollend event listener to unlock scrollspy tracking when smooth scroll completes
+  useEffect(() => {
+    const handleScrollEnd = () => {
+      isScrollingRef.current = false
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+        scrollTimeoutRef.current = null
+      }
+    }
+    window.addEventListener('scrollend', handleScrollEnd)
+    return () => {
+      window.removeEventListener('scrollend', handleScrollEnd)
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+    }
+  }, [])
+
+  // Scroll tracker logic (scrollspy)
   useEffect(() => {
     const handleScroll = () => {
       // Determine if floating menu button should appear (after scrolling past hero banner)
       setShowFloatingMenuBtn(window.scrollY > 250)
 
-      const navbarEl = document.querySelector('nav')
-      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
-      
-      setNavbarHeight(prev => {
-        if (Math.abs(prev - currentNavbarHeight) > 1) {
-          return currentNavbarHeight
-        }
-        return prev
-      })
+      if (isScrollingRef.current) return
 
-      const headerOffset = currentNavbarHeight + 16
+      const headerOffset = navbarHeight + 16
       const scrollPosition = window.scrollY + headerOffset
 
       let currentActive = ''
@@ -560,7 +575,19 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     // Initialize active state on mount
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [filteredCategorySections, menuCategories])
+  }, [filteredCategorySections, menuCategories, navbarHeight])
+
+  // Auto-reset active category if it gets filtered out of the visible list
+  useEffect(() => {
+    if (menuCategories.length > 0) {
+      const isStillVisible = menuCategories.some(c => c.tag === activeCategory)
+      if (!isStillVisible) {
+        setActiveCategory(menuCategories[0].tag)
+      }
+    } else {
+      setActiveCategory('')
+    }
+  }, [menuCategories, activeCategory])
 
   // Auto-scroll vertical sidebar (on mobile) to center active tag button (debounced by 150ms to prevent jittering when scrolling fast)
   useEffect(() => {
@@ -595,29 +622,34 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     const el = document.getElementById(`${idPrefix}${tag}`)
     
     if (el) {
-      const navbarEl = document.querySelector('nav')
-      const currentNavbarHeight = navbarEl ? navbarEl.getBoundingClientRect().height : 96
-      
-      const headerOffset = currentNavbarHeight + 8
+      const headerOffset = navbarHeight + 8
       const elementPosition = el.offsetTop
       const offsetPosition = elementPosition - headerOffset
+
+      // Lock scrollspy updates during programmatic smooth scroll
+      isScrollingRef.current = true
+      setActiveCategory(tag)
+      setIsFloatingMenuOpen(false)
 
       window.scrollTo({
         top: offsetPosition >= 0 ? offsetPosition : 0,
         behavior: 'smooth'
       })
       
-      setActiveCategory(tag)
-      setIsFloatingMenuOpen(false)
+      // Fallback timeout to re-enable scrollspy if scrollend is not supported or does not fire
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = false
+      }, 1000)
     }
   }
 
   const currentActiveTag = activeCategory || menuCategories[0]?.tag || ''
   const activeSection = filteredCategorySections.sections.find(s => s.tag === currentActiveTag)
   const activeSectionProducts = activeSection ? activeSection.products : (currentActiveTag === 'more' ? filteredCategorySections.moreItems : [])
-  const activeSectionTitle = activeSection ? activeSection.title : (currentActiveTag === 'more' ? 'More Specials' : '')
-  const activeSectionEmoji = activeSection ? activeSection.emoji : (currentActiveTag === 'more' ? '🍽️' : '')
-  const activeSectionDescription = activeSection ? activeSection.description : (currentActiveTag === 'more' ? 'Additional cafe items and specials' : '')
+  const activeSectionTitle = activeSection ? activeSection.title : (currentActiveTag === 'more' ? 'More Specials' : 'Fresh Specials')
+  const activeSectionEmoji = activeSection ? activeSection.emoji : (currentActiveTag === 'more' ? '🍽️' : '☕')
+  const activeSectionDescription = activeSection ? activeSection.description : (currentActiveTag === 'more' ? 'Additional cafe items and specials' : 'Prepared Fresh & Delivered Fast')
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl relative">
@@ -731,39 +763,6 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
             <div className="flex justify-between items-center bg-card border border-border/50 rounded-2xl p-4 shadow-sm select-none mb-2">
               <div className="flex items-center gap-4">
                 <span className="text-xs font-extrabold text-text-primary uppercase tracking-wider">Cafe Menu</span>
-                
-                {/* Veg / Non Veg toggles */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
-                      foodPreference === 'veg'
-                        ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_6px_rgba(34,197,94,0.15)]"
-                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
-                    )}
-                  >
-                    <span className="flex h-2.5 w-2.5 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
-                      <span className="h-1 w-1 rounded-full bg-green-600" />
-                    </span>
-                    VEG ONLY
-                  </button>
-
-                  <button
-                    onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
-                      foodPreference === 'nonveg'
-                        ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_6px_rgba(239,68,68,0.15)]"
-                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
-                    )}
-                  >
-                    <span className="flex h-2.5 w-2.5 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
-                      <span className="h-1 w-1 rotate-45 bg-red-600" />
-                    </span>
-                    NON-VEG ONLY
-                  </button>
-                </div>
               </div>
               {/* Café Search Input */}
               <div className="relative flex-1 max-w-sm">
@@ -824,9 +823,9 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
                 <span className="text-4xl animate-bounce-gentle">🥗</span>
                 <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
-                <p className="text-xs text-text-secondary max-w-[280px] mt-1">Try switching the preference filters or clear your search query.</p>
+                <p className="text-xs text-text-secondary max-w-[280px] mt-1">Try clearing your search query to see all items.</p>
                 <button
-                  onClick={() => { setFoodPreference('all'); setSearchQuery('') }}
+                  onClick={() => { setSearchQuery('') }}
                   className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
                 >
                   Show All Items
@@ -942,38 +941,6 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
 
             {/* Mobile Filters & Search Bar */}
             <div className="space-y-2.5 pb-1 select-none">
-              {/* Veg / Non Veg toggles */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFoodPreference(p => p === 'veg' ? 'all' : 'veg')}
-                  className={cn(
-                    "flex items-center gap-1.2 px-2.5 py-1.5 rounded-xl border text-[9px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
-                    foodPreference === 'veg'
-                      ? "bg-green-500/10 border-green-500 text-green-600 dark:text-green-400 shadow-[0_0_6px_rgba(34,197,94,0.15)]"
-                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
-                  )}
-                >
-                  <span className="flex h-2.5 w-2.5 items-center justify-center border border-green-600 p-0.5 rounded-xs shrink-0">
-                    <span className="h-1 w-1 rounded-full bg-green-600" />
-                  </span>
-                  VEG ONLY
-                </button>
-
-                <button
-                  onClick={() => setFoodPreference(p => p === 'nonveg' ? 'all' : 'nonveg')}
-                  className={cn(
-                    "flex items-center gap-1.2 px-2.5 py-1.5 rounded-xl border text-[9px] font-black tracking-wide transition-all duration-200 cursor-pointer active:scale-95",
-                    foodPreference === 'nonveg'
-                      ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_6px_rgba(239,68,68,0.15)]"
-                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-text-secondary"
-                  )}
-                >
-                  <span className="flex h-2.5 w-2.5 items-center justify-center border border-red-600 p-0.5 rounded-xs shrink-0">
-                    <span className="h-1 w-1 rotate-45 bg-red-600" />
-                  </span>
-                  NON-VEG ONLY
-                </button>
-              </div>
 
               {/* Café Search Input */}
               <div className="relative w-full">
@@ -1061,9 +1028,9 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
               <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
                 <span className="text-4xl animate-bounce-gentle">🥗</span>
                 <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
-                <p className="text-xs text-text-secondary max-w-[240px] mt-1">Try switching the preference filters or clear your search query.</p>
+                <p className="text-xs text-text-secondary max-w-[240px] mt-1">Try clearing your search query to see all items.</p>
                 <button
-                  onClick={() => { setFoodPreference('all'); setSearchQuery('') }}
+                  onClick={() => { setSearchQuery('') }}
                   className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
                 >
                   Show All Items
@@ -1073,29 +1040,6 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           </div>
         </div>
       </div>
-
-      {/* Floating Swiggy MENU Drawer (Preserved for desktop/fallback support if needed) */}
-      <AnimatePresence>
-        {showFloatingMenuBtn && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 30 }}
-            transition={{ duration: 0.2 }}
-            className={`fixed left-1/2 -translate-x-1/2 z-40 md:hidden ${
-              hasCartItems ? 'bottom-[124px]' : 'bottom-20'
-            }`}
-          >
-            <button
-              onClick={() => setIsFloatingMenuOpen(true)}
-              className="bg-zinc-900 dark:bg-zinc-800 border border-white/10 text-white font-extrabold text-xs px-4 py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all select-none cursor-pointer"
-            >
-              <MenuIcon className="h-4 w-4" />
-              <span>MENU</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Floating Menu Drawer Backdrop/Popup */}
       <AnimatePresence>

@@ -21,6 +21,10 @@ const DEFAULT_SETTINGS = {
   tax_rate: '5',
   misc_fee: '0',
   misc_fee_label: 'Miscellaneous Additions',
+  contact_phone: '+91 70544 70303',
+  contact_email: 'help@fastkirana.com',
+  contact_timings: '6 AM - 12 AM',
+  contact_address: 'NH34, Ghatampur, Kanpur Nagar',
 }
 
 export async function GET() {
