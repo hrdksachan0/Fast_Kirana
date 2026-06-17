@@ -26,6 +26,11 @@ export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth
   const { nextUrl } = req
 
+  // Reconstruct original request domain to bypass NextAuth NEXTAUTH_URL localhost overrides
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || nextUrl.host
+  const proto = req.headers.get('x-forwarded-proto') || (nextUrl.protocol ? nextUrl.protocol.replace(':', '') : 'https')
+  const baseUrl = `${proto}://${host}`
+
   const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth')
   const isAuthRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/signup'
   const isAdminRoute = nextUrl.pathname.startsWith('/admin')
@@ -37,7 +42,7 @@ export const proxy = auth((req) => {
   // Redirect logged-in users away from /login and /signup
   if (isAuthRoute) {
     if (isLoggedIn) {
-      return NextResponse.redirect(new URL('/', nextUrl))
+      return NextResponse.redirect(new URL('/', baseUrl))
     }
     return NextResponse.next()
   }
@@ -47,7 +52,7 @@ export const proxy = auth((req) => {
   if (isLoggedIn && !isSetupProfileRoute) {
     const userPhone = req.auth?.user?.phone
     if (!userPhone) {
-      return NextResponse.redirect(new URL('/setup-profile', nextUrl))
+      return NextResponse.redirect(new URL('/setup-profile', baseUrl))
     }
   }
 
@@ -63,7 +68,7 @@ export const proxy = auth((req) => {
       callbackUrl += nextUrl.search
     }
     const encodedCallbackUrl = encodeURIComponent(callbackUrl)
-    return NextResponse.redirect(new URL(`/login?callbackUrl=${encodedCallbackUrl}`, nextUrl))
+    return NextResponse.redirect(new URL(`/login?callbackUrl=${encodedCallbackUrl}`, baseUrl))
   }
 
   // Protect delivery routes
@@ -71,11 +76,11 @@ export const proxy = auth((req) => {
   if (isDeliveryRoute) {
     if (!isLoggedIn) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
     const userRole = req.auth?.user?.role
     if (userRole !== 'DELIVERY' && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', nextUrl))
+      return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
 
@@ -84,11 +89,11 @@ export const proxy = auth((req) => {
   if (isPickerRoute) {
     if (!isLoggedIn) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
     const userRole = req.auth?.user?.role
     if (userRole !== 'PICKER' && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', nextUrl))
+      return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
 
@@ -97,11 +102,11 @@ export const proxy = auth((req) => {
   if (isCafeRoute) {
     if (!isLoggedIn) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
     const userRole = req.auth?.user?.role
     if (userRole !== 'CHEF' && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', nextUrl))
+      return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
 
@@ -109,11 +114,11 @@ export const proxy = auth((req) => {
   if (isAdminRoute) {
     if (!isLoggedIn) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
     const userRole = req.auth?.user?.role
     if (userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', nextUrl))
+      return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
 
