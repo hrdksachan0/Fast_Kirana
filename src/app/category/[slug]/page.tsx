@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic'
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
 
+  let productsError: string | null = null
+  let categoriesError: string | null = null
+  let countsError: string | null = null
+
   // 1. Fetch categories, category products, and active product counts in parallel
   const [categoriesRaw, productsRaw, productCounts] = await Promise.all([
     prisma.category.findMany({
@@ -20,7 +24,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         slug: { not: 'cafe' },
       },
       orderBy: { sortOrder: 'asc' },
-    }).catch(() => []),
+    }).catch((err) => {
+      categoriesError = err.message || String(err)
+      console.error("Prisma category query failed:", err)
+      return []
+    }),
     prisma.product.findMany({
       where: {
         category: { slug },
@@ -30,14 +38,22 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       include: {
         category: true,
       },
-    }).catch(() => []),
+    }).catch((err) => {
+      productsError = err.message || String(err)
+      console.error("Prisma product query failed:", err)
+      return []
+    }),
     prisma.product.groupBy({
       by: ['categoryId'],
       where: { isAvailable: true },
       _count: {
         id: true,
       },
-    }).catch(() => []),
+    }).catch((err) => {
+      countsError = err.message || String(err)
+      console.error("Prisma counts query failed:", err)
+      return []
+    }),
   ])
 
   // 2. Fetch the active category from the pre-loaded category pool
@@ -89,21 +105,37 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     },
   }))
 
+  const debugInfo = {
+    slug,
+    activeCategory: activeCategory ? { id: activeCategory.id, slug: activeCategory.slug, name: activeCategory.name } : null,
+    productsRawLength: productsRaw?.length,
+    categoriesRawLength: categoriesRaw?.length,
+    productCountsLength: productCounts?.length,
+    productsError,
+    categoriesError,
+    countsError,
+    envDatabaseUrlExists: !!process.env.DATABASE_URL,
+    timestamp: new Date().toISOString(),
+  }
+
   return (
-    <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>
-      <CategoryPageClient
-        categories={categories}
-        initialProducts={products}
-        activeCategory={{
-          id: activeCategory.id,
-          name: activeCategory.name,
-          slug: activeCategory.slug,
-          imageUrl: activeCategory.imageUrl,
-          parentId: activeCategory.parentId,
-          sortOrder: activeCategory.sortOrder,
-        }}
-        countsMap={countsMap}
-      />
-    </Suspense>
+    <>
+      <div id="fastkirana-db-debug" data-debug={JSON.stringify(debugInfo)} style={{ display: 'none' }} />
+      <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>
+        <CategoryPageClient
+          categories={categories}
+          initialProducts={products}
+          activeCategory={{
+            id: activeCategory.id,
+            name: activeCategory.name,
+            slug: activeCategory.slug,
+            imageUrl: activeCategory.imageUrl,
+            parentId: activeCategory.parentId,
+            sortOrder: activeCategory.sortOrder,
+          }}
+          countsMap={countsMap}
+        />
+      </Suspense>
+    </>
   )
 }
