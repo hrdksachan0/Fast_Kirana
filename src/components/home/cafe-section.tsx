@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -16,6 +17,12 @@ const getCafeSectionImage = (tag: string) => {
     'italian-pasta': '/cafe_pasta_category.png',
     'bombay-bites': '/cafe_bombay_bites_category.png',
     'rice-dishes': '/cafe_rice_category.png',
+    'shakes': '/cafe_shakes_category.png',
+    'mocktails': '/cafe_mocktails_category.png',
+    'cold-coffee': '/cafe_coffee_category.png',
+    'south-indian': '/cafe_south_indian_category.png',
+    'chilled': '/cafe_cold_drinks_category.png',
+    'bakery': '/bakery_biscuits_category.png',
   }
   return mapping[tag] || null
 }
@@ -56,31 +63,164 @@ export function CafeSection() {
     { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.png' },
     { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.png' },
   ])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        const customSectionsStr = data.cafe_menu_sections || data.CAFE_MENU_SECTIONS
-        if (customSectionsStr) {
-          try {
-            const parsed = JSON.parse(customSectionsStr)
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              const mapped = parsed.map((sec: any) => ({
-                tag: sec.tag,
-                title: getShortTitle(sec.tag, sec.title),
-                emoji: sec.emoji || '🍽️',
-                image: sec.imageUrl || sec.image || getCafeSectionImage(sec.tag)
-              }))
-              setCategories([
-                { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
-                ...mapped
-              ])
+    setIsLoading(true)
+    Promise.all([
+      fetch('/api/settings').then(res => res.json()).catch(() => ({})),
+      fetch('/api/products?category=cafe&limit=250').then(res => res.json()).catch(() => ({ products: [] }))
+    ])
+    .then(([settingsData, productsRes]) => {
+      const dbProducts = productsRes?.products || productsRes || []
+      const customSectionsStr = settingsData.cafe_menu_sections || settingsData.CAFE_MENU_SECTIONS
+      
+      let parsedSections = null
+      if (customSectionsStr) {
+        try {
+          const parsed = JSON.parse(customSectionsStr)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            parsedSections = parsed
+          }
+        } catch (e) {}
+      }
+
+      const PREDEFINED_CATEGORIES = parsedSections || DEFAULT_CAFE_MENU_SECTIONS
+
+      const sectionsMap = new Map<string, any>()
+      PREDEFINED_CATEGORIES.forEach(cat => {
+        sectionsMap.set(cat.tag, {
+          tag: cat.tag,
+          title: getShortTitle(cat.tag, cat.title),
+          emoji: cat.emoji || '🍽️',
+          image: cat.imageUrl || cat.image || getCafeSectionImage(cat.tag),
+          matchTags: cat.matchTags || [],
+          productsCount: 0,
+          matchedIds: new Set<string>()
+        })
+      })
+
+      const assignedProductIds = new Set<string>()
+
+      dbProducts.forEach((product: any) => {
+        for (const cat of PREDEFINED_CATEGORIES) {
+          const hasMatch = product.tags?.some((t: string) => 
+            cat.matchTags?.map((mt: string) => mt.toLowerCase()).includes(t.toLowerCase())
+          ) || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate'].includes(product.slug))
+
+          if (hasMatch) {
+            const sec = sectionsMap.get(cat.tag)
+            if (sec && !sec.matchedIds.has(product.id)) {
+              sec.productsCount++
+              sec.matchedIds.add(product.id)
+              assignedProductIds.add(product.id)
             }
-          } catch (e) {}
+          }
         }
       })
-      .catch(() => {})
+
+      const excludeTags = new Set([
+        'cafe', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
+        'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
+        'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
+        'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
+        'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
+        'shaving', 'men', 'herbal', 'hair', 'oil', 'cleaning', 'detergent', 'toilet', 
+        'floor', 'mosquito', 'freshener', 'glass', 'wrapping', 'cookies', 'light', 
+        'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
+      ])
+
+      const dynamicTagsMap = new Map<string, number>()
+      dbProducts.forEach((product: any) => {
+        if (assignedProductIds.has(product.id)) return
+
+        product.tags?.forEach((t: string) => {
+          const lowerTag = t.toLowerCase()
+          if (excludeTags.has(lowerTag)) return
+
+          dynamicTagsMap.set(lowerTag, (dynamicTagsMap.get(lowerTag) || 0) + 1)
+        })
+      })
+
+      const dynamicSections: any[] = []
+      dynamicTagsMap.forEach((count, tag) => {
+        if (count > 0) {
+          const title = tag
+            .split(/[-_ ]+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+
+          dynamicSections.push({
+            tag,
+            title: getShortTitle(tag, title),
+            emoji: '✨',
+            image: getCafeSectionImage(tag),
+            productsCount: count
+          })
+        }
+      })
+
+      const finalCategories: any[] = []
+      PREDEFINED_CATEGORIES.forEach(cat => {
+        const sec = sectionsMap.get(cat.tag)
+        if (sec && sec.productsCount > 0) {
+          finalCategories.push({
+            tag: sec.tag,
+            title: sec.title,
+            emoji: sec.emoji,
+            image: sec.image
+          })
+        }
+      })
+
+      dynamicSections.forEach(sec => {
+        finalCategories.push({
+          tag: sec.tag,
+          title: sec.title,
+          emoji: sec.emoji,
+          image: sec.image
+        })
+      })
+
+      const allGroupedIds = new Set<string>()
+      PREDEFINED_CATEGORIES.forEach(cat => {
+        const sec = sectionsMap.get(cat.tag)
+        if (sec) {
+          sec.matchedIds.forEach((id: string) => allGroupedIds.add(id))
+        }
+      })
+      const moreCount = dbProducts.filter((p: any) => !allGroupedIds.has(p.id)).length
+      if (moreCount > 0) {
+        finalCategories.push({
+          tag: 'more',
+          title: 'More Specials',
+          emoji: '🍽️',
+          image: '/cafe_all_menu_category.png'
+        })
+      }
+
+      if (finalCategories.length > 0) {
+        setCategories([
+          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+          ...finalCategories
+        ])
+      } else if (dbProducts.length === 0) {
+        const defaultMapped = PREDEFINED_CATEGORIES.map(cat => ({
+          tag: cat.tag,
+          title: getShortTitle(cat.tag, cat.title),
+          emoji: cat.emoji || '🍽️',
+          image: cat.imageUrl || cat.image || getCafeSectionImage(cat.tag)
+        }))
+        setCategories([
+          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+          ...defaultMapped
+        ])
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      setIsLoading(false)
+    })
   }, [])
 
   return (
@@ -174,3 +314,4 @@ export function CafeSection() {
     </section>
   )
 }
+

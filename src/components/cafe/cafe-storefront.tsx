@@ -17,6 +17,26 @@ import { cn } from '@/lib/utils'
 
 import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 
+const getCafeSectionImage = (tag: string) => {
+  const mapping: Record<string, string> = {
+    'hot-beverage': '/cafe_brews_category.png',
+    'hot-bite': '/cafe_snacks_category.png',
+    'sandwiches': '/cafe_sandwiches_category.png',
+    'frankie-rolls': '/cafe_rolls_category.png',
+    'chinese': '/cafe_chinese_category.png',
+    'italian-pasta': '/cafe_pasta_category.png',
+    'bombay-bites': '/cafe_bombay_bites_category.png',
+    'rice-dishes': '/cafe_rice_category.png',
+    'shakes': '/cafe_shakes_category.png',
+    'mocktails': '/cafe_mocktails_category.png',
+    'cold-coffee': '/cafe_coffee_category.png',
+    'south-indian': '/cafe_south_indian_category.png',
+    'chilled': '/cafe_cold_drinks_category.png',
+    'bakery': '/bakery_biscuits_category.png',
+  }
+  return mapping[tag] || null
+}
+
 interface CafeProductRowProps {
   product: any
   cafeOpen: boolean
@@ -390,10 +410,12 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const menuCategories = useMemo(() => {
     const list = []
     categorySections.sections.forEach(sec => {
+      const predef = (customSections || DEFAULT_CAFE_MENU_SECTIONS).find(c => c.tag === sec.tag) as any
       list.push({
         tag: sec.tag,
         title: sec.title,
         emoji: sec.emoji,
+        image: predef?.imageUrl || predef?.image || getCafeSectionImage(sec.tag),
         count: sec.products.length
       })
     })
@@ -402,11 +424,12 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         tag: 'more',
         title: 'More Specials',
         emoji: '🍽️',
+        image: '/cafe_all_menu_category.png',
         count: categorySections.moreItems.length
       })
     }
     return list
-  }, [categorySections])
+  }, [categorySections, customSections])
 
   // Scroll tracker logic
   useEffect(() => {
@@ -600,7 +623,21 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                     />
                   )}
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-base shrink-0">{cat.emoji}</span>
+                    <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 relative">
+                      {cat.image ? (
+                        <Image
+                          src={cat.image}
+                          alt={cat.title}
+                          fill
+                          sizes="24px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-xs select-none">
+                          {cat.emoji}
+                        </div>
+                      )}
+                    </div>
                     <span className="text-xs truncate">{cat.title}</span>
                   </div>
                   <span className={cn(
@@ -696,7 +733,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                   {/* Icon Card Container */}
                   <div
                     className={cn(
-                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10',
+                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10 overflow-hidden',
                       isActive
                         ? 'border-rose-400/80 dark:border-rose-500/50 scale-[1.05] shadow-[0_0_12px_rgba(244,63,94,0.25)]'
                         : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
@@ -710,7 +747,17 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{cat.emoji}</span>
+                    {cat.image ? (
+                      <Image
+                        src={cat.image}
+                        alt={cat.title}
+                        fill
+                        sizes="46px"
+                        className="object-cover relative z-20"
+                      />
+                    ) : (
+                      <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{cat.emoji}</span>
+                    )}
                   </div>
 
                   {/* Category Name */}
@@ -837,7 +884,21 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{cat.emoji}</span>
+                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 relative">
+                          {cat.image ? (
+                            <Image
+                              src={cat.image}
+                              alt={cat.title}
+                              fill
+                              sizes="24px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-xs select-none">
+                              {cat.emoji}
+                            </div>
+                          )}
+                        </div>
                         <span className="text-sm font-bold">{cat.title}</span>
                       </div>
                       <span className="text-xs text-text-muted font-bold bg-muted px-2 py-0.5 rounded-full">
