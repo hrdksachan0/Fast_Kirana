@@ -39,6 +39,18 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
 
+  // Lock body scroll when search overlay is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   const [categories, setCategories] = useState<any[]>([])
   const [trendingSearches, setTrendingSearches] = useState<string[]>([])
 

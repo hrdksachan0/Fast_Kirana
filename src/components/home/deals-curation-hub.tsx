@@ -632,6 +632,7 @@ export function DealsCurationHub({
               key={c.id}
               onClick={() => setActiveCuration(c.id)}
               className="group flex flex-col items-center gap-2 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
+              suppressHydrationWarning
             >
               {/* Clean minimal organic circle */}
               <div
@@ -652,11 +653,12 @@ export function DealsCurationHub({
               {/* Title Text Centered Below */}
               <span
                 className={cn(
-                  'text-[11px] sm:text-xs tracking-tight transition-colors duration-300 max-w-[85px] sm:max-w-[105px] text-center line-clamp-2 leading-tight',
+                  'text-[11px] sm:text-xs tracking-tight transition-colors duration-300 max-w-[85px] sm:max-w-[105px] text-center line-clamp-2 leading-tight h-9 flex items-center justify-center',
                   isActive
                     ? 'text-zinc-900 dark:text-white font-extrabold'
                     : 'text-zinc-500 dark:text-zinc-400 font-medium group-hover:text-zinc-900 dark:group-hover:text-white'
                 )}
+                suppressHydrationWarning
               >
                 {c.title}
               </span>

@@ -43,6 +43,18 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   const [storeLng, setStoreLng] = useState(80.1714024)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Lock body scroll when location picker is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   // Fetch delivery radius and store coordinates from settings
   useEffect(() => {
     if (open) {

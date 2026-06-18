@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 // 1. Single Product Card Skeleton (used in storefront, search, category, etc.)
 export function ProductCardSkeleton() {
   return (
-    <div className="bg-card border border-border p-3.5 rounded-2xl shadow-sm flex flex-col justify-between space-y-3 h-full animate-pulse">
+    <div className="bg-card border border-border p-3.5 rounded-2xl shadow-sm flex flex-col justify-between space-y-3 h-[200px] min-[375px]:h-[220px] sm:h-[240px] md:h-[280px] animate-pulse">
       {/* Product Image placeholder */}
       <div className="relative aspect-square w-full rounded-xl bg-muted/50 overflow-hidden" />
       
@@ -48,6 +48,12 @@ export function HomepageSkeleton() {
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl animate-pulse">
       {/* Shop Categories Circular List / Grid */}
       <div className="py-2 md:py-6">
+        {/* Mobile Header: Trending Categories + See all */}
+        <div className="flex items-center justify-between mb-2.5 md:hidden px-1">
+          <div className="h-4 bg-muted/50 rounded w-28 animate-pulse" />
+          <div className="h-3.5 bg-muted/40 rounded w-10 animate-pulse" />
+        </div>
+
         {/* Mobile: Horizontal scrollable sliding list */}
         <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 select-none">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -55,6 +61,12 @@ export function HomepageSkeleton() {
           ))}
         </div>
         
+        {/* Desktop Header */}
+        <div className="hidden md:flex items-center gap-2 mb-4 px-1">
+          <div className="h-5 w-1.5 rounded-full bg-muted/50 animate-pulse" />
+          <div className="h-6 bg-muted/50 rounded w-44 animate-pulse" />
+        </div>
+
         {/* Desktop: Grid layout */}
         <div className="hidden md:grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 gap-4 py-2">
           {Array.from({ length: 9 }).map((_, i) => (

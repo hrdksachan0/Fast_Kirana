@@ -114,77 +114,63 @@ export function LastOrderBanner() {
     }
   }
 
-  if (authStatus !== 'authenticated' || isLoading || !lastOrder) return null
+  const isActive = lastOrder ? !['DELIVERED', 'CANCELLED'].includes(lastOrder.status) : false;
+
+  if (authStatus !== 'authenticated' || isLoading || !lastOrder || !isActive) return null;
 
   const config = STATUS_CONFIG[lastOrder.status] || STATUS_CONFIG.PENDING
   const timeAgo = getTimeAgo(lastOrder.createdAt)
-  const isActive = !['DELIVERED', 'CANCELLED'].includes(lastOrder.status)
 
   return (
-    <Link
-      href={isActive ? `/order/${lastOrder.id}/track` : `/account`}
-      className="block group"
-    >
-      <div className={`relative overflow-hidden rounded-2xl border ${isActive ? 'border-primary/30 bg-primary/[0.03]' : 'border-border bg-card'} p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/40`}>
-        
-        {/* Active order pulse indicator */}
-        {isActive && (
-          <div className="absolute top-3 right-3">
-            <span className="relative flex h-2.5 w-2.5">
+    <div className="fixed bottom-[68px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[40] animate-slide-up pointer-events-auto">
+      <Link
+        href={`/order/${lastOrder.id}/track`}
+        className="block group"
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-primary/35 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md p-3.5 shadow-xl transition-all duration-350 hover:shadow-2xl hover:border-primary/50">
+          
+          {/* Active order pulse indicator */}
+          <div className="absolute top-3.5 right-3.5">
+            <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
             </span>
           </div>
-        )}
 
-        <div className="flex items-center gap-3.5">
-          {/* Icon */}
-          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${isActive ? config.iconClass : 'bg-muted/60 text-text-secondary border border-border/40'}`}>
-            {(() => {
-              const IconComp = statusIconMap[lastOrder.status] || Clock
-              return <IconComp className="h-5 w-5 stroke-[1.5]" />
-            })()}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${config.color}`}>
-                {config.label}
-              </span>
-              <span className="text-[10px] text-text-muted font-medium flex items-center gap-0.5">
-                <Clock className="h-2.5 w-2.5" />
-                {timeAgo}
-              </span>
+          <div className="flex items-center gap-3">
+            {/* Icon */}
+            <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${config.iconClass}`}>
+              {(() => {
+                const IconComp = statusIconMap[lastOrder.status] || Clock
+                return <IconComp className="h-5 w-5 stroke-[1.8]" />
+              })()}
             </div>
-            <p className="text-xs font-bold text-text-primary truncate">
-              {lastOrder.items.map(i => `${i.name} ×${i.quantity}`).join(', ')}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs font-extrabold text-text-primary">{formatPrice(lastOrder.total)}</span>
-              {lastOrder.address && (
-                <span className="text-[10px] text-text-muted flex items-center gap-0.5">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {lastOrder.address.area}
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 text-left">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${config.color}`}>
+                  {config.label}
                 </span>
-              )}
+                <span className="text-[9px] text-text-muted font-bold flex items-center gap-0.5">
+                  <Clock className="h-2.5 w-2.5" />
+                  {timeAgo}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-text-primary truncate">
+                {lastOrder.items.map(i => `${i.name} ×${i.quantity}`).join(', ')}
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" />
             </div>
           </div>
 
-          {/* Arrow */}
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors flex-shrink-0">
-            {isActive ? (
-              <RefreshCw className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowRight className="h-3.5 w-3.5" />
-            )}
-          </div>
-        </div>
-
-        {/* Track bar for active orders */}
-        {isActive && (
-          <div className="mt-3 pt-2 border-t border-border/40">
-            <div className="flex items-center gap-1.5">
+          {/* Track bar for active orders */}
+          <div className="mt-2.5 pt-2 border-t border-border/40">
+            <div className="flex items-center gap-1">
               {['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'].map((step, idx) => {
                 const stepOrder = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED']
                 const currentIdx = stepOrder.indexOf(lastOrder.status)
@@ -198,19 +184,19 @@ export function LastOrderBanner() {
                         ? isCurrent 
                           ? 'bg-accent animate-pulse' 
                           : 'bg-accent' 
-                        : 'bg-border/60'
+                        : 'bg-border/30 dark:bg-zinc-800/60'
                     }`}
                   />
                 )
               })}
             </div>
-            <p className="text-[9px] font-bold text-accent mt-1.5 text-center">
-              {isActive ? 'Tap to track your order →' : 'View order details →'}
+            <p className="text-[9px] font-black text-accent mt-1.5 text-center">
+              Active Delivery • Tap to track details →
             </p>
           </div>
-        )}
-      </div>
-    </Link>
+        </div>
+      </Link>
+    </div>
   )
 }
 

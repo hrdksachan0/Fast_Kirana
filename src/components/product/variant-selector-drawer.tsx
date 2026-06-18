@@ -4,7 +4,7 @@ import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { X, Plus, Minus, ShieldCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
@@ -134,6 +134,17 @@ export function VariantSelectorDrawer() {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
 
   const isOpen = activeProduct !== null
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
 
   const variantsList = useMemo(() => {
     if (!activeProduct || !activeProduct.variants || !Array.isArray(activeProduct.variants)) return []
