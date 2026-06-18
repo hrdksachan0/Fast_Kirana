@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service. Fresh fruits, vegetables, dairy, snacks and more.',
   keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'FastKirana', 'kirana store'],
   manifest: '/manifest.json',
-  metadataBase: new URL('https://fast-kirana-gray.vercel.app'),
+  metadataBase: new URL('https://fast-kirana-gtm.vercel.app'),
 }
 
 export const viewport: Viewport = {
