@@ -35,7 +35,7 @@ export function ProductCardSkeleton() {
 // 2. Circular Category Item Skeleton
 export function CategoryItemSkeleton() {
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 animate-pulse w-[70px]">
+    <div className="flex flex-col items-center flex-shrink-0 animate-pulse w-[70px]">
       <div className="w-[66px] h-[66px] md:w-16 md:h-16 rounded-full bg-muted/50" />
       <div className="h-2.5 bg-muted/50 rounded w-12 mt-2" />
     </div>
@@ -47,7 +47,7 @@ export function HomepageSkeleton() {
   return (
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl animate-pulse">
       {/* Shop Categories Circular List / Grid */}
-      <div>
+      <div className="py-2 md:py-6">
         {/* Mobile: Horizontal scrollable sliding list */}
         <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 select-none">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -71,7 +71,9 @@ export function HomepageSkeleton() {
       <div className="w-full h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] rounded-2xl md:rounded-3xl bg-muted/40" />
 
       {/* Speed Strip Skeleton */}
-      <div className="w-full h-8 min-[375px]:h-9 md:h-[52px] rounded-xl bg-muted/30" />
+      <div className="py-1.5 md:py-3">
+        <div className="w-full h-8 min-[375px]:h-9 md:h-[52px] rounded-xl bg-muted/30" />
+      </div>
 
       {/* Cafe Section Skeleton */}
       <div className="space-y-4">
@@ -93,7 +95,7 @@ export function HomepageSkeleton() {
       </div>
 
       {/* Deals & Curations Hub Skeleton */}
-      <div className="relative space-y-6 pt-4">
+      <div className="relative py-4 md:py-8 space-y-6 px-1 transition-all duration-500">
         {/* Hub Title & Subtitle */}
         <div className="px-1 space-y-1.5">
           <div className="h-6 bg-muted/65 rounded w-44" />
