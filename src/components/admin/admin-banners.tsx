@@ -174,6 +174,7 @@ export function AdminBanners() {
       toast.error('Could not connect to Cloudinary.')
     } finally {
       setIsUploading(false)
+      e.target.value = ''
     }
   }
 
@@ -496,7 +497,10 @@ export function AdminBanners() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                   {/* File Upload option */}
                   <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer bg-muted/10 hover:bg-accent/5 transition-all">
+                    <label
+                      htmlFor="banner-image-file"
+                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer bg-muted/10 hover:bg-accent/5 transition-all"
+                    >
                       <div className="flex flex-col items-center justify-center py-4">
                         {isUploading ? (
                           <>
@@ -512,14 +516,15 @@ export function AdminBanners() {
                           </>
                         )}
                       </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={isUploading}
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
                     </label>
+                    <input
+                      id="banner-image-file"
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      onChange={handleImageUpload}
+                      className="sr-only"
+                    />
                   </div>
 
                   {/* Paste URL option */}

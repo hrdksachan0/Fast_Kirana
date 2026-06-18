@@ -506,17 +506,21 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
             Download {isCafe ? 'Cafe' : 'Grocery'} Template CSV
           </button>
 
-          <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed text-xs font-bold rounded-xl transition-all cursor-pointer ${uploadLabelClass}`}>
+          <label
+            htmlFor="csv-file-upload-input"
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed text-xs font-bold rounded-xl transition-all cursor-pointer ${uploadLabelClass}`}
+          >
             <Upload className="h-4 w-4" />
             {fileName ? `📄 ${fileName}` : 'Upload CSV File'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
           </label>
+          <input
+            id="csv-file-upload-input"
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="sr-only"
+          />
         </div>
 
         {/* Available Categories Reference */}

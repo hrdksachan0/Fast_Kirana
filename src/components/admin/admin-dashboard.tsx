@@ -2582,23 +2582,28 @@ export function AdminDashboard({
                       onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
                       className="flex-1 px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                     />
-                    <label className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap">
+                    <label
+                      htmlFor="new-product-image-file"
+                      className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                    >
                       {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            handleCloudinaryUpload(file, (url) => {
-                              setNewProduct({ ...newProduct, imageUrl: url })
-                            })
-                          }
-                        }}
-                        className="hidden"
-                        disabled={isUploading}
-                      />
                     </label>
+                    <input
+                      id="new-product-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          handleCloudinaryUpload(file, (url) => {
+                            setNewProduct({ ...newProduct, imageUrl: url })
+                          })
+                        }
+                        e.target.value = ''
+                      }}
+                      className="sr-only"
+                      disabled={isUploading}
+                    />
                   </div>
                 </div>
 
@@ -3208,15 +3213,22 @@ export function AdminDashboard({
                         
                         <div className="flex-1 space-y-1.5">
                           <div className="flex items-center gap-2">
-                            <label className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all">
+                            <label
+                              htmlFor="new-category-image-file"
+                              className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all"
+                            >
                               Upload Photo
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageFileChange('new', e)}
-                                className="hidden"
-                              />
                             </label>
+                            <input
+                              id="new-category-image-file"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                handleImageFileChange('new', e)
+                                e.target.value = ''
+                              }}
+                              className="sr-only"
+                            />
                             <span className="text-[9px] text-text-secondary">Max size 2MB</span>
                           </div>
                           
@@ -4453,23 +4465,28 @@ export function AdminDashboard({
                       onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
                       className="flex-1 px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                     />
-                    <label className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap">
+                    <label
+                      htmlFor="edit-product-image-file"
+                      className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                    >
                       {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            handleCloudinaryUpload(file, (url) => {
-                              setProductEditForm({ ...productEditForm, imageUrl: url })
-                            })
-                          }
-                        }}
-                        className="hidden"
-                        disabled={isUploading}
-                      />
                     </label>
+                    <input
+                      id="edit-product-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          handleCloudinaryUpload(file, (url) => {
+                            setProductEditForm({ ...productEditForm, imageUrl: url })
+                          })
+                        }
+                        e.target.value = ''
+                      }}
+                      className="sr-only"
+                      disabled={isUploading}
+                    />
                   </div>
                 </div>
                 <div>
@@ -4901,15 +4918,22 @@ export function AdminDashboard({
                     
                     <div className="flex-1 space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <label className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all">
+                        <label
+                          htmlFor="edit-category-image-file"
+                          className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all"
+                        >
                           Upload Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageFileChange('edit', e)}
-                            className="hidden"
-                          />
                         </label>
+                        <input
+                          id="edit-category-image-file"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            handleImageFileChange('edit', e)
+                            e.target.value = ''
+                          }}
+                          className="sr-only"
+                        />
                         <span className="text-[9px] text-text-secondary">Max size 2MB</span>
                       </div>
                       

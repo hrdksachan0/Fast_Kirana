@@ -215,7 +215,18 @@ export async function POST(request: NextRequest) {
     const ordersToCreate: any[] = []
 
     if (groceryItems.length > 0) {
-      const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.dbProduct.price * item.quantity, 0)
+      const grocerySubtotal = groceryItems.reduce((sum, item) => {
+        const isVariant = item.product.id.includes('_')
+        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+        let itemPrice = item.dbProduct.price
+        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+          if (variant) {
+            itemPrice = variant.price
+          }
+        }
+        return sum + itemPrice * item.quantity
+      }, 0)
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
@@ -234,7 +245,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (cafeItems.length > 0) {
-      const cafeSubtotal = cafeItems.reduce((sum, item) => sum + item.dbProduct.price * item.quantity, 0)
+      const cafeSubtotal = cafeItems.reduce((sum, item) => {
+        const isVariant = item.product.id.includes('_')
+        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+        let itemPrice = item.dbProduct.price
+        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+          if (variant) {
+            itemPrice = variant.price
+          }
+        }
+        return sum + itemPrice * item.quantity
+      }, 0)
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
       const cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
       const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
@@ -476,7 +498,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(mainOrder)
   } catch (error: any) {
     console.error('Order creation error:', error)
-    return NextResponse.json({ error: 'Failed to place order' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 })
   }
 }
 

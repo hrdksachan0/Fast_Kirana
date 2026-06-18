@@ -61,7 +61,10 @@ export default function PhotoCapture({
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (!file) return
+      if (!file) {
+        e.target.value = ''
+        return
+      }
 
       const reader = new FileReader()
       reader.onloadend = async () => {
@@ -70,6 +73,7 @@ export default function PhotoCapture({
         setPreview(compressed)
       }
       reader.readAsDataURL(file)
+      e.target.value = ''
     },
     []
   )
@@ -118,25 +122,27 @@ export default function PhotoCapture({
         <div className="px-5 pb-4">
           {!preview ? (
             /* Capture prompt */
-            <label
-              htmlFor="photo-input"
-              className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-primary/30 bg-primary/[0.03] rounded-2xl p-8 cursor-pointer hover:border-primary/50 hover:bg-primary/[0.06] transition-all active:scale-[0.98]"
-            >
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Camera className="h-7 w-7 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-bold text-text-primary">
-                  Tap to take delivery photo
-                </p>
-                <p className="text-[10px] text-text-secondary mt-1 leading-relaxed max-w-[200px]">
-                  Capture the delivered package at the customer&apos;s doorstep
-                </p>
-              </div>
-              <div className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
-                <ImageIcon className="h-3 w-3 inline mr-1" />
-                Open Camera
-              </div>
+            <>
+              <label
+                htmlFor="photo-input"
+                className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-primary/30 bg-primary/[0.03] rounded-2xl p-8 cursor-pointer hover:border-primary/50 hover:bg-primary/[0.06] transition-all active:scale-[0.98]"
+              >
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Camera className="h-7 w-7 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-text-primary">
+                    Tap to take delivery photo
+                  </p>
+                  <p className="text-[10px] text-text-secondary mt-1 leading-relaxed max-w-[200px]">
+                    Capture the delivered package at the customer&apos;s doorstep
+                  </p>
+                </div>
+                <div className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
+                  <ImageIcon className="h-3 w-3 inline mr-1" />
+                  Open Camera
+                </div>
+              </label>
               <input
                 ref={fileInputRef}
                 id="photo-input"
@@ -144,9 +150,9 @@ export default function PhotoCapture({
                 accept="image/*"
                 capture="environment"
                 onChange={handleFileChange}
-                className="hidden"
+                className="sr-only"
               />
-            </label>
+            </>
           ) : (
             /* Photo Preview */
             <div className="space-y-3">
