@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { sendPushNotification } from '@/lib/push-notification'
+import { sendPushNotification, sendPushNotificationToRoles } from '@/lib/push-notification'
+import { Role } from '@prisma/client'
 
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
@@ -306,6 +307,50 @@ export async function PATCH(
         renotify: true,
         data: { orderId: id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
+
+      // 2. Send push notifications to staff roles based on status transitions
+      if (status === 'PACKED') {
+        // Notify riders (DELIVERY)
+        sendPushNotificationToRoles([Role.DELIVERY], {
+          title: 'New Delivery Job 🚴',
+          body: `Order #${id.slice(-6).toUpperCase()} is packed and ready for delivery!`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `order-delivery-${id}`,
+          renotify: true,
+          data: { orderId: id }
+        }).catch(err => console.error('Error notifying riders:', err))
+
+        // Notify admins
+        sendPushNotificationToRoles([Role.ADMIN], {
+          title: 'Order Packed 📦',
+          body: `Order #${id.slice(-6).toUpperCase()} has been packed and is ready for delivery.`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `order-packed-admin-${id}`,
+          data: { orderId: id }
+        }).catch(err => console.error('Error notifying admins on pack:', err))
+      } else if (status === 'DELIVERED') {
+        // Notify admins
+        sendPushNotificationToRoles([Role.ADMIN], {
+          title: 'Order Delivered 🎉',
+          body: `Order #${id.slice(-6).toUpperCase()} has been delivered successfully.`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `order-delivered-admin-${id}`,
+          data: { orderId: id }
+        }).catch(err => console.error('Error notifying admins on delivery:', err))
+      } else if (status === 'CANCELLED') {
+        // Notify admins
+        sendPushNotificationToRoles([Role.ADMIN], {
+          title: 'Order Cancelled ❌',
+          body: `Order #${id.slice(-6).toUpperCase()} has been cancelled.`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `order-cancelled-admin-${id}`,
+          data: { orderId: id }
+        }).catch(err => console.error('Error notifying admins on cancel:', err))
+      }
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
     }

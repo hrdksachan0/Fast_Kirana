@@ -1,5 +1,6 @@
 import webpush from 'web-push'
 import { prisma } from './prisma'
+import { Role } from '@prisma/client'
 
 const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
 const privateKey = process.env.VAPID_PRIVATE_KEY || '02VzQDrVNvZo88wiRVPtDu3r_Gfp0McW3nW4UoyhI7Q'
@@ -178,6 +179,37 @@ export async function broadcastPushNotification(payload: PushPayload) {
   } catch (error) {
     console.error('Error broadcasting push notification:', error)
     return { successCount: 0, failureCount: 0, error: String(error) }
+  }
+}
+
+/**
+ * Send a push notification to all users who have any of the specified roles.
+ */
+export async function sendPushNotificationToRoles(roles: Role[], payload: PushPayload) {
+  if (!publicKey || !privateKey) {
+    console.error('Cannot send push notification to roles: VAPID keys not configured.')
+    return
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: { in: roles }
+      },
+      select: { id: true }
+    })
+
+    if (users.length === 0) {
+      console.log(`No active users found for roles: ${roles.join(', ')}`)
+      return
+    }
+
+    console.log(`Sending role-based push notification to ${users.length} users with roles ${roles.join(', ')}`)
+    
+    // Send to all matching users
+    await Promise.all(users.map(user => sendPushNotification(user.id, payload)))
+  } catch (error) {
+    console.error('Error sending push notifications to roles:', error)
   }
 }
 
