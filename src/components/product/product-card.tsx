@@ -23,6 +23,7 @@ import { useLiveStock } from '@/components/providers/live-stock-provider'
 export function ProductCard({ product }: ProductCardProps) {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
   
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
@@ -97,7 +98,11 @@ export function ProductCard({ product }: ProductCardProps) {
   }, [isNotifySubscribed, product.id, product.name, subscribe])
 
   const isCafe = isCafeProduct(product)
-  const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+  const categorySlug = product.category?.slug || ''
+  const isCategoryOpen = categoryStatus[categorySlug] !== false
+  const isStoreClosed = isCafe 
+    ? (!cafeOpen || !isCategoryOpen) 
+    : (!groceryMartOpen || !isCategoryOpen)
 
   // Map of category slug to emoji representation
   const emojiMap: Record<string, string> = {
@@ -111,7 +116,6 @@ export function ProductCard({ product }: ProductCardProps) {
     'atta-rice-dal': '🌾',
   }
 
-  const categorySlug = product.category?.slug || ''
   const categoryEmoji = emojiMap[categorySlug] || '🛒'
 
   // Total stock across all variants

@@ -18,6 +18,7 @@ interface UIState {
   shopPhone: string
   groceryMartOpen: boolean
   cafeOpen: boolean
+  categoryStatus: Record<string, boolean>
   deliveryRadius: number
   setCartOpen: (open: boolean) => void
   toggleCart: () => void
@@ -28,7 +29,7 @@ interface UIState {
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
   setShopDetails: (name: string, phone: string) => void
-  setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, radius: number) => void
+  setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, radius: number, categoryStatus: Record<string, boolean>) => void
   hydrateLocation: () => void
 }
 
@@ -44,6 +45,7 @@ export const useUIStore = create<UIState>((set) => ({
   shopPhone: '',
   groceryMartOpen: true,
   cafeOpen: true,
+  categoryStatus: {},
   deliveryRadius: 5,
 
   setCartOpen: (open) => set({ isCartOpen: open }),
@@ -71,8 +73,8 @@ export const useUIStore = create<UIState>((set) => ({
     }
     set({ shopName: name, shopPhone: phone })
   },
-  setStoreStatus: (groceryOpen, cafeOpen, radius) => {
-    set({ groceryMartOpen: groceryOpen, cafeOpen, deliveryRadius: radius })
+  setStoreStatus: (groceryOpen, cafeOpen, radius, categoryStatus) => {
+    set({ groceryMartOpen: groceryOpen, cafeOpen, deliveryRadius: radius, categoryStatus })
   },
   hydrateLocation: () => {
     if (typeof window !== 'undefined') {

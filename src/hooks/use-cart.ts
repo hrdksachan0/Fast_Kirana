@@ -50,17 +50,19 @@ export function useCart() {
   }, [])
 
   const addItem = useCallback((product: CartProduct) => {
-    const { groceryMartOpen, cafeOpen } = useUIStore.getState()
+    const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
     const isCafe = isCafeProduct(product)
+    const categorySlug = product.category?.slug || ''
+    const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
     
-    if (isCafe && !cafeOpen) {
+    if (isCafe && (!cafeOpen || !isCategoryOpen)) {
       triggerHaptic('warning')
-      toast.error(`FastKirana Cafe is temporarily closed. Cannot add ${product.name}.`)
+      toast.error(`FastKirana Cafe or category is closed. Cannot add ${product.name}.`)
       return
     }
-    if (!isCafe && !groceryMartOpen) {
+    if (!isCafe && (!groceryMartOpen || !isCategoryOpen)) {
       triggerHaptic('warning')
-      toast.error(`Grocery Mart is temporarily closed. Cannot add ${product.name}.`)
+      toast.error(`Grocery Mart or category is closed. Cannot add ${product.name}.`)
       return
     }
     if (product.stock <= 0) {
@@ -95,7 +97,7 @@ export function useCart() {
     const currentQty = storeState.getItemQuantity(productId)
 
     if (quantity > currentQty) {
-      const { groceryMartOpen, cafeOpen } = useUIStore.getState()
+      const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
       const item = storeState.items.find((i) => i.product.id === productId)
       if (item) {
         const limit = isCafeProduct(item.product) ? 10 : 5
@@ -112,14 +114,17 @@ export function useCart() {
           return
         }
         const isCafe = isCafeProduct(item.product)
-        if (isCafe && !cafeOpen) {
+        const categorySlug = item.product.category?.slug || ''
+        const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
+
+        if (isCafe && (!cafeOpen || !isCategoryOpen)) {
           triggerHaptic('warning')
-          toast.error(`FastKirana Cafe is temporarily closed. Cannot increase quantity.`)
+          toast.error(`FastKirana Cafe or category is closed. Cannot increase quantity.`)
           return
         }
-        if (!isCafe && !groceryMartOpen) {
+        if (!isCafe && (!groceryMartOpen || !isCategoryOpen)) {
           triggerHaptic('warning')
-          toast.error(`Grocery Mart is temporarily closed. Cannot increase quantity.`)
+          toast.error(`Grocery Mart or category is closed. Cannot increase quantity.`)
           return
         }
       }

@@ -25,9 +25,14 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const quantity = getItemQuantity(product.id)
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const isCafe = isCafeProduct(product)
-  const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+  const categorySlug = product.category?.slug || ''
+  const isCategoryOpen = categoryStatus[categorySlug] !== false
+  const isStoreClosed = isCafe 
+    ? (!cafeOpen || !isCategoryOpen) 
+    : (!groceryMartOpen || !isCategoryOpen)
 
   const liveState = useLiveStock(product.id)
   const resolvedStock = liveState !== null ? liveState.stock : product.stock

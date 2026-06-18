@@ -33,8 +33,13 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
     ? Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
     : 0
 
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
-  const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+  const categorySlug = product.category?.slug || ''
+  const isCategoryOpen = categoryStatus[categorySlug] !== false
+  const isStoreClosed = isCafe 
+    ? (!cafeOpen || !isCategoryOpen) 
+    : (!groceryMartOpen || !isCategoryOpen)
 
   const cartProduct = useMemo(() => ({
     id: resolvedId,

@@ -139,6 +139,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
   const { getItemQuantity, addItem, updateQuantity } = useCart()
@@ -356,7 +357,11 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       {suggestions.map((product) => {
                         const quantity = getItemQuantity(product.id)
                         const isCafe = isCafeProduct(product)
-                        const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+                        const categorySlug = product.category?.slug || ''
+                        const isCategoryOpen = categoryStatus[categorySlug] !== false
+                        const isStoreClosed = isCafe 
+                          ? (!cafeOpen || !isCategoryOpen) 
+                          : (!groceryMartOpen || !isCategoryOpen)
 
                         return (
                           <div

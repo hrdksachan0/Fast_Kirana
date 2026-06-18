@@ -29,6 +29,7 @@ export default function CartPage() {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const [taxRate, setTaxRate] = useState(TAX_RATE)
   const [miscFee, setMiscFee] = useState(0)
@@ -155,8 +156,15 @@ export default function CartPage() {
   const hasInventoryIssues = items.some(
     (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
   )
-  const hasClosedGroceryItems = groceryItems.length > 0 && !groceryMartOpen
-  const hasClosedCafeItems = cafeItems.length > 0 && !cafeOpen
+  const isItemClosed = (product: any) => {
+    const isCafe = isCafeProduct(product)
+    const categorySlug = product.category?.slug || ''
+    const isCatOpen = categoryStatus[categorySlug] !== false
+    return isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
+  }
+
+  const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
+  const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
   const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
 
   const handleAutoAdjust = () => {
@@ -178,8 +186,7 @@ export default function CartPage() {
   }
 
   const renderItemRow = (item: typeof items[0]) => {
-    const isCafe = isCafeProduct(item.product)
-    const isStoreClosed = isCafe ? !cafeOpen : !groceryMartOpen
+    const isStoreClosed = isItemClosed(item.product)
 
     const isOOS = item.product.stock <= 0 || item.product.isAvailable === false
     const isExceeded = item.quantity > item.product.stock && !isOOS

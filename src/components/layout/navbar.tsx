@@ -89,6 +89,15 @@ export function Navbar() {
           const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
           const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
 
+          // Parse category statuses
+          const categoryStatus: Record<string, boolean> = {}
+          Object.keys(data).forEach((key) => {
+            if (key.startsWith('category_open_')) {
+              const slug = key.replace('category_open_', '')
+              categoryStatus[slug] = data[key] === 'true'
+            }
+          })
+
           // Trigger alerts on opening transition
           if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === false && gOpen === true) {
             triggerHaptic('success')
@@ -130,7 +139,7 @@ export function Navbar() {
           
           setGroceryMartOpen(gOpen)
           setCafeOpen(cOpen)
-          setStoreStatus(gOpen, cOpen, radius)
+          setStoreStatus(gOpen, cOpen, radius, categoryStatus)
 
           // Automatically set default location if not set, without intrusive geolocation prompts
           const currentLoc = useUIStore.getState().selectedLocation

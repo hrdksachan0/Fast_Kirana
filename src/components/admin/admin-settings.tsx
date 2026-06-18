@@ -34,6 +34,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
   
+  const [categories, setCategories] = useState<any[]>([])
+  const [categoryStatuses, setCategoryStatuses] = useState<Record<string, boolean>>({})
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -42,6 +45,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     async function loadSettings() {
       try {
         setLoading(true)
+        
+        // Fetch categories first
+        const catRes = await fetch('/api/categories')
+        if (!catRes.ok) throw new Error('Failed to load categories')
+        const cats = await catRes.json()
+        setCategories(cats)
+
         const res = await fetch('/api/settings', { cache: 'no-store' })
         if (!res.ok) throw new Error('Failed to load settings')
         const data = await res.json()
@@ -68,6 +78,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.contact_email) setContactEmail(data.contact_email)
         if (data.contact_timings) setContactTimings(data.contact_timings)
         if (data.contact_address) setContactAddress(data.contact_address)
+
+        // Parse category statuses
+        const catStatusMap: Record<string, boolean> = {}
+        cats.forEach((cat: any) => {
+          catStatusMap[cat.slug] = data[`category_open_${cat.slug}`] !== 'false'
+        })
+        setCategoryStatuses(catStatusMap)
       } catch (err: any) {
         console.error(err)
         toast.error('Could not fetch store settings')
@@ -90,6 +107,11 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
     try {
       setSaving(true)
+      const categorySettingsPayload: Record<string, string> = {}
+      Object.entries(categoryStatuses).forEach(([slug, isOpen]) => {
+        categorySettingsPayload[`category_open_${slug}`] = isOpen ? 'true' : 'false'
+      })
+
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -116,6 +138,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
           contact_address: contactAddress.trim(),
+          ...categorySettingsPayload,
         }),
       })
 
@@ -433,6 +456,34 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       onChange={(e) => setContactAddress(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                     />
+                  </div>
+
+                  {/* Category-Wise Statuses Section */}
+                  <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2">
+                    <h4 className="text-xs font-black text-text-primary mb-3">🏪 Category-Wise Status (Open/Closed)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {categories.map((cat) => (
+                        <div key={cat.id} className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                            {cat.name} Status
+                          </label>
+                          <select
+                            value={categoryStatuses[cat.slug] !== false ? 'true' : 'false'}
+                            onChange={(e) => {
+                              const isOpen = e.target.value === 'true'
+                              setCategoryStatuses((prev) => ({
+                                ...prev,
+                                [cat.slug]: isOpen,
+                              }))
+                            }}
+                            className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                          >
+                            <option value="true">🟢 Open (Active)</option>
+                            <option value="false">🔴 Closed (Temporarily)</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
