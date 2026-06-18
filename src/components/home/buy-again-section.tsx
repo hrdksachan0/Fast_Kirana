@@ -1,106 +1,57 @@
 'use client'
 
-import { useRef } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, History } from 'lucide-react'
-import { useCartStore } from '@/stores/cart-store'
-import { formatPrice } from '@/lib/utils'
-import { toast } from 'sonner'
-
-const iconMap: Record<string, React.ComponentType<any>> = {
-  'fruits-vegetables': Salad,
-  'dairy-breakfast': Milk,
-  'snacks-munchies': Cookie,
-  'beverages': CupSoda,
-  'personal-care': Sparkles,
-  'household': Home,
-  'bakery-biscuits': Croissant,
-  'atta-rice-dal': Wheat,
-}
+import { useState, useEffect, useRef } from 'react'
+import { ChevronLeft, ChevronRight, Plus, Minus, History } from 'lucide-react'
+import { useCart } from '@/hooks/use-cart'
+import { useUIStore } from '@/stores/ui-store'
+import { formatPrice, isCafeProduct, cn } from '@/lib/utils'
+import { ProductImage } from '@/components/product/product-image'
+import { motion, AnimatePresence } from 'framer-motion'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface BuyAgainItem {
   id: string
   name: string
   slug: string
-  emoji: string
+  imageUrl: string | null
   price: number
   mrp: number
   unit: string
   lastOrderedDays: number
   categorySlug: string
+  stock?: number
+  isAvailable?: boolean
+  category?: any
 }
-
-const MOCK_BUY_AGAIN_ITEMS: BuyAgainItem[] = [
-  {
-    id: 'cmpxxtm2h000su8idf678npyj',
-    name: 'Amul Taaza Milk',
-    slug: 'amul-taaza-milk',
-    emoji: '🥛',
-    price: 27,
-    mrp: 27,
-    unit: '500 ml',
-    lastOrderedDays: 3,
-    categorySlug: 'dairy-breakfast',
-  },
-  {
-    id: 'cmpxxtm3f0012u8id0qcaxr17',
-    name: 'Maggi Noodles',
-    slug: 'maggi-noodles',
-    emoji: '🍜',
-    price: 52,
-    mrp: 56,
-    unit: '280 g (4-pack)',
-    lastOrderedDays: 5,
-    categorySlug: 'snacks-munchies',
-  },
-  {
-    id: 'cmpxxtm75002au8idnznyrntl',
-    name: 'Aashirvaad Atta',
-    slug: 'aashirvaad-atta',
-    emoji: '🌾',
-    price: 265,
-    mrp: 295,
-    unit: '5 kg',
-    lastOrderedDays: 12,
-    categorySlug: 'atta-rice-dal',
-  },
-  {
-    id: 'cmpxxtm2k000tu8idhemvnlj4',
-    name: 'Bread - White',
-    slug: 'bread-white',
-    emoji: '🍞',
-    price: 35,
-    mrp: 40,
-    unit: '400 g',
-    lastOrderedDays: 2,
-    categorySlug: 'bakery-biscuits',
-  },
-  {
-    id: 'cmpxxtm2z0017u8id4jp136oc',
-    name: 'Tata Tea Gold',
-    slug: 'tata-tea-gold',
-    emoji: '🍵',
-    price: 249,
-    mrp: 270,
-    unit: '500 g',
-    lastOrderedDays: 15,
-    categorySlug: 'beverages',
-  },
-  {
-    id: 'cmpxxtm6g0020u8idhnc9sgkp',
-    name: 'Parle-G Biscuits',
-    slug: 'parle-g-biscuits',
-    emoji: '🍪',
-    price: 72,
-    mrp: 80,
-    unit: '800 g',
-    lastOrderedDays: 7,
-    categorySlug: 'bakery-biscuits',
-  },
-]
 
 export function BuyAgainSection() {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const addItem = useCartStore((s) => s.addItem)
+  
+  // Select store closure settings
+  const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
+  const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
+
+  const { getItemQuantity, addItem, updateQuantity } = useCart()
+  const [items, setItems] = useState<BuyAgainItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchItems() {
+      try {
+        const res = await fetch('/api/products/buy-again')
+        if (res.ok) {
+          const data = await res.json()
+          setItems(data)
+        }
+      } catch (err) {
+        console.error('Error fetching buy-again items:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchItems()
+  }, [])
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -113,23 +64,62 @@ export function BuyAgainSection() {
     }
   }
 
-  const handleAddToCart = (item: BuyAgainItem) => {
+  const handleAddToCart = (e: React.MouseEvent, item: BuyAgainItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    triggerHaptic('light')
+
     addItem({
       id: item.id,
       name: item.name,
       slug: item.slug,
-      imageUrl: null,
+      imageUrl: item.imageUrl,
       mrp: item.mrp,
       price: item.price,
       discount: item.mrp > item.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0,
       unit: item.unit,
-      stock: 50,
-      isAvailable: true,
-    })
-    toast.success(`${item.name} added to cart`, {
-      id: `buyagain-${item.id}`,
+      stock: item.stock ?? 50,
+      isAvailable: item.isAvailable ?? true,
+      category: item.category,
     })
   }
+
+  const handleIncrement = (e: React.MouseEvent, item: BuyAgainItem, quantity: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    triggerHaptic('light')
+    updateQuantity(item.id, item.name, quantity + 1)
+  }
+
+  const handleDecrement = (e: React.MouseEvent, item: BuyAgainItem, quantity: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    triggerHaptic('medium')
+    updateQuantity(item.id, item.name, quantity - 1)
+  }
+
+  if (loading) {
+    return (
+      <section className="py-4">
+        <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 md:p-5">
+          <div className="h-6 w-36 bg-muted/65 rounded mb-4 animate-pulse" />
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="w-[120px] flex-shrink-0 bg-card rounded-xl border border-border/60 p-3 h-[190px] shadow-sm animate-pulse flex flex-col items-center">
+                <div className="w-12 h-12 rounded-xl bg-muted/50 mb-3 shrink-0" />
+                <div className="h-3 w-5/6 bg-muted/55 rounded mb-2" />
+                <div className="h-2.5 w-1/2 bg-muted/40 rounded mb-3" />
+                <div className="h-3 w-1/3 bg-muted/50 rounded mb-4" />
+                <div className="h-7 w-full bg-muted/45 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (items.length === 0) return null
 
   return (
     <section className="py-4">
@@ -150,14 +140,14 @@ export function BuyAgainSection() {
           <div className="hidden sm:flex items-center gap-1.5">
             <button
               onClick={() => scroll('left')}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm cursor-pointer"
               aria-label="Scroll left"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => scroll('right')}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-text-primary hover:bg-muted transition-colors shadow-sm cursor-pointer"
               aria-label="Scroll right"
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -168,58 +158,136 @@ export function BuyAgainSection() {
         {/* Horizontal scroll of compact items */}
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x snap-mandatory"
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-none scroll-smooth snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {MOCK_BUY_AGAIN_ITEMS.map((item) => (
-            <div
-              key={item.id}
-              className="w-[120px] flex-shrink-0 snap-start group"
-            >
-              <div className="flex flex-col items-center bg-card rounded-xl border border-border/60 p-3 h-full shadow-sm md:hover:shadow-card-hover md:hover:border-primary/20 transition-all duration-300">
-                {/* Icon circle */}
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/5 text-primary mb-2 md:group-hover:scale-110 transition-transform duration-300">
-                  {(() => {
-                    const IconComponent = iconMap[item.categorySlug] || ShoppingBag
-                    return <IconComponent className="h-5 w-5 text-primary" />
-                  })()}
-                </div>
+          {items.map((item) => {
+            const quantity = getItemQuantity(item.id)
+            const isCafe = item.categorySlug === 'cafe'
+            const isCatOpen = categoryStatus[item.categorySlug] !== false
+            const isStoreClosed = isCafe 
+              ? (!cafeOpen || !isCatOpen) 
+              : (!groceryMartOpen || !isCatOpen)
+              
+            const stock = item.stock ?? 50
+            const isLowStock = !isCafe && stock > 0 && stock <= 10
 
-                {/* Product name */}
-                <h3 className="text-xs font-semibold text-text-primary text-center line-clamp-2 leading-tight mb-1 min-h-[2rem]">
-                  {item.name}
-                </h3>
+            return (
+              <div
+                key={item.id}
+                className="w-[120px] flex-shrink-0 snap-start group"
+              >
+                <div className="flex flex-col items-center bg-card rounded-xl border border-border/60 p-3 h-full shadow-[0_2px_8px_rgba(0,0,0,0.03)] md:hover:-translate-y-1 md:hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] md:hover:border-primary/20 transition-all duration-300">
+                  {/* Product Image */}
+                  <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-850 flex items-center justify-center mb-2 shrink-0 md:group-hover:scale-105 transition-transform duration-300">
+                    <ProductImage
+                      src={item.imageUrl}
+                      alt={item.name}
+                      categorySlug={item.categorySlug}
+                      className="h-full w-full object-contain p-0.5"
+                    />
+                    
+                    {/* Low stock mini warning */}
+                    {isLowStock && (
+                      <span className="absolute inset-x-0 bottom-0 bg-red-500/95 text-[7px] font-bold text-white text-center py-0.5 leading-none select-none">
+                        Low Stock
+                      </span>
+                    )}
+                  </div>
 
-                {/* Last ordered */}
-                <p className="text-[10px] text-text-muted mb-2">
-                  {item.lastOrderedDays === 1
-                    ? 'Yesterday'
-                    : `${item.lastOrderedDays} days ago`}
-                </p>
+                  {/* Product name */}
+                  <h3 className="text-xs font-semibold text-text-primary text-center line-clamp-2 leading-tight mb-1 min-h-[2rem]">
+                    {item.name}
+                  </h3>
 
-                {/* Price */}
-                <div className="flex items-center gap-1 mb-2">
-                  <span className="text-sm font-bold text-text-primary">
-                    {formatPrice(item.price)}
-                  </span>
-                  {item.mrp > item.price && (
-                    <span className="text-[10px] text-text-muted line-through">
-                      {formatPrice(item.mrp)}
+                  {/* Last ordered days */}
+                  <p className="text-[9.5px] text-text-muted mb-2 font-medium">
+                    {item.lastOrderedDays === 1
+                      ? 'Yesterday'
+                      : `${item.lastOrderedDays} days ago`}
+                  </p>
+
+                  {/* Price */}
+                  <div className="flex items-center gap-1 mb-2.5 leading-none">
+                    <span className="text-xs font-bold text-text-primary">
+                      {formatPrice(item.price)}
                     </span>
-                  )}
-                </div>
+                    {item.mrp > item.price && (
+                      <span className="text-[9.5px] text-text-muted line-through font-medium">
+                        {formatPrice(item.mrp)}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Quick ADD button */}
-                <button
-                  onClick={() => handleAddToCart(item)}
-                  className="w-full flex items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg border border-accent bg-accent/5 text-accent text-xs font-bold md:hover:bg-accent md:hover:text-white active:scale-95 transition-all duration-200"
-                >
-                  ADD
-                  <Plus className="h-3 w-3" />
-                </button>
+                  {/* Dynamic Action Button: Counter or ADD */}
+                  <div className="w-full h-7">
+                    <AnimatePresence mode="wait">
+                      {quantity === 0 ? (
+                        <motion.div
+                          key="add"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.12 }}
+                          className="w-full h-full"
+                        >
+                          <button
+                            onClick={(e) => handleAddToCart(e, item)}
+                            disabled={isStoreClosed}
+                            className={cn(
+                              "w-full h-full flex items-center justify-center gap-0.5 rounded-lg border text-[10px] font-black transition-all duration-200 cursor-pointer shadow-sm",
+                              isStoreClosed
+                                ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                : "border-accent bg-accent/5 text-accent md:hover:bg-accent md:hover:text-white"
+                            )}
+                          >
+                            {isStoreClosed ? (
+                              'Closed'
+                            ) : (
+                              <>
+                                ADD
+                                <Plus className="h-2.5 w-2.5 stroke-[3.5]" />
+                              </>
+                            )}
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="counter"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.12 }}
+                          className="flex h-full w-full items-center justify-between rounded-lg bg-gradient-to-r from-accent to-rose-600 text-white font-bold shadow-sm overflow-hidden"
+                        >
+                          <motion.button
+                            whileTap={{ scale: 0.82 }}
+                            onClick={(e) => handleDecrement(e, item, quantity)}
+                            className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                          </motion.button>
+                          <span className="w-5 shrink-0 flex items-center justify-center text-[10px] font-black select-none h-full bg-accent border-x border-white/20">
+                            {quantity}
+                          </span>
+                          <motion.button
+                            whileTap={{ scale: 0.82 }}
+                            onClick={(e) => handleIncrement(e, item, quantity)}
+                            disabled={quantity >= stock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+                            className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="h-2.5 w-2.5 stroke-[3]" />
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>
