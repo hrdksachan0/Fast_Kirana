@@ -503,7 +503,7 @@ export function DealsCurationHub({
 
   // Combine products for "All" curation dynamically to ensure they stay up-to-date
   const allProducts = useMemo(() => {
-    const combined = [...flashDeals, ...bestSellers, ...topPicks, ...dynamicCravingConfig.products]
+    const combined = [...flashDeals, ...bestSellers, ...topPicks]
     const seen = new Set()
     return combined.filter((p) => {
       if (!p || !p.id) return false
@@ -511,7 +511,7 @@ export function DealsCurationHub({
       seen.add(p.id)
       return true
     })
-  }, [flashDeals, bestSellers, topPicks, dynamicCravingConfig.products])
+  }, [flashDeals, bestSellers, topPicks])
 
   // All curation options linked directly to backend admin (isFlashDeal, isBestSeller, isTopPick)
   const curations = useMemo(() => [

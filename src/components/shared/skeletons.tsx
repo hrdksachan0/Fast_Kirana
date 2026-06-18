@@ -35,9 +35,9 @@ export function ProductCardSkeleton() {
 // 2. Circular Category Item Skeleton
 export function CategoryItemSkeleton() {
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 animate-pulse">
-      <div className="w-14 h-14 rounded-full bg-muted/50 shadow-sm" />
-      <div className="h-2.5 bg-muted/50 rounded w-12 mt-1" />
+    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 animate-pulse w-[70px]">
+      <div className="w-[66px] h-[66px] md:w-16 md:h-16 rounded-full bg-muted/50" />
+      <div className="h-2.5 bg-muted/50 rounded w-12 mt-2" />
     </div>
   )
 }
@@ -45,48 +45,101 @@ export function CategoryItemSkeleton() {
 // 3. Homepage Skeleton
 export function HomepageSkeleton() {
   return (
-    <div className="container mx-auto px-4 pt-3 pb-8 space-y-6 md:space-y-8 max-w-7xl animate-pulse">
-      {/* Shop Categories Circular List */}
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide select-none pt-2">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <CategoryItemSkeleton key={i} />
-        ))}
-      </div>
-
-      {/* Hero Banner Skeleton */}
-      <div className="w-full h-[180px] md:h-[300px] rounded-2xl bg-muted/40" />
-
-      {/* Speed Strip Skeleton */}
-      <div className="w-full h-8 rounded-xl bg-muted/30" />
-
-      {/* Cafe Promo Banner Skeleton */}
-      <div className="w-full h-16 rounded-2xl bg-muted/45" />
-
-      {/* Active Order Banner Skeleton */}
-      <div className="w-full h-12 rounded-xl bg-muted/30" />
-
-      {/* Flash Deals Section Skeleton */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center px-1">
-          <div className="space-y-1">
-            <div className="h-5 bg-muted/65 rounded w-32" />
-            <div className="h-3 bg-muted/45 rounded w-48" />
-          </div>
-          <div className="h-6 bg-muted/40 rounded w-24" />
+    <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl animate-pulse">
+      {/* Shop Categories Circular List / Grid */}
+      <div>
+        {/* Mobile: Horizontal scrollable sliding list */}
+        <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 select-none">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <CategoryItemSkeleton key={i} />
+          ))}
         </div>
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <ProductCardSkeleton key={i} />
+        
+        {/* Desktop: Grid layout */}
+        <div className="hidden md:grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 gap-4 py-2">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center p-3">
+              <div className="w-16 h-16 rounded-2xl bg-muted/50" />
+              <div className="h-3 bg-muted/45 rounded w-14 mt-2" />
+              <div className="h-2.5 bg-muted/30 rounded w-8 mt-1" />
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Time Suggestions Section Skeleton */}
-      <div className="space-y-3">
-        <div className="h-5 bg-muted/65 rounded w-44" />
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <ProductCardSkeleton key={i} />
+      {/* Hero Banner Skeleton */}
+      <div className="w-full h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] rounded-2xl md:rounded-3xl bg-muted/40" />
+
+      {/* Speed Strip Skeleton */}
+      <div className="w-full h-8 min-[375px]:h-9 md:h-[52px] rounded-xl bg-muted/30" />
+
+      {/* Cafe Section Skeleton */}
+      <div className="space-y-4">
+        <div className="w-full h-[120px] sm:h-[140px] md:h-[160px] rounded-3xl bg-muted/40" />
+        
+        <div className="flex items-center justify-between px-1">
+          <div className="h-3.5 w-24 bg-muted/50 rounded" />
+          <div className="h-3 w-16 bg-muted/40 rounded" />
+        </div>
+
+        <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 select-none">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="w-[70px] shrink-0 flex flex-col items-center">
+              <div className="w-[64px] h-[64px] rounded-full bg-muted/50" />
+              <div className="h-2 bg-muted/40 rounded w-10 mt-2" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Deals & Curations Hub Skeleton */}
+      <div className="relative space-y-6 pt-4">
+        {/* Hub Title & Subtitle */}
+        <div className="px-1 space-y-1.5">
+          <div className="h-6 bg-muted/65 rounded w-44" />
+          <div className="h-3.5 bg-muted/40 rounded w-60" />
+        </div>
+
+        {/* Curation Tab Bar circles */}
+        <div className="flex items-center gap-6 sm:gap-10 overflow-x-auto pb-3.5 pt-2 select-none w-full justify-start sm:justify-center px-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-2 shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50" />
+              <div className="h-2.5 bg-muted/45 rounded w-14 mt-1" />
+            </div>
+          ))}
+        </div>
+
+        {/* Grouped Products scrollable lists */}
+        <div className="space-y-6">
+          {Array.from({ length: 2 }).map((_, gIdx) => (
+            <div key={gIdx} className="space-y-2.5">
+              {/* Category subheader */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 bg-muted/65 rounded w-32" />
+                  <div className="h-4 w-12 bg-muted/45 rounded-full" />
+                </div>
+                <div className="h-4 bg-muted/40 rounded w-14" />
+              </div>
+              
+              {/* Category Products Horizontal Snap Track */}
+              <div className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4">
+                {Array.from({ length: 4 }).map((_, pIdx) => (
+                  <div key={pIdx} className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0">
+                    <div className="bg-card border border-border/50 p-2.5 rounded-xl space-y-2.5 h-[200px] min-[375px]:h-[220px] sm:h-[240px] md:h-[280px]">
+                      <div className="aspect-square w-full rounded-lg bg-muted/40" />
+                      <div className="h-3 bg-muted/50 rounded w-5/6" />
+                      <div className="h-2.5 bg-muted/30 rounded w-1/2" />
+                      <div className="flex justify-between items-center pt-1">
+                        <div className="h-3 bg-muted/60 rounded w-8" />
+                        <div className="h-6 w-12 bg-muted/55 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

@@ -114,15 +114,7 @@ export function LastOrderBanner() {
     }
   }
 
-  if (authStatus !== 'authenticated' || (!isLoading && !lastOrder)) return null
-
-  if (isLoading) {
-    return (
-      <div className="animate-pulse rounded-2xl border border-border bg-card h-20" />
-    )
-  }
-
-  if (!lastOrder) return null
+  if (authStatus !== 'authenticated' || isLoading || !lastOrder) return null
 
   const config = STATUS_CONFIG[lastOrder.status] || STATUS_CONFIG.PENDING
   const timeAgo = getTimeAgo(lastOrder.createdAt)
