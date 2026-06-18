@@ -282,10 +282,13 @@ export default function CheckoutPage() {
         const res = await fetch('/api/addresses')
         if (res.ok) {
           const data = await res.json()
-          setAddresses(data)
-          if (data.length > 0) {
-            const def = data.find((a: Address) => a.isDefault)
-            setSelectedAddressId(def ? def.id : data[0].id)
+          const deliveryAddrs = data.filter((a: any) => a.label !== 'STORE_PICKUP')
+          setAddresses(deliveryAddrs)
+          if (deliveryAddrs.length > 0) {
+            const def = deliveryAddrs.find((a: any) => a.isDefault)
+            setSelectedAddressId(def ? def.id : deliveryAddrs[0].id)
+          } else {
+            setSelectedAddressId('')
           }
         }
       } catch (err) {

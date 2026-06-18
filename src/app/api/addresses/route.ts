@@ -10,7 +10,10 @@ export async function GET() {
 
   try {
     const addresses = await prisma.address.findMany({
-      where: { userId: session.user.id },
+      where: { 
+        userId: session.user.id,
+        label: { not: 'STORE_PICKUP' }
+      },
       orderBy: { isDefault: 'desc' },
     })
     return NextResponse.json(addresses)
