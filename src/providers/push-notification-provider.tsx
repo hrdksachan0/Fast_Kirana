@@ -70,7 +70,16 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
 
   const registerSubscription = async () => {
     try {
-      const registration = await navigator.serviceWorker.ready
+      // Prevent infinite loading state if service worker activation is delayed or blocked (e.g. non-secure local HTTP context)
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Service Worker registration timed out')), 6000)
+      )
+      
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        timeoutPromise
+      ]) as ServiceWorkerRegistration
+      
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
 
       const subscription = await registration.pushManager.subscribe({

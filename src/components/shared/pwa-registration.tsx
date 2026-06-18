@@ -14,7 +14,7 @@ export function PWARegistration() {
   useEffect(() => {
     // 1. Register Service Worker
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      const registerSW = () => {
         navigator.serviceWorker
           .register('/sw.js?v=2')
           .then((reg) => {
@@ -25,7 +25,13 @@ export function PWARegistration() {
           .catch((err) => {
             console.error('ServiceWorker registration failed: ', err)
           })
-      })
+      }
+
+      if (document.readyState === 'complete') {
+        registerSW()
+      } else {
+        window.addEventListener('load', registerSW)
+      }
     }
 
     // 2. Detect standalone mode (if already installed and opened as PWA, do not show banner)
