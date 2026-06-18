@@ -228,7 +228,12 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
                 <Button
                   onClick={handleAdd}
                   disabled={resolvedStock <= 0 || !resolvedIsAvailable || !cafeOpen}
-                  className="w-full h-full border border-green-600 bg-white dark:bg-zinc-900 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black hover:bg-green-50 dark:hover:bg-zinc-800 rounded shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className={cn(
+                    "w-full h-full border text-[10px] sm:text-xs font-black rounded shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer",
+                    resolvedStock <= 0 || !resolvedIsAvailable || !cafeOpen
+                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                      : "border-green-600 bg-white dark:bg-zinc-900 text-[#2e7d32] dark:text-emerald-400 hover:bg-green-50 dark:hover:bg-zinc-800"
+                  )}
                 >
                   {resolvedStock <= 0 || !resolvedIsAvailable ? (
                     'Out'

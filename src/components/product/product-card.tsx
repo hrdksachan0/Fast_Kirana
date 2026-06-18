@@ -227,7 +227,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Image Container */}
-        <div ref={imageRef} className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
+        <div ref={imageRef} className="relative w-full h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px] overflow-hidden rounded-lg bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
@@ -334,7 +334,9 @@ export function ProductCard({ product }: ProductCardProps) {
                   disabled={isStoreClosed && resolvedStock > 0}
                   className={cn(
                     "w-full h-full border text-[10px] sm:text-xs font-black rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
-                    resolvedStock <= 0 || !resolvedIsAvailable
+                    isStoreClosed && resolvedStock > 0
+                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                      : resolvedStock <= 0 || !resolvedIsAvailable
                       ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400"
                       : "border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 md:hover:bg-[#2e7d32] md:hover:text-white"
                   )}

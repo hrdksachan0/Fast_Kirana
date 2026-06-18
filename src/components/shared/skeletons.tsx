@@ -7,7 +7,7 @@ export function ProductCardSkeleton() {
   return (
     <div className="bg-card border border-border p-1.5 min-[375px]:p-2 sm:p-3 rounded-xl shadow-sm flex flex-col space-y-1.5 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] animate-pulse">
       {/* Product Image placeholder */}
-      <div className="relative aspect-square w-full rounded-lg bg-muted/50 overflow-hidden shrink-0" />
+      <div className="relative w-full h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px] rounded-lg bg-muted/50 overflow-hidden shrink-0" />
       
       {/* Product Details */}
       <div className="flex flex-col flex-1 min-h-0 justify-center">
