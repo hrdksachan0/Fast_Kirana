@@ -93,11 +93,13 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         body: JSON.stringify({ id }),
       })
 
+      const data = await res.json()
+
       if (res.ok) {
         setAddresses(addresses.filter((a) => a.id !== id))
         toast.success('Address deleted successfully')
       } else {
-        toast.error('Failed to delete address')
+        toast.error(data.error || 'Failed to delete address')
       }
     } catch (err) {
       toast.error('Failed to delete address')
@@ -272,13 +274,22 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       </p>
                     )}
                   </div>
-                  <Button
-                    onClick={() => handleDeleteAddress(addr.id)}
-                    variant="ghost"
-                    className="text-danger hover:bg-danger/10 hover:text-danger self-start text-[10px] font-bold h-7 px-2.5"
-                  >
-                    Delete Address
-                  </Button>
+                  {addresses.length <= 1 ? (
+                    <span
+                      className="text-text-muted self-start text-[10px] font-semibold h-7 px-2.5 flex items-center gap-1 italic"
+                      title="You must keep at least one delivery address"
+                    >
+                      🔒 Primary address
+                    </span>
+                  ) : (
+                    <Button
+                      onClick={() => handleDeleteAddress(addr.id)}
+                      variant="ghost"
+                      className="text-danger hover:bg-danger/10 hover:text-danger self-start text-[10px] font-bold h-7 px-2.5"
+                    >
+                      Delete Address
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

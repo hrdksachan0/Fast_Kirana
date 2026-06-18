@@ -32,11 +32,16 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session, account }) {
       if (user) {
         token.role = (user as any).role
         token.id = user.id
         token.phone = (user as any).phone
+      }
+      // For Google OAuth users, the adapter creates the user but doesn't set
+      // role/phone on the JWT. Mark them so the middleware can handle it.
+      if (account?.provider === 'google' && !token.role) {
+        token.role = 'USER'
       }
       if (trigger === 'update' && session) {
         if (session.name) token.name = session.name

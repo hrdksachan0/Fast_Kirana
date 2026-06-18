@@ -27,6 +27,37 @@ function ProfileSetupForm() {
     }
   }, [status, router])
 
+  // If the user already has a phone in the session (JWT is fresh), redirect away
+  useEffect(() => {
+    if (session?.user?.phone) {
+      window.location.href = callbackUrl
+    }
+  }, [session, callbackUrl])
+
+  // Check DB if user already completed profile setup (handles stale JWT edge case)
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    let cancelled = false
+
+    const checkProfile = async () => {
+      try {
+        const res = await fetch('/api/profile/setup')
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        if (data.phone) {
+          // Phone already exists in DB — refresh JWT and redirect
+          await update({ name: data.name, phone: data.phone }).catch(() => {})
+          window.location.href = callbackUrl
+        }
+      } catch {
+        // Ignore — will fall through to the form
+      }
+    }
+    checkProfile()
+    return () => { cancelled = true }
+  }, [status, callbackUrl, update])
+
   useEffect(() => {
     if (session?.user?.name && !name) {
       setName(session.user.name)
@@ -69,12 +100,25 @@ function ProfileSetupForm() {
         return
       }
 
-      // Update the NextAuth session dynamically in the background to avoid blocking the redirect
-      update({ name, phone }).catch(err => console.error('NextAuth session update error:', err))
+      // Update the NextAuth JWT token to include the phone number.
+      // Use a timeout because the session endpoint can be slow (cold DB, adapter overhead).
+      // Even if this times out, the DB is already updated, and the hard redirect below
+      // will trigger a fresh middleware check that will let the user through.
+      try {
+        await Promise.race([
+          update({ name, phone }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Session update timeout')), 5000)),
+        ])
+      } catch (err) {
+        console.warn('Session update timed out or failed, proceeding with redirect:', err)
+      }
       
       toast.success('Profile completed successfully!')
-      router.push(callbackUrl)
-      router.refresh()
+
+      // Use hard redirect instead of router.push() to force a full page load.
+      // This ensures the browser sends the updated JWT cookie to the server,
+      // preventing the middleware from redirecting back to /setup-profile.
+      window.location.href = callbackUrl
     } catch (error) {
       toast.error('Something went wrong. Please try again.')
       setIsLoading(false)

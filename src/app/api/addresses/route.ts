@@ -95,6 +95,31 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
+    // Enforce: user must keep at least 1 delivery address
+    const userAddressCount = await prisma.address.count({
+      where: {
+        userId: session.user.id,
+        label: { not: 'STORE_PICKUP' },
+      },
+    })
+    if (userAddressCount <= 1) {
+      return NextResponse.json(
+        { error: 'You must keep at least one delivery address. Add a new address before deleting this one.' },
+        { status: 400 }
+      )
+    }
+
+    // Check if this address is linked to any existing orders
+    const linkedOrdersCount = await prisma.order.count({
+      where: { addressId: id },
+    })
+    if (linkedOrdersCount > 0) {
+      return NextResponse.json(
+        { error: `This address is linked to ${linkedOrdersCount} order(s) and cannot be deleted.` },
+        { status: 400 }
+      )
+    }
+
     await prisma.address.delete({ where: { id } })
     return NextResponse.json({ message: 'Address deleted successfully' })
   } catch (error) {
