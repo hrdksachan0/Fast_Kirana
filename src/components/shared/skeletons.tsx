@@ -5,28 +5,28 @@ import { Skeleton } from '@/components/ui/skeleton'
 // 1. Single Product Card Skeleton (used in storefront, search, category, etc.)
 export function ProductCardSkeleton() {
   return (
-    <div className="bg-card border border-border p-3.5 rounded-2xl shadow-sm flex flex-col justify-between space-y-3 h-[200px] min-[375px]:h-[220px] sm:h-[240px] md:h-[280px] animate-pulse">
+    <div className="bg-card border border-border p-1.5 min-[375px]:p-2 sm:p-3 rounded-xl shadow-sm flex flex-col space-y-1.5 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] animate-pulse">
       {/* Product Image placeholder */}
-      <div className="relative aspect-square w-full rounded-xl bg-muted/50 overflow-hidden" />
+      <div className="relative aspect-square w-full rounded-lg bg-muted/50 overflow-hidden shrink-0" />
       
       {/* Product Details */}
-      <div className="space-y-2 flex-1">
+      <div className="flex flex-col flex-1 min-h-0 justify-center">
         {/* Name */}
         <div className="h-4 bg-muted/65 rounded w-5/6" />
         {/* Unit */}
-        <div className="h-3 bg-muted/50 rounded w-1/3" />
-        
-        {/* Price & Add button row */}
-        <div className="flex justify-between items-center pt-2">
-          <div className="space-y-1">
-            {/* Price */}
-            <div className="h-4 bg-muted/70 rounded w-12" />
-            {/* MRP */}
-            <div className="h-3 bg-muted/40 rounded w-8" />
-          </div>
-          {/* Add button */}
-          <div className="h-8 w-16 bg-muted/60 rounded-lg" />
+        <div className="h-3 bg-muted/50 rounded w-1/3 mt-1.5" />
+      </div>
+      
+      {/* Price & Add button row — pinned to bottom */}
+      <div className="flex justify-between items-end pt-1 mt-auto shrink-0">
+        <div className="space-y-1">
+          {/* Price */}
+          <div className="h-4 bg-muted/70 rounded w-12" />
+          {/* Savings placeholder */}
+          <div className="h-[10px] min-[375px]:h-[11px] bg-muted/40 rounded w-14" />
         </div>
+        {/* Add button */}
+        <div className="h-8 w-16 bg-muted/60 rounded-lg" />
       </div>
     </div>
   )
@@ -141,7 +141,7 @@ export function HomepageSkeleton() {
               <div className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4">
                 {Array.from({ length: 4 }).map((_, pIdx) => (
                   <div key={pIdx} className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0">
-                    <div className="bg-card border border-border/50 p-2.5 rounded-xl space-y-2.5 h-[200px] min-[375px]:h-[220px] sm:h-[240px] md:h-[280px]">
+                    <div className="bg-card border border-border/50 p-1.5 min-[375px]:p-2 sm:p-3 rounded-xl space-y-1.5 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]">
                       <div className="aspect-square w-full rounded-lg bg-muted/40" />
                       <div className="h-3 bg-muted/50 rounded w-5/6" />
                       <div className="h-2.5 bg-muted/30 rounded w-1/2" />

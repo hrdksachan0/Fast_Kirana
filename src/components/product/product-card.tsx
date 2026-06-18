@@ -186,11 +186,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const savings = resolvedMrp - resolvedPrice
 
+  const isLowStock = product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10)
+
   return (
     <motion.div
       whileHover={{ y: -6, scale: 1.015, transition: { type: 'spring', stiffness: 350, damping: 18 } }}
       whileTap={{ scale: 0.97 }}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1 min-[375px]:p-1.5 sm:p-3 shadow-card transition-all duration-300 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 cursor-pointer h-[200px] min-[375px]:h-[220px] sm:h-[240px] md:h-[280px]"
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1.5 min-[375px]:p-2 sm:p-3 shadow-card transition-all duration-300 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
@@ -215,7 +217,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </AnimatePresence>
 
-      <Link href={`/product/${product.slug}`} className="flex flex-col flex-grow">
+      <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0">
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
@@ -225,7 +227,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Image Container */}
-        <div ref={imageRef} className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center mb-0.5">
+        <div ref={imageRef} className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
@@ -240,39 +242,44 @@ export function ProductCard({ product }: ProductCardProps) {
               ⭐ Bestseller
             </div>
           )}
-        </div>
 
-        {/* Product Info */}
-        <div className="flex flex-col flex-grow">
-          {/* Name */}
-          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px] mb-0.5">
-            {product.name}
-          </h3>
-          {hasVariants ? (
-            <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md mt-1 mb-0.5 w-fit border border-primary/10">
-              Customisable ▾
-            </span>
-          ) : (
-            <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted mb-0.5">
-              {product.unit}
-            </span>
-          )}
-          {product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
-            <motion.span
+          {/* Low Stock Badge — overlay on image */}
+          {isLowStock && (
+            <motion.div
               key={resolvedStock}
-              initial={{ scale: 0.9, opacity: 0.7 }}
+              initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="text-[8px] min-[375px]:text-[9px] font-bold text-red-500 dark:text-red-400 mb-0.5 block"
+              className="absolute top-0.5 right-0.5 z-10 flex items-center gap-0.5 rounded bg-red-500/90 px-1 min-[375px]:px-1.5 py-0.5 text-[7px] min-[375px]:text-[8px] font-bold text-white shadow-sm pointer-events-none select-none"
             >
-              Only {resolvedStock} left!
-            </motion.span>
+              Only {resolvedStock} left
+            </motion.div>
           )}
+        </div>
+
+        {/* Product Info — flex-1 takes remaining space between image and bottom row */}
+        <div className="flex flex-col flex-1 min-h-0 justify-center mt-1">
+          {/* Name — fixed min-height for 2 lines */}
+          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]">
+            {product.name}
+          </h3>
+          {/* Unit / Customisable — fixed height container */}
+          <div className="h-4 min-[375px]:h-[18px] sm:h-5 flex items-center">
+            {hasVariants ? (
+              <span className="inline-flex items-center gap-0.5 text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-md w-fit border border-primary/10 leading-none">
+                Customisable ▾
+              </span>
+            ) : (
+              <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted leading-none">
+                {product.unit}
+              </span>
+            )}
+          </div>
         </div>
       </Link>
 
-      {/* Consolidated Bottom Row: Price, MRP, Savings and ADD Button */}
-      <div className="flex items-end justify-between gap-1 mt-1 w-full min-w-0">
+      {/* Consolidated Bottom Row: Price, MRP, Savings and ADD Button — always pinned to bottom */}
+      <div className="flex items-end justify-between gap-1 mt-auto pt-1 w-full min-w-0 shrink-0">
         {/* Left Side: Pricing & Savings */}
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-baseline gap-1 flex-wrap leading-none">
@@ -291,14 +298,17 @@ export function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </div>
-          {savings > 0 && (
-            <span 
-              className="text-[7.5px] min-[375px]:text-[8px] font-black text-[#2e7d32] dark:text-emerald-400 mt-0.5 block truncate tracking-tight leading-none"
-              title={`Save ₹${savings}`}
-            >
-              Save ₹{savings}
-            </span>
-          )}
+          {/* Savings — always reserves height for stable layout */}
+          <span 
+            className={cn(
+              "text-[7.5px] min-[375px]:text-[8px] font-black mt-0.5 block truncate tracking-tight leading-none h-[10px] min-[375px]:h-[11px]",
+              savings > 0 ? "text-[#2e7d32] dark:text-emerald-400" : "text-transparent select-none pointer-events-none"
+            )}
+            title={savings > 0 ? `Save ₹${savings}` : undefined}
+            aria-hidden={savings <= 0}
+          >
+            {savings > 0 ? `Save ₹${savings}` : '\u00A0'}
+          </span>
         </div>
 
         {/* Right Side: Add to Cart Actions */}
