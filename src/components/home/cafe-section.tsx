@@ -224,12 +224,7 @@ export function CafeSection() {
     <section className="space-y-4">
       {/* Café Banner Card */}
       <Link href="/cafe" className="block group">
-        <div className={cn(
-          "relative overflow-hidden rounded-3xl h-[120px] sm:h-[140px] md:h-[160px] border shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-500",
-          isCafeActive
-            ? "border-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)] hover:-translate-y-0.5"
-            : "border-zinc-250 dark:border-zinc-800 grayscale contrast-75 brightness-75 opacity-70"
-        )}>
+        <div className="relative overflow-hidden rounded-3xl h-[120px] sm:h-[140px] md:h-[160px] border border-amber-500/20 shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-500 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)] hover:-translate-y-0.5">
           {/* Cafe Banner Image */}
           <Image
             src="/cafe_banner.png"
@@ -286,10 +281,7 @@ export function CafeSection() {
       </div>
 
       {/* Café Menu Categories Horizontal Scrollbar */}
-      <div className={cn(
-        "flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none",
-        !isCafeActive && "grayscale opacity-60 pointer-events-none"
-      )}>
+      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, idx) => (
             <div
