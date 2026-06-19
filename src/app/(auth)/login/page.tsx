@@ -78,8 +78,8 @@ function LoginForm() {
   const validateIdentifier = (val: string) => {
     const trimmed = val.trim()
     if (loginType === 'WHATSAPP') {
-      if (!trimmed) return 'WhatsApp number is required'
-      if (!isPhoneNumber(trimmed)) return 'Please enter a valid 10-digit WhatsApp number'
+      if (!trimmed) return 'Mobile number is required'
+      if (!isPhoneNumber(trimmed)) return 'Please enter a valid 10-digit mobile number'
       return null
     } else {
       if (!trimmed) return 'Email is required'
@@ -91,7 +91,7 @@ function LoginForm() {
   const formatIdentifierDisplay = (val: string): string => {
     if (val.startsWith('wa-') && val.includes('@')) {
       const phoneDigits = val.split('@')[0].replace('wa-', '')
-      return `WhatsApp (+91 ${phoneDigits})`
+      return `Mobile (+91 ${phoneDigits})`
     }
     return val
   }
@@ -377,7 +377,7 @@ function LoginForm() {
           <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && 'Welcome to FastKirana'}
             {step === 'PASSWORD' && 'Enter Password'}
-            {step === 'OTP' && (email.startsWith('wa-') ? 'Verify WhatsApp' : 'Verify Email')}
+            {step === 'OTP' && (email.startsWith('wa-') ? 'Verify Mobile' : 'Verify Email')}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
@@ -399,7 +399,7 @@ function LoginForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-bold text-xs text-text-secondary">
-                {loginType === 'WHATSAPP' ? 'WhatsApp Number' : 'Email Address'}
+                {loginType === 'WHATSAPP' ? 'Mobile Number' : 'Email Address'}
               </Label>
               <div className="relative group">
                 {loginType === 'WHATSAPP' ? (
@@ -410,7 +410,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type={loginType === 'WHATSAPP' ? 'text' : 'email'}
-                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'name@example.com'}
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit mobile number' : 'name@example.com'}
                   value={email}
                   onChange={(e) => {
                     let val = e.target.value
@@ -492,7 +492,7 @@ function LoginForm() {
                   }}
                   className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
                 >
-                  Go back to WhatsApp Login
+                  Go back to Mobile Login
                 </button>
               )}
             </div>

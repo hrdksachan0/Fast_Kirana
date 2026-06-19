@@ -492,23 +492,8 @@ export async function POST(request: NextRequest) {
           createdAt: order.createdAt,
         })
 
-        // 1. Send notification to ADMINs
-        sendPushNotificationToRoles([Role.ADMIN], {
-          title: 'New Order Placed 🏪',
-          body: `Order #${order.id.slice(-6).toUpperCase()} of ₹${order.total} has been placed.`,
-          tag: `order-${order.id}`,
-          data: { orderId: order.id }
-        }).catch((err: any) => console.error('Error sending push notification to admins:', err))
-
-        // 2. Send notification to CHEFs or PICKERs
-        if (order.shopName === 'FastKirana Cafe Kitchen') {
-          sendPushNotificationToRoles([Role.CHEF], {
-            title: 'New Cafe Order ☕',
-            body: `Order #${order.id.slice(-6).toUpperCase()} is ready for the kitchen.`,
-            tag: `order-${order.id}`,
-            data: { orderId: order.id }
-          }).catch((err: any) => console.error('Error sending push notification to chefs:', err))
-        } else {
+        // Send push notifications to PICKERs if not a cafe order
+        if (order.shopName !== 'FastKirana Cafe Kitchen') {
           sendPushNotificationToRoles([Role.PICKER], {
             title: 'New Grocery Order 📦',
             body: `Order #${order.id.slice(-6).toUpperCase()} is ready for picking.`,
