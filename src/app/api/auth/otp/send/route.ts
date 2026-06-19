@@ -68,17 +68,12 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 5. Send OTP Email or SMS/WhatsApp via Fast2SMS
+    // 5. Send OTP via WhatsApp Cloud API
     let isSent = false
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      isSent = await sendFast2SmsOtp(recipientPhone, otp)
-      // Fallback to WhatsApp mock if Fast2SMS credentials are not configured or fail
-      if (!isSent) {
-        console.log('[OTP Send] Fast2SMS failed or not configured, falling back to WhatsApp sender')
-        isSent = await sendWhatsAppOtp(recipientPhone, otp)
-      }
+      isSent = await sendWhatsAppOtp(recipientPhone, otp)
     } else {
       return NextResponse.json({ error: 'Email OTP is not supported. Please log in using a Mobile Number or Google Sign-In.' }, { status: 400 })
     }
