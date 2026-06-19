@@ -102,6 +102,10 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        if (productVariants && productVariants.length > 0) {
+          productVariants.sort((a: any, b: any) => (a.price || 0) - (b.price || 0))
+        }
+
         const mrp = productVariants && productVariants.length > 0 ? productVariants[0].mrp : parseFloat(item.mrp)
         const price = productVariants && productVariants.length > 0 ? productVariants[0].price : parseFloat(item.price)
         const stock = productVariants && productVariants.length > 0 ? productVariants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) : (parseInt(item.stock) || 0)

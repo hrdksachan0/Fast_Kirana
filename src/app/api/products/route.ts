@@ -379,8 +379,18 @@ export async function POST(request: NextRequest) {
       finalSlug = `${slug}-${Date.now().toString().slice(-4)}`
     }
 
-    const calculatedDiscount = mrp > price 
-      ? Math.max(0, Math.round(((mrp - price) / mrp) * 100))
+    let finalMrp = parseFloat(mrp)
+    let finalPrice = parseFloat(price)
+    let sortedVariants = variants
+
+    if (variants && Array.isArray(variants) && variants.length > 0) {
+      sortedVariants = [...variants].sort((a: any, b: any) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+      finalPrice = parseFloat(sortedVariants[0].price) || 0
+      finalMrp = parseFloat(sortedVariants[0].mrp) || finalPrice
+    }
+
+    const calculatedDiscount = finalMrp > finalPrice 
+      ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
     const product = await prisma.product.create({
@@ -390,14 +400,14 @@ export async function POST(request: NextRequest) {
         description,
         imageUrl: imageUrl || '📦',
         categoryId,
-        mrp: parseFloat(mrp),
-        price: parseFloat(price),
+        mrp: finalMrp,
+        price: finalPrice,
         discount: calculatedDiscount,
         unit: finalUnit,
         stock: parseInt(stock) || 0,
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: Array.isArray(tags) ? tags : [],
-        variants: variants || null,
+        variants: sortedVariants || null,
         minStock: minStock !== undefined ? parseInt(minStock) : 10,
         expiryDate: expiryDate ? new Date(expiryDate) : null,
         costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,

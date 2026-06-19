@@ -2546,7 +2546,9 @@ export function AdminDashboard({
                             return
                           }
 
-                          setNewProductVariants([...newProductVariants, { name, mrp, price, stock }])
+                          const newVars = [...newProductVariants, { name, mrp, price, stock }]
+                          newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+                          setNewProductVariants(newVars)
                           nameInput.value = ''
                           mrpInput.value = ''
                           priceInput.value = ''
@@ -4441,7 +4443,9 @@ export function AdminDashboard({
                             return
                           }
 
-                          setEditProductVariants([...editProductVariants, { name, mrp, price, stock }])
+                          const newVars = [...editProductVariants, { name, mrp, price, stock }]
+                          newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+                          setEditProductVariants(newVars)
                           nameInput.value = ''
                           mrpInput.value = ''
                           priceInput.value = ''

@@ -88,23 +88,36 @@ export async function PATCH(
     if (minStock !== undefined) updateData.minStock = parseInt(minStock)
     if (expiryDate !== undefined) updateData.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (costPrice !== undefined) updateData.costPrice = parseFloat(costPrice)
-    if (variants !== undefined) updateData.variants = variants
     if (location !== undefined) updateData.location = location || null
     if (isFlashDeal !== undefined) updateData.isFlashDeal = !!isFlashDeal
     if (isTopPick !== undefined) updateData.isTopPick = !!isTopPick
     if (isBestSeller !== undefined) updateData.isBestSeller = !!isBestSeller
 
-    const finalMrp = mrp !== undefined ? parseFloat(mrp) : product.mrp
-    const finalPrice = price !== undefined ? parseFloat(price) : product.price
+    let finalMrp = mrp !== undefined ? parseFloat(mrp) : product.mrp
+    let finalPrice = price !== undefined ? parseFloat(price) : product.price
+    let sortedVariants = variants
 
-    if (mrp !== undefined) updateData.mrp = parseFloat(mrp)
-    if (price !== undefined) updateData.price = parseFloat(price)
-
-    if (mrp !== undefined || price !== undefined) {
-      updateData.discount = finalMrp > finalPrice
-        ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
-        : 0
+    if (variants && Array.isArray(variants) && variants.length > 0) {
+      sortedVariants = [...variants].sort((a: any, b: any) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+      finalPrice = parseFloat(sortedVariants[0].price) || 0
+      finalMrp = parseFloat(sortedVariants[0].mrp) || finalPrice
+      updateData.variants = sortedVariants
+      updateData.price = finalPrice
+      updateData.mrp = finalMrp
+    } else if (variants !== undefined) {
+      updateData.variants = variants
     }
+
+    if (mrp !== undefined && (!variants || !Array.isArray(variants) || variants.length === 0)) {
+      updateData.mrp = parseFloat(mrp)
+    }
+    if (price !== undefined && (!variants || !Array.isArray(variants) || variants.length === 0)) {
+      updateData.price = parseFloat(price)
+    }
+
+    updateData.discount = finalMrp > finalPrice
+      ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
+      : 0
 
     const updatedProduct = await prisma.product.update({
       where: { id: product.id },
