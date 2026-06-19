@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendOtpEmail } from '@/lib/mail'
 import { sendWhatsAppOtp } from '@/lib/whatsapp'
-import { sendFast2SmsOtp } from '@/lib/fast2sms'
 import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
@@ -73,10 +72,9 @@ export async function POST(request: NextRequest) {
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      isSent = await sendFast2SmsOtp(recipientPhone, otp)
+      isSent = await sendWhatsAppOtp(recipientPhone, otp)
       if (!isSent) {
-        console.log('[OTP Send] Fast2SMS failed or not configured, falling back to WhatsApp sender')
-        isSent = await sendWhatsAppOtp(recipientPhone, otp)
+        return NextResponse.json({ error: 'Failed to send OTP via WhatsApp. Please check your number or try again later.' }, { status: 500 })
       }
     } else {
       return NextResponse.json({ error: 'Email OTP is not supported. Please log in using a Mobile Number or Google Sign-In.' }, { status: 400 })
