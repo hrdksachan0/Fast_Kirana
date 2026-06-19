@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const finalUnit = (unit && typeof unit === 'string' && unit.trim()) || '1 pc'
+    const finalUnit = (unit && typeof unit === 'string') ? unit.trim() : ''
 
     // Generate slug from name
     const slug = name

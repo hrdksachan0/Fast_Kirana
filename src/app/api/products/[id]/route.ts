@@ -81,7 +81,7 @@ export async function PATCH(
     if (description !== undefined) updateData.description = description
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl
     if (categoryId !== undefined) updateData.categoryId = categoryId
-    if (unit !== undefined) updateData.unit = (unit && typeof unit === 'string' && unit.trim()) || '1 pc'
+    if (unit !== undefined) updateData.unit = (unit && typeof unit === 'string') ? unit.trim() : ''
     if (stock !== undefined) updateData.stock = parseInt(stock)
     if (isAvailable !== undefined) updateData.isAvailable = !!isAvailable
     if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : []

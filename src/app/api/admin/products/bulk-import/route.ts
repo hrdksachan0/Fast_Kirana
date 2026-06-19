@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
             mrp,
             price,
             discount,
-            unit: (item.unit && item.unit.trim()) || '1 pc',
+            unit: (item.unit && item.unit.trim()) || '',
             stock,
             isAvailable: true,
             tags,
