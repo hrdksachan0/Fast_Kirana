@@ -1,33 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useUIStore } from '@/stores/ui-store'
 import Link from 'next/link'
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 import { formatPhone } from '@/lib/utils'
 
 export function Footer() {
-  const [trustedText, setTrustedText] = useState<string | null>(null)
-  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
-  const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
-  const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
-  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const settings = useUIStore((s) => s.settings) || {}
+  const isLoaded = Object.keys(settings).length > 0
 
-  useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        setTrustedText(data.trusted_text || '✨ Trusted by 5,000+ families in your town')
-        if (data.contact_phone) setContactPhone(data.contact_phone)
-        if (data.contact_email) setContactEmail(data.contact_email)
-        if (data.contact_timings) setContactTimings(data.contact_timings)
-        if (data.contact_address) setContactAddress(data.contact_address)
-      })
-      .catch((err) => {
-        console.error('Failed to load settings in footer:', err)
-        setTrustedText('✨ Trusted by 5,000+ families in your town')
-      })
-  }, [])
+  const trustedText = isLoaded ? (settings.trusted_text || '✨ Trusted by 5,000+ families in your town') : null
+  const contactPhone = settings.contact_phone || '+91 70544 70303'
+  const contactEmail = settings.contact_email || 'help@fastkirana.com'
+  const contactTimings = settings.contact_timings || '6 AM - 12 AM'
+  const contactAddress = settings.contact_address || 'NH34, Ghatampur, Kanpur Nagar'
 
   return (
     <footer className="bg-text-primary text-white mt-0 md:mt-0 pb-[80px] md:pb-8">

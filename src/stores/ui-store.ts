@@ -20,6 +20,7 @@ interface UIState {
   cafeOpen: boolean
   categoryStatus: Record<string, boolean>
   deliveryRadius: number
+  settings: Record<string, string>
   setCartOpen: (open: boolean) => void
   toggleCart: () => void
   setMobileMenuOpen: (open: boolean) => void
@@ -30,6 +31,7 @@ interface UIState {
   setUserCoords: (coords: UserCoords | null) => void
   setShopDetails: (name: string, phone: string) => void
   setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, radius: number, categoryStatus: Record<string, boolean>) => void
+  setSettings: (settings: Record<string, string>) => void
   hydrateLocation: () => void
 }
 
@@ -47,6 +49,7 @@ export const useUIStore = create<UIState>((set) => ({
   cafeOpen: true,
   categoryStatus: {},
   deliveryRadius: 5,
+  settings: {},
 
   setCartOpen: (open) => set({ isCartOpen: open }),
   toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
@@ -76,6 +79,7 @@ export const useUIStore = create<UIState>((set) => ({
   setStoreStatus: (groceryOpen, cafeOpen, radius, categoryStatus) => {
     set({ groceryMartOpen: groceryOpen, cafeOpen, deliveryRadius: radius, categoryStatus })
   },
+  setSettings: (settings) => set({ settings }),
   hydrateLocation: () => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fk-location')

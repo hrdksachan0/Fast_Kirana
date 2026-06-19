@@ -60,6 +60,7 @@ export function Navbar() {
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
   const hydrateLocation = useUIStore((s) => s.hydrateLocation)
   const setStoreStatus = useUIStore((s) => s.setStoreStatus)
+  const setSettings = useUIStore((s) => s.setSettings)
   const setSelectedLocation = useUIStore((s) => s.setSelectedLocation)
   const setUserCoords = useUIStore((s) => s.setUserCoords)
   const { data: session } = useSession()
@@ -140,6 +141,7 @@ export function Navbar() {
           setGroceryMartOpen(gOpen)
           setCafeOpen(cOpen)
           setStoreStatus(gOpen, cOpen, radius, categoryStatus)
+          setSettings(data)
 
           // Automatically set default location if not set, without intrusive geolocation prompts
           const currentLoc = useUIStore.getState().selectedLocation
@@ -154,7 +156,7 @@ export function Navbar() {
 
     // Initial fetch only (no periodic background polling to save database CPU limits)
     fetchStatus()
-  }, [hydrateLocation, setStoreStatus, setSelectedLocation, setUserCoords])
+  }, [hydrateLocation, setStoreStatus, setSettings, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {
     setIsScrolled(window.scrollY > 10)

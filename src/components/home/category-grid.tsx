@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
+import { useUIStore } from '@/stores/ui-store'
+import { cn } from '@/lib/utils'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -75,6 +77,10 @@ const categoryPhotos: Record<string, string> = {
 }
 
 export function CategoryGrid({ categories }: CategoryGridProps) {
+  const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
+  const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
+
   const allDisplayCategories: Array<Category & { isCafeSection?: boolean; emoji?: string }> = categories
 
   // Map of category slugs to visual themes with glowing rings
@@ -176,19 +182,30 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               emoji: category.emoji || '🍽️'
             }
 
+            const isCafe = category.slug === 'cafe' || category.isCafeSection
+            const isCatOpen = categoryStatus[category.slug] !== false
+            const isClosed = isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
+
             return (
               <motion.div
                 key={category.id}
-                whileTap={{ scale: 0.93, rotate: -1.5 }}
+                whileTap={isClosed ? {} : { scale: 0.93, rotate: -1.5 }}
                 className="w-[70px] shrink-0 snap-start"
               >
                 <Link
                   href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
-                  className="group flex flex-col items-center text-center cursor-pointer"
+                  className={cn(
+                    "group flex flex-col items-center text-center cursor-pointer",
+                    isClosed && "pointer-events-none"
+                  )}
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
                   <div
-                    className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                    className={cn(
+                      "w-[66px] h-[66px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative",
+                      config.bg,
+                      isClosed && "grayscale opacity-50 contrast-75"
+                    )}
                   >
                     {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                       <Image
@@ -248,23 +265,37 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             const itemCount = category._count?.products ?? 0
             const IconComponent = iconMap[category.slug] || ShoppingBag
 
+            const isCafe = category.slug === 'cafe' || category.isCafeSection
+            const isCatOpen = categoryStatus[category.slug] !== false
+            const isClosed = isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
+
             return (
               <motion.div
                 key={category.id}
-                whileHover={{ 
+                whileHover={isClosed ? {} : { 
                   scale: 1.05, 
                   rotate: 1.5,
                   transition: { type: 'spring', stiffness: 300, damping: 15 } 
                 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1 group"
+                whileTap={isClosed ? {} : { scale: 0.95 }}
+                className={cn(
+                  "p-3 rounded-2xl transition-all duration-300 shadow-none hover:shadow-card hover:-translate-y-1 group",
+                  isClosed && "hover:shadow-none hover:translate-y-0"
+                )}
               >
                 <Link
                   href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
-                  className="flex flex-col items-center text-center"
+                  className={cn(
+                    "flex flex-col items-center text-center",
+                    isClosed && "pointer-events-none"
+                  )}
                 >
                   <div
-                    className={`flex items-center justify-center w-16 h-16 rounded-2xl ${colors.bg} border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 group-hover:shadow-lg ${colors.ring} overflow-hidden relative`}
+                    className={cn(
+                      "flex items-center justify-center w-16 h-16 rounded-2xl border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-sm transition-all duration-300 overflow-hidden relative",
+                      colors.bg,
+                      isClosed ? "grayscale opacity-50 contrast-75 shadow-none" : cn("group-hover:shadow-lg", colors.ring)
+                    )}
                   >
                     {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                       <Image

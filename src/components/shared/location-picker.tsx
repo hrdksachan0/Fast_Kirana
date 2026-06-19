@@ -55,25 +55,20 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
     }
   }, [open])
 
-  // Fetch delivery radius and store coordinates from settings
+  const settings = useUIStore((s) => s.settings) || {}
+
+  // Sync delivery radius and store coordinates from global settings
   useEffect(() => {
-    if (open) {
-      fetch('/api/settings')
-        .then(res => res.json())
-        .then(data => {
-          if (data.delivery_radius) {
-            setDeliveryRadius(parseFloat(data.delivery_radius))
-          }
-          if (data.store_lat) {
-            setStoreLat(parseFloat(data.store_lat))
-          }
-          if (data.store_lng) {
-            setStoreLng(parseFloat(data.store_lng))
-          }
-        })
-        .catch(err => console.error('Error loading settings in location-picker:', err))
+    if (settings.delivery_radius) {
+      setDeliveryRadius(parseFloat(settings.delivery_radius))
     }
-  }, [open])
+    if (settings.store_lat) {
+      setStoreLat(parseFloat(settings.store_lat))
+    }
+    if (settings.store_lng) {
+      setStoreLng(parseFloat(settings.store_lng))
+    }
+  }, [settings])
 
   const setSelectedLocation = useUIStore((s) => s.setSelectedLocation)
   const setUserCoords = useUIStore((s) => s.setUserCoords)

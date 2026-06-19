@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 import { motion } from 'framer-motion'
+import { useUIStore } from '@/stores/ui-store'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -57,6 +58,11 @@ const getShortTitle = (tag: string, fullTitle: string) => {
 }
 
 export function CafeSection() {
+  const settings = useUIStore((s) => s.settings) || {}
+  const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
+  const isCafeActive = cafeOpen && (categoryStatus['cafe'] !== false)
+
   const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
     { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
@@ -72,155 +78,158 @@ export function CafeSection() {
 
   useEffect(() => {
     setIsLoading(true)
-    Promise.all([
-      fetch('/api/settings').then(res => res.json()).catch(() => ({})),
-      fetch('/api/products?category=cafe&limit=250').then(res => res.json()).catch(() => ({ products: [] }))
-    ])
-    .then(([settingsData, productsRes]) => {
-      const dbProducts = productsRes?.products || productsRes || []
-      const customSectionsStr = settingsData.cafe_menu_sections || settingsData.CAFE_MENU_SECTIONS
-      
-      let parsedSections = null
-      if (customSectionsStr) {
-        try {
-          const parsed = JSON.parse(customSectionsStr)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            parsedSections = parsed
-          }
-        } catch (e) {}
-      }
+    fetch('/api/products?category=cafe&limit=250')
+      .then(res => res.json())
+      .then(productsRes => {
+        const dbProducts = productsRes?.products || productsRes || []
+        const customSectionsStr = settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS
+        
+        let parsedSections = null
+        if (customSectionsStr) {
+          try {
+            const parsed = JSON.parse(customSectionsStr)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsedSections = parsed
+            }
+          } catch (e) {}
+        }
 
-      const PREDEFINED_CATEGORIES = parsedSections || DEFAULT_CAFE_MENU_SECTIONS
+        const PREDEFINED_CATEGORIES = parsedSections || DEFAULT_CAFE_MENU_SECTIONS
 
-      const sectionsMap = new Map<string, any>()
-      PREDEFINED_CATEGORIES.forEach(cat => {
-        sectionsMap.set(cat.tag, {
-          tag: cat.tag,
-          title: getShortTitle(cat.tag, cat.title),
-          emoji: cat.emoji || '🍽️',
-          image: cat.imageUrl || cat.image || getCafeSectionImage(cat.tag),
-          matchTags: cat.matchTags || [],
-          productsCount: 0,
-          matchedIds: new Set<string>()
+        const sectionsMap = new Map<string, any>()
+        PREDEFINED_CATEGORIES.forEach(cat => {
+          sectionsMap.set(cat.tag, {
+            tag: cat.tag,
+            title: getShortTitle(cat.tag, cat.title),
+            emoji: cat.emoji || '🍽️',
+            image: cat.imageUrl || cat.image || getCafeSectionImage(cat.tag),
+            matchTags: cat.matchTags || [],
+            productsCount: 0,
+            matchedIds: new Set<string>()
+          })
         })
-      })
 
-      const assignedProductIds = new Set<string>()
+        const assignedProductIds = new Set<string>()
 
-      dbProducts.forEach((product: any) => {
-        for (const cat of PREDEFINED_CATEGORIES) {
-          const hasMatch = product.tags?.some((t: string) => 
-            cat.matchTags?.map((mt: string) => mt.toLowerCase()).includes(t.toLowerCase())
-          ) || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate'].includes(product.slug))
+        dbProducts.forEach((product: any) => {
+          for (const cat of PREDEFINED_CATEGORIES) {
+            const hasMatch = product.tags?.some((t: string) => 
+              cat.matchTags?.map((mt: string) => mt.toLowerCase()).includes(t.toLowerCase())
+            ) || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate'].includes(product.slug))
 
-          if (hasMatch) {
-            const sec = sectionsMap.get(cat.tag)
-            if (sec && !sec.matchedIds.has(product.id)) {
-              sec.productsCount++
-              sec.matchedIds.add(product.id)
-              assignedProductIds.add(product.id)
+            if (hasMatch) {
+              const sec = sectionsMap.get(cat.tag)
+              if (sec && !sec.matchedIds.has(product.id)) {
+                sec.productsCount++
+                sec.matchedIds.add(product.id)
+                assignedProductIds.add(product.id)
+              }
             }
           }
-        }
-      })
-
-      const excludeTags = new Set([
-        'cafe', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
-        'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
-        'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
-        'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
-        'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
-        'shaving', 'men', 'herbal', 'hair', 'oil', 'cleaning', 'detergent', 'toilet', 
-        'floor', 'mosquito', 'freshener', 'glass', 'wrapping', 'cookies', 'light', 
-        'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
-      ])
-
-      const dynamicTagsMap = new Map<string, number>()
-      dbProducts.forEach((product: any) => {
-        if (assignedProductIds.has(product.id)) return
-
-        product.tags?.forEach((t: string) => {
-          const lowerTag = t.toLowerCase()
-          if (excludeTags.has(lowerTag)) return
-
-          dynamicTagsMap.set(lowerTag, (dynamicTagsMap.get(lowerTag) || 0) + 1)
         })
-      })
 
-      const dynamicSections: any[] = []
-      dynamicTagsMap.forEach((count, tag) => {
-        if (count > 0) {
-          const title = tag
-            .split(/[-_ ]+/)
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
+        const excludeTags = new Set([
+          'cafe', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
+          'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
+          'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
+          'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
+          'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
+          'shaving', 'men', 'herbal', 'hair', 'oil', 'cleaning', 'detergent', 'toilet', 
+          'floor', 'mosquito', 'freshener', 'glass', 'wrapping', 'cookies', 'light', 
+          'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
+        ])
 
-          dynamicSections.push({
-            tag,
-            title: getShortTitle(tag, title),
-            emoji: '✨',
-            image: getCafeSectionImage(tag),
-            productsCount: count
+        const dynamicTagsMap = new Map<string, number>()
+        dbProducts.forEach((product: any) => {
+          if (assignedProductIds.has(product.id)) return
+
+          product.tags?.forEach((t: string) => {
+            const lowerTag = t.toLowerCase()
+            if (excludeTags.has(lowerTag)) return
+
+            dynamicTagsMap.set(lowerTag, (dynamicTagsMap.get(lowerTag) || 0) + 1)
           })
-        }
-      })
+        })
 
-      const finalCategories: any[] = []
-      PREDEFINED_CATEGORIES.forEach(cat => {
-        const sec = sectionsMap.get(cat.tag)
-        if (sec && sec.productsCount > 0) {
+        const dynamicSections: any[] = []
+        dynamicTagsMap.forEach((count, tag) => {
+          if (count > 0) {
+            const title = tag
+              .split(/[-_ ]+/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+
+            dynamicSections.push({
+              tag,
+              title: getShortTitle(tag, title),
+              emoji: '✨',
+              image: getCafeSectionImage(tag),
+              productsCount: count
+            })
+          }
+        })
+
+        const finalCategories: any[] = []
+        PREDEFINED_CATEGORIES.forEach(cat => {
+          const sec = sectionsMap.get(cat.tag)
+          if (sec && sec.productsCount > 0) {
+            finalCategories.push({
+              tag: sec.tag,
+              title: sec.title,
+              emoji: sec.emoji,
+              image: sec.image
+            })
+          }
+        })
+
+        dynamicSections.forEach(sec => {
           finalCategories.push({
             tag: sec.tag,
             title: sec.title,
             emoji: sec.emoji,
             image: sec.image
           })
-        }
-      })
-
-      dynamicSections.forEach(sec => {
-        finalCategories.push({
-          tag: sec.tag,
-          title: sec.title,
-          emoji: sec.emoji,
-          image: sec.image
         })
-      })
 
-      const allGroupedIds = new Set<string>()
-      PREDEFINED_CATEGORIES.forEach(cat => {
-        const sec = sectionsMap.get(cat.tag)
-        if (sec) {
-          sec.matchedIds.forEach((id: string) => allGroupedIds.add(id))
-        }
-      })
-      const moreCount = dbProducts.filter((p: any) => !allGroupedIds.has(p.id)).length
-      if (moreCount > 0) {
-        finalCategories.push({
-          tag: 'more',
-          title: 'More Specials',
-          emoji: '🍽️',
-          image: '/cafe_all_menu_category.png'
+        const allGroupedIds = new Set<string>()
+        PREDEFINED_CATEGORIES.forEach(cat => {
+          const sec = sectionsMap.get(cat.tag)
+          if (sec) {
+            sec.matchedIds.forEach((id: string) => allGroupedIds.add(id))
+          }
         })
-      }
+        const moreCount = dbProducts.filter((p: any) => !allGroupedIds.has(p.id)).length
+        if (moreCount > 0) {
+          finalCategories.push({
+            tag: 'more',
+            title: 'More Specials',
+            emoji: '🍽️',
+            image: '/cafe_all_menu_category.png'
+          })
+        }
 
-      // Only show categories that have products in the database
-      setCategories([
-        { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
-        ...finalCategories
-      ])
-    })
-    .catch(() => {})
-    .finally(() => {
-      setIsLoading(false)
-    })
-  }, [])
+        // Only show categories that have products in the database
+        setCategories([
+          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+          ...finalCategories
+        ])
+      })
+      .catch(() => {})
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [settings])
 
   return (
     <section className="space-y-4">
       {/* Café Banner Card */}
       <Link href="/cafe" className="block group">
-        <div className="relative overflow-hidden rounded-3xl h-[120px] sm:h-[140px] md:h-[160px] border border-amber-500/20 shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-500 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)] hover:-translate-y-0.5">
+        <div className={cn(
+          "relative overflow-hidden rounded-3xl h-[120px] sm:h-[140px] md:h-[160px] border shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-500",
+          isCafeActive
+            ? "border-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)] hover:-translate-y-0.5"
+            : "border-zinc-250 dark:border-zinc-800 grayscale contrast-75 brightness-75 opacity-70"
+        )}>
           {/* Cafe Banner Image */}
           <Image
             src="/cafe_banner.png"
@@ -243,13 +252,19 @@ export function CafeSection() {
                   Cafe
                   <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-amber-350 group-hover:translate-x-1.5 transition-transform duration-300 stroke-[3.5] self-center" />
                 </h3>
-                <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-inner">
-                  <span className="relative flex h-1.5 w-1.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {isCafeActive ? (
+                  <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-inner">
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    </span>
+                    Live Kitchen
                   </span>
-                  Live Kitchen
-                </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-zinc-800/80 text-zinc-400 border border-zinc-700/55 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider">
+                    🔴 Kitchen Closed
+                  </span>
+                )}
               </div>
               <p className="text-zinc-100 text-[10px] sm:text-xs font-semibold leading-relaxed max-w-[200px] sm:max-w-md">
                 Freshly prepared sandwiches, rolls, Chinese, Italian pasta & beverages — delivered hot!
@@ -271,7 +286,10 @@ export function CafeSection() {
       </div>
 
       {/* Café Menu Categories Horizontal Scrollbar */}
-      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none">
+      <div className={cn(
+        "flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none",
+        !isCafeActive && "grayscale opacity-60 pointer-events-none"
+      )}>
         {isLoading ? (
           Array.from({ length: 8 }).map((_, idx) => (
             <div
