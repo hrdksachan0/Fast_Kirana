@@ -24,16 +24,27 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
         type: 'template',
         template: {
           name: templateName,
-          language: { code: 'en' },
+          language: { code: process.env.WHATSAPP_TEMPLATE_LANG || 'en' },
           components: [
             {
               type: 'body',
-              parameters: [
-                {
-                  type: 'text',
-                  text: otp,
-                },
-              ],
+              parameters: templateName === 'fastkirana_otp' 
+                ? [
+                    {
+                      type: 'text',
+                      text: 'Customer',
+                    },
+                    {
+                      type: 'text',
+                      text: otp,
+                    },
+                  ]
+                : [
+                    {
+                      type: 'text',
+                      text: otp,
+                    },
+                  ],
             },
           ],
         },

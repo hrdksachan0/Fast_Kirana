@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useCart } from '@/hooks/use-cart'
 
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 export default function CheckoutPage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const prefilledPhoneRef = useRef(false)
   const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal, updateQuantity, updateCartProduct } = useCart()
 
   // Steps: 1 = Address, 2 = Review, 3 = Payment
@@ -150,6 +153,36 @@ export default function CheckoutPage() {
   })
 
   const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+
+  // Pre-fill phone number from session if available
+  useEffect(() => {
+    if (session?.user?.phone && !prefilledPhoneRef.current) {
+      prefilledPhoneRef.current = true
+      let phoneVal = session.user.phone
+      if (phoneVal.startsWith('wa-') && phoneVal.includes('@')) {
+        phoneVal = phoneVal.split('@')[0].replace('wa-', '')
+      }
+      const digits = phoneVal.replace(/\D/g, '')
+      const cleanPhone = digits.length > 10 && digits.startsWith('91') ? digits.slice(-10) : digits
+      
+      setAddressForm(prev => ({
+        ...prev,
+        phone: prev.phone || cleanPhone || phoneVal
+      }))
+    }
+  }, [session])
+
+  // Scroll new address form into view when opened
+  useEffect(() => {
+    if (showNewAddressForm) {
+      setTimeout(() => {
+        const el = document.getElementById('new-address-form')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 150)
+    }
+  }, [showNewAddressForm])
 
   const handleDetectLocationForCheckout = () => {
     if (!navigator.geolocation) {
@@ -823,7 +856,7 @@ export default function CheckoutPage() {
 
                     {/* New Address Collapsible Form */}
                     {showNewAddressForm && (
-                      <form onSubmit={handleSaveAddress} className="border border-border p-4 rounded-xl space-y-4 bg-muted/10 animate-slide-up">
+                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border p-4 rounded-xl space-y-4 bg-muted/10 animate-slide-up">
                         <div className="flex justify-between items-center border-b border-border/40 pb-2">
                           <h3 className="font-bold text-sm">New Delivery Address</h3>
                           <Button
@@ -854,6 +887,7 @@ export default function CheckoutPage() {
                             <Input
                               id="phone"
                               type="tel"
+                              required
                               placeholder="Enter contact phone number"
                               value={addressForm.phone}
                               onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
@@ -863,9 +897,12 @@ export default function CheckoutPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="label">Address Label (e.g. Home, Work)</Label>
+                            <Label htmlFor="label" className="text-xs font-bold text-text-primary">
+                              Address Label (e.g. Home, Work) <span className="text-red-500 font-bold">*</span>
+                            </Label>
                             <Input
                               id="label"
+                              required
                               value={addressForm.label}
                               onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
                               className="mt-1"
@@ -877,6 +914,7 @@ export default function CheckoutPage() {
                             </Label>
                             <Input
                               id="pincode"
+                              required
                               maxLength={6}
                               placeholder="e.g. 209206"
                               value={addressForm.pincode}
@@ -887,18 +925,24 @@ export default function CheckoutPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="houseNo">Flat / House / Apartment No</Label>
+                            <Label htmlFor="houseNo" className="text-xs font-bold text-text-primary">
+                              Flat / House / Apartment No <span className="text-red-500 font-bold">*</span>
+                            </Label>
                             <Input
                               id="houseNo"
+                              required
                               value={addressForm.houseNo}
                               onChange={(e) => setAddressForm({ ...addressForm, houseNo: e.target.value })}
                               className="mt-1"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="street">Street / Road Name</Label>
+                            <Label htmlFor="street" className="text-xs font-bold text-text-primary">
+                              Street / Road Name <span className="text-red-500 font-bold">*</span>
+                            </Label>
                             <Input
                               id="street"
+                              required
                               value={addressForm.street}
                               onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
                               className="mt-1"
@@ -907,9 +951,12 @@ export default function CheckoutPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="area">Area / Sector / Locality</Label>
+                            <Label htmlFor="area" className="text-xs font-bold text-text-primary">
+                              Area / Sector / Locality <span className="text-red-500 font-bold">*</span>
+                            </Label>
                             <Input
                               id="area"
+                              required
                               value={addressForm.area}
                               onChange={(e) => setAddressForm({ ...addressForm, area: e.target.value })}
                               className="mt-1"
@@ -921,6 +968,7 @@ export default function CheckoutPage() {
                             </Label>
                             <Input
                               id="city"
+                              required
                               placeholder="e.g. Ghatampur"
                               value={addressForm.city}
                               onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
