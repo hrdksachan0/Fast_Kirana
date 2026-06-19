@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
         isSent = await sendWhatsAppOtp(recipientPhone, otp)
       }
     } else {
-      await sendOtpEmail(normalizedEmail, otp)
-      isSent = true
+      return NextResponse.json({ error: 'Email OTP is not supported. Please log in using a Mobile Number or Google Sign-In.' }, { status: 400 })
     }
 
     // Do not return the OTP in the response payload for security

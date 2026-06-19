@@ -164,6 +164,11 @@ function LoginForm() {
         }
         setStep('PASSWORD')
       } else {
+        // Block email OTP for customers
+        if (loginType === 'EMAIL') {
+          toast.error('Email OTP is not supported. Customers must log in using a Mobile Number or Google Sign-In.')
+          return
+        }
         // Customer flow → auto-send OTP and go to OTP step
         await sendOtp(finalEmail)
       }
@@ -385,47 +390,12 @@ function LoginForm() {
 
 
 
-        {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
+         {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
         {step === 'EMAIL' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
             onSubmit={handleEmailSubmit}
           >
-            {/* Tabs Selector */}
-            <div className="grid grid-cols-2 gap-2 bg-zinc-100/80 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginType('WHATSAPP')
-                  setEmail('')
-                  setErrors({})
-                }}
-                className={`py-2 px-3 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  loginType === 'WHATSAPP'
-                    ? 'bg-white dark:bg-zinc-800 text-primary shadow-xs border border-zinc-200/30'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                <Phone size={14} className="stroke-[2.2]" />
-                Mobile No.
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginType('EMAIL')
-                  setEmail('')
-                  setErrors({})
-                }}
-                className={`py-2 px-3 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  loginType === 'EMAIL'
-                    ? 'bg-white dark:bg-zinc-800 text-primary shadow-xs border border-zinc-200/30'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                <Mail size={14} className="stroke-[2.2]" />
-                Email
-              </button>
-            </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-bold text-xs text-text-secondary">
@@ -497,6 +467,35 @@ function LoginForm() {
               )}
               Google Sign In
             </Button>
+
+            {/* Toggle Link for Staff/Admin Login */}
+            <div className="text-center pt-2.5">
+              {loginType === 'WHATSAPP' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginType('EMAIL')
+                    setEmail('')
+                    setErrors({})
+                  }}
+                  className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
+                >
+                  Are you an Admin or Staff? Login with Email
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginType('WHATSAPP')
+                    setEmail('')
+                    setErrors({})
+                  }}
+                  className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
+                >
+                  Go back to Mobile Login
+                </button>
+              )}
+            </div>
           </form>
         )}
 
