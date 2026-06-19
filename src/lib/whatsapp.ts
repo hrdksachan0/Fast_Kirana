@@ -19,34 +19,50 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
     }
 
     if (templateName) {
+      const components: any[] = [
+        {
+          type: 'body',
+          parameters: templateName === 'fastkirana_otp' 
+            ? [
+                {
+                  type: 'text',
+                  text: 'Customer',
+                },
+                {
+                  type: 'text',
+                  text: otp,
+                },
+              ]
+            : [
+                {
+                  type: 'text',
+                  text: otp,
+                },
+              ],
+        },
+      ]
+
+      if (templateName === 'verify_otp') {
+        components.push({
+          type: 'button',
+          sub_type: 'url',
+          index: '0',
+          parameters: [
+            {
+              type: 'text',
+              text: otp,
+            },
+          ],
+        })
+      }
+
       body = {
         ...body,
         type: 'template',
         template: {
           name: templateName,
           language: { code: process.env.WHATSAPP_TEMPLATE_LANG || 'en' },
-          components: [
-            {
-              type: 'body',
-              parameters: templateName === 'fastkirana_otp' 
-                ? [
-                    {
-                      type: 'text',
-                      text: 'Customer',
-                    },
-                    {
-                      type: 'text',
-                      text: otp,
-                    },
-                  ]
-                : [
-                    {
-                      type: 'text',
-                      text: otp,
-                    },
-                  ],
-            },
-          ],
+          components,
         },
       }
     } else {
