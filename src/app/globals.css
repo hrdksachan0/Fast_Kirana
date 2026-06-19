@@ -969,3 +969,13 @@ button,
 [data-sonner-toast] [data-close-button]:hover {
   background: rgba(0, 0, 0, 0.1) !important;
 }
+
+/* Adjust page spacing dynamically when the store-closed warning ribbon is visible */
+body.store-closed-banner-active main {
+  padding-top: 136px !important;
+}
+@media (min-width: 768px) {
+  body.store-closed-banner-active main {
+    padding-top: 120px !important;
+  }
+}

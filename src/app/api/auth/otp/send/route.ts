@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendOtpEmail } from '@/lib/mail'
 import { sendWhatsAppOtp } from '@/lib/whatsapp'
+import { sendFast2SmsOtp } from '@/lib/fast2sms'
 import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { email: rawEmail } = await request.json()
 
     if (!rawEmail || typeof rawEmail !== 'string') {
-      return NextResponse.json({ error: 'Email or WhatsApp number is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Email or mobile number is required' }, { status: 400 })
     }
 
     const trimmed = rawEmail.trim()
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
     } else if (!trimmed.includes('@')) {
-      return NextResponse.json({ error: 'Please enter a valid email address or 10-digit WhatsApp number' }, { status: 400 })
+      return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
     }
 
     // 1. Generate a 6-digit numeric OTP
@@ -67,12 +68,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 5. Send OTP Email or WhatsApp Message
+    // 5. Send OTP Email or SMS/WhatsApp via Fast2SMS
     let isSent = false
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      isSent = await sendWhatsAppOtp(recipientPhone, otp)
+      isSent = await sendFast2SmsOtp(recipientPhone, otp)
+      // Fallback to WhatsApp mock if Fast2SMS credentials are not configured or fail
+      if (!isSent) {
+        console.log('[OTP Send] Fast2SMS failed or not configured, falling back to WhatsApp sender')
+        isSent = await sendWhatsAppOtp(recipientPhone, otp)
+      }
     } else {
       await sendOtpEmail(normalizedEmail, otp)
       isSent = true

@@ -75,6 +75,18 @@ export function Navbar() {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    const isClosed = !groceryMartOpen || !cafeOpen
+    if (isClosed) {
+      document.body.classList.add('store-closed-banner-active')
+    } else {
+      document.body.classList.remove('store-closed-banner-active')
+    }
+    return () => {
+      document.body.classList.remove('store-closed-banner-active')
+    }
+  }, [groceryMartOpen, cafeOpen])
+
 
 
   useEffect(() => {
@@ -358,13 +370,13 @@ export function Navbar() {
 
         {(!groceryMartOpen || !cafeOpen) && (
           <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[10px] sm:text-xs font-black py-2 px-4 text-center border-t border-orange-600/20 shadow-lg flex items-center justify-center gap-2 select-none animate-slide-down backdrop-blur-sm">
-            <span className="animate-pulse-gentle">⚠️</span>
+            <span className="animate-pulse-gentle">✨</span>
             {!groceryMartOpen && !cafeOpen ? (
-              <span>FastKirana Mart & Cafe are currently closed. We'll be back online soon!</span>
+              <span>FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon! 💤</span>
             ) : !groceryMartOpen ? (
-              <span>Grocery Mart is temporarily closed. Cafe is open! ☕</span>
+              <span>Grocery Mart is taking a quick break. Meanwhile, our Cafe is firing up chinese &amp; rolls! ☕✨</span>
             ) : (
-              <span>Cafe Kitchen is temporarily closed. Grocery delivery is active! 📦</span>
+              <span>Cafe Kitchen is resting. But our Grocery Mart is wide open and delivering fresh essentials in minutes! 📦🌱</span>
             )}
           </div>
         )}

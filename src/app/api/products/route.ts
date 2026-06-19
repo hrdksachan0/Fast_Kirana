@@ -357,9 +357,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller } = body
 
-    if (!name || !categoryId || mrp === undefined || price === undefined || !unit) {
+    if (!name || !categoryId || mrp === undefined || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const finalUnit = (unit && typeof unit === 'string' && unit.trim()) || '1 pc'
 
     // Generate slug from name
     const slug = name
@@ -391,7 +393,7 @@ export async function POST(request: NextRequest) {
         mrp: parseFloat(mrp),
         price: parseFloat(price),
         discount: calculatedDiscount,
-        unit,
+        unit: finalUnit,
         stock: parseInt(stock) || 0,
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: Array.isArray(tags) ? tags : [],

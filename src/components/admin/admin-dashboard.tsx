@@ -1194,7 +1194,7 @@ export function AdminDashboard({
     if (!editingProduct) return
 
     const requiresBasePrice = !hasVariantsEdit
-    if (!productEditForm.name || !productEditForm.categoryId || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp)) || !productEditForm.unit) {
+    if (!productEditForm.name || !productEditForm.categoryId || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -1282,7 +1282,7 @@ export function AdminDashboard({
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsNew
-    if (!newProduct.name || !newProduct.categoryId || (requiresBasePrice && (!newProduct.price || !newProduct.mrp)) || !newProduct.unit) {
+    if (!newProduct.name || !newProduct.categoryId || (requiresBasePrice && (!newProduct.price || !newProduct.mrp))) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -2404,10 +2404,9 @@ export function AdminDashboard({
                 )}
 
                 <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification *</label>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. 1 kg, 12 pcs, 500 ml"
                     value={newProduct.unit}
                     onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
@@ -4307,10 +4306,9 @@ export function AdminDashboard({
                   </div>
                 )}
                 <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification *</label>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
                   <input
                     type="text"
-                    required
                     value={productEditForm.unit}
                     onChange={(e) => setProductEditForm({ ...productEditForm, unit: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"

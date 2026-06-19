@@ -62,12 +62,6 @@ export async function POST(request: NextRequest) {
           results.skipped++
           continue
         }
-        if (!item.unit || !item.unit.trim()) {
-          results.errors.push(`Row ${rowNum} (${item.name}): Unit is required`)
-          results.skipped++
-          continue
-        }
-
         let productVariants = null
         if (item.variants && item.variants.trim()) {
           const variantsStr = item.variants.trim()
@@ -161,7 +155,7 @@ export async function POST(request: NextRequest) {
             mrp,
             price,
             discount,
-            unit: item.unit.trim(),
+            unit: (item.unit && item.unit.trim()) || '1 pc',
             stock,
             isAvailable: true,
             tags,

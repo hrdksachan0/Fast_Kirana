@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Validate email format
       if (!trimmed.includes('@')) {
-        return NextResponse.json({ error: 'Please enter a valid email address or 10-digit WhatsApp number' }, { status: 400 })
+        return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
       }
     }
 
