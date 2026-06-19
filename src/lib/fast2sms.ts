@@ -22,10 +22,8 @@ export async function sendFast2SmsOtp(phone: string, otp: string): Promise<boole
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        route: "q",
-        message: `Your FastKirana verification code is: ${otp}`,
-        language: "english",
-        flash: 0,
+        route: "otp",
+        variables_values: otp,
         numbers: cleanPhone,
       }),
     });
