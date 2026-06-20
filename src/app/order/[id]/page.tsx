@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { CheckCircle2, MapPin, Clock, ArrowRight } from 'lucide-react'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatAddress } from '@/lib/utils'
 import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
@@ -188,7 +188,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 {order.address.label}
               </span>
               <p className="text-text-secondary leading-relaxed font-semibold mt-2">
-                House No {order.address.houseNo}, {order.address.street}, {order.address.area}, {order.address.city} - {order.address.pincode}
+                {formatAddress(order.address)}
               </p>
             </div>
             <a
@@ -196,7 +196,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 order.address.lat && order.address.lng
                   ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
                   : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      `${order.address.houseNo} ${order.address.street} ${order.address.area} ${order.address.city} ${order.address.pincode}`
+                      formatAddress(order.address)
                     )}`
               }
               target="_blank"

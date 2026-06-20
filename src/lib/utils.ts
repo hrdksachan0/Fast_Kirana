@@ -34,3 +34,41 @@ export function formatPhone(phone: string | null | undefined): string {
   return trimmed
 }
 
+export function formatAddress(
+  addr: { houseNo?: string; street?: string; area?: string; city?: string; pincode?: string } | null | undefined,
+  includeCityAndPincode = true
+): string {
+  if (!addr) return ''
+  const parts: string[] = []
+  
+  if (addr.houseNo && addr.houseNo !== '.' && addr.houseNo.toLowerCase() !== 'n/a' && addr.houseNo.toLowerCase() !== 'ghatampur') {
+    parts.push(`House No ${addr.houseNo}`)
+  }
+  
+  if (addr.street && addr.street !== '.' && addr.street.toLowerCase() !== 'n/a') {
+    parts.push(addr.street)
+  }
+  
+  if (addr.area && addr.area !== '.' && addr.area.toLowerCase() !== 'n/a' && addr.area.toLowerCase() !== 'ghatampur') {
+    parts.push(addr.area)
+  }
+  
+  if (includeCityAndPincode) {
+    if (addr.city && addr.city !== '.' && addr.city.toLowerCase() !== 'n/a') {
+      // Only include city if it is not already present in the street string (case-insensitive)
+      const streetLower = addr.street ? addr.street.toLowerCase() : ''
+      const cityLower = addr.city.toLowerCase()
+      if (!streetLower.includes(cityLower)) {
+        parts.push(addr.city)
+      }
+    }
+    
+    if (addr.pincode && addr.pincode !== '.' && addr.pincode.toLowerCase() !== 'n/a') {
+      parts.push(addr.pincode)
+    }
+  }
+  
+  return parts.join(', ')
+}
+
+

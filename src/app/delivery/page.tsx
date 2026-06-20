@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { formatPrice, formatPhone } from '@/lib/utils'
+import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
@@ -1121,7 +1121,7 @@ export default function DeliveryDashboard() {
                           order.address.lat && order.address.lng
                             ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
                             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${order.address.houseNo}, ${order.address.street}, ${order.address.area}, ${order.address.city} ${order.address.pincode}`
+                                formatAddress(order.address)
                               )}`
                         }
                         target="_blank"
@@ -1143,7 +1143,7 @@ export default function DeliveryDashboard() {
                             </span>
                           </span>
                           <span className="text-[11px] leading-relaxed text-text-primary font-bold block mt-0.5 group-hover/map:underline">
-                            {order.address.houseNo}, {order.address.street}, {order.address.area}, {order.address.city} - {order.address.pincode}
+                            {formatAddress(order.address)}
                           </span>
                         </div>
                       </a>
@@ -1295,7 +1295,7 @@ export default function DeliveryDashboard() {
                             order.address.lat && order.address.lng
                               ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
                               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                  `${order.address.houseNo}, ${order.address.street}, ${order.address.area}, ${order.address.city} ${order.address.pincode}`
+                                  formatAddress(order.address)
                                 )}`
                           }
                           target="_blank"
@@ -1309,7 +1309,7 @@ export default function DeliveryDashboard() {
                             <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
                               Deliver To <span className="text-[7px] text-emerald-600 font-black ml-1 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-0.2 rounded">NAV 🗺️</span>
                             </span>
-                            <span className="text-text-primary font-bold group-hover:underline">{order.address.area}, {order.address.city}</span>
+                            <span className="text-text-primary font-bold group-hover:underline">{formatAddress(order.address, false)}</span>
                           </div>
                         </a>
                       </div>

@@ -20,7 +20,7 @@ import {
   Camera,
   Home,
 } from 'lucide-react'
-import { cn, formatPhone } from '@/lib/utils'
+import { cn, formatPhone, formatAddress } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface OrderItem {
@@ -607,7 +607,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
               
               <div className="bg-muted/40 p-3 rounded-xl border text-[11px] font-medium text-text-secondary leading-relaxed">
                 Delivery address: <br />
-                <span className="text-text-primary font-bold">{order.address.houseNo}, {order.address.street}, {order.address.area}</span>
+                <span className="text-text-primary font-bold">{formatAddress(order.address, false)}</span>
               </div>
             </div>
           </div>
@@ -622,14 +622,14 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
         </h3>
         <div className="text-xs space-y-3">
           <p className="text-text-secondary leading-relaxed font-semibold">
-            House No {order.address.houseNo}, {order.address.street}, {order.address.area}, {order.address.city} - {order.address.pincode}
+            {formatAddress(order.address)}
           </p>
           <a
             href={
               order.address.lat && order.address.lng
                 ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
                 : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    `${order.address.houseNo} ${order.address.street} ${order.address.area} ${order.address.city} ${order.address.pincode}`
+                    formatAddress(order.address)
                   )}`
             }
             target="_blank"

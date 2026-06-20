@@ -9,7 +9,7 @@ import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn, isCafeProduct, formatPhone } from '@/lib/utils'
+import { cn, isCafeProduct, formatPhone, formatAddress } from '@/lib/utils'
 import {
   MapPin,
   ShoppingBag,
@@ -37,6 +37,131 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
     Math.sin(dLon / 2) * Math.sin(dLon / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c // Distance in km
+}
+
+interface SlideToOrderProps {
+  onConfirm: () => void
+  isPlacingOrder: boolean
+  disabled: boolean
+  amount: number
+}
+
+function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: SlideToOrderProps) {
+  const [sliderVal, setSliderVal] = useState(0)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleStart = () => {
+    if (disabled || isPlacingOrder) return
+    setIsDragging(true)
+  }
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging || !trackRef.current) return
+    const rect = trackRef.current.getBoundingClientRect()
+    const handleWidth = 40
+    const padding = 4
+    const minLeft = padding
+    const maxLeft = rect.width - handleWidth - padding
+    
+    let currentPos = clientX - rect.left - handleWidth / 2
+    if (currentPos < minLeft) currentPos = minLeft
+    if (currentPos > maxLeft) currentPos = maxLeft
+    
+    const pct = ((currentPos - minLeft) / (maxLeft - minLeft)) * 100
+    setSliderVal(pct)
+  }
+
+  const handleEnd = () => {
+    if (!isDragging) return
+    setIsDragging(false)
+    if (sliderVal >= 90) {
+      setSliderVal(100)
+      onConfirm()
+    } else {
+      setSliderVal(0)
+    }
+  }
+
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      if (isDragging) {
+        handleMove(e.touches[0].clientX)
+      }
+    }
+    const onTouchEnd = () => {
+      handleEnd()
+    }
+    const onMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        handleMove(e.clientX)
+      }
+    }
+    const onMouseUp = () => {
+      handleEnd()
+    }
+
+    if (isDragging) {
+      window.addEventListener('touchmove', onTouchMove, { passive: true })
+      window.addEventListener('touchend', onTouchEnd)
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    }
+
+    return () => {
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [isDragging, sliderVal])
+
+  useEffect(() => {
+    if (!isPlacingOrder) {
+      setSliderVal(0)
+    }
+  }, [isPlacingOrder])
+
+  return (
+    <div
+      ref={trackRef}
+      className={cn(
+        "relative flex items-center justify-center w-full h-12 bg-muted/85 border border-border rounded-xl select-none overflow-hidden",
+        (disabled || isPlacingOrder) && "opacity-60 cursor-not-allowed"
+      )}
+    >
+      <span className={cn(
+        "text-xs font-black text-text-secondary transition-opacity pointer-events-none uppercase tracking-wider",
+        sliderVal > 40 ? "opacity-0" : "opacity-100"
+      )}>
+        {isPlacingOrder ? 'Processing Order...' : `Slide to Order (₹${amount.toFixed(0)}) →`}
+      </span>
+
+      <div
+        className="absolute left-0 top-0 h-full bg-accent/20 rounded-l-xl pointer-events-none"
+        style={{ width: `${sliderVal}%` }}
+      />
+
+      <div
+        onMouseDown={handleStart}
+        onTouchStart={handleStart}
+        className={cn(
+          "absolute flex items-center justify-center w-10 h-10 bg-accent text-white rounded-lg shadow cursor-grab active:cursor-grabbing",
+          isPlacingOrder && "pointer-events-none"
+        )}
+        style={{
+          left: `calc(4px + (${sliderVal}% * (100% - 48px) / 100))`,
+          transition: isDragging ? 'none' : 'left 0.2s ease-out'
+        }}
+      >
+        {isPlacingOrder ? (
+          <Loader2 className="h-4 w-4 animate-spin text-white" />
+        ) : (
+          <span className="text-base font-bold">👉</span>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function CheckoutPage() {
@@ -143,11 +268,11 @@ export default function CheckoutPage() {
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
-    houseNo: '',
+    houseNo: '.',
     street: '',
-    area: '',
-    city: '',
-    pincode: '',
+    area: '.',
+    city: 'Ghatampur',
+    pincode: '209206',
     phone: '',
     isDefault: false,
   })
@@ -208,10 +333,10 @@ export default function CheckoutPage() {
           setIsDetectingLocation(false)
           setAddressForm({
             label: addressForm.label || 'Home',
-            houseNo: 'Vikas Medical Store',
-            street: 'NH34, Ghatampur',
-            area: 'Kanpur Nagar',
-            city: 'Kanpur',
+            houseNo: '.',
+            street: 'Vikas Medical Store, NH34, Ghatampur',
+            area: '.',
+            city: 'Ghatampur',
             pincode: '209206',
             phone: addressForm.phone,
             isDefault: addressForm.isDefault,
@@ -231,13 +356,21 @@ export default function CheckoutPage() {
             toast.dismiss(toastId)
             if (data && data.address) {
               const address = data.address
+              
+              // Combine detected components into one address string
+              const detectedStreet = [
+                address.building || address.house_number || '',
+                address.road || '',
+                address.neighbourhood || address.city_district || address.suburb || ''
+              ].filter(Boolean).join(', ')
+
               setAddressForm({
                 label: addressForm.label || 'Home',
-                houseNo: address.building || address.house_number || '',
-                street: address.road || address.suburb || '',
-                area: address.neighbourhood || address.city_district || address.suburb || '',
-                city: address.city || address.town || address.village || '',
-                pincode: address.postcode || '',
+                houseNo: '.',
+                street: detectedStreet || 'Detected Location',
+                area: '.',
+                city: address.city || address.town || address.village || 'Ghatampur',
+                pincode: address.postcode || '209206',
                 phone: addressForm.phone,
                 isDefault: addressForm.isDefault,
               })
@@ -338,15 +471,14 @@ export default function CheckoutPage() {
   // Create New Address
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { label, houseNo, street, area, city, pincode, phone } = addressForm
+    const { label, street, pincode, phone, isDefault } = addressForm
 
-    if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
-      toast.error('Please fill in all address details, including pincode, city, and phone number')
+    if (!street || !pincode || !phone) {
+      toast.error('Please fill in all address details, including pincode and phone number')
       return
     }
 
     const cleanPincode = pincode.trim()
-    const cleanCity = city.trim().toLowerCase()
 
     if (!/^\d{6}$/.test(cleanPincode)) {
       toast.error('Pincode must be a 6-digit number')
@@ -358,9 +490,20 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!cleanCity.includes('ghatampur') && !cleanCity.includes('kanpur') && !cleanCity.includes('bangalore')) {
-      toast.error('FastKirana delivery is currently only available in Ghatampur / Kanpur')
-      return
+    let inferredCity = 'Ghatampur'
+    if (cleanPincode === '560034') {
+      inferredCity = 'Bangalore'
+    }
+
+    const payload = {
+      label: label || 'Home',
+      houseNo: '.',
+      street: street.trim(),
+      area: '.',
+      city: inferredCity,
+      pincode: cleanPincode,
+      phone: phone.trim(),
+      isDefault: !!isDefault,
     }
 
     setIsSavingAddress(true)
@@ -368,7 +511,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(addressForm),
+        body: JSON.stringify(payload),
       })
 
       if (res.ok) {
@@ -378,12 +521,12 @@ export default function CheckoutPage() {
         setShowNewAddressForm(false)
         setAddressForm({
           label: 'Home',
-          houseNo: '',
+          houseNo: '.',
           street: '',
-          area: '',
-          city: '',
-          pincode: '',
-          phone: '',
+          area: '.',
+          city: 'Ghatampur',
+          pincode: '209206',
+          phone: addressForm.phone, // keep phone number for convenience
           isDefault: false,
         })
         toast.success('Address saved successfully!')
@@ -831,7 +974,7 @@ export default function CheckoutPage() {
                             )}
                           </div>
                           <p className="text-text-secondary leading-relaxed mt-1 font-semibold">
-                            House No {addr.houseNo}, {addr.street}, {addr.area}, {addr.city} - {addr.pincode}
+                            {formatAddress(addr)}
                           </p>
                           {addr.phone && (
                             <p className="text-[10px] text-text-secondary mt-1 font-extrabold flex items-center gap-1">
@@ -856,33 +999,37 @@ export default function CheckoutPage() {
 
                     {/* New Address Collapsible Form */}
                     {showNewAddressForm && (
-                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border p-4 rounded-xl space-y-4 bg-muted/10 animate-slide-up">
-                        <div className="flex justify-between items-center border-b border-border/40 pb-2">
-                          <h3 className="font-bold text-sm">New Delivery Address</h3>
+                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border p-4 sm:p-5 rounded-2xl space-y-4 bg-muted/5 animate-slide-up shadow-sm">
+                        <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                          <h3 className="font-bold text-sm text-text-primary">New Delivery Address</h3>
                           <Button
                             type="button"
                             onClick={handleDetectLocationForCheckout}
                             disabled={isDetectingLocation}
                             variant="ghost"
-                            className="text-xs text-primary font-black hover:text-primary-dark hover:bg-primary/5 flex items-center gap-1.5 h-8 border border-primary/20 rounded-lg shrink-0 px-2.5"
+                            className="text-xs text-primary font-bold hover:bg-primary/5 flex items-center gap-1.5 h-8 border border-primary/20 rounded-lg shrink-0 px-2.5"
                           >
                             {isDetectingLocation ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              <MapPin className="h-3.5 w-3.5 animate-pulse-gentle text-primary" />
+                              <>
+                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                                Detect Location
+                              </>
                             )}
                           </Button>
                         </div>
                         <div className="text-[10px] text-text-secondary leading-relaxed bg-primary/5 p-2.5 rounded-lg border border-primary/10 flex items-start gap-1.5">
                           <span>ℹ️</span>
                           <span>
-                            <strong>Ordering from another city?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>) instead of using auto-detect.
+                            <strong>Ordering for someone else?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>).
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 gap-4">
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="phone" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                              Phone Number <span className="text-red-500 font-black text-[10px] bg-red-50 px-1.5 py-0.5 rounded">* COMPULSORY</span>
+                            <Label htmlFor="phone" className="text-xs font-bold text-text-primary">
+                              Phone Number <span className="text-red-500 font-bold">*</span>
                             </Label>
                             <Input
                               id="phone"
@@ -891,103 +1038,74 @@ export default function CheckoutPage() {
                               placeholder="Enter contact phone number"
                               value={addressForm.phone}
                               onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                              className="mt-1 text-xs font-bold"
+                              className="mt-1 text-xs font-semibold rounded-lg"
                             />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-bold text-text-primary">Address Label</Label>
+                            <div className="flex gap-2 mt-1">
+                              {['Home', 'Work'].map((lbl) => (
+                                <button
+                                  key={lbl}
+                                  type="button"
+                                  onClick={() => setAddressForm({ ...addressForm, label: lbl })}
+                                  className={cn(
+                                    "px-4 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 select-none",
+                                    addressForm.label === lbl
+                                      ? "bg-primary text-white border-primary shadow-sm"
+                                      : "bg-background border-border text-text-secondary hover:border-primary/40"
+                                  )}
+                                >
+                                  {lbl === 'Home' ? '🏠' : '🏢'} {lbl}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                          <div>
-                            <Label htmlFor="label" className="text-xs font-bold text-text-primary">
-                              Address Label (e.g. Home, Work) <span className="text-red-500 font-bold">*</span>
-                            </Label>
-                            <Input
-                              id="label"
-                              required
-                              value={addressForm.label}
-                              onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="pincode" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                              Pincode (6 digits) <span className="text-red-500 font-black text-[10px] bg-red-50 px-1.5 py-0.5 rounded">* COMPULSORY</span>
-                            </Label>
-                            <Input
-                              id="pincode"
-                              required
-                              maxLength={6}
-                              placeholder="e.g. 209206"
-                              value={addressForm.pincode}
-                              onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                              className="mt-1 text-xs font-bold"
-                            />
-                          </div>
+
+                        <div>
+                          <Label htmlFor="pincode" className="text-xs font-bold text-text-primary">
+                            Pincode (6 digits) <span className="text-red-500 font-bold">*</span>
+                          </Label>
+                          <Input
+                            id="pincode"
+                            required
+                            maxLength={6}
+                            placeholder="e.g. 209206"
+                            value={addressForm.pincode}
+                            onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                            className="mt-1 text-xs font-semibold rounded-lg"
+                          />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                          <div>
-                            <Label htmlFor="houseNo" className="text-xs font-bold text-text-primary">
-                              Flat / House / Apartment No <span className="text-red-500 font-bold">*</span>
-                            </Label>
-                            <Input
-                              id="houseNo"
-                              required
-                              value={addressForm.houseNo}
-                              onChange={(e) => setAddressForm({ ...addressForm, houseNo: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="street" className="text-xs font-bold text-text-primary">
-                              Street / Road Name <span className="text-red-500 font-bold">*</span>
-                            </Label>
-                            <Input
-                              id="street"
-                              required
-                              value={addressForm.street}
-                              onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
+
+                        <div>
+                          <Label htmlFor="street" className="text-xs font-bold text-text-primary">
+                            Complete Delivery Address <span className="text-red-500 font-bold">*</span>
+                          </Label>
+                          <textarea
+                            id="street"
+                            required
+                            rows={3}
+                            placeholder="Enter landmark, house number, building, road, and locality details..."
+                            value={addressForm.street}
+                            onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                            className="mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                          <div>
-                            <Label htmlFor="area" className="text-xs font-bold text-text-primary">
-                              Area / Sector / Locality <span className="text-red-500 font-bold">*</span>
-                            </Label>
-                            <Input
-                              id="area"
-                              required
-                              value={addressForm.area}
-                              onChange={(e) => setAddressForm({ ...addressForm, area: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="city" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                              City <span className="text-red-500 font-black text-[10px] bg-red-50 px-1.5 py-0.5 rounded">* COMPULSORY</span>
-                            </Label>
-                            <Input
-                              id="city"
-                              required
-                              placeholder="e.g. Ghatampur"
-                              value={addressForm.city}
-                              onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                              className="mt-1 text-xs font-bold"
-                            />
-                          </div>
-                        </div>
+
                         <div className="flex gap-2 justify-end pt-2">
                           <Button
                             type="button"
                             variant="ghost"
                             onClick={() => setShowNewAddressForm(false)}
                             disabled={isSavingAddress}
+                            className="rounded-lg text-xs"
                           >
                             Cancel
                           </Button>
                           <Button
                             type="submit"
-                            className="bg-primary text-white"
+                            className="bg-primary text-white rounded-lg text-xs font-bold px-4"
                             disabled={isSavingAddress}
                           >
                             {isSavingAddress ? 'Saving...' : 'Save & Select'}
@@ -1262,20 +1380,14 @@ export default function CheckoutPage() {
                 >
                   Back
                 </Button>
-                <Button
-                  onClick={handlePlaceOrderClick}
-                  className="w-2/3 bg-accent text-white hover:bg-accent-dark rounded-xl h-11"
-                  disabled={isPlacingOrder}
-                >
-                  {isPlacingOrder ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    `Place Order (₹${grandTotal.toFixed(0)})`
-                  )}
-                </Button>
+                <div className="w-2/3">
+                  <SlideToOrder
+                    onConfirm={handlePlaceOrderClick}
+                    isPlacingOrder={isPlacingOrder}
+                    disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
+                    amount={grandTotal}
+                  />
+                </div>
               </div>
             </div>
           )}

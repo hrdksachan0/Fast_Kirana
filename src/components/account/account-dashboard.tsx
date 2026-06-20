@@ -3,7 +3,7 @@
 import { signOut } from 'next-auth/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
 import { LogOut, MapPin, User, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
@@ -266,7 +266,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       )}
                     </div>
                     <p className="text-text-secondary leading-relaxed font-semibold">
-                      House No {addr.houseNo}, {addr.street}, {addr.area}, {addr.city} - {addr.pincode}
+                      {formatAddress(addr)}
                     </p>
                     {addr.phone && (
                       <p className="text-[10px] text-text-secondary mt-1 font-extrabold flex items-center gap-1">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS } from '@/lib/constants'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -66,8 +66,8 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                 <tr key={o.id} className="hover:bg-muted/30">
                   <td className="py-3 px-4 font-mono font-bold text-[10px] truncate max-w-[120px]">{o.id}</td>
                   <td className="py-3 px-4 truncate max-w-[150px]">{o.userName || o.userEmail}</td>
-                  <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium">
-                    {o.address.houseNo}, {o.address.street}, {o.address.area}
+                  <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium" title={formatAddress(o.address)}>
+                    {formatAddress(o.address, false)}
                   </td>
                   <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
                   <td className="py-3 px-4">

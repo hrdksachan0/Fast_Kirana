@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
 import { toast } from 'sonner'
 import { 
@@ -2098,8 +2098,8 @@ export function AdminDashboard({
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium">
-                        {o.address.houseNo}, {o.address.street}, {o.address.area}
+                      <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium" title={formatAddress(o.address)}>
+                        {formatAddress(o.address, false)}
                       </td>
                       <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
                       <td className="py-3 px-4">
