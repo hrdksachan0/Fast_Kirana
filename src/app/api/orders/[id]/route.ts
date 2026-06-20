@@ -283,7 +283,7 @@ export async function PATCH(
       `
     }
 
-    // Trigger PWA Push Notification for customer
+    // Trigger PWA Push Notification for customer and staff
     try {
       const statusLabels: Record<string, string> = {
         CONFIRMED: 'Confirmed by Store 🏪',
@@ -308,7 +308,17 @@ export async function PATCH(
         data: { orderId: id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
 
-      // Push notifications to staff roles are disabled for PACKED, DELIVERED, and CANCELLED statuses.
+      // Notify workers/staff of the update
+      sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
+        title: `Order #${id.slice(-6).toUpperCase()} Updated 🔄`,
+        body: `Order status changed to ${statusLabels[status] || status}.`,
+        icon: `${origin}/icons/icon-192.png`,
+        badge: `${origin}/icons/icon-192.png`,
+        tag: `order-${id}-update`,
+        renotify: true,
+        data: { orderId: id }
+      }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
+
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
     }

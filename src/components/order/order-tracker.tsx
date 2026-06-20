@@ -19,6 +19,7 @@ import {
   Store,
   Camera,
   Home,
+  X,
 } from 'lucide-react'
 import { cn, formatPhone, formatAddress } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -77,7 +78,10 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [supportPhone, setSupportPhone] = useState('+91 70544 70303')
 
-  const statusSteps = order.deliveryMethod === 'PICKUP' ? [
+  const statusSteps = order.status === 'CANCELLED' ? [
+    { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
+    { status: 'CANCELLED', label: 'Order Cancelled', desc: 'This order has been cancelled.', icon: X },
+  ] : order.deliveryMethod === 'PICKUP' ? [
     { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
     { status: 'CONFIRMED', label: 'Confirmed', desc: 'Store has accepted your order.', icon: CheckCircle2 },
     { status: 'PACKED', label: 'Packing Items', desc: 'Packing fresh items at our store.', icon: Package },
@@ -311,16 +315,36 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {order.status === 'CANCELLED' && (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex items-start gap-3">
+          <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 font-bold">
+            ❌
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-red-800 dark:text-red-400">Order Cancelled</h2>
+            <p className="text-xs text-red-700 dark:text-red-500 mt-0.5">
+              This order has been cancelled and will not be processed further. If payment was made, it will be refunded shortly.
+            </p>
+          </div>
+        </div>
+      )}
       
       {/* Visual Delivery Status Card */}
       <div className="bg-card border border-border p-4 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-5 md:space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-4">
           <div>
-            <span className="text-[10px] uppercase font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-              Live Tracking Active
+            <span className={cn(
+              "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full",
+              order.status === 'CANCELLED'
+                ? "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950/40"
+                : "text-accent bg-accent/10"
+            )}>
+              {order.status === 'CANCELLED' ? 'Order Cancelled' : 'Live Tracking Active'}
             </span>
             <h1 className="text-xl font-black text-text-primary tracking-tight mt-1">
-              {order.status === 'DELIVERED' 
+              {order.status === 'CANCELLED'
+                ? 'Order Cancelled'
+                : order.status === 'DELIVERED' 
                 ? 'Order Delivered!' 
                 : order.deliveryMethod === 'PICKUP' 
                 ? 'Order Ready for Pickup!' 
@@ -399,6 +423,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
           {statusSteps.map((step, idx) => {
             const isCompleted = idx < activeStep
             const isActive = idx === activeStep
+            const isCancelledStep = step.status === 'CANCELLED'
             const StepIcon = step.icon
 
             return (
@@ -407,14 +432,17 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
                 <div
                   className={cn(
                     "absolute -left-[35px] flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300",
-                    isCompleted
-                      ? "bg-accent border-accent text-white"
-                      : isActive
-                      ? "bg-primary border-primary text-white scale-110 shadow"
-                      : "bg-card border-border text-text-muted"
+                    isCancelledStep
+                      ? "bg-red-500 border-red-500 text-white scale-110 shadow ring-4 ring-red-500/20"
+                      : isCompleted || isActive
+                      ? "bg-green-500 border-green-500 text-white"
+                      : "bg-card border-border text-text-muted",
+                    isActive && !isCancelledStep && "scale-110 shadow-md ring-4 ring-green-500/20"
                   )}
                 >
-                  {isCompleted ? (
+                  {isCancelledStep ? (
+                    <X className="h-3 w-3 stroke-[3]" />
+                  ) : isCompleted || isActive ? (
                     <Check className="h-3 w-3 stroke-[3]" />
                   ) : (
                     <span className="text-[10px] font-bold">{idx + 1}</span>
@@ -426,7 +454,13 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
                   <h3
                     className={cn(
                       "text-sm font-extrabold",
-                      isActive ? "text-primary" : isCompleted ? "text-text-primary" : "text-text-muted"
+                      isCancelledStep
+                        ? "text-red-500"
+                        : isActive
+                        ? "text-green-600 dark:text-green-500"
+                        : isCompleted
+                        ? "text-text-primary"
+                        : "text-text-muted"
                     )}
                   >
                     {step.label}
@@ -489,7 +523,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
       <LockscreenAlertMockup orderId={order.id} />
 
       {/* Simulated Tracking Map Panel */}
-      {order.status !== 'DELIVERED' && order.status !== 'PENDING' && (
+      {order.status !== 'DELIVERED' && order.status !== 'PENDING' && order.status !== 'CANCELLED' && (
         <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
             <Navigation className="h-4 w-4 text-primary" />
