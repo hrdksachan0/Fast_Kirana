@@ -164,11 +164,6 @@ function LoginForm() {
         }
         setStep('PASSWORD')
       } else {
-        // Block email OTP for customers
-        if (loginType === 'EMAIL') {
-          toast.error('Email OTP is not supported. Customers must log in using a Mobile Number or Google Sign-In.')
-          return
-        }
         // Customer flow → auto-send OTP and go to OTP step
         await sendOtp(finalEmail)
       }

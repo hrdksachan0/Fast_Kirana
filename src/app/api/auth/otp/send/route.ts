@@ -67,17 +67,21 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 5. Send OTP via Fast2SMS with WhatsApp fallback
-    let isSent = false
+    // 5. Send OTP via WhatsApp or Email
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      isSent = await sendWhatsAppOtp(recipientPhone, otp)
+      const isSent = await sendWhatsAppOtp(recipientPhone, otp)
       if (!isSent) {
         return NextResponse.json({ error: 'Failed to send OTP via WhatsApp. Please check your number or try again later.' }, { status: 500 })
       }
     } else {
-      return NextResponse.json({ error: 'Email OTP is not supported. Please log in using a Mobile Number or Google Sign-In.' }, { status: 400 })
+      try {
+        await sendOtpEmail(normalizedEmail, otp)
+      } catch (err) {
+        console.error('Failed to send OTP email:', err)
+        return NextResponse.json({ error: 'Failed to send verification email. Please try again.' }, { status: 500 })
+      }
     }
 
     // Do not return the OTP in the response payload for security
