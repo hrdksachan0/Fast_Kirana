@@ -485,15 +485,12 @@ export default function CheckoutPage() {
       return
     }
 
-    if (cleanPincode !== '209206' && cleanPincode !== '560034') {
+    if (cleanPincode !== '209206') {
       toast.error('FastKirana only delivers to Ghatampur area (Pincode: 209206)')
       return
     }
 
-    let inferredCity = 'Ghatampur'
-    if (cleanPincode === '560034') {
-      inferredCity = 'Bangalore'
-    }
+    const inferredCity = 'Ghatampur'
 
     const payload = {
       label: label || 'Home',
@@ -557,14 +554,14 @@ export default function CheckoutPage() {
         if (selectedAddr) {
           const p = selectedAddr.pincode.trim()
           const c = selectedAddr.city.trim().toLowerCase()
-          if (p !== '209206' && p !== '560034') {
+          if (p !== '209206') {
             triggerHaptic('warning')
             toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
             setIsPlacingOrder(false)
             setStep(1)
             return
           }
-          if (!c.includes('ghatampur') && !c.includes('kanpur') && !c.includes('bangalore')) {
+          if (!c.includes('ghatampur') && !c.includes('kanpur')) {
             triggerHaptic('warning')
             toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
             setIsPlacingOrder(false)

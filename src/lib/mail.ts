@@ -1,26 +1,8 @@
 import { Resend } from 'resend'
-import nodemailer from 'nodemailer'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
-// SMTP configuration for fallback (e.g. Gmail App Password)
-const smtpHost = process.env.SMTP_HOST
-const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
-const smtpUser = process.env.SMTP_USER
-const smtpPass = process.env.SMTP_PASS
 const fromEmail = process.env.EMAIL_FROM || 'FastKirana <onboarding@resend.dev>'
-
-const transporter = smtpHost && smtpUser && smtpPass 
-  ? nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465, // true for 465, false for other ports
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    })
-  : null
 
 export async function sendOtpEmail(email: string, otp: string) {
   console.log(`\n==============================================`)
@@ -58,21 +40,6 @@ export async function sendOtpEmail(email: string, otp: string) {
     </div>
   `
 
-  if (transporter) {
-    try {
-      await transporter.sendMail({
-        from: fromEmail,
-        to: email,
-        subject: `${otp} is your FastKirana verification code`,
-        html: htmlContent,
-      })
-      console.log(`OTP email sent successfully via SMTP to: ${email}`)
-      return
-    } catch (error) {
-      console.error('Error sending email via SMTP:', error)
-    }
-  }
-
   if (resend) {
     try {
       const resendFrom = fromEmail.includes('@gmail.com') || fromEmail.includes('@yahoo.com') || fromEmail.includes('@outlook.com')
@@ -89,5 +56,7 @@ export async function sendOtpEmail(email: string, otp: string) {
     } catch (error) {
       console.error('Error sending email via Resend:', error)
     }
+  } else {
+    console.warn('Resend is not configured (RESEND_API_KEY missing). Email NOT sent.')
   }
 }
