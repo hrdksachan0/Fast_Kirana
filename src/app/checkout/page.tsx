@@ -107,7 +107,7 @@ function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: SlideToOr
           </>
         ) : (
           <>
-            <span>Place Order (₹${amount.toFixed(0)})</span>
+            <span>Place Order (₹{amount.toFixed(0)})</span>
             <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
           </>
         )}
