@@ -111,7 +111,13 @@ export async function broadcastPushNotification(payload: PushPayload) {
   }
 
   try {
-    const subscriptions = await prisma.pushSubscription.findMany()
+    const subscriptions = await prisma.pushSubscription.findMany({
+      where: {
+        user: {
+          role: 'USER',
+        },
+      },
+    })
 
     if (subscriptions.length === 0) {
       console.log('No active push subscriptions found in database.')
