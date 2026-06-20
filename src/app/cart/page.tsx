@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2, Plus, Minus, ArrowRight, Ticket, Loader2, ShoppingBag } from 'lucide-react'
+import { Trash2, Plus, Minus, ArrowRight, Ticket, Loader2, ShoppingBag, ChevronsRight } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -533,22 +533,69 @@ export default function CartPage() {
             )}
 
             {/* Confirmation triggers checkout */}
-            <Button
-              onClick={handleCheckoutRedirect}
-              disabled={isCheckoutBlocked}
-              className="w-full bg-accent text-white hover:bg-accent-dark h-12 font-bold rounded-xl text-sm flex items-center justify-center gap-2 pt-1 transition-all disabled:bg-muted disabled:text-text-muted disabled:cursor-not-allowed disabled:opacity-75"
-            >
-              {hasClosedGroceryItems || hasClosedCafeItems ? (
-                'Checkout Blocked (Store Closed)'
-              ) : hasInventoryIssues ? (
-                'Fix Stock Issues to Checkout'
-              ) : (
-                <>
-                  Confirm and Checkout
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <>
+              <style>{`
+                @keyframes shimmer {
+                  100% {
+                    transform: translateX(100%);
+                  }
+                }
+                .shimmer-btn {
+                  position: relative;
+                  overflow: hidden;
+                }
+                .shimmer-btn::after {
+                  position: absolute;
+                  top: 0;
+                  right: 0;
+                  bottom: 0;
+                  left: 0;
+                  transform: translateX(-100%);
+                  background-image: linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.25) 30%,
+                    rgba(255, 255, 255, 0.5) 60%,
+                    rgba(255, 255, 255, 0) 100%
+                  );
+                  animation: shimmer 2s infinite;
+                  content: '';
+                }
+                @keyframes pulseGlow {
+                  0%, 100% {
+                    box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.45);
+                  }
+                  50% {
+                    box-shadow: 0 4px 24px 0 rgba(34, 197, 94, 0.75);
+                  }
+                }
+                .glow-btn {
+                  animation: pulseGlow 2s infinite;
+                }
+              `}</style>
+              <button
+                type="button"
+                onClick={handleCheckoutRedirect}
+                disabled={isCheckoutBlocked}
+                className={cn(
+                  "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+                  "shimmer-btn",
+                  !isCheckoutBlocked && "glow-btn",
+                  isCheckoutBlocked && "opacity-60 cursor-not-allowed"
+                )}
+              >
+                {hasClosedGroceryItems || hasClosedCafeItems ? (
+                  'Checkout Blocked (Store Closed)'
+                ) : hasInventoryIssues ? (
+                  'Fix Stock Issues to Checkout'
+                ) : (
+                  <>
+                    <span>Confirm and Checkout</span>
+                    <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+                  </>
+                )}
+              </button>
+            </>
           </div>
         </div>
       </div>

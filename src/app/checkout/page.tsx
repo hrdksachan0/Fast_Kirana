@@ -1068,20 +1068,30 @@ export default function CheckoutPage() {
 
               {/* Action Button */}
               {deliveryMethod === 'PICKUP' ? (
-                <Button
+                <button
+                  type="button"
                   onClick={() => setStep(2)}
-                  className="w-full bg-accent text-white hover:bg-accent-dark h-11 rounded-xl"
+                  className={cn(
+                    "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+                    "shimmer-btn glow-btn"
+                  )}
                 >
-                  Confirm Pickup Details
-                </Button>
+                  <span>Confirm Pickup Details</span>
+                  <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+                </button>
               ) : (
                 selectedAddressId && (
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => setStep(2)}
-                    className="w-full bg-accent text-white hover:bg-accent-dark h-11 rounded-xl"
+                    className={cn(
+                      "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+                      "shimmer-btn glow-btn"
+                    )}
                   >
-                    Deliver to this Address
-                  </Button>
+                    <span>Deliver to this Address</span>
+                    <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+                  </button>
                 )
               )}
             </div>
@@ -1173,20 +1183,25 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <div className="flex gap-4 border-t border-border/40 pt-5">
+              <div className="flex gap-4 border-t border-border/40 pt-5 items-center">
                 <Button
                   variant="outline"
                   onClick={() => setStep(1)}
-                  className="w-1/3 rounded-xl"
+                  className="w-1/3 rounded-full h-14 font-black border-border/80 hover:bg-muted text-xs tracking-widest uppercase transition-all duration-200"
                 >
                   Back
                 </Button>
-                <Button
+                <button
+                  type="button"
                   onClick={() => setStep(3)}
-                  className="w-2/3 bg-accent text-white hover:bg-accent-dark rounded-xl"
+                  className={cn(
+                    "w-2/3 h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+                    "shimmer-btn glow-btn"
+                  )}
                 >
-                  Proceed to Payment
-                </Button>
+                  <span>Proceed to Payment</span>
+                  <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+                </button>
               </div>
             </div>
           )}
