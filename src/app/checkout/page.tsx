@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   QrCode,
   Smartphone,
+  ChevronsRight,
 } from 'lucide-react'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -47,120 +48,71 @@ interface SlideToOrderProps {
 }
 
 function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: SlideToOrderProps) {
-  const [sliderVal, setSliderVal] = useState(0)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleStart = () => {
-    if (disabled || isPlacingOrder) return
-    setIsDragging(true)
-  }
-
-  const handleMove = (clientX: number) => {
-    if (!isDragging || !trackRef.current) return
-    const rect = trackRef.current.getBoundingClientRect()
-    const handleWidth = 40
-    const padding = 4
-    const minLeft = padding
-    const maxLeft = rect.width - handleWidth - padding
-    
-    let currentPos = clientX - rect.left - handleWidth / 2
-    if (currentPos < minLeft) currentPos = minLeft
-    if (currentPos > maxLeft) currentPos = maxLeft
-    
-    const pct = ((currentPos - minLeft) / (maxLeft - minLeft)) * 100
-    setSliderVal(pct)
-  }
-
-  const handleEnd = () => {
-    if (!isDragging) return
-    setIsDragging(false)
-    if (sliderVal >= 90) {
-      setSliderVal(100)
-      onConfirm()
-    } else {
-      setSliderVal(0)
-    }
-  }
-
-  useEffect(() => {
-    const onTouchMove = (e: TouchEvent) => {
-      if (isDragging) {
-        handleMove(e.touches[0].clientX)
-      }
-    }
-    const onTouchEnd = () => {
-      handleEnd()
-    }
-    const onMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        handleMove(e.clientX)
-      }
-    }
-    const onMouseUp = () => {
-      handleEnd()
-    }
-
-    if (isDragging) {
-      window.addEventListener('touchmove', onTouchMove, { passive: true })
-      window.addEventListener('touchend', onTouchEnd)
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
-    }
-
-    return () => {
-      window.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('touchend', onTouchEnd)
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
-  }, [isDragging, sliderVal])
-
-  useEffect(() => {
-    if (!isPlacingOrder) {
-      setSliderVal(0)
-    }
-  }, [isPlacingOrder])
-
   return (
-    <div
-      ref={trackRef}
-      className={cn(
-        "relative flex items-center justify-center w-full h-12 bg-muted/85 border border-border rounded-xl select-none overflow-hidden",
-        (disabled || isPlacingOrder) && "opacity-60 cursor-not-allowed"
-      )}
-    >
-      <span className={cn(
-        "text-xs font-black text-text-secondary transition-opacity pointer-events-none uppercase tracking-wider",
-        sliderVal > 40 ? "opacity-0" : "opacity-100"
-      )}>
-        {isPlacingOrder ? 'Processing Order...' : `Slide to Order (₹${amount.toFixed(0)}) →`}
-      </span>
-
-      <div
-        className="absolute left-0 top-0 h-full bg-accent/20 rounded-l-xl pointer-events-none"
-        style={{ width: `${sliderVal}%` }}
-      />
-
-      <div
-        onMouseDown={handleStart}
-        onTouchStart={handleStart}
+    <>
+      <style>{`
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+        .shimmer-btn {
+          position: relative;
+          overflow: hidden;
+        }
+        .shimmer-btn::after {
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          transform: translateX(-100%);
+          background-image: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.25) 30%,
+            rgba(255, 255, 255, 0.5) 60%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          animation: shimmer 2s infinite;
+          content: '';
+        }
+        @keyframes pulseGlow {
+          0%, 100% {
+            box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.45);
+          }
+          50% {
+            box-shadow: 0 4px 24px 0 rgba(34, 197, 94, 0.75);
+          }
+        }
+        .glow-btn {
+          animation: pulseGlow 2s infinite;
+        }
+      `}</style>
+      <button
+        type="button"
+        disabled={disabled || isPlacingOrder}
+        onClick={onConfirm}
         className={cn(
-          "absolute flex items-center justify-center w-10 h-10 bg-accent text-white rounded-lg shadow cursor-grab active:cursor-grabbing",
-          isPlacingOrder && "pointer-events-none"
+          "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+          "shimmer-btn",
+          !disabled && !isPlacingOrder && "glow-btn",
+          (disabled || isPlacingOrder) && "opacity-60 cursor-not-allowed"
         )}
-        style={{
-          left: `calc(4px + (${sliderVal}% * (100% - 48px) / 100))`,
-          transition: isDragging ? 'none' : 'left 0.2s ease-out'
-        }}
       >
         {isPlacingOrder ? (
-          <Loader2 className="h-4 w-4 animate-spin text-white" />
+          <>
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
+            <span>Processing Order...</span>
+          </>
         ) : (
-          <span className="text-base font-bold">👉</span>
+          <>
+            <span>Place Order (₹${amount.toFixed(0)})</span>
+            <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+          </>
         )}
-      </div>
-    </div>
+      </button>
+    </>
   )
 }
 
@@ -1368,11 +1320,11 @@ export default function CheckoutPage() {
                 Your transaction is simulated safely for local demonstration.
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-4 items-center">
                 <Button
                   variant="outline"
                   onClick={() => setStep(2)}
-                  className="w-1/3 rounded-xl"
+                  className="w-1/3 rounded-full h-14 font-black border-border/80 hover:bg-muted text-xs tracking-widest uppercase transition-all duration-200"
                   disabled={isPlacingOrder}
                 >
                   Back
