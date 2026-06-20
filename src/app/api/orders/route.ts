@@ -492,13 +492,15 @@ export async function POST(request: NextRequest) {
           createdAt: order.createdAt,
         })
 
-        // Send push notifications to all workers for any new order
+        // Send push notifications to all workers for any new order (disabled by request)
+        /*
         sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
           title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
           body: `Order #${order.id.slice(-6).toUpperCase()} of ₹${order.total} has been placed.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id }
         }).catch((err: any) => console.error('Error sending push notification to workers:', err))
+        */
       }
     } catch (sseErr) {
       console.error('Failed to emit SSE/notifications for new orders:', sseErr)
