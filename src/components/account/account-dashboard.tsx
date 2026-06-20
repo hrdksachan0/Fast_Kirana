@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
@@ -29,6 +29,156 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [orders, setOrders] = useState(initialOrders)
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('orders')
+
+  // Resend countdown timers
+  const [emailCountdown, setEmailCountdown] = useState(0)
+  const [phoneCountdown, setPhoneCountdown] = useState(0)
+
+  useEffect(() => {
+    let timer: any
+    if (emailCountdown > 0) {
+      timer = setTimeout(() => setEmailCountdown(emailCountdown - 1), 1000)
+    }
+    return () => clearTimeout(timer)
+  }, [emailCountdown])
+
+  useEffect(() => {
+    let timer: any
+    if (phoneCountdown > 0) {
+      timer = setTimeout(() => setPhoneCountdown(phoneCountdown - 1), 1000)
+    }
+    return () => clearTimeout(timer)
+  }, [phoneCountdown])
+
+  // Email verification state
+  const [email, setEmail] = useState(user.email)
+  const [isEditingEmail, setIsEditingEmail] = useState(false)
+  const [newEmail, setNewEmail] = useState(user.email)
+  const [otpCode, setOtpCode] = useState('')
+  const [isOtpSent, setIsOtpSent] = useState(false)
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false)
+
+  const handleSendEmailOtp = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+    setIsSendingOtp(true)
+    try {
+      const res = await fetch('/api/profile/send-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setIsOtpSent(true)
+        setEmailCountdown(30)
+        toast.success(`Verification code sent to ${newEmail}`)
+      } else {
+        toast.error(data.error || 'Failed to send verification code')
+      }
+    } catch (err) {
+      toast.error('Something went wrong')
+    } finally {
+      setIsSendingOtp(false)
+    }
+  }
+
+  const handleUpdateEmail = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP code')
+      return
+    }
+    setIsUpdatingEmail(true)
+    try {
+      const res = await fetch('/api/profile/update-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail, otp: otpCode }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setEmail(newEmail)
+        setIsEditingEmail(false)
+        setIsOtpSent(false)
+        setOtpCode('')
+        toast.success('Email address updated successfully!')
+      } else {
+        toast.error(data.error || 'Failed to update email address')
+      }
+    } catch (err) {
+      toast.error('Something went wrong')
+    } finally {
+      setIsUpdatingEmail(false)
+    }
+  }
+
+  // Phone verification state
+  const [phone, setPhone] = useState(user.phone)
+  const [isEditingPhone, setIsEditingPhone] = useState(false)
+  const [newPhone, setNewPhone] = useState(user.phone || '')
+  const [phoneOtpCode, setPhoneOtpCode] = useState('')
+  const [isPhoneOtpSent, setIsPhoneOtpSent] = useState(false)
+  const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false)
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false)
+
+  const handleSendPhoneOtp = async () => {
+    if (!newPhone || newPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number')
+      return
+    }
+    setIsSendingPhoneOtp(true)
+    try {
+      const res = await fetch('/api/profile/send-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: newPhone }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setIsPhoneOtpSent(true)
+        setPhoneCountdown(30)
+        toast.success(`Verification code sent to ${newPhone} via WhatsApp`)
+      } else {
+        toast.error(data.error || 'Failed to send verification code')
+      }
+    } catch (err) {
+      toast.error('Something went wrong')
+    } finally {
+      setIsSendingPhoneOtp(false)
+    }
+  }
+
+  const handleUpdatePhone = async () => {
+    if (!phoneOtpCode || phoneOtpCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP code')
+      return
+    }
+    setIsUpdatingPhone(true)
+    try {
+      const res = await fetch('/api/profile/update-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: newPhone, otp: phoneOtpCode }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setPhone(newPhone)
+        setIsEditingPhone(false)
+        setIsPhoneOtpSent(false)
+        setPhoneOtpCode('')
+        toast.success('Phone number updated successfully!')
+      } else {
+        toast.error(data.error || 'Failed to update phone number')
+      }
+    } catch (err) {
+      toast.error('Something went wrong')
+    } finally {
+      setIsUpdatingPhone(false)
+    }
+  }
 
   // Live order status updates via Server-Sent Events
   useEffect(() => {
@@ -308,18 +458,210 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                 </span>
               </div>
               {!user.email.startsWith('wa-') && (
-                <div className="space-y-1">
-                  <span className="text-text-secondary block">Email Address</span>
-                  <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
-                    {user.email}
-                  </span>
+                <div className="space-y-1 col-span-1 sm:col-span-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-text-secondary block">Email Address</span>
+                    {!isEditingEmail ? (
+                      <button
+                        onClick={() => {
+                          setIsEditingEmail(true)
+                          setNewEmail(email)
+                        }}
+                        className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1"
+                      >
+                        <Pencil className="h-3 w-3" /> Edit Email
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setIsEditingEmail(false)
+                          setIsOtpSent(false)
+                        }}
+                        className="text-[10px] text-text-muted font-bold hover:underline flex items-center gap-1"
+                      >
+                        <X className="h-3 w-3" /> Cancel
+                      </button>
+                    )}
+                  </div>
+                  
+                  {!isEditingEmail ? (
+                    <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
+                      {email}
+                    </span>
+                  ) : (
+                    <div className="space-y-3 p-3 bg-muted/10 rounded-lg border border-dashed">
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          disabled={isOtpSent || isSendingOtp}
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="Enter new email address"
+                          className="flex-grow bg-background text-text-primary px-3 py-2 text-xs font-semibold rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        {!isOtpSent && (
+                          <button
+                            type="button"
+                            disabled={isSendingOtp}
+                            onClick={handleSendEmailOtp}
+                            className="bg-primary text-white text-[10px] font-black px-3 rounded-lg hover:bg-primary-dark disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {isSendingOtp ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              'Send OTP'
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {isOtpSent && (
+                        <div className="space-y-2 pt-1 border-t border-border/40 animate-slide-up">
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex-grow space-y-1">
+                              <span className="text-[10px] text-text-secondary block font-bold">Verification Code (OTP)</span>
+                              <input
+                                type="text"
+                                maxLength={6}
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                placeholder="Enter 6-digit code"
+                                className="w-full bg-background text-text-primary px-3 py-2 text-xs font-black tracking-wider rounded-lg border border-input focus:outline-none text-center"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isUpdatingEmail}
+                              onClick={handleUpdateEmail}
+                              className="bg-accent text-white text-[10px] font-black px-4 h-9 self-end rounded-lg hover:bg-accent-dark disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              {isUpdatingEmail ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                'Verify & Update'
+                              )}
+                            </button>
+                          </div>
+                          <div className="flex justify-between items-center w-full px-1">
+                            {emailCountdown > 0 ? (
+                              <span className="text-[10px] text-text-muted">Resend code in {emailCountdown}s</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleSendEmailOtp}
+                                className="text-[10px] text-primary font-bold hover:underline"
+                              >
+                                Resend Code
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
-              <div className="space-y-1">
-                <span className="text-text-secondary block">Phone Number</span>
-                <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
-                  {user.phone || 'Not provided'}
-                </span>
+              <div className="space-y-1 col-span-1 sm:col-span-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary block">Phone Number</span>
+                  {!isEditingPhone ? (
+                    <button
+                      onClick={() => {
+                        setIsEditingPhone(true)
+                        setNewPhone(phone || '')
+                      }}
+                      className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit Phone
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsEditingPhone(false)
+                        setIsPhoneOtpSent(false)
+                      }}
+                      className="text-[10px] text-text-muted font-bold hover:underline flex items-center gap-1"
+                    >
+                      <X className="h-3 w-3" /> Cancel
+                    </button>
+                  )}
+                </div>
+                
+                {!isEditingPhone ? (
+                  <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
+                    {phone || 'Not provided'}
+                  </span>
+                ) : (
+                  <div className="space-y-3 p-3 bg-muted/10 rounded-lg border border-dashed">
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        disabled={isPhoneOtpSent || isSendingPhoneOtp}
+                        value={newPhone}
+                        onChange={(e) => setNewPhone(e.target.value)}
+                        placeholder="Enter 10-digit mobile number"
+                        className="flex-grow bg-background text-text-primary px-3 py-2 text-xs font-semibold rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      {!isPhoneOtpSent && (
+                        <button
+                          type="button"
+                          disabled={isSendingPhoneOtp}
+                          onClick={handleSendPhoneOtp}
+                          className="bg-primary text-white text-[10px] font-black px-3 rounded-lg hover:bg-primary-dark disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {isSendingPhoneOtp ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Send OTP'
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {isPhoneOtpSent && (
+                      <div className="space-y-2 pt-1 border-t border-border/40 animate-slide-up">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <div className="flex-grow space-y-1">
+                            <span className="text-[10px] text-text-secondary block font-bold">Verification Code (OTP via WhatsApp)</span>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={phoneOtpCode}
+                              onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="Enter 6-digit code"
+                              className="w-full bg-background text-text-primary px-3 py-2 text-xs font-black tracking-wider rounded-lg border border-input focus:outline-none text-center"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isUpdatingPhone}
+                            onClick={handleUpdatePhone}
+                            className="bg-accent text-white text-[10px] font-black px-4 h-9 self-end rounded-lg hover:bg-accent-dark disabled:opacity-50 flex items-center justify-center gap-1"
+                          >
+                            {isUpdatingPhone ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              'Verify & Update'
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex justify-between items-center w-full px-1">
+                          {phoneCountdown > 0 ? (
+                            <span className="text-[10px] text-text-muted">Resend code in {phoneCountdown}s</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleSendPhoneOtp}
+                              className="text-[10px] text-primary font-bold hover:underline"
+                            >
+                              Resend Code
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -47,14 +47,14 @@ export const proxy = auth((req) => {
     return NextResponse.next()
   }
 
-  // Redirect authenticated users who lack a mobile number to /setup-profile
-  const isSetupProfileRoute = nextUrl.pathname === '/setup-profile'
-  if (isLoggedIn && !isSetupProfileRoute) {
-    const userPhone = req.auth?.user?.phone
-    if (!userPhone) {
-      return NextResponse.redirect(new URL('/setup-profile', baseUrl))
-    }
-  }
+  // Redirect authenticated users who lack a mobile number to /setup-profile (Disabled to improve signup UX)
+  // const isSetupProfileRoute = nextUrl.pathname === '/setup-profile'
+  // if (isLoggedIn && !isSetupProfileRoute) {
+  //   const userPhone = req.auth?.user?.phone
+  //   if (!userPhone) {
+  //     return NextResponse.redirect(new URL('/setup-profile', baseUrl))
+  //   }
+  // }
 
   // Protect account, checkout, and order routes
   const isProtectedRoute =
