@@ -46,13 +46,18 @@ export async function sendOtpEmail(email: string, otp: string) {
         ? 'onboarding@resend.dev'
         : fromEmail
 
-      await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: resendFrom,
         to: email,
         subject: `${otp} is your FastKirana verification code`,
         html: htmlContent,
       })
-      console.log(`OTP email sent successfully via Resend to: ${email}`)
+      
+      if (error) {
+        console.error('Error response from Resend API:', error)
+      } else {
+        console.log(`OTP email sent successfully via Resend to: ${email}, ID: ${data?.id}`)
+      }
     } catch (error) {
       console.error('Error sending email via Resend:', error)
     }
