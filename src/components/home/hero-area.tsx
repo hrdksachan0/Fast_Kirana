@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sun, Utensils, Cookie, Moon } from 'lucide-react'
+import { Sun, Utensils, Cookie, Moon, Coffee, ShieldAlert } from 'lucide-react'
 import { HeroBanner } from './hero-banner'
 import { cn } from '@/lib/utils'
+import { useUIStore } from '@/stores/ui-store'
 
 interface HeroAreaProps {
   initialBanners?: any[]
@@ -26,6 +27,9 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
   const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
   const [currentHour, setCurrentHour] = useState<number>(8) // Default to 8 AM (Morning) for SSR fallback
+
+  const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
+  const cafeOpen = useUIStore((s) => s.cafeOpen)
 
   useEffect(() => {
     setMounted(true)
@@ -49,13 +53,35 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
     const firstName = name ? name.split(' ')[0] : ''
     const welcome = firstName ? `Hey ${firstName}, ` : ''
 
-    // 6 AM - 11 AM: Morning
+    // CASE 1: Both Grocery and Cafe are closed
+    if (mounted && !groceryMartOpen && !cafeOpen) {
+      return {
+        greeting: `We're resting right now 💤`,
+        subtitle: 'FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!',
+        icon: <ShieldAlert className="h-4 w-4 text-rose-500 animate-pulse" />,
+        modeLabel: 'Store Closed',
+        gradient: 'from-zinc-100 via-stone-50 to-zinc-50',
+        darkGradient: 'dark:from-zinc-950/20 dark:via-zinc-900/10 dark:to-zinc-900/5',
+        border: 'border-zinc-200/50',
+        darkBorder: 'dark:border-zinc-800/30',
+        accentColor: 'text-rose-600 dark:text-rose-400',
+      }
+    }
+
+    // 6 AM - 11 AM: Morning Mode
     if (currentHour >= 6 && currentHour < 11) {
+      const isCafeClosed = mounted && !cafeOpen
+      const isMartClosed = mounted && !groceryMartOpen
+
       return {
         greeting: `${welcome}Good morning, let's get breakfast! 🌅`,
-        subtitle: 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.',
-        icon: <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
-        modeLabel: 'Morning Mode',
+        subtitle: isMartClosed 
+          ? 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨'
+          : isCafeClosed
+          ? 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦'
+          : 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.',
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 animate-pulse" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
+        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Morning Mode',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',
         darkGradient: 'dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-zinc-900/10',
         border: 'border-amber-200/40',
@@ -63,13 +89,20 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-amber-600 dark:text-amber-400',
       }
     }
-    // 11 AM - 4 PM: Lunch
+    // 11 AM - 4 PM: Lunch Mode
     else if (currentHour >= 11 && currentHour < 16) {
+      const isCafeClosed = mounted && !cafeOpen
+      const isMartClosed = mounted && !groceryMartOpen
+
       return {
         greeting: `${welcome}Good afternoon! Ready for lunch? 🍛`,
-        subtitle: 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.',
-        icon: <Utensils className="h-4 w-4 text-emerald-500" />,
-        modeLabel: 'Lunch Mode',
+        subtitle: isMartClosed
+          ? 'Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨'
+          : isCafeClosed
+          ? 'Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦'
+          : 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.',
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-emerald-500 animate-pulse" /> : <Utensils className="h-4 w-4 text-emerald-500" />,
+        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Lunch Mode',
         gradient: 'from-emerald-50 via-teal-50/60 to-cyan-50/40',
         darkGradient: 'dark:from-emerald-950/20 dark:via-teal-950/10 dark:to-zinc-900/10',
         border: 'border-emerald-200/30',
@@ -77,13 +110,20 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-emerald-600 dark:text-emerald-400',
       }
     }
-    // 4 PM - 8 PM: Evening Snacks
+    // 4 PM - 8 PM: Evening Snacks Mode
     else if (currentHour >= 16 && currentHour < 20) {
+      const isCafeClosed = mounted && !cafeOpen
+      const isMartClosed = mounted && !groceryMartOpen
+
       return {
         greeting: `${welcome}It's snack o'clock! Tea & snacks are ready ☕`,
-        subtitle: 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.',
-        icon: <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10" />,
-        modeLabel: 'Tea & Snacks Mode',
+        subtitle: isMartClosed
+          ? 'Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟'
+          : isCafeClosed
+          ? 'Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦'
+          : 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.',
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-orange-500 animate-pulse" /> : <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10" />,
+        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Tea & Snacks Mode',
         gradient: 'from-orange-100/40 via-rose-50/40 to-amber-100/30',
         darkGradient: 'dark:from-orange-950/25 dark:via-rose-950/15 dark:to-zinc-900/10',
         border: 'border-orange-200/30',
@@ -91,13 +131,20 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-orange-600 dark:text-orange-400',
       }
     }
-    // 8 PM - 5 AM: Late Night Cravings
+    // 8 PM - 5 AM: Late Night Cravings Mode
     else {
+      const isCafeClosed = mounted && !cafeOpen
+      const isMartClosed = mounted && !groceryMartOpen
+
       return {
         greeting: `${welcome}Late night cravings? We got you! 🌙`,
-        subtitle: 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.',
-        icon: <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20" />,
-        modeLabel: 'Cravings Mode',
+        subtitle: isMartClosed
+          ? 'Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨'
+          : isCafeClosed
+          ? 'Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦'
+          : 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.',
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-indigo-500 animate-pulse" /> : <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20" />,
+        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Cravings Mode',
         gradient: 'from-indigo-100/60 via-purple-50/50 to-pink-100/30',
         darkGradient: 'dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-zinc-900/10',
         border: 'border-indigo-200/40',
@@ -105,7 +152,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-indigo-600 dark:text-indigo-400',
       }
     }
-  }, [currentHour, session])
+  }, [currentHour, session, groceryMartOpen, cafeOpen, mounted])
 
   // Soft fallback for SSR to prevent layout shifting
   const currentGradient = mounted ? `${themeConfig.gradient} ${themeConfig.darkGradient}` : 'from-amber-100/50 via-yellow-50/40 to-orange-100/30 dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-zinc-900/10'
