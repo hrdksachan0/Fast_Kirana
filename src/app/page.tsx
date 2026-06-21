@@ -442,11 +442,11 @@ export default async function Home() {
 
   return (
     <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
-      {/* Hero Area (Dynamic Greeting & Banners) */}
-      <HeroArea initialBanners={promoBanners} />
-
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />
+
+      {/* Hero Area (Dynamic Greeting & Banners) */}
+      <HeroArea initialBanners={promoBanners} />
 
       {/* Speed ticker strip */}
       <SpeedStrip
