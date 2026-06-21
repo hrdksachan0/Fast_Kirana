@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { HeroBanner } from '@/components/home/hero-banner'
+import { HeroArea } from '@/components/home/hero-area'
 import { CategoryGrid } from '@/components/home/category-grid'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { ProductCard } from '@/components/product/product-card'
@@ -445,8 +445,8 @@ export default async function Home() {
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />
 
-      {/* Top Banner Promos */}
-      <HeroBanner initialBanners={promoBanners} />
+      {/* Hero Area (Dynamic Greeting & Banners) */}
+      <HeroArea initialBanners={promoBanners} />
 
       {/* Speed ticker strip */}
       <SpeedStrip
