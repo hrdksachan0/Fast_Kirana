@@ -535,14 +535,18 @@ export async function POST(request: NextRequest) {
           data: { orderId: order.id }
         }).catch((err: any) => console.error('Error sending push notification to workers:', err))
 
+        const whatsappPromises: Promise<any>[] = []
+
         // 1. WhatsApp Alert to Customer
         const customerPhone = order.address?.phone
         if (customerPhone) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
           const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
           const customerText = `Order #${shortId} of ₹${order.total} placed successfully. Track: ${cleanAppUrl}/order/${order.id}/track`
-          sendWhatsAppOrderAlert(customerPhone, customerText)
-            .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
+          whatsappPromises.push(
+            sendWhatsAppOrderAlert(customerPhone, customerText)
+              .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
+          )
         }
 
         // 2. WhatsApp Alert to Admins/Staff
@@ -554,9 +558,16 @@ export async function POST(request: NextRequest) {
           const adminText = `New ${orderType} Order #${shortId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
           
           for (const adminPhone of adminPhones) {
-            sendWhatsAppOrderAlert(adminPhone, adminText)
-              .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
+            whatsappPromises.push(
+              sendWhatsAppOrderAlert(adminPhone, adminText)
+                .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
+            )
           }
+        }
+
+        // Wait for all WhatsApp notifications to finish before continuing
+        if (whatsappPromises.length > 0) {
+          await Promise.allSettled(whatsappPromises)
         }
       }
     } catch (sseErr) {

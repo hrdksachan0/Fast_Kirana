@@ -38,7 +38,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
         components.push({
           type: 'button',
           sub_type: 'url',
-          index: '0',
+          index: 0,
           parameters: [
             {
               type: 'text',

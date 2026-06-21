@@ -892,8 +892,17 @@ export default function CheckoutPage() {
         </button>
         <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-text-muted" />
         <button
-          onClick={() => (deliveryMethod === 'PICKUP' || selectedAddressId) && setStep(2)}
-          disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
+          onClick={() => {
+            if (showNewAddressForm) {
+              toast.error('Please save your new address first by clicking Save & Select')
+              return
+            }
+            if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
+              toast.error('Please select or add a delivery address')
+              return
+            }
+            setStep(2)
+          }}
           className={cn(
             "flex items-center gap-2 pb-1 transition-colors",
             step === 2 ? "text-primary border-b-2 border-primary" : ""
@@ -1258,12 +1267,20 @@ export default function CheckoutPage() {
               <div className="border-t border-border/40 pt-5 md:pt-6">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
-                  disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
+                  onClick={() => {
+                    if (showNewAddressForm) {
+                      toast.error('Please save your new address first by clicking Save & Select')
+                      return
+                    }
+                    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
+                      toast.error('Please select or add a delivery address')
+                      return
+                    }
+                    setStep(2)
+                  }}
                   className={cn(
                     "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                    "shimmer-btn",
-                    (deliveryMethod === 'PICKUP' || selectedAddressId) ? "glow-btn" : "opacity-60 cursor-not-allowed"
+                    "shimmer-btn glow-btn"
                   )}
                 >
                   <span>Proceed to Payment</span>
