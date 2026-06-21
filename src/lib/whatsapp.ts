@@ -9,7 +9,10 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
   }
 
   // Clean phone number to digits only (e.g. +919876543210 -> 919876543210)
-  const cleanPhone = phone.replace(/\D/g, '')
+  let cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.length === 10) {
+    cleanPhone = '91' + cleanPhone
+  }
 
   try {
     let body: any = {
