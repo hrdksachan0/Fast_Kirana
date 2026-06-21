@@ -156,8 +156,19 @@ export function Navbar() {
         .catch(err => console.error('Error loading store status/location in navbar:', err))
     }
 
-    // Initial fetch only (no periodic background polling to save database CPU limits)
+    // Initial fetch
     fetchStatus()
+
+    // Gentle periodic background polling (every 10 seconds) to ensure real-time status updates without refresh
+    const statusInterval = setInterval(fetchStatus, 10000)
+
+    // Re-fetch status immediately when user refocusses or returns to the window tab
+    window.addEventListener('focus', fetchStatus)
+
+    return () => {
+      clearInterval(statusInterval)
+      window.removeEventListener('focus', fetchStatus)
+    }
   }, [hydrateLocation, setStoreStatus, setSettings, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {
