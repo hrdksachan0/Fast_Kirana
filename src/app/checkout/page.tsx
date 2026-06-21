@@ -140,7 +140,7 @@ export default function CheckoutPage() {
   const [isSettingsLoading, setIsSettingsLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.grocery_mart_open !== undefined) {
@@ -536,7 +536,7 @@ export default function CheckoutPage() {
         }
       }
       // Fetch settings to check store status
-      const settingsRes = await fetch('/api/settings')
+      const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings = await settingsRes.json()
       
       const hasGrocery = items.some((item) => !isCafeProduct(item.product))
@@ -645,7 +645,7 @@ export default function CheckoutPage() {
     setIsPlacingOrder(true)
     try {
       // 1. Fetch settings to check store status
-      const settingsRes = await fetch('/api/settings')
+      const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings = await settingsRes.json()
       
       const hasGrocery = items.some((item) => !isCafeProduct(item.product))

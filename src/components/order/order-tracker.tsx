@@ -97,7 +97,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
 
   // Fetch store coordinates and support phone from settings on mount
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.store_lat) setStoreLat(parseFloat(data.store_lat))

@@ -36,7 +36,7 @@ export default function CartPage() {
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.tax_rate !== undefined) {

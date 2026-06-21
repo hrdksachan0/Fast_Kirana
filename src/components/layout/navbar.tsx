@@ -93,7 +93,7 @@ export function Navbar() {
     hydrateLocation()
 
     const fetchStatus = () => {
-      fetch('/api/settings')
+      fetch('/api/settings', { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
           const gOpen = data.grocery_mart_open !== 'false'
