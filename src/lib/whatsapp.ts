@@ -101,7 +101,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
 export async function sendWhatsAppOrderAlert(phone: string, textParam: string): Promise<boolean> {
   const token = process.env.WHATSAPP_TOKEN
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const templateName = 'fastkirana_otp'
+  const templateName = 'fastkirana_order'
 
   if (!token || !phoneId) {
     console.log(`[WhatsApp Mock Alert] Logged Order Alert to ${phone}: ${textParam}`)
@@ -121,7 +121,7 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
       type: 'template',
       template: {
         name: templateName,
-        language: { code: 'en' },
+        language: { code: process.env.WHATSAPP_TEMPLATE_LANG || 'en' },
         components: [
           {
             type: 'body',
