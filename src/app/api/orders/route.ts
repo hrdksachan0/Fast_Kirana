@@ -493,8 +493,30 @@ export async function POST(request: NextRequest) {
     try {
       const { sseEmitter } = require('@/lib/sse-emitter')
       const { sendPushNotificationToRoles } = require('@/lib/push-notification')
+      const { sendWhatsAppOrderAlert } = require('@/lib/whatsapp')
+
+      // Fetch admin users from DB
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { phone: true }
+      })
+
+      // Standard admin numbers to notify
+      const adminPhones = ['7054470303', '8112849854']
+
+      for (const a of admins) {
+        if (a.phone) {
+          const cleanP = a.phone.trim().replace(/\D/g, '')
+          if (cleanP && cleanP !== '9876543210' && cleanP !== '919876543210' && !adminPhones.includes(cleanP)) {
+            adminPhones.push(cleanP)
+          }
+        }
+      }
 
       for (const order of createdOrders) {
+        const shortId = order.id.slice(-6).toUpperCase()
+        const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
+
         sseEmitter.emit('order', {
           type: 'new-order',
           orderId: order.id,
@@ -507,10 +529,32 @@ export async function POST(request: NextRequest) {
         // Send push notifications to all workers for any new order
         sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
           title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
-          body: `Order #${order.id.slice(-6).toUpperCase()} of ₹${order.total} has been placed.`,
+          body: `Order #${shortId} of ₹${order.total} has been placed.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id }
         }).catch((err: any) => console.error('Error sending push notification to workers:', err))
+
+        // 1. WhatsApp Alert to Customer
+        const customerPhone = order.address?.phone
+        if (customerPhone) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+          const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+          const customerText = `Order #${shortId} of ₹${order.total} placed successfully. Track: ${cleanAppUrl}/order/${order.id}/track`
+          sendWhatsAppOrderAlert(customerPhone, customerText)
+            .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
+        }
+
+        // 2. WhatsApp Alert to Admins/Staff
+        if (adminPhones.length > 0) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+          const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+          const adminText = `New ${orderType} Order #${shortId} of ₹${order.total} received. Manage: ${cleanAppUrl}/admin`
+          
+          for (const adminPhone of adminPhones) {
+            sendWhatsAppOrderAlert(adminPhone, adminText)
+              .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
+          }
+        }
       }
     } catch (sseErr) {
       console.error('Failed to emit SSE/notifications for new orders:', sseErr)

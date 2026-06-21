@@ -97,3 +97,64 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
     return false
   }
 }
+
+export async function sendWhatsAppOrderAlert(phone: string, textParam: string): Promise<boolean> {
+  const token = process.env.WHATSAPP_TOKEN
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const templateName = 'fastkirana_otp'
+
+  if (!token || !phoneId) {
+    console.log(`[WhatsApp Mock Alert] Logged Order Alert to ${phone}: ${textParam}`)
+    return false
+  }
+
+  let cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.length === 10) {
+    cleanPhone = '91' + cleanPhone
+  }
+
+  try {
+    const body = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: cleanPhone,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: 'en' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              {
+                type: 'text',
+                text: textParam,
+              },
+            ],
+          },
+        ],
+      },
+    }
+
+    const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      console.error('Meta WhatsApp Order Alert error response:', data)
+      return false
+    }
+
+    console.log(`[WhatsApp Order Alert Success] Sent to ${phone} successfully.`)
+    return true
+  } catch (err) {
+    console.error('Meta WhatsApp Order Alert API connection error:', err)
+    return false
+  }
+}
