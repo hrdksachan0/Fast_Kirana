@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendPushNotification, sendPushNotificationToRoles } from '@/lib/push-notification'
 import { Role } from '@prisma/client'
+import { sseEmitter } from '@/lib/sse-emitter'
 
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
@@ -333,7 +334,6 @@ export async function PATCH(
 
     // Emit real-time SSE event for the updated order status
     try {
-      const { sseEmitter } = require('@/lib/sse-emitter')
       sseEmitter.emit('order', {
         type: 'status-change',
         orderId: id,

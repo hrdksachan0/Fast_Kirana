@@ -5,6 +5,9 @@ import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { sseEmitter } from '@/lib/sse-emitter'
+import { sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
@@ -492,10 +495,6 @@ export async function POST(request: NextRequest) {
 
     // Emit real-time SSE event for each newly created order and send push notifications to staff roles
     try {
-      const { sseEmitter } = require('@/lib/sse-emitter')
-      const { sendPushNotificationToRoles } = require('@/lib/push-notification')
-      const { sendWhatsAppOrderAlert } = require('@/lib/whatsapp')
-
       // Fetch admin users from DB
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN' },
