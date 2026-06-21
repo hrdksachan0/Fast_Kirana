@@ -135,11 +135,20 @@ export default function CheckoutPage() {
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
   const [contactPhone, setContactPhone] = useState('+91 70544 70303')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const [groceryMartOpen, setGroceryMartOpen] = useState(true)
+  const [cafeOpen, setCafeOpen] = useState(true)
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
+        if (data.grocery_mart_open !== undefined) {
+          setGroceryMartOpen(data.grocery_mart_open === 'true')
+        }
+        if (data.cafe_open !== undefined) {
+          setCafeOpen(data.cafe_open === 'true')
+        }
         if (data.delivery_radius) {
           setDeliveryRadius(parseFloat(data.delivery_radius))
         }
@@ -167,8 +176,12 @@ export default function CheckoutPage() {
         if (data.contact_address) {
           setContactAddress(data.contact_address)
         }
+        setIsSettingsLoading(false)
       })
-      .catch(err => console.error('Error fetching settings on checkout mount:', err))
+      .catch(err => {
+        console.error('Error fetching settings on checkout mount:', err)
+        setIsSettingsLoading(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -768,6 +781,44 @@ export default function CheckoutPage() {
         <Link href="/" className="inline-block bg-primary text-white px-6 py-3 rounded-xl font-bold">
           Explore Products
         </Link>
+      </div>
+    )
+  }
+
+  const hasGrocery = items.some((item) => !isCafeProduct(item.product))
+  const hasCafe = items.some((item) => isCafeProduct(item.product))
+  const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen)
+
+  if (isStoreClosed && !isSettingsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 max-w-md text-center space-y-6 animate-fade-in">
+        <div className="h-20 w-20 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner animate-pulse-gentle border border-amber-200/60 dark:border-amber-900/40">
+          🏪
+        </div>
+        <h1 className="text-2xl font-black text-text-primary">Store Closed Temporarily</h1>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          {hasGrocery && !groceryMartOpen && hasCafe && !cafeOpen ? (
+            "Both our Grocery Mart and Cafe are temporarily closed and not accepting orders right now. Please check back later!"
+          ) : hasGrocery && !groceryMartOpen ? (
+            "Our Grocery Mart is temporarily closed. You can proceed with Cafe items by removing grocery items from your cart."
+          ) : (
+            "Our Cafe is temporarily closed. You can proceed with Grocery items by removing cafe items from your cart."
+          )}
+        </p>
+        <div className="pt-4 flex flex-col gap-3">
+          <Link
+            href="/cart"
+            className="px-6 py-3 bg-primary text-white font-black text-xs rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-98 text-center"
+          >
+            Go Back to Cart
+          </Link>
+          <Link
+            href="/"
+            className="px-6 py-3 border-2 border-border text-text-secondary font-black text-xs rounded-full hover:bg-muted/30 transition-all active:scale-98 text-center"
+          >
+            Continue Browsing
+          </Link>
+        </div>
       </div>
     )
   }

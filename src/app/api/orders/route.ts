@@ -76,6 +76,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch store settings for dynamic tax, miscellaneous fee, and store status
+    const storeSettings = await prisma.storeSetting.findMany()
+    const settingsMap = storeSettings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
+    const groceryMartOpen = settingsMap['grocery_mart_open'] !== 'false'
+    const cafeOpen = settingsMap['cafe_open'] !== 'false'
+
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
     const productSlugs = items.map((i: any) => i.product.slug).filter(Boolean)
@@ -145,6 +155,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (groceryItems.length > 0 && !groceryMartOpen) {
+      return NextResponse.json({ error: 'Grocery Mart is temporarily closed.' }, { status: 400 })
+    }
+    if (cafeItems.length > 0 && !cafeOpen) {
+      return NextResponse.json({ error: 'FastKirana Cafe is temporarily closed.' }, { status: 400 })
+    }
+
     const combinedSubtotal = items.reduce((sum: number, item: any) => {
       const isVariant = item.product.id.includes('_')
       const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
@@ -200,12 +217,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch store settings for dynamic tax and miscellaneous fee
-    const storeSettings = await prisma.storeSetting.findMany()
-    const settingsMap = storeSettings.reduce((acc, s) => {
-      acc[s.key] = s.value
-      return acc
-    }, {} as Record<string, string>)
+    // Reuse settingsMap from the beginning of POST handler for tax and miscellaneous fee calculations
 
     const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
     const serverTaxRate = taxPercent / 100
