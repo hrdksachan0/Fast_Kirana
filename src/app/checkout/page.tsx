@@ -455,6 +455,17 @@ export default function CheckoutPage() {
       return
     }
 
+    const trimmedPhone = phone.trim()
+    let cleanPhone = trimmedPhone.replace(/\D/g, '')
+    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.slice(-10)
+    }
+
+    if (cleanPhone.length !== 10) {
+      toast.error('Mobile number must be a valid 10-digit number')
+      return
+    }
+
     const inferredCity = 'Ghatampur'
 
     const payload = {
@@ -464,7 +475,7 @@ export default function CheckoutPage() {
       area: '.',
       city: inferredCity,
       pincode: cleanPincode,
-      phone: phone.trim(),
+      phone: cleanPhone,
       isDefault: !!isDefault,
     }
 
@@ -529,6 +540,15 @@ export default function CheckoutPage() {
           if (!c.includes('ghatampur') && !c.includes('kanpur')) {
             triggerHaptic('warning')
             toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+          const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
+          const cleanPhone = phoneVal.length > 10 && phoneVal.startsWith('91') ? phoneVal.slice(-10) : phoneVal
+          if (cleanPhone.length !== 10) {
+            triggerHaptic('warning')
+            toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
             setIsPlacingOrder(false)
             setStep(1)
             return
@@ -663,6 +683,38 @@ export default function CheckoutPage() {
         toast.error('FastKirana Cafe is temporarily closed. Cannot complete checkout.')
         setIsPlacingOrder(false)
         return
+      }
+
+      if (deliveryMethod === 'DELIVERY') {
+        const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+        const selectedAddr = addresses.find((a) => a.id === targetId)
+        if (selectedAddr) {
+          const p = selectedAddr.pincode.trim()
+          const c = selectedAddr.city.trim().toLowerCase()
+          if (p !== '209206') {
+            triggerHaptic('warning')
+            toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+          if (!c.includes('ghatampur') && !c.includes('kanpur')) {
+            triggerHaptic('warning')
+            toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+          const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
+          const cleanPhone = phoneVal.length > 10 && phoneVal.startsWith('91') ? phoneVal.slice(-10) : phoneVal
+          if (cleanPhone.length !== 10) {
+            triggerHaptic('warning')
+            toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
+            setIsPlacingOrder(false)
+            setStep(1)
+            return
+          }
+        }
       }
 
       const finalAddressId = deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : (selectedAddressId || (addresses.length > 0 ? addresses[0].id : ''))
@@ -1030,7 +1082,7 @@ export default function CheckoutPage() {
                                 required
                                 placeholder="Enter 10-digit mobile number"
                                 value={addressForm.phone}
-                                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })}
                                 className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
                               />
                             </div>

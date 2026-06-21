@@ -36,6 +36,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    let cleanPhone = phone.toString().trim().replace(/\D/g, '')
+    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.slice(-10)
+    }
+
+    if (cleanPhone.length !== 10) {
+      return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
+    }
+
     const cleanPincode = pincode.toString().trim()
     const cleanCity = city.toString().trim().toLowerCase()
 
@@ -64,7 +73,7 @@ export async function POST(request: Request) {
         area,
         city,
         pincode,
-        phone,
+        phone: cleanPhone,
         isDefault: !!isDefault,
         lat: lat ? parseFloat(lat.toString()) : null,
         lng: lng ? parseFloat(lng.toString()) : null,
