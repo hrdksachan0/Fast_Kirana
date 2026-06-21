@@ -36,7 +36,9 @@ export default async function AdminPage() {
 
   try {
     const results = await Promise.all([
-      prisma.order.count(),
+      prisma.order.count({
+        where: { status: 'DELIVERED' },
+      }),
       prisma.user.count(),
       prisma.product.count({
         where: {
