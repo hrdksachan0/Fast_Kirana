@@ -25,9 +25,10 @@ interface ThemeConfig {
 }
 
 export function HeroArea({ initialBanners }: HeroAreaProps) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
   const [currentHour, setCurrentHour] = useState<number>(8) // Default to 8 AM (Morning) for SSR fallback
+  const isReady = mounted && status !== 'loading'
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -177,7 +178,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
 
       {/* Greeting Header */}
       <div className="flex flex-col gap-1.5 text-left relative z-10 min-h-[64px] justify-center">
-        {mounted ? (
+        {isReady ? (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}

@@ -122,7 +122,7 @@ export default function CheckoutPage() {
   const prefilledPhoneRef = useRef(false)
   const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal, updateQuantity, updateCartProduct } = useCart()
 
-  // Steps: 1 = Address, 2 = Review, 3 = Payment
+  // Steps: 1 = Fulfillment & Review, 2 = Payment
   const [step, setStep] = useState(1)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
@@ -835,8 +835,8 @@ export default function CheckoutPage() {
           )}
         >
           <span className="flex h-4.5 w-4.5 min-[375px]:h-5 min-[375px]:w-5 items-center justify-center rounded-full bg-primary/10 text-[9px] min-[375px]:text-xs">1</span>
-          <span className="hidden min-[375px]:inline">Fulfillment</span>
-          <span className="min-[375px]:hidden">Address</span>
+          <span className="hidden min-[375px]:inline">Fulfillment & Review</span>
+          <span className="min-[375px]:hidden">Fulfillment</span>
         </button>
         <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-text-muted" />
         <button
@@ -844,23 +844,10 @@ export default function CheckoutPage() {
           disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
           className={cn(
             "flex items-center gap-2 pb-1 transition-colors",
-            step >= 2 ? "text-primary border-b-2 border-primary" : ""
+            step === 2 ? "text-primary border-b-2 border-primary" : ""
           )}
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">2</span>
-          <span className="hidden min-[375px]:inline">Review & Schedule</span>
-          <span className="min-[375px]:hidden">Review</span>
-        </button>
-        <ChevronRight className="h-4 w-4 text-text-muted" />
-        <button
-          onClick={() => (deliveryMethod === 'PICKUP' || selectedAddressId) && setStep(3)}
-          disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
-          className={cn(
-            "flex items-center gap-2 pb-1 transition-colors",
-            step === 3 ? "text-primary border-b-2 border-primary" : ""
-          )}
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">3</span>
           <span className="hidden min-[375px]:inline">Payment</span>
           <span className="min-[375px]:hidden">Pay</span>
         </button>
@@ -886,292 +873,253 @@ export default function CheckoutPage() {
         {/* Left: Step Panels */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* STEP 1: Address Selection / Fulfillment Option */}
+          {/* STEP 1: Fulfillment, Address & Review */}
           {step === 1 && (
-            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
-              <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Choose Fulfillment Method
-              </h2>
+            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
+              <div className="space-y-4">
+                <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Choose Fulfillment Method
+                </h2>
 
-              {/* Fulfillment Option */}
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div
-                  onClick={() => setDeliveryMethod('DELIVERY')}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 min-[375px]:p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
-                    deliveryMethod === 'DELIVERY' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
-                  )}
-                >
-                  <span className="text-2xl">🚚</span>
-                  <span className="text-sm font-bold">Home Delivery</span>
-                  <span className="text-[10px] text-text-muted">Delivered to your doorstep</span>
-                </div>
-                <div
-                  onClick={() => setDeliveryMethod('PICKUP')}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
-                    deliveryMethod === 'PICKUP' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
-                  )}
-                >
-                  <span className="text-2xl">🏪</span>
-                  <span className="text-sm font-bold">Self-Pickup</span>
-                  <span className="text-[10px] text-text-muted">Waived delivery fee (Save ₹25)</span>
-                </div>
-              </div>
-
-              {deliveryMethod === 'PICKUP' ? (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">🏪</span>
-                    <div>
-                      <h4 className="text-sm font-bold text-text-primary">FastKirana Ghatampur Hub</h4>
-                      <p className="text-xs text-text-secondary leading-relaxed mt-1">
-                        {contactAddress}
-                      </p>
-                      <p className="text-xs text-text-secondary mt-1">
-                        Pin: 209206 | Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
-                      </p>
-                      <div className="mt-3 text-[10px] text-accent font-bold bg-accent/10 px-2 py-1 rounded inline-block">
-                        ✓ Self-Pickup Selected: No delivery charge
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                isAddressesLoading ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {addresses.map((addr) => (
-                      <div
-                        key={addr.id}
-                        onClick={() => setSelectedAddressId(addr.id)}
-                        className={cn(
-                          "flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 bg-muted/20",
-                          selectedAddressId === addr.id
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border hover:border-primary/40"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          checked={selectedAddressId === addr.id}
-                          onChange={() => setSelectedAddressId(addr.id)}
-                          className="mt-1"
-                        />
-                        <div className="flex-grow text-xs">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-text-primary uppercase bg-muted/60 px-2 py-0.5 rounded">
-                              {addr.label}
-                            </span>
-                            {addr.isDefault && (
-                              <span className="text-[10px] text-accent font-semibold bg-accent/10 px-1.5 py-0.5 rounded">
-                                Default
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-text-secondary leading-relaxed mt-1 font-semibold">
-                            {formatAddress(addr)}
-                          </p>
-                          {addr.phone && (
-                            <p className="text-[10px] text-text-secondary mt-1 font-extrabold flex items-center gap-1">
-                              <span>📞</span> Phone: {formatPhone(addr.phone)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Add New Address Button */}
-                    {!showNewAddressForm && (
-                      <Button
-                        onClick={() => setShowNewAddressForm(true)}
-                        variant="outline"
-                        className="w-full border-dashed border-2 hover:bg-muted/50 rounded-xl"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Address
-                      </Button>
-                    )}
-
-                    {/* New Address Collapsible Form */}
-                    {showNewAddressForm && (
-                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border p-4 sm:p-5 rounded-2xl space-y-4 bg-muted/5 animate-slide-up shadow-sm">
-                        <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
-                          <h3 className="font-bold text-sm text-text-primary">New Delivery Address</h3>
-                          <Button
-                            type="button"
-                            onClick={handleDetectLocationForCheckout}
-                            disabled={isDetectingLocation}
-                            variant="ghost"
-                            className="text-xs text-primary font-bold hover:bg-primary/5 flex items-center gap-1.5 h-8 border border-primary/20 rounded-lg shrink-0 px-2.5"
-                          >
-                            {isDetectingLocation ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                <MapPin className="h-3.5 w-3.5 text-primary" />
-                                Detect Location
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <div className="text-[10px] text-text-secondary leading-relaxed bg-primary/5 p-2.5 rounded-lg border border-primary/10 flex items-start gap-1.5">
-                          <span>ℹ️</span>
-                          <span>
-                            <strong>Ordering for someone else?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>).
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="phone" className="text-xs font-bold text-text-primary">
-                              Phone Number <span className="text-red-500 font-bold">*</span>
-                            </Label>
-                            <Input
-                              id="phone"
-                              type="tel"
-                              required
-                              placeholder="Enter contact phone number"
-                              value={addressForm.phone}
-                              onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                              className="mt-1 text-xs font-semibold rounded-lg"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs font-bold text-text-primary">Address Label</Label>
-                            <div className="flex gap-2 mt-1">
-                              {['Home', 'Work'].map((lbl) => (
-                                <button
-                                  key={lbl}
-                                  type="button"
-                                  onClick={() => setAddressForm({ ...addressForm, label: lbl })}
-                                  className={cn(
-                                    "px-4 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 select-none",
-                                    addressForm.label === lbl
-                                      ? "bg-primary text-white border-primary shadow-sm"
-                                      : "bg-background border-border text-text-secondary hover:border-primary/40"
-                                  )}
-                                >
-                                  {lbl === 'Home' ? '🏠' : '🏢'} {lbl}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="pincode" className="text-xs font-bold text-text-primary">
-                            Pincode (6 digits) <span className="text-red-500 font-bold">*</span>
-                          </Label>
-                          <Input
-                            id="pincode"
-                            required
-                            maxLength={6}
-                            placeholder="e.g. 209206"
-                            value={addressForm.pincode}
-                            onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                            className="mt-1 text-xs font-semibold rounded-lg"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="street" className="text-xs font-bold text-text-primary">
-                            Complete Delivery Address <span className="text-red-500 font-bold">*</span>
-                          </Label>
-                          <textarea
-                            id="street"
-                            required
-                            rows={3}
-                            placeholder="Enter landmark, house number, building, road, and locality details..."
-                            value={addressForm.street}
-                            onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
-                            className="mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          />
-                        </div>
-
-                        <div className="flex gap-2 justify-end pt-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setShowNewAddressForm(false)}
-                            disabled={isSavingAddress}
-                            className="rounded-lg text-xs"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="submit"
-                            className="bg-primary text-white rounded-lg text-xs font-bold px-4"
-                            disabled={isSavingAddress}
-                          >
-                            {isSavingAddress ? 'Saving...' : 'Save & Select'}
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                )
-              )}
-
-              {/* Action Button */}
-              {deliveryMethod === 'PICKUP' ? (
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className={cn(
-                    "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                    "shimmer-btn glow-btn"
-                  )}
-                >
-                  <span>Confirm Pickup Details</span>
-                  <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
-                </button>
-              ) : (
-                selectedAddressId && (
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
+                {/* Fulfillment Option */}
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                  <div
+                    onClick={() => setDeliveryMethod('DELIVERY')}
                     className={cn(
-                      "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                      "shimmer-btn glow-btn"
+                      "flex flex-col items-center justify-center p-3 min-[375px]:p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
+                      deliveryMethod === 'DELIVERY' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
                     )}
                   >
-                    <span>Deliver to this Address</span>
-                    <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
-                  </button>
-                )
-              )}
-            </div>
-          )}
-
-          {/* STEP 2: Order Review & Scheduling */}
-          {step === 2 && (
-            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
-              <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-primary" />
-                Review Your Cart Items
-              </h2>
-
-              <div className="divide-y divide-border/40">
-                {items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0 text-xs font-semibold">
-                    <div className="max-w-[70%]">
-                      <h4 className="text-text-primary font-bold">{item.product.name}</h4>
-                      <p className="text-[10px] text-text-secondary mt-0.5">{item.product.unit} × {item.quantity}</p>
-                    </div>
-                    <span className="text-text-primary font-bold">₹{item.product.price * item.quantity}</span>
+                    <span className="text-2xl">🚚</span>
+                    <span className="text-sm font-bold">Home Delivery</span>
+                    <span className="text-[10px] text-text-muted">Delivered to your doorstep</span>
                   </div>
-                ))}
+                  <div
+                    onClick={() => setDeliveryMethod('PICKUP')}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
+                      deliveryMethod === 'PICKUP' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
+                    )}
+                  >
+                    <span className="text-2xl">🏪</span>
+                    <span className="text-sm font-bold">Self-Pickup</span>
+                    <span className="text-[10px] text-text-muted">Waived delivery fee (Save ₹25)</span>
+                  </div>
+                </div>
+
+                {deliveryMethod === 'PICKUP' ? (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🏪</span>
+                      <div>
+                        <h4 className="text-sm font-bold text-text-primary">FastKirana Ghatampur Hub</h4>
+                        <p className="text-xs text-text-secondary leading-relaxed mt-1">
+                          {contactAddress}
+                        </p>
+                        <p className="text-xs text-text-secondary mt-1">
+                          Pin: 209206 | Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
+                        </p>
+                        <div className="mt-3 text-[10px] text-accent font-bold bg-accent/10 px-2 py-1 rounded inline-block">
+                          ✓ Self-Pickup Selected: No delivery charge
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  isAddressesLoading ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {addresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          onClick={() => setSelectedAddressId(addr.id)}
+                          className={cn(
+                            "flex items-start gap-3.5 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden bg-white dark:bg-zinc-900/50",
+                            selectedAddressId === addr.id
+                              ? "border-primary bg-primary/[0.01] shadow-[0_4px_20px_rgba(251,37,118,0.06)]"
+                              : "border-border/60 hover:border-primary/30"
+                          )}
+                        >
+                          {/* Premium Radio Selector */}
+                          <div className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
+                            selectedAddressId === addr.id ? "border-primary bg-primary" : "border-border"
+                          )}>
+                            {selectedAddressId === addr.id && (
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-grow text-xs">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="font-bold text-[10px] text-text-primary uppercase bg-muted px-2 py-0.5 rounded-md tracking-wider">
+                                {addr.label}
+                              </span>
+                              {addr.isDefault && (
+                                <span className="text-[9px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-md">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-text-secondary leading-relaxed font-semibold">
+                              {formatAddress(addr)}
+                            </p>
+                            {addr.phone && (
+                              <p className="text-[10px] text-text-secondary mt-1.5 font-bold flex items-center gap-1">
+                                <span className="opacity-80">📞</span> Phone: <span className="text-text-primary">{formatPhone(addr.phone)}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add New Address Button */}
+                      {!showNewAddressForm && (
+                        <Button
+                          onClick={() => setShowNewAddressForm(true)}
+                          variant="outline"
+                          className="w-full border-dashed border-2 hover:border-primary/50 hover:bg-primary/[0.02] rounded-2xl h-12 transition-all font-bold text-xs"
+                        >
+                          <Plus className="h-4 w-4 mr-1.5 text-primary" />
+                          Add New Address
+                        </Button>
+                      )}
+
+                      {/* New Address Collapsible Form */}
+                      {showNewAddressForm && (
+                        <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border/80 p-5 sm:p-6 rounded-2xl space-y-5 bg-card/60 backdrop-blur-sm animate-slide-up shadow-sm">
+                          <div className="flex justify-between items-center border-b border-border/40 pb-3">
+                            <h3 className="font-black text-sm text-text-primary">New Delivery Address</h3>
+                            <Button
+                              type="button"
+                              onClick={handleDetectLocationForCheckout}
+                              disabled={isDetectingLocation}
+                              variant="outline"
+                              className="text-xs text-primary border-primary/20 hover:border-primary/40 hover:bg-primary/5 font-bold flex items-center gap-1.5 h-8.5 rounded-xl shrink-0 px-3"
+                            >
+                              {isDetectingLocation ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                                  Detect Location
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          
+                          <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200/50 dark:border-blue-900/30 flex items-start gap-2.5 leading-relaxed font-medium">
+                            <span className="text-base shrink-0 mt-0.5">ℹ️</span>
+                            <span>
+                              <strong>Ordering for someone else?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>).
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                              <Label htmlFor="phone" className="text-xs font-bold text-text-primary flex items-center gap-1">
+                                Phone Number <span className="text-red-500 font-bold">*</span>
+                              </Label>
+                              <Input
+                                id="phone"
+                                type="tel"
+                                required
+                                placeholder="Enter 10-digit mobile number"
+                                value={addressForm.phone}
+                                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                                className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs font-bold text-text-primary">Address Label</Label>
+                              <div className="flex gap-2.5 mt-1.5">
+                                {['Home', 'Work'].map((lbl) => (
+                                  <button
+                                    key={lbl}
+                                    type="button"
+                                    onClick={() => setAddressForm({ ...addressForm, label: lbl })}
+                                    className={cn(
+                                      "px-4 py-2 h-11 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 select-none w-full justify-center active:scale-95",
+                                      addressForm.label === lbl
+                                        ? "bg-primary text-white border-primary shadow-md"
+                                        : "bg-background border-border text-text-secondary hover:border-primary/40 hover:bg-muted/10"
+                                    )}
+                                  >
+                                    <span>{lbl === 'Home' ? '🏠' : '🏢'}</span>
+                                    <span>{lbl}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="pincode" className="text-xs font-bold text-text-primary flex items-center gap-1">
+                              Pincode (6 digits) <span className="text-red-500 font-bold">*</span>
+                            </Label>
+                            <Input
+                              id="pincode"
+                              required
+                              maxLength={6}
+                              placeholder="e.g. 209206"
+                              value={addressForm.pincode}
+                              onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                              className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="street" className="text-xs font-bold text-text-primary flex items-center gap-1">
+                              Complete Delivery Address <span className="text-red-500 font-bold">*</span>
+                            </Label>
+                            <textarea
+                              id="street"
+                              required
+                              rows={3}
+                              placeholder="Enter landmark, house number, building, road, and locality details..."
+                              value={addressForm.street}
+                              onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                              className="mt-1.5 block w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-semibold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-0 placeholder:text-text-muted/60"
+                            />
+                          </div>
+
+                          <div className="flex gap-3 justify-end pt-3">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => setShowNewAddressForm(false)}
+                              disabled={isSavingAddress}
+                              className="rounded-xl text-xs font-bold hover:bg-muted h-10 px-4"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="bg-primary text-white rounded-xl text-xs font-black px-5 h-10 hover:bg-primary/95 shadow-md active:scale-98 transition-all"
+                              disabled={isSavingAddress}
+                            >
+                              {isSavingAddress ? (
+                                <span className="flex items-center gap-1.5">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  Saving...
+                                </span>
+                              ) : 'Save & Select'}
+                            </Button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )
+                )}
               </div>
 
-
               {/* Delivery Scheduling */}
-              <div className="border-t border-border/40 pt-5 space-y-3">
-                <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
+                <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
                   <span>📅</span> {deliveryMethod === 'PICKUP' ? 'Choose Pickup Schedule' : 'Choose Delivery Schedule'}
                 </h3>
                 
@@ -1234,20 +1182,36 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <div className="flex gap-4 border-t border-border/40 pt-5 items-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                  className="w-1/3 rounded-full h-14 font-black border-border/80 hover:bg-muted text-xs tracking-widest uppercase transition-all duration-200"
-                >
-                  Back
-                </Button>
+              {/* Cart Items Review */}
+              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
+                <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                  Review Your Cart Items
+                </h3>
+
+                <div className="divide-y divide-border/40 max-h-60 overflow-y-auto pr-1">
+                  {items.map((item) => (
+                    <div key={item.product.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0 text-xs font-semibold">
+                      <div className="max-w-[70%]">
+                        <h4 className="text-text-primary font-bold">{item.product.name}</h4>
+                        <p className="text-[10px] text-text-secondary mt-0.5">{item.product.unit} × {item.quantity}</p>
+                      </div>
+                      <span className="text-text-primary font-bold">₹{item.product.price * item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Button: Proceed to Payment */}
+              <div className="border-t border-border/40 pt-5 md:pt-6">
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(2)}
+                  disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
                   className={cn(
-                    "w-2/3 h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                    "shimmer-btn glow-btn"
+                    "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
+                    "shimmer-btn",
+                    (deliveryMethod === 'PICKUP' || selectedAddressId) ? "glow-btn" : "opacity-60 cursor-not-allowed"
                   )}
                 >
                   <span>Proceed to Payment</span>
@@ -1257,8 +1221,8 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* STEP 3: Payment Selection */}
-          {step === 3 && (
+          {/* STEP 2: Payment Selection */}
+          {step === 2 && (
             <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
               <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -1347,7 +1311,7 @@ export default function CheckoutPage() {
                           <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
                         </div>
                         <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                          Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner\'s Club cards
+                          Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner's Club cards
                         </p>
                       </div>
                     </div>
@@ -1389,7 +1353,7 @@ export default function CheckoutPage() {
               <div className="flex gap-4 items-center">
                 <Button
                   variant="outline"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   className="w-1/3 rounded-full h-14 font-black border-border/80 hover:bg-muted text-xs tracking-widest uppercase transition-all duration-200"
                   disabled={isPlacingOrder}
                 >
