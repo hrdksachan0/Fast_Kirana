@@ -445,6 +445,9 @@ export default async function Home() {
       {/* Shop Categories Circular List */}
       <CategoryGrid categories={categories} />
 
+      {/* Cafe Banner with sliding menu categories */}
+      <CafeSection />
+
       {/* Hero Area (Dynamic Greeting & Banners) */}
       <HeroArea initialBanners={promoBanners} />
 
@@ -455,9 +458,6 @@ export default async function Home() {
         freshStock={settingsMap.fresh_stock_loaded}
         happyFamilies={settingsMap.happy_families}
       />
-
-      {/* Cafe Banner with sliding menu categories */}
-      <CafeSection />
 
       {/* Your Last Order - Track active or reorder */}
       <LastOrderBanner />
