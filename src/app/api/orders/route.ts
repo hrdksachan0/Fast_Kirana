@@ -376,6 +376,7 @@ export async function POST(request: NextRequest) {
           include: {
             items: true,
             address: true,
+            user: true,
           },
         })
 
@@ -548,7 +549,9 @@ export async function POST(request: NextRequest) {
         if (adminPhones.length > 0) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
           const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-          const adminText = `New ${orderType} Order #${shortId} of ₹${order.total} received. Manage: ${cleanAppUrl}/admin`
+          const customerName = order.user?.name || 'Customer'
+          const customerPhone = order.address?.phone || 'N/A'
+          const adminText = `New ${orderType} Order #${shortId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
           
           for (const adminPhone of adminPhones) {
             sendWhatsAppOrderAlert(adminPhone, adminText)
