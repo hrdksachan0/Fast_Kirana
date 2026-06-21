@@ -90,7 +90,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
       return false
     }
 
-    console.log(`[WhatsApp Success] Message sent to ${phone} successfully.`)
+    console.log(`[WhatsApp Success] Message sent to ${phone} successfully. Response:`, JSON.stringify(data, null, 2))
     return true
   } catch (err) {
     console.error('Meta WhatsApp API connection error:', err)
@@ -101,7 +101,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
 export async function sendWhatsAppOrderAlert(phone: string, textParam: string): Promise<boolean> {
   const token = process.env.WHATSAPP_TOKEN
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const templateName = 'fastkirana_order'
+  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'fastkirana_otp'
 
   if (!token || !phoneId) {
     console.log(`[WhatsApp Mock Alert] Logged Order Alert to ${phone}: ${textParam}`)
@@ -151,7 +151,7 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
       return false
     }
 
-    console.log(`[WhatsApp Order Alert Success] Sent to ${phone} successfully.`)
+    console.log(`[WhatsApp Order Alert Success] Sent to ${phone} successfully. Response:`, JSON.stringify(data, null, 2))
     return true
   } catch (err) {
     console.error('Meta WhatsApp Order Alert API connection error:', err)
