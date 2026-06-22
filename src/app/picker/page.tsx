@@ -78,6 +78,7 @@ interface Order {
     area: string
     city: string
     pincode: string
+    phone?: string
   }
   items: OrderItem[]
   companionOrder?: CompanionOrder | null
@@ -1286,9 +1287,19 @@ export default function PickerDashboard() {
                 #{activeOrder.id.slice(0, 8)}
               </span>
             </div>
-            <div className="relative mt-3 flex items-center gap-3">
-              <User className="h-4 w-4 text-white/70" />
-              <span className="text-sm font-bold">{activeOrder.user.name}</span>
+            <div className="relative mt-3 flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-white/70" />
+                <span className="text-sm font-bold">{activeOrder.user.name}</span>
+              </div>
+              {(activeOrder.user.phone || activeOrder.address?.phone) && (
+                <div className="flex items-center gap-3 text-xs text-white/80 pl-7">
+                  <Smartphone className="h-3.5 w-3.5" />
+                  <a href={`tel:${activeOrder.address?.phone || activeOrder.user.phone}`} className="hover:underline font-mono">
+                    {activeOrder.address?.phone || activeOrder.user.phone}
+                  </a>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -1718,6 +1729,14 @@ export default function PickerDashboard() {
                                 <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                                 <h3 className="text-sm font-extrabold text-gray-800 truncate">{order.user.name}</h3>
                               </div>
+                              {(order.user.phone || order.address?.phone) && (
+                                <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500">
+                                  <Smartphone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                  <a href={`tel:${order.address?.phone || order.user.phone}`} className="hover:underline font-mono font-bold">
+                                    {order.address?.phone || order.user.phone}
+                                  </a>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[9px] font-mono font-bold text-gray-400">#{order.id.slice(0, 8)}</span>
                                 {order.companionOrder && (

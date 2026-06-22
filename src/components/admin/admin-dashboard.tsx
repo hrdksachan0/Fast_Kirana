@@ -1999,7 +1999,9 @@ export function AdminDashboard({
                 orderSearchQuery.trim() === '' || 
                 o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
                 (o.userName && o.userName.toLowerCase().includes(orderSearchQuery.toLowerCase())) || 
-                (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase()))
+                (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase())) ||
+                (o.userPhone && o.userPhone.includes(orderSearchQuery)) ||
+                (o.address?.phone && o.address.phone.includes(orderSearchQuery))
               return matchesFilter && matchesSearch
             })
             const activeOrdersCount = (orderCounts['PENDING'] ?? 0) + (orderCounts['CONFIRMED'] ?? 0)
@@ -2097,6 +2099,11 @@ export function AdminDashboard({
                       <td className="py-3 px-4">
                         <div className="font-bold">{o.userName || 'No Name'}</div>
                         <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
+                        {(o.userPhone || o.address?.phone) && (
+                          <div className="text-[10px] text-text-secondary font-bold font-mono mt-0.5">
+                            📞 {o.userPhone || o.address?.phone}
+                          </div>
+                        )}
                         {o.isB2B && o.shopName && (
                           <div className="text-[10px] text-primary font-bold mt-1 bg-primary/5 px-2 py-1 rounded border border-primary/10">
                             🏢 Shop: {o.shopName} ({o.shopPhone})

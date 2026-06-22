@@ -54,6 +54,7 @@ export async function GET(request: Request) {
             select: {
               name: true,
               email: true,
+              phone: true,
             },
           },
           address: true,
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
       updatedAt: o.updatedAt.toISOString(),
       userName: o.user.name,
       userEmail: o.user.email,
+      userPhone: o.user.phone,
       isB2B: o.isB2B,
       deliveryMethod: o.deliveryMethod,
       shopName: o.shopName,
@@ -88,6 +90,7 @@ export async function GET(request: Request) {
         street: o.address.street,
         area: o.address.area,
         city: o.address.city,
+        phone: o.address.phone,
       } : null,
     }))
 
