@@ -16,25 +16,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId }
-    });
+    // Fetch order from database using raw SQL to avoid the enum deserialization bug
+    const orders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o."userId", o.status::text as status
+      FROM orders o WHERE o.id = ${orderId} LIMIT 1
+    `
 
-    if (!order) {
+    if (orders.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
+
+    const order = orders[0];
 
     if (order.userId !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Update order status to PAID
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: 'PAID'
-      }
-    });
+    // Update order status to PAID using raw SQL
+    await prisma.$executeRaw`
+      UPDATE orders 
+      SET "paymentStatus" = 'PAID'::"PaymentStatus",
+          "updatedAt" = NOW()
+      WHERE id = ${orderId}
+    `
+
+    const updatedOrders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt"
+      FROM orders o WHERE o.id = ${orderId} LIMIT 1
+    `
+    const updatedOrder = updatedOrders[0];
 
     // Emit live SSE event to pickers, chefs, and riders
     try {

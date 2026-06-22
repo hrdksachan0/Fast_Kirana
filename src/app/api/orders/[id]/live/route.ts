@@ -14,14 +14,16 @@ export async function GET(
 
   const { id } = await params
 
-  // Verify order exists
-  const order = await prisma.order.findUnique({
-    where: { id },
-  })
+  // Verify order exists using raw SQL to avoid the enum deserialization bug
+  const orders: any[] = await prisma.$queryRaw`
+    SELECT id, "userId", status::text as status, "deliveryLat", "deliveryLng" FROM orders WHERE id = ${id} LIMIT 1
+  `
 
-  if (!order) {
+  if (orders.length === 0) {
     return new Response('Order not found', { status: 404 })
   }
+
+  const order = orders[0]
 
   // Verify access authorization
   if (
@@ -54,12 +56,12 @@ export async function GET(
       // Interval to poll DB and push changes
       const interval = setInterval(async () => {
         try {
-          const freshOrder = await prisma.order.findUnique({
-            where: { id },
-            select: { status: true, deliveryLat: true, deliveryLng: true },
-          })
+          const freshOrders: any[] = await prisma.$queryRaw`
+            SELECT status::text as status, "deliveryLat", "deliveryLng" FROM orders WHERE id = ${id} LIMIT 1
+          `
 
-          if (freshOrder) {
+          if (freshOrders.length > 0) {
+            const freshOrder = freshOrders[0]
             const hasStatusChanged = freshOrder.status !== lastStatus
             const hasCoordinatesChanged =
               freshOrder.deliveryLat !== lastLat || freshOrder.deliveryLng !== lastLng

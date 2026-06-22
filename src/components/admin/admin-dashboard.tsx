@@ -984,6 +984,7 @@ export function AdminDashboard({
       name: v.name,
       price: String(v.price),
       mrp: String(v.mrp),
+      costPrice: String(v.costPrice ?? 0),
       stock: String(v.stock),
     })) : [])
 
@@ -1182,6 +1183,7 @@ export function AdminDashboard({
       name: v.name,
       price: String(v.price),
       mrp: String(v.mrp),
+      costPrice: String(v.costPrice ?? 0),
       stock: String(v.stock),
     })) : [])
 
@@ -1251,6 +1253,7 @@ export function AdminDashboard({
             name: v.name,
             price: parseFloat(v.price) || 0,
             mrp: parseFloat(v.mrp) || 0,
+            costPrice: parseFloat(v.costPrice) || 0,
             stock: parseInt(v.stock) || 0,
           })) : null,
         }),
@@ -1330,6 +1333,7 @@ export function AdminDashboard({
             name: v.name,
             price: parseFloat(v.price) || 0,
             mrp: parseFloat(v.mrp) || 0,
+            costPrice: parseFloat(v.costPrice) || 0,
             stock: parseInt(v.stock) || 0,
           })) : null,
         }),
@@ -2514,7 +2518,7 @@ export function AdminDashboard({
                         <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                           {newProductVariants.map((v, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-card border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Stock: {v.stock})</span>
+                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Cost: ₹{v.costPrice || 0}, Stock: {v.stock})</span>
                               <button
                                 type="button"
                                 onClick={() => setNewProductVariants(newProductVariants.filter((_, i) => i !== idx))}
@@ -2527,7 +2531,7 @@ export function AdminDashboard({
                         </div>
                       )}
 
-                      <div className="grid grid-cols-4 gap-2 items-end">
+                      <div className="grid grid-cols-5 gap-2 items-end">
                         <div>
                           <label className="text-[9px] font-bold text-text-secondary block mb-1">Variant Name</label>
                           <input
@@ -2556,6 +2560,15 @@ export function AdminDashboard({
                           />
                         </div>
                         <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Cost Price</label>
+                          <input
+                            type="number"
+                            id="new-var-cost"
+                            placeholder="Cost"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
                           <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock</label>
                           <input
                             type="number"
@@ -2571,11 +2584,13 @@ export function AdminDashboard({
                           const nameInput = document.getElementById('new-var-name') as HTMLInputElement
                           const mrpInput = document.getElementById('new-var-mrp') as HTMLInputElement
                           const priceInput = document.getElementById('new-var-price') as HTMLInputElement
+                          const costInput = document.getElementById('new-var-cost') as HTMLInputElement
                           const stockInput = document.getElementById('new-var-stock') as HTMLInputElement
 
                           const name = nameInput.value.trim()
                           const mrp = mrpInput.value.trim()
                           const price = priceInput.value.trim()
+                          const costPrice = costInput.value.trim() || '0'
                           const stock = stockInput.value.trim()
 
                           if (!name || !mrp || !price || !stock) {
@@ -2583,12 +2598,13 @@ export function AdminDashboard({
                             return
                           }
 
-                          const newVars = [...newProductVariants, { name, mrp, price, stock }]
+                          const newVars = [...newProductVariants, { name, mrp, price, costPrice, stock }]
                           newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
                           setNewProductVariants(newVars)
                           nameInput.value = ''
                           mrpInput.value = ''
                           priceInput.value = ''
+                          costInput.value = ''
                           stockInput.value = ''
                         }}
                         className="w-full py-1.5 text-[10px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
@@ -4411,7 +4427,7 @@ export function AdminDashboard({
                         <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                           {editProductVariants.map((v, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-card border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Stock: {v.stock})</span>
+                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Cost: ₹{v.costPrice || 0}, Stock: {v.stock})</span>
                               <button
                                 type="button"
                                 onClick={() => setEditProductVariants(editProductVariants.filter((_, i) => i !== idx))}
@@ -4424,7 +4440,7 @@ export function AdminDashboard({
                         </div>
                       )}
 
-                      <div className="grid grid-cols-4 gap-2 items-end">
+                      <div className="grid grid-cols-5 gap-2 items-end">
                         <div>
                           <label className="text-[9px] font-bold text-text-secondary block mb-1">Variant Name</label>
                           <input
@@ -4453,6 +4469,15 @@ export function AdminDashboard({
                           />
                         </div>
                         <div>
+                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Cost Price</label>
+                          <input
+                            type="number"
+                            id="edit-var-cost"
+                            placeholder="Cost"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
+                          />
+                        </div>
+                        <div>
                           <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock</label>
                           <input
                             type="number"
@@ -4468,11 +4493,13 @@ export function AdminDashboard({
                           const nameInput = document.getElementById('edit-var-name') as HTMLInputElement
                           const mrpInput = document.getElementById('edit-var-mrp') as HTMLInputElement
                           const priceInput = document.getElementById('edit-var-price') as HTMLInputElement
+                          const costInput = document.getElementById('edit-var-cost') as HTMLInputElement
                           const stockInput = document.getElementById('edit-var-stock') as HTMLInputElement
 
                           const name = nameInput.value.trim()
                           const mrp = mrpInput.value.trim()
                           const price = priceInput.value.trim()
+                          const costPrice = costInput.value.trim() || '0'
                           const stock = stockInput.value.trim()
 
                           if (!name || !mrp || !price || !stock) {
@@ -4480,12 +4507,13 @@ export function AdminDashboard({
                             return
                           }
 
-                          const newVars = [...editProductVariants, { name, mrp, price, stock }]
+                          const newVars = [...editProductVariants, { name, mrp, price, costPrice, stock }]
                           newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
                           setEditProductVariants(newVars)
                           nameInput.value = ''
                           mrpInput.value = ''
                           priceInput.value = ''
+                          costInput.value = ''
                           stockInput.value = ''
                         }}
                         className="w-full py-1.5 text-[10px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"

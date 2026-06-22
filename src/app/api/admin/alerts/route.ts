@@ -99,16 +99,11 @@ export async function GET() {
         }),
 
         // 5. CONFIRMED ORDERS: Accepted but not packed orders
-        prisma.order.findMany({
-          where: {
-            status: 'CONFIRMED',
-          },
-          select: {
-            id: true,
-            updatedAt: true,
-            shopName: true,
-          },
-        }),
+        prisma.$queryRaw`
+          SELECT id, "updatedAt", "shopName"
+          FROM orders
+          WHERE status = 'CONFIRMED'::"OrderStatus"
+        ` as Promise<any[]>,
       ])
 
     // Retrieve existing snoozed alerts from StoreSetting

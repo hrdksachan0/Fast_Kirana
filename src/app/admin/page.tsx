@@ -35,6 +35,8 @@ export default async function AdminPage() {
   let couponsRaw: any[] = []
   let usersRaw: any[] = []
   let allProductsRaw: any[] = []
+  let allUsers: any[] = []
+  let allAddresses: any[] = []
   let initialOrderCounts = {
     ALL: 0,
     PENDING: 0,
@@ -59,20 +61,13 @@ export default async function AdminPage() {
         _sum: { total: true },
         where: { status: 'DELIVERED' },
       }),
-      prisma.order.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-              phone: true,
-            },
-          },
-          address: true,
-        },
-      }),
+      prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+        FROM orders o
+        ORDER BY o."createdAt" DESC
+        LIMIT 10
+      ` as Promise<any[]>,
       prisma.product.findMany({
         include: {
           category: true,
@@ -129,12 +124,11 @@ export default async function AdminPage() {
           }
         }
       }),
-      prisma.order.groupBy({
-        by: ['status'],
-        _count: {
-          _all: true,
-        },
-      }),
+      prisma.$queryRaw`
+        SELECT o.status::text as status, COUNT(*)::int as count
+        FROM orders o
+        GROUP BY o.status
+      ` as Promise<any[]>,
     ])
 
     userCount = results[0] as number
@@ -150,6 +144,22 @@ export default async function AdminPage() {
     allProductsRaw = results[9] as any[]
     const statusGroups = results[10] as any[]
 
+    const userIds = [...new Set(ordersRaw.map(o => o.userId))]
+    const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
+
+    const [fetchedUsers, fetchedAddresses] = await Promise.all([
+      userIds.length > 0
+        ? (prisma.$queryRaw`
+            SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
+          ` as Promise<any[]>)
+        : [],
+      addressIds.length > 0
+        ? prisma.address.findMany({ where: { id: { in: addressIds } } })
+        : [],
+    ])
+    allUsers = fetchedUsers
+    allAddresses = fetchedAddresses
+
     const statusCountsMap: Record<string, number> = {
       PENDING: 0,
       CONFIRMED: 0,
@@ -160,7 +170,7 @@ export default async function AdminPage() {
     }
     statusGroups.forEach((group) => {
       if (group.status && statusCountsMap[group.status] !== undefined) {
-        statusCountsMap[group.status] = group._count._all
+        statusCountsMap[group.status] = group.count || 0
       }
     })
 
@@ -186,27 +196,31 @@ export default async function AdminPage() {
   // (already computed above via DB aggregate sum)
 
   // Map objects to serializable structures for the client components
-  const orders = ordersRaw.map((o) => ({
-    id: o.id,
-    status: o.status,
-    total: o.total,
-    createdAt: o.createdAt.toISOString(),
-    updatedAt: o.updatedAt.toISOString(),
-    userName: o.user.name,
-    userEmail: o.user.email,
-    userPhone: o.user.phone,
-    isB2B: o.isB2B,
-    deliveryMethod: o.deliveryMethod,
-    shopName: o.shopName,
-    shopPhone: o.shopPhone,
-    address: {
-      houseNo: o.address.houseNo,
-      street: o.address.street,
-      area: o.address.area,
-      city: o.address.city,
-      phone: o.address.phone,
-    },
-  }))
+  const orders = ordersRaw.map((o) => {
+    const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
+    const address = allAddresses.find(a => a.id === o.addressId) || null
+    return {
+      id: o.id,
+      status: o.status,
+      total: o.total,
+      createdAt: new Date(o.createdAt).toISOString(),
+      updatedAt: new Date(o.updatedAt).toISOString(),
+      userName: user.name,
+      userEmail: user.email,
+      userPhone: user.phone,
+      isB2B: o.isB2B,
+      deliveryMethod: o.deliveryMethod,
+      shopName: o.shopName,
+      shopPhone: o.shopPhone,
+      address: address ? {
+        houseNo: address.houseNo,
+        street: address.street,
+        area: address.area,
+        city: address.city,
+        phone: address.phone,
+      } : null,
+    }
+  })
 
   const products = productsRaw.map((p) => ({
     id: p.id,

@@ -22,15 +22,39 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
   let companionOrder = null
 
   try {
-    orderRaw = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: true,
-        address: true,
-      },
-    })
+    const orders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o."userId", o."addressId",
+             o.status::text as status,
+             o.subtotal, o.discount, o."deliveryFee", o.taxes, o.total,
+             o."paymentMethod"::text as "paymentMethod",
+             o."paymentStatus"::text as "paymentStatus",
+             o."estimatedDelivery", o."createdAt", o."updatedAt",
+             o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+             o."deliveryPhoto", o."deliveryLat", o."deliveryLng"
+      FROM orders o WHERE o.id = ${id} LIMIT 1
+    `
+
+    if (orders.length > 0) {
+      const orderDb = orders[0]
+
+      // Fetch items
+      const items = await prisma.orderItem.findMany({
+        where: { orderId: id },
+      })
+
+      // Fetch address
+      const address = await prisma.address.findUnique({
+        where: { id: orderDb.addressId },
+      })
+
+      orderRaw = {
+        ...orderDb,
+        items,
+        address,
+      }
+    }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch tracking order')
+    console.warn('Database connection error: failed to fetch tracking order', error)
   }
 
   if (!orderRaw) {
@@ -44,20 +68,23 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
 
   try {
     // Find other orders placed by the same user within 5 seconds of this order
-    const fiveSecondsAgo = new Date(orderRaw.createdAt.getTime() - 5000)
-    const fiveSecondsAfter = new Date(orderRaw.createdAt.getTime() + 5000)
-    companionOrder = await prisma.order.findFirst({
-      where: {
-        userId: orderRaw.userId,
-        id: { not: orderRaw.id },
-        createdAt: {
-          gte: fiveSecondsAgo,
-          lte: fiveSecondsAfter,
-        },
-      },
-    })
+    const fiveSecondsAgo = new Date(new Date(orderRaw.createdAt).getTime() - 5000)
+    const fiveSecondsAfter = new Date(new Date(orderRaw.createdAt).getTime() + 5000)
+    
+    const companionOrders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o.status::text as status, o."shopName", o."createdAt"
+      FROM orders o 
+      WHERE o."userId" = ${orderRaw.userId}
+        AND o.id != ${orderRaw.id}
+        AND o."createdAt" >= ${fiveSecondsAgo}
+        AND o."createdAt" <= ${fiveSecondsAfter}
+      LIMIT 1
+    `
+    if (companionOrders.length > 0) {
+      companionOrder = companionOrders[0]
+    }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch tracking companion order')
+    console.warn('Database connection error: failed to fetch tracking companion order', error)
   }
 
   const isCafeOrder = orderRaw.shopName === 'FastKirana Cafe Kitchen'
@@ -74,7 +101,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
     total: orderRaw.total,
     paymentMethod: orderRaw.paymentMethod,
     paymentStatus: orderRaw.paymentStatus,
-    estimatedDelivery: orderRaw.estimatedDelivery?.toISOString() || null,
+    estimatedDelivery: orderRaw.estimatedDelivery ? new Date(orderRaw.estimatedDelivery).toISOString() : null,
     deliveryPhoto: orderRaw.deliveryPhoto || null,
     deliveryLat: orderRaw.deliveryLat || null,
     deliveryLng: orderRaw.deliveryLng || null,
@@ -82,8 +109,8 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
     isB2B: orderRaw.isB2B,
     shopName: orderRaw.shopName,
     shopPhone: orderRaw.shopPhone,
-    createdAt: orderRaw.createdAt.toISOString(),
-    items: orderRaw.items.map((i) => ({
+    createdAt: new Date(orderRaw.createdAt).toISOString(),
+    items: orderRaw.items.map((i: any) => ({
       id: i.id,
       name: i.name,
       price: i.price,

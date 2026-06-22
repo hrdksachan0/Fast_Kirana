@@ -50,13 +50,19 @@ export async function POST(request: NextRequest) {
     if (status === 'TXN_SUCCESS') {
       console.log(`Paytm Transaction Success for Order ID: ${orderId}`);
 
-      // Update order status in database
-      const updatedOrder = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          paymentStatus: 'PAID'
-        }
-      });
+      // Update order status in database using raw SQL
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'PAID'::"PaymentStatus",
+            "updatedAt" = NOW()
+        WHERE id = ${orderId}
+      `
+
+      const updatedOrders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt"
+        FROM orders o WHERE o.id = ${orderId} LIMIT 1
+      `
+      const updatedOrder = updatedOrders[0];
 
       // Emit real-time SSE event for the updated order
       try {
@@ -74,13 +80,13 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn(`Paytm Transaction Failed/Cancelled for Order ID: ${orderId}. Status: ${status}`);
 
-      // Update order paymentStatus to FAILED in database
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          paymentStatus: 'FAILED'
-        }
-      });
+      // Update order paymentStatus to FAILED in database using raw SQL
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'FAILED'::"PaymentStatus",
+            "updatedAt" = NOW()
+        WHERE id = ${orderId}
+      `
 
       const responseMessage = encodeURIComponent(paytmParams.RESPMSG || 'Payment failed');
       return NextResponse.redirect(`${baseUrl}/checkout?payment=failed&orderId=${orderId}&msg=${responseMessage}`, 303);

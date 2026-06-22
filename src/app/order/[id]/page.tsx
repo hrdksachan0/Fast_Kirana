@@ -24,15 +24,38 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   let companionOrder = null
 
   try {
-    order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: true,
-        address: true,
-      },
-    })
+    const orders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o."userId", o."addressId",
+             o.status::text as status,
+             o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+             o."paymentMethod"::text as "paymentMethod",
+             o."paymentStatus"::text as "paymentStatus",
+             o."estimatedDelivery", o."createdAt", o."updatedAt",
+             o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
+      FROM orders o WHERE o.id = ${id} LIMIT 1
+    `
+
+    if (orders.length > 0) {
+      const orderRaw = orders[0]
+
+      // Fetch items
+      const items = await prisma.orderItem.findMany({
+        where: { orderId: id },
+      })
+
+      // Fetch address
+      const address = await prisma.address.findUnique({
+        where: { id: orderRaw.addressId },
+      })
+
+      order = {
+        ...orderRaw,
+        items,
+        address,
+      }
+    }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch order details')
+    console.warn('Database connection error: failed to fetch order details', error)
   }
 
   if (!order) {
@@ -46,20 +69,23 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
   try {
     // Find other orders placed by the same user within 5 seconds of this order
-    const fiveSecondsAgo = new Date(order.createdAt.getTime() - 5000)
-    const fiveSecondsAfter = new Date(order.createdAt.getTime() + 5000)
-    companionOrder = await prisma.order.findFirst({
-      where: {
-        userId: order.userId,
-        id: { not: order.id },
-        createdAt: {
-          gte: fiveSecondsAgo,
-          lte: fiveSecondsAfter,
-        },
-      },
-    })
+    const fiveSecondsAgo = new Date(new Date(order.createdAt).getTime() - 5000)
+    const fiveSecondsAfter = new Date(new Date(order.createdAt).getTime() + 5000)
+    
+    const companionOrders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o.status::text as status, o."shopName", o."createdAt"
+      FROM orders o 
+      WHERE o."userId" = ${order.userId}
+        AND o.id != ${order.id}
+        AND o."createdAt" >= ${fiveSecondsAgo}
+        AND o."createdAt" <= ${fiveSecondsAfter}
+      LIMIT 1
+    `
+    if (companionOrders.length > 0) {
+      companionOrder = companionOrders[0]
+    }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch companion order')
+    console.warn('Database connection error: failed to fetch companion order', error)
   }
 
   // Fetch store settings for dynamic miscFeeLabel
@@ -243,7 +269,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           Receipt Sum
         </h2>
         <div className="text-xs font-semibold text-text-secondary space-y-2.5">
-          {order.items.map((item) => (
+          {order.items.map((item: any) => (
             <div key={item.id} className="flex justify-between">
               <span>
                 {item.name} × {item.quantity}

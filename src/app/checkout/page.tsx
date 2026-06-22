@@ -27,6 +27,7 @@ import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants
 import { toast } from 'sonner'
 import { triggerHaptic } from '@/lib/haptic'
 import { Address } from '@/types'
+import MapPicker from '@/components/shared/map-picker'
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Radius of the earth in km
@@ -389,7 +390,7 @@ export default function CheckoutPage() {
     )
   }
 
-  // Scroll new address form into view when opened and auto-detect location
+  // Scroll new address form into view when opened
   useEffect(() => {
     if (showNewAddressForm) {
       setTimeout(() => {
@@ -398,9 +399,6 @@ export default function CheckoutPage() {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
       }, 150)
-      
-      // Auto detect location when form is shown
-      handleDetectLocationForCheckout()
     }
   }, [showNewAddressForm])
 
@@ -1153,27 +1151,14 @@ export default function CheckoutPage() {
                       {showNewAddressForm && (
                         <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border/80 p-5 sm:p-6 rounded-2xl space-y-5 bg-card/60 backdrop-blur-sm animate-slide-up shadow-sm">
                           <div className="flex justify-between items-center border-b border-border/40 pb-3">
-                            <h3 className="font-black text-sm text-text-primary">New Delivery Address</h3>
-                            <Button
-                              type="button"
-                              onClick={handleDetectLocationForCheckout}
-                              disabled={isDetectingLocation}
-                              variant="outline"
-                              className="text-xs text-primary border-primary/20 hover:border-primary/40 hover:bg-primary/5 font-bold flex items-center gap-1.5 h-8.5 rounded-xl shrink-0 px-3"
-                            >
-                              {isDetectingLocation ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  <MapPin className="h-3.5 w-3.5 text-primary" />
-                                  Detect Location
-                                </>
-                              )}
-                            </Button>
+                            <h3 className="font-black text-sm text-text-primary text-primary flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-primary animate-pulse" />
+                              Choose Delivery Location
+                            </h3>
                           </div>
                           
                           {addressForm.lat && addressForm.lng && (
-                            <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-2 font-bold animate-pulse">
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-2 font-bold">
                               <span className="text-sm shrink-0">📍</span>
                               <span>GPS Location Pinned! Coordinates: {addressForm.lat.toFixed(6)}, {addressForm.lng.toFixed(6)}</span>
                             </div>
@@ -1182,9 +1167,27 @@ export default function CheckoutPage() {
                           <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200/50 dark:border-blue-900/30 flex items-start gap-2.5 leading-relaxed font-medium">
                             <span className="text-base shrink-0 mt-0.5">ℹ️</span>
                             <span>
-                              <strong>Ordering for someone else?</strong> If you are ordering for delivery to a home in Ghatampur while physically elsewhere, please type the address manually below (pincode must be <strong>209206</strong>).
+                              <strong>Ordering for someone else?</strong> Drag the map marker to pin your exact address. If ordering for a home in Ghatampur while elsewhere, use the search bar or drag the pin manually.
                             </span>
                           </div>
+
+                          {/* Interactive Swiggy/Zomato Map Picker */}
+                          <MapPicker
+                            initialLat={addressForm.lat ?? null}
+                            initialLng={addressForm.lng ?? null}
+                            storeLat={storeLat}
+                            storeLng={storeLng}
+                            onLocationSelect={(loc) => {
+                              setAddressForm((prev) => ({
+                                ...prev,
+                                lat: loc.lat,
+                                lng: loc.lng,
+                                street: loc.street,
+                                city: loc.city,
+                                pincode: loc.pincode,
+                              }))
+                            }}
+                          />
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>

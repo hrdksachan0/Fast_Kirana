@@ -62,10 +62,13 @@ export async function GET(request: NextRequest) {
         name: string
         costPrice: number
         categoryName: string
+        variants: any
+        selectedVariant: string | null
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
-             COALESCE(p."costPrice", 0) as "costPrice", c.name as "categoryName"
+             COALESCE(p."costPrice", 0) as "costPrice", c.name as "categoryName",
+             p.variants, oi."selectedVariant"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
       JOIN categories c ON p."categoryId" = c.id
@@ -89,9 +92,26 @@ export async function GET(request: NextRequest) {
 
     // Helper: calculate cost and profit for an item
     const getItemMetrics = (item: typeof orderItems[0]) => {
-      const hasCostPrice = item.costPrice > 0
+      let costPrice = item.costPrice
+
+      // If there is a selected variant, try to find its cost price in the variants array
+      if (item.selectedVariant && item.variants) {
+        try {
+          const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
+          if (Array.isArray(variantsList)) {
+            const matchedVariant = variantsList.find((v: any) => v.name === item.selectedVariant)
+            if (matchedVariant && matchedVariant.costPrice !== undefined) {
+              costPrice = parseFloat(matchedVariant.costPrice) || 0
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing variants for item cost calculation:', e)
+        }
+      }
+
+      const hasCostPrice = costPrice > 0
       // Fallback: if cost price is 0, assume 25% margin (cost is 75% of sale price)
-      const costPerUnit = hasCostPrice ? item.costPrice : item.price * 0.75
+      const costPerUnit = hasCostPrice ? costPrice : item.price * 0.75
       const itemCost = costPerUnit * item.quantity
       const itemRevenue = item.price * item.quantity
       const itemProfit = itemRevenue - itemCost

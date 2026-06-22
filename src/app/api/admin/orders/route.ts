@@ -35,33 +35,71 @@ export async function GET(request: Request) {
     const whereForCounts = { ...where }
     delete whereForCounts.status
 
-    const [
-      ordersRaw,
-      total,
-      allCount,
-      pendingCount,
-      confirmedCount,
-      packedCount,
-      shippedCount,
-      deliveredCount,
-      cancelledCount,
-    ] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-              phone: true,
-            },
-          },
-          address: true,
-        },
-        skip,
-        take: limit,
-      }),
+    let ordersRaw: any[] = []
+    
+    // Construct dynamic raw SQL query based on filters to avoid enum deserialization bug
+    if (status && status !== 'ALL' && search) {
+      const searchLike = `%${search}%`
+      ordersRaw = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+        FROM orders o
+        LEFT JOIN users u ON o."userId" = u.id
+        WHERE o.status::text = ${status}
+          AND (
+            o.id ILIKE ${searchLike}
+            OR u.name ILIKE ${searchLike}
+            OR u.email ILIKE ${searchLike}
+            OR o."shopName" ILIKE ${searchLike}
+          )
+        ORDER BY o."createdAt" DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `
+    } else if (status && status !== 'ALL') {
+      ordersRaw = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+        FROM orders o
+        WHERE o.status::text = ${status}
+        ORDER BY o."createdAt" DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `
+    } else if (search) {
+      const searchLike = `%${search}%`
+      ordersRaw = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+        FROM orders o
+        LEFT JOIN users u ON o."userId" = u.id
+        WHERE o.id ILIKE ${searchLike}
+          OR u.name ILIKE ${searchLike}
+          OR u.email ILIKE ${searchLike}
+          OR o."shopName" ILIKE ${searchLike}
+        ORDER BY o."createdAt" DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `
+    } else {
+      ordersRaw = await prisma.$queryRaw`
+        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+        FROM orders o
+        ORDER BY o."createdAt" DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `
+    }
+
+    const userIds = [...new Set(ordersRaw.map(o => o.userId))]
+    const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
+
+    const [allUsers, allAddresses, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
+      userIds.length > 0
+        ? (prisma.$queryRaw`
+            SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
+          ` as Promise<any[]>)
+        : [],
+      addressIds.length > 0
+        ? prisma.address.findMany({ where: { id: { in: addressIds } } })
+        : [],
       prisma.order.count({ where }),
       prisma.order.count({ where: whereForCounts }),
       prisma.order.count({ where: { ...whereForCounts, status: 'PENDING' } }),
@@ -72,27 +110,31 @@ export async function GET(request: Request) {
       prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED' } }),
     ])
 
-    const orders = ordersRaw.map((o) => ({
-      id: o.id,
-      status: o.status,
-      total: o.total,
-      createdAt: o.createdAt.toISOString(),
-      updatedAt: o.updatedAt.toISOString(),
-      userName: o.user.name,
-      userEmail: o.user.email,
-      userPhone: o.user.phone,
-      isB2B: o.isB2B,
-      deliveryMethod: o.deliveryMethod,
-      shopName: o.shopName,
-      shopPhone: o.shopPhone,
-      address: o.address ? {
-        houseNo: o.address.houseNo,
-        street: o.address.street,
-        area: o.address.area,
-        city: o.address.city,
-        phone: o.address.phone,
-      } : null,
-    }))
+    const orders = ordersRaw.map((o) => {
+      const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
+      const address = allAddresses.find(a => a.id === o.addressId) || null
+      return {
+        id: o.id,
+        status: o.status,
+        total: o.total,
+        createdAt: new Date(o.createdAt).toISOString(),
+        updatedAt: new Date(o.updatedAt).toISOString(),
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+        isB2B: o.isB2B,
+        deliveryMethod: o.deliveryMethod,
+        shopName: o.shopName,
+        shopPhone: o.shopPhone,
+        address: address ? {
+          houseNo: address.houseNo,
+          street: address.street,
+          area: address.area,
+          city: address.city,
+          phone: address.phone,
+        } : null,
+      }
+    })
 
     return NextResponse.json({
       orders,

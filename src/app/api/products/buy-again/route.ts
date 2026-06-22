@@ -13,45 +13,47 @@ export async function GET(request: NextRequest) {
     const orderedProductMap = new Map<string, number>()
 
     if (userId) {
-      // Fetch user's orders
-      const orders = await prisma.order.findMany({
-        where: {
-          userId,
-          status: {
-            in: ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED']
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        include: {
-          items: {
-            include: {
-              product: {
-                include: {
-                  category: true
-                }
+      // Fetch user's orders using raw SQL to avoid the enum deserialization bug
+      const orders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o."createdAt"
+        FROM orders o
+        WHERE o."userId" = ${userId}
+          AND o.status::text IN ('CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED')
+        ORDER BY o."createdAt" DESC
+        LIMIT 10
+      `
+
+      if (orders.length > 0) {
+        const orderIds = orders.map(o => o.id)
+        
+        // Fetch order items and include product information
+        const orderItems = await prisma.orderItem.findMany({
+          where: { orderId: { in: orderIds } },
+          include: {
+            product: {
+              include: {
+                category: true
               }
             }
           }
-        },
-        take: 10
-      })
-
-      // Extract unique products and calculate lastOrderedDays
-      const now = new Date()
-      orders.forEach(order => {
-        const orderDate = new Date(order.createdAt)
-        const diffTime = Math.abs(now.getTime() - orderDate.getTime())
-        const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
-
-        order.items.forEach(item => {
-          if (item.product && !orderedProductMap.has(item.product.id)) {
-            orderedProductMap.set(item.product.id, diffDays)
-            products.push(item.product)
-          }
         })
-      })
+
+        // Extract unique products and calculate lastOrderedDays
+        const now = new Date()
+        orders.forEach(order => {
+          const orderDate = new Date(order.createdAt)
+          const diffTime = Math.abs(now.getTime() - orderDate.getTime())
+          const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+
+          const items = orderItems.filter(item => item.orderId === order.id)
+          items.forEach(item => {
+            if (item.product && !orderedProductMap.has(item.product.id)) {
+              orderedProductMap.set(item.product.id, diffDays)
+              products.push(item.product)
+            }
+          })
+        })
+      }
     }
 
     // If we have fewer than 6 products, fill with popular items from the DB

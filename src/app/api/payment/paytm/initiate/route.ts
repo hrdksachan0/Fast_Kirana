@@ -16,15 +16,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
     }
 
-    // Fetch order from database to verify amount and ownership
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { user: true }
-    });
+    // Fetch order from database to verify amount and ownership using raw SQL
+    const orders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o."userId", o.total, o."paymentStatus"::text as "paymentStatus"
+      FROM orders o WHERE o.id = ${orderId} LIMIT 1
+    `
 
-    if (!order) {
+    if (orders.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
+
+    const order = orders[0];
 
     if (order.userId !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
