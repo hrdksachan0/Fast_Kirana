@@ -1118,8 +1118,8 @@ export default function DeliveryDashboard() {
                       {/* Step 2 — Deliver */}
                       <a
                         href={
-                          order.address.lat && order.address.lng
-                            ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                          (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
+                            ? `https://www.google.com/maps/search/?api=1&query=${order.deliveryLat || order.address.lat},${order.deliveryLng || order.address.lng}`
                             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                                 formatAddress(order.address)
                               )}`
@@ -1292,8 +1292,8 @@ export default function DeliveryDashboard() {
                         <div className="h-px bg-border/30 ml-7" />
                         <a
                           href={
-                            order.address.lat && order.address.lng
-                              ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                            (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
+                              ? `https://www.google.com/maps/search/?api=1&query=${order.deliveryLat || order.address.lat},${order.deliveryLng || order.address.lng}`
                               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                                   formatAddress(order.address)
                                 )}`

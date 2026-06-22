@@ -65,9 +65,30 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
               orders.map((o) => (
                 <tr key={o.id} className="hover:bg-muted/30">
                   <td className="py-3 px-4 font-mono font-bold text-[10px] truncate max-w-[120px]">{o.id}</td>
-                  <td className="py-3 px-4 truncate max-w-[150px]">{o.userName || o.userEmail}</td>
+                  <td className="py-3 px-4 truncate max-w-[150px]">
+                    <div className="font-bold">{o.userName || 'No Name'}</div>
+                    <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
+                    {(o.userPhone || o.address?.phone) && (
+                      <div className="text-[10px] text-text-secondary font-bold font-mono mt-0.5">
+                        📞 {o.userPhone || o.address?.phone}
+                      </div>
+                    )}
+                  </td>
                   <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium" title={formatAddress(o.address)}>
-                    {formatAddress(o.address, false)}
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate">{formatAddress(o.address, false)}</span>
+                      {o.address?.lat && o.address?.lng && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${o.address.lat},${o.address.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                          title="Open exact GPS coordinates on Google Maps"
+                        >
+                          📍
+                        </a>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
                   <td className="py-3 px-4">

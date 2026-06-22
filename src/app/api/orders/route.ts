@@ -365,6 +365,8 @@ export async function POST(request: NextRequest) {
             isB2B,
             shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
             shopPhone: orderInfo.type === 'CAFE' ? (settingsMap['contact_phone'] || '+91 70544 70303') : shopPhone,
+            deliveryLat: address.lat,
+            deliveryLng: address.lng,
             items: {
               create: orderItemsData.map((item: any) => ({
                 productId: item.productId,

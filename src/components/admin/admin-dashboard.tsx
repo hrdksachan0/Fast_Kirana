@@ -2122,8 +2122,21 @@ export function AdminDashboard({
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium" title={formatAddress(o.address)}>
-                        {formatAddress(o.address, false)}
+                       <td className="py-3 px-4 max-w-[200px] truncate text-text-secondary font-medium" title={formatAddress(o.address)}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate">{formatAddress(o.address, false)}</span>
+                          {o.address?.lat && o.address?.lng && (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${o.address.lat},${o.address.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                              title="Open exact GPS coordinates on Google Maps"
+                            >
+                              📍
+                            </a>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
                       <td className="py-3 px-4">

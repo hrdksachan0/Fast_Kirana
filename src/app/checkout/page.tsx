@@ -231,7 +231,18 @@ export default function CheckoutPage() {
   // New Address Form State
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
-  const [addressForm, setAddressForm] = useState({
+  const [addressForm, setAddressForm] = useState<{
+    label: string
+    houseNo: string
+    street: string
+    area: string
+    city: string
+    pincode: string
+    phone: string
+    isDefault: boolean
+    lat?: number | null
+    lng?: number | null
+  }>({
     label: 'Home',
     houseNo: '.',
     street: '',
@@ -240,6 +251,8 @@ export default function CheckoutPage() {
     pincode: '209206',
     phone: '',
     isDefault: false,
+    lat: null,
+    lng: null,
   })
 
   const [isDetectingLocation, setIsDetectingLocation] = useState(false)
@@ -261,18 +274,6 @@ export default function CheckoutPage() {
       }))
     }
   }, [session])
-
-  // Scroll new address form into view when opened
-  useEffect(() => {
-    if (showNewAddressForm) {
-      setTimeout(() => {
-        const el = document.getElementById('new-address-form')
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 150)
-    }
-  }, [showNewAddressForm])
 
   const handleDetectLocationForCheckout = () => {
     if (!navigator.geolocation) {
@@ -296,16 +297,17 @@ export default function CheckoutPage() {
           longitude = storeLng + 0.015
           toast.dismiss(toastId)
           setIsDetectingLocation(false)
-          setAddressForm({
-            label: addressForm.label || 'Home',
+          setAddressForm(prev => ({
+            ...prev,
+            label: prev.label || 'Home',
             houseNo: '.',
             street: 'Vikas Medical Store, NH34, Ghatampur',
             area: '.',
             city: 'Ghatampur',
             pincode: '209206',
-            phone: addressForm.phone,
-            isDefault: addressForm.isDefault,
-          })
+            lat: latitude,
+            lng: longitude,
+          }))
           toast.success('Location detected and filled (Kanpur NH34 mock)!')
           return
         } else if (dist > deliveryRadius) {
@@ -315,38 +317,88 @@ export default function CheckoutPage() {
           return
         }
 
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`)
+        fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`)
           .then((res) => res.json())
-          .then((data) => {
+          .then((resData) => {
             toast.dismiss(toastId)
-            if (data && data.address) {
-              const address = data.address
-              
-              // Combine detected components into one address string
-              const detectedStreet = [
-                address.building || address.house_number || '',
-                address.road || '',
-                address.neighbourhood || address.city_district || address.suburb || ''
-              ].filter(Boolean).join(', ')
+            if (resData.source === 'google') {
+              const results = resData.data.results
+              if (results && results.length > 0) {
+                const firstResult = results[0]
+                const addressComponents = firstResult.address_components
+                
+                let route = ''
+                let sublocality = ''
+                let city = 'Ghatampur'
+                let postcode = '209206'
+                
+                addressComponents.forEach((comp: any) => {
+                  if (comp.types.includes('route')) {
+                    route = comp.long_name
+                  }
+                  if (
+                    comp.types.includes('sublocality') ||
+                    comp.types.includes('sublocality_level_1') ||
+                    comp.types.includes('sublocality_level_2')
+                  ) {
+                    sublocality = comp.long_name
+                  }
+                  if (comp.types.includes('locality')) {
+                    city = comp.long_name
+                  }
+                  if (comp.types.includes('postal_code')) {
+                    postcode = comp.long_name
+                  }
+                })
 
-              setAddressForm({
-                label: addressForm.label || 'Home',
-                houseNo: '.',
-                street: detectedStreet || 'Detected Location',
-                area: '.',
-                city: address.city || address.town || address.village || 'Ghatampur',
-                pincode: address.postcode || '209206',
-                phone: addressForm.phone,
-                isDefault: addressForm.isDefault,
-              })
-              toast.success('Location detected and filled!')
+                const streetParts = [sublocality, route].filter(Boolean)
+                const streetName = streetParts.length > 0 ? streetParts.join(', ') : firstResult.formatted_address.split(',')[0]
+
+                setAddressForm(prev => ({
+                  ...prev,
+                  label: prev.label || 'Home',
+                  houseNo: '.',
+                  street: streetName || 'Detected Location',
+                  area: '.',
+                  city: city || 'Ghatampur',
+                  pincode: postcode || '209206',
+                  lat: latitude,
+                  lng: longitude,
+                }))
+                toast.success('Location detected using Google Maps!')
+              } else {
+                toast.error('Failed to parse Google Maps location details.')
+              }
             } else {
-              toast.error('Failed to parse address details.')
+              // OpenStreetMap Fallback
+              const address = resData.data?.address
+              if (address) {
+                const detectedStreet = [
+                  address.building || address.house_number || '',
+                  address.road || '',
+                  address.neighbourhood || address.city_district || address.suburb || ''
+                ].filter(Boolean).join(', ')
+
+                setAddressForm(prev => ({
+                  ...prev,
+                  label: prev.label || 'Home',
+                  houseNo: '.',
+                  street: detectedStreet || 'Detected Location',
+                  area: '.',
+                  city: address.city || address.town || address.village || 'Ghatampur',
+                  pincode: address.postcode || '209206',
+                  lat: latitude,
+                  lng: longitude,
+                }))
+                toast.success('Location detected using OpenStreetMap!')
+              } else {
+                toast.error('Failed to parse address details.')
+              }
             }
           })
           .catch(() => {
             toast.dismiss(toastId)
-            toast.error('Error fetching details from map server.')
+            toast.error('Error fetching details from geocoding proxy.')
           })
           .finally(() => {
             setIsDetectingLocation(false)
@@ -360,6 +412,21 @@ export default function CheckoutPage() {
       { enableHighAccuracy: true, timeout: 8000 }
     )
   }
+
+  // Scroll new address form into view when opened and auto-detect location
+  useEffect(() => {
+    if (showNewAddressForm) {
+      setTimeout(() => {
+        const el = document.getElementById('new-address-form')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 150)
+      
+      // Auto detect location when form is shown
+      handleDetectLocationForCheckout()
+    }
+  }, [showNewAddressForm])
 
   // Payment Method
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI' | 'CARD' | 'WALLET'>('COD')
@@ -468,19 +535,50 @@ export default function CheckoutPage() {
 
     const inferredCity = 'Ghatampur'
 
-    const payload = {
-      label: label || 'Home',
-      houseNo: '.',
-      street: street.trim(),
-      area: '.',
-      city: inferredCity,
-      pincode: cleanPincode,
-      phone: cleanPhone,
-      isDefault: !!isDefault,
-    }
-
     setIsSavingAddress(true)
     try {
+      let finalLat = addressForm.lat
+      let finalLng = addressForm.lng
+
+      // Fallback: If coordinates are not set, try to geocode the manually typed address in the background
+      if (!finalLat || !finalLng) {
+        try {
+          const searchQuery = `${street.trim()}, ${inferredCity}, ${cleanPincode}`
+          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`)
+          if (geoRes.ok) {
+            const geoData = await geoRes.json()
+            if (geoData.source === 'google') {
+              const results = geoData.data.results
+              if (results && results.length > 0) {
+                finalLat = results[0].geometry.location.lat
+                finalLng = results[0].geometry.location.lng
+              }
+            } else {
+              const results = geoData.data
+              if (results && results.length > 0) {
+                finalLat = parseFloat(results[0].lat)
+                finalLng = parseFloat(results[0].lon)
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error auto-geocoding manual address:', err)
+        }
+      }
+
+      const payload = {
+        label: label || 'Home',
+        houseNo: '.',
+        street: street.trim(),
+        area: '.',
+        city: inferredCity,
+        pincode: cleanPincode,
+        phone: cleanPhone,
+        isDefault: !!isDefault,
+        lat: finalLat,
+        lng: finalLng,
+      }
+
       const res = await fetch('/api/addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -501,6 +599,8 @@ export default function CheckoutPage() {
           pincode: '209206',
           phone: addressForm.phone, // keep phone number for convenience
           isDefault: false,
+          lat: null,
+          lng: null,
         })
         toast.success('Address saved successfully!')
       } else {
@@ -1072,6 +1172,13 @@ export default function CheckoutPage() {
                               )}
                             </Button>
                           </div>
+                          
+                          {addressForm.lat && addressForm.lng && (
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-2 font-bold animate-pulse">
+                              <span className="text-sm shrink-0">📍</span>
+                              <span>GPS Location Pinned! Coordinates: {addressForm.lat.toFixed(6)}, {addressForm.lng.toFixed(6)}</span>
+                            </div>
+                          )}
                           
                           <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200/50 dark:border-blue-900/30 flex items-start gap-2.5 leading-relaxed font-medium">
                             <span className="text-base shrink-0 mt-0.5">ℹ️</span>

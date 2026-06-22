@@ -42,14 +42,16 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id
     const trimmedName = name.trim()
-    const trimmedPhone = phone.trim().replace(/\D/g, '')
+    const cleaned = phone.replace(/\D/g, '')
+    const cleanDigits = cleaned.slice(-10)
+    const normalizedPhone = `+91${cleanDigits}`
 
     // Update the user record
     await prisma.user.update({
       where: { id: userId },
       data: {
         name: trimmedName,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
       }
     })
 

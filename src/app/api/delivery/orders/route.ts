@@ -17,7 +17,8 @@ export async function GET() {
              o."paymentStatus"::text as "paymentStatus",
              o."estimatedDelivery", o."createdAt",
              o."shopName", o."deliveryUserId", o.notes,
-             o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
+             o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
+             o."deliveryLat", o."deliveryLng"
       FROM orders o
       WHERE o."deliveryMethod" = 'DELIVERY'
         AND (
