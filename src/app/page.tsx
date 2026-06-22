@@ -106,7 +106,7 @@ const getCachedFlashDeals = unstable_cache(
         { isFlashDeal: 'desc' },
         { discount: 'desc' }
       ],
-      take: 30,
+      take: 150,
       select: productSelect,
     })
   },
@@ -124,7 +124,7 @@ const getCachedBestSellers = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 30,
+      take: 150,
       select: productSelect,
     })
   },
