@@ -14,33 +14,10 @@ export async function GET(request: NextRequest) {
 
   const apiKey = process.env.GOOGLE_MAPS_API_KEY
 
-  // If no Google Maps API Key is provided, fallback to OpenStreetMap Nominatim
+  // If no Google Maps API Key is provided, return an error (OpenStreetMap disabled)
   if (!apiKey) {
-    console.warn('GOOGLE_MAPS_API_KEY is not configured in .env. Falling back to OpenStreetMap.')
-    try {
-      if (lat && lng) {
-        const osmRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`,
-          { headers: { 'User-Agent': 'FastKiranaApp/1.0' } }
-        )
-        if (osmRes.ok) {
-          const data = await osmRes.json()
-          return NextResponse.json({ source: 'osm', data })
-        }
-      } else if (addressQuery) {
-        const osmRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}&limit=1`,
-          { headers: { 'User-Agent': 'FastKiranaApp/1.0' } }
-        )
-        if (osmRes.ok) {
-          const data = await osmRes.json()
-          return NextResponse.json({ source: 'osm', data })
-        }
-      }
-      return NextResponse.json({ error: 'Failed to fetch from OpenStreetMap' }, { status: 500 })
-    } catch (err: any) {
-      return NextResponse.json({ error: err.message || 'OSM Error' }, { status: 500 })
-    }
+    console.error('GOOGLE_MAPS_API_KEY is not configured in .env')
+    return NextResponse.json({ error: 'Google Maps API is not configured on this server.' }, { status: 500 })
   }
 
   try {

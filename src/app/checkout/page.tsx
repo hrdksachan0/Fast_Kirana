@@ -318,87 +318,63 @@ export default function CheckoutPage() {
         }
 
         fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`)
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error('Geocoding failed')
+            return res.json()
+          })
           .then((resData) => {
             toast.dismiss(toastId)
-            if (resData.source === 'google') {
-              const results = resData.data.results
-              if (results && results.length > 0) {
-                const firstResult = results[0]
-                const addressComponents = firstResult.address_components
-                
-                let route = ''
-                let sublocality = ''
-                let city = 'Ghatampur'
-                let postcode = '209206'
-                
-                addressComponents.forEach((comp: any) => {
-                  if (comp.types.includes('route')) {
-                    route = comp.long_name
-                  }
-                  if (
-                    comp.types.includes('sublocality') ||
-                    comp.types.includes('sublocality_level_1') ||
-                    comp.types.includes('sublocality_level_2')
-                  ) {
-                    sublocality = comp.long_name
-                  }
-                  if (comp.types.includes('locality')) {
-                    city = comp.long_name
-                  }
-                  if (comp.types.includes('postal_code')) {
-                    postcode = comp.long_name
-                  }
-                })
+            const results = resData.data?.results
+            if (results && results.length > 0) {
+              const firstResult = results[0]
+              const addressComponents = firstResult.address_components
+              
+              let route = ''
+              let sublocality = ''
+              let city = 'Ghatampur'
+              let postcode = '209206'
+              
+              addressComponents.forEach((comp: any) => {
+                if (comp.types.includes('route')) {
+                  route = comp.long_name
+                }
+                if (
+                  comp.types.includes('sublocality') ||
+                  comp.types.includes('sublocality_level_1') ||
+                  comp.types.includes('sublocality_level_2')
+                ) {
+                  sublocality = comp.long_name
+                }
+                if (comp.types.includes('locality')) {
+                  city = comp.long_name
+                }
+                if (comp.types.includes('postal_code')) {
+                  postcode = comp.long_name
+                }
+              })
 
-                const streetParts = [sublocality, route].filter(Boolean)
-                const streetName = streetParts.length > 0 ? streetParts.join(', ') : firstResult.formatted_address.split(',')[0]
+              const streetParts = [sublocality, route].filter(Boolean)
+              const streetName = streetParts.length > 0 ? streetParts.join(', ') : firstResult.formatted_address.split(',')[0]
 
-                setAddressForm(prev => ({
-                  ...prev,
-                  label: prev.label || 'Home',
-                  houseNo: '.',
-                  street: streetName || 'Detected Location',
-                  area: '.',
-                  city: city || 'Ghatampur',
-                  pincode: postcode || '209206',
-                  lat: latitude,
-                  lng: longitude,
-                }))
-                toast.success('Location detected using Google Maps!')
-              } else {
-                toast.error('Failed to parse Google Maps location details.')
-              }
+              setAddressForm(prev => ({
+                ...prev,
+                label: prev.label || 'Home',
+                houseNo: '.',
+                street: streetName || 'Detected Location',
+                area: '.',
+                city: city || 'Ghatampur',
+                pincode: postcode || '209206',
+                lat: latitude,
+                lng: longitude,
+              }))
+              toast.success('Location detected using Google Maps!')
             } else {
-              // OpenStreetMap Fallback
-              const address = resData.data?.address
-              if (address) {
-                const detectedStreet = [
-                  address.building || address.house_number || '',
-                  address.road || '',
-                  address.neighbourhood || address.city_district || address.suburb || ''
-                ].filter(Boolean).join(', ')
-
-                setAddressForm(prev => ({
-                  ...prev,
-                  label: prev.label || 'Home',
-                  houseNo: '.',
-                  street: detectedStreet || 'Detected Location',
-                  area: '.',
-                  city: address.city || address.town || address.village || 'Ghatampur',
-                  pincode: address.postcode || '209206',
-                  lat: latitude,
-                  lng: longitude,
-                }))
-                toast.success('Location detected using OpenStreetMap!')
-              } else {
-                toast.error('Failed to parse address details.')
-              }
+              toast.error('Failed to parse Google Maps location details.')
             }
           })
           .catch(() => {
             toast.dismiss(toastId)
-            toast.error('Error fetching details from geocoding proxy.')
+            toast.error('Error fetching details from Google Maps geocoding service.')
           })
           .finally(() => {
             setIsDetectingLocation(false)
@@ -488,6 +464,37 @@ export default function CheckoutPage() {
           } else {
             setSelectedAddressId('')
           }
+
+          // Automatically geocode in background if any saved address lacks coordinates
+          deliveryAddrs.forEach(async (addr: any) => {
+            if (addr.lat === null || addr.lng === null) {
+              try {
+                const searchQuery = `${addr.street}, ${addr.city}, ${addr.pincode}`
+                const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`)
+                if (geoRes.ok) {
+                  const geoData = await geoRes.json()
+                  let finalLat = null
+                  let finalLng = null
+                  const results = geoData.data?.results
+                  if (results && results.length > 0) {
+                    finalLat = Math.round(results[0].geometry.location.lat * 1000000) / 1000000
+                    finalLng = Math.round(results[0].geometry.location.lng * 1000000) / 1000000
+                  }
+                  
+                  if (finalLat && finalLng) {
+                    await fetch('/api/addresses', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: addr.id, lat: finalLat, lng: finalLng }),
+                    })
+                    setAddresses(prev => prev.map(a => a.id === addr.id ? { ...a, lat: finalLat, lng: finalLng } : a))
+                  }
+                }
+              } catch (err) {
+                console.error('Error auto-geocoding existing address:', addr.id, err)
+              }
+            }
+          })
         }
       } catch (err) {
         toast.error('Failed to load saved addresses')
@@ -547,18 +554,10 @@ export default function CheckoutPage() {
           const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`)
           if (geoRes.ok) {
             const geoData = await geoRes.json()
-            if (geoData.source === 'google') {
-              const results = geoData.data.results
-              if (results && results.length > 0) {
-                finalLat = results[0].geometry.location.lat
-                finalLng = results[0].geometry.location.lng
-              }
-            } else {
-              const results = geoData.data
-              if (results && results.length > 0) {
-                finalLat = parseFloat(results[0].lat)
-                finalLng = parseFloat(results[0].lon)
-              }
+            const results = geoData.data?.results
+            if (results && results.length > 0) {
+              finalLat = results[0].geometry.location.lat
+              finalLng = results[0].geometry.location.lng
             }
           }
         } catch (err) {

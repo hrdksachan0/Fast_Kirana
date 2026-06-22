@@ -136,3 +136,35 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete address' }, { status: 500 })
   }
 }
+
+export async function PATCH(request: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id, lat, lng } = await request.json()
+    if (!id) {
+      return NextResponse.json({ error: 'Address ID is required' }, { status: 400 })
+    }
+
+    const address = await prisma.address.findUnique({ where: { id } })
+    if (!address || address.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
+    }
+
+    const updatedAddress = await prisma.address.update({
+      where: { id },
+      data: {
+        lat: lat ? parseFloat(lat.toString()) : null,
+        lng: lng ? parseFloat(lng.toString()) : null,
+      },
+    })
+
+    return NextResponse.json(updatedAddress)
+  } catch (error) {
+    console.error('Error in PATCH /api/addresses:', error)
+    return NextResponse.json({ error: 'Failed to update address' }, { status: 500 })
+  }
+}
