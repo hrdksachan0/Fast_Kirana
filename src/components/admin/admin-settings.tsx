@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText } from 'lucide-react'
+import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface AdminSettingsProps {
@@ -10,7 +10,8 @@ interface AdminSettingsProps {
 }
 
 export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
-  const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance'>('ops')
+  const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance' | 'greetings'>('ops')
+  const [greetingsSubTab, setGreetingsSubTab] = useState<'closed' | 'morning' | 'afternoon' | 'evening' | 'night'>('morning')
   const [deliveriesCount, setDeliveriesCount] = useState('10,000+')
   const [ratingValue, setRatingValue] = useState('4.8')
   const [happyFamilies, setHappyFamilies] = useState('5,000+')
@@ -33,6 +34,29 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+
+  const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
+  const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
+  
+  const [heroGreetingMorning, setHeroGreetingMorning] = useState("Good morning, let's get breakfast! 🌅")
+  const [heroSubtitleMorningMartClosed, setHeroSubtitleMorningMartClosed] = useState("Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨")
+  const [heroSubtitleMorningCafeClosed, setHeroSubtitleMorningCafeClosed] = useState("Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦")
+  const [heroSubtitleMorningBothOpen, setHeroSubtitleMorningBothOpen] = useState("Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.")
+  
+  const [heroGreetingAfternoon, setHeroGreetingAfternoon] = useState("Good afternoon! Ready for lunch? 🍛")
+  const [heroSubtitleAfternoonMartClosed, setHeroSubtitleAfternoonMartClosed] = useState("Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨")
+  const [heroSubtitleAfternoonCafeClosed, setHeroSubtitleAfternoonCafeClosed] = useState("Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦")
+  const [heroSubtitleAfternoonBothOpen, setHeroSubtitleAfternoonBothOpen] = useState("Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.")
+  
+  const [heroGreetingEvening, setHeroGreetingEvening] = useState("It's snack o'clock! Tea & snacks are ready ☕")
+  const [heroSubtitleEveningMartClosed, setHeroSubtitleEveningMartClosed] = useState("Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟")
+  const [heroSubtitleEveningCafeClosed, setHeroSubtitleEveningCafeClosed] = useState("Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦")
+  const [heroSubtitleEveningBothOpen, setHeroSubtitleEveningBothOpen] = useState("Samosas, munchies, chips, and chilled soft drinks ready for tea time.")
+  
+  const [heroGreetingNight, setHeroGreetingNight] = useState("Late night cravings? We got you! 🌙")
+  const [heroSubtitleNightMartClosed, setHeroSubtitleNightMartClosed] = useState("Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨")
+  const [heroSubtitleNightCafeClosed, setHeroSubtitleNightCafeClosed] = useState("Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦")
+  const [heroSubtitleNightBothOpen, setHeroSubtitleNightBothOpen] = useState("Indulge in ice creams, chocolates, late night munchies, and cafe specialties.")
   
   const [categories, setCategories] = useState<any[]>([])
   const [categoryStatuses, setCategoryStatuses] = useState<Record<string, boolean>>({})
@@ -79,6 +103,25 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.contact_timings) setContactTimings(data.contact_timings)
         if (data.contact_address) setContactAddress(data.contact_address)
 
+        if (data.hero_greeting_closed) setHeroGreetingClosed(data.hero_greeting_closed)
+        if (data.hero_subtitle_closed) setHeroSubtitleClosed(data.hero_subtitle_closed)
+        if (data.hero_greeting_morning) setHeroGreetingMorning(data.hero_greeting_morning)
+        if (data.hero_subtitle_morning_mart_closed) setHeroSubtitleMorningMartClosed(data.hero_subtitle_morning_mart_closed)
+        if (data.hero_subtitle_morning_cafe_closed) setHeroSubtitleMorningCafeClosed(data.hero_subtitle_morning_cafe_closed)
+        if (data.hero_subtitle_morning_both_open) setHeroSubtitleMorningBothOpen(data.hero_subtitle_morning_both_open)
+        if (data.hero_greeting_afternoon) setHeroGreetingAfternoon(data.hero_greeting_afternoon)
+        if (data.hero_subtitle_afternoon_mart_closed) setHeroSubtitleAfternoonMartClosed(data.hero_subtitle_afternoon_mart_closed)
+        if (data.hero_subtitle_afternoon_cafe_closed) setHeroSubtitleAfternoonCafeClosed(data.hero_subtitle_afternoon_cafe_closed)
+        if (data.hero_subtitle_afternoon_both_open) setHeroSubtitleAfternoonBothOpen(data.hero_subtitle_afternoon_both_open)
+        if (data.hero_greeting_evening) setHeroGreetingEvening(data.hero_greeting_evening)
+        if (data.hero_subtitle_evening_mart_closed) setHeroSubtitleEveningMartClosed(data.hero_subtitle_evening_mart_closed)
+        if (data.hero_subtitle_evening_cafe_closed) setHeroSubtitleEveningCafeClosed(data.hero_subtitle_evening_cafe_closed)
+        if (data.hero_subtitle_evening_both_open) setHeroSubtitleEveningBothOpen(data.hero_subtitle_evening_both_open)
+        if (data.hero_greeting_night) setHeroGreetingNight(data.hero_greeting_night)
+        if (data.hero_subtitle_night_mart_closed) setHeroSubtitleNightMartClosed(data.hero_subtitle_night_mart_closed)
+        if (data.hero_subtitle_night_cafe_closed) setHeroSubtitleNightCafeClosed(data.hero_subtitle_night_cafe_closed)
+        if (data.hero_subtitle_night_both_open) setHeroSubtitleNightBothOpen(data.hero_subtitle_night_both_open)
+
         // Parse category statuses
         const catStatusMap: Record<string, boolean> = {}
         cats.forEach((cat: any) => {
@@ -100,7 +143,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim()) {
+    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
+        !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
+        !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
+        !heroGreetingAfternoon.trim() || !heroSubtitleAfternoonMartClosed.trim() || !heroSubtitleAfternoonCafeClosed.trim() || !heroSubtitleAfternoonBothOpen.trim() ||
+        !heroGreetingEvening.trim() || !heroSubtitleEveningMartClosed.trim() || !heroSubtitleEveningCafeClosed.trim() || !heroSubtitleEveningBothOpen.trim() ||
+        !heroGreetingNight.trim() || !heroSubtitleNightMartClosed.trim() || !heroSubtitleNightCafeClosed.trim() || !heroSubtitleNightBothOpen.trim()) {
       toast.error('Please fill in all setting fields')
       return
     }
@@ -138,6 +186,24 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
           contact_address: contactAddress.trim(),
+          hero_greeting_closed: heroGreetingClosed.trim(),
+          hero_subtitle_closed: heroSubtitleClosed.trim(),
+          hero_greeting_morning: heroGreetingMorning.trim(),
+          hero_subtitle_morning_mart_closed: heroSubtitleMorningMartClosed.trim(),
+          hero_subtitle_morning_cafe_closed: heroSubtitleMorningCafeClosed.trim(),
+          hero_subtitle_morning_both_open: heroSubtitleMorningBothOpen.trim(),
+          hero_greeting_afternoon: heroGreetingAfternoon.trim(),
+          hero_subtitle_afternoon_mart_closed: heroSubtitleAfternoonMartClosed.trim(),
+          hero_subtitle_afternoon_cafe_closed: heroSubtitleAfternoonCafeClosed.trim(),
+          hero_subtitle_afternoon_both_open: heroSubtitleAfternoonBothOpen.trim(),
+          hero_greeting_evening: heroGreetingEvening.trim(),
+          hero_subtitle_evening_mart_closed: heroSubtitleEveningMartClosed.trim(),
+          hero_subtitle_evening_cafe_closed: heroSubtitleEveningCafeClosed.trim(),
+          hero_subtitle_evening_both_open: heroSubtitleEveningBothOpen.trim(),
+          hero_greeting_night: heroGreetingNight.trim(),
+          hero_subtitle_night_mart_closed: heroSubtitleNightMartClosed.trim(),
+          hero_subtitle_night_cafe_closed: heroSubtitleNightCafeClosed.trim(),
+          hero_subtitle_night_both_open: heroSubtitleNightBothOpen.trim(),
           ...categorySettingsPayload,
         }),
       })
@@ -189,6 +255,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
               {[
                 { id: 'ops', label: '🚚 Operations' },
                 { id: 'cosmetics', label: '🎨 Branding' },
+                { id: 'greetings', label: '👋 Greetings' },
                 { id: 'finance', label: '🔑 Financials' }
               ].map(t => (
                 <button
@@ -569,6 +636,240 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                     To enable direct uploads for product images from your computer, create a free account on <a href="https://cloudinary.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Cloudinary.com</a> and configure an Unsigned upload preset.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {settingsTab === 'greetings' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Time-of-day mode tabs switcher */}
+                <div className="flex flex-wrap gap-1 bg-muted/20 p-1 rounded-xl">
+                  {[
+                    { id: 'closed', label: '💤 Closed' },
+                    { id: 'morning', label: '🌅 Morning (6-11)' },
+                    { id: 'afternoon', label: '🍛 Afternoon (11-16)' },
+                    { id: 'evening', label: '☕ Evening (16-20)' },
+                    { id: 'night', label: '🌙 Night (20-5)' }
+                  ].map(subTab => (
+                    <button
+                      key={subTab.id}
+                      type="button"
+                      onClick={() => setGreetingsSubTab(subTab.id as any)}
+                      className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        greetingsSubTab === subTab.id
+                          ? 'bg-card text-accent border border-border/30 shadow-xs'
+                          : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {subTab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sub Tab Contents */}
+                {greetingsSubTab === 'closed' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Closed Greeting *</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroGreetingClosed}
+                        onChange={(e) => setHeroGreetingClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Closed Subtitle *</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={heroSubtitleClosed}
+                        onChange={(e) => setHeroSubtitleClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {greetingsSubTab === 'morning' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Morning Greeting *</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroGreetingMorning}
+                        onChange={(e) => setHeroGreetingMorning(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Grocery Mart Closed & Cafe Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleMorningMartClosed}
+                        onChange={(e) => setHeroSubtitleMorningMartClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Cafe Closed & Grocery Mart Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleMorningCafeClosed}
+                        onChange={(e) => setHeroSubtitleMorningCafeClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Both Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleMorningBothOpen}
+                        onChange={(e) => setHeroSubtitleMorningBothOpen(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {greetingsSubTab === 'afternoon' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Afternoon Greeting *</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroGreetingAfternoon}
+                        onChange={(e) => setHeroGreetingAfternoon(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Grocery Mart Closed & Cafe Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleAfternoonMartClosed}
+                        onChange={(e) => setHeroSubtitleAfternoonMartClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Cafe Closed & Grocery Mart Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleAfternoonCafeClosed}
+                        onChange={(e) => setHeroSubtitleAfternoonCafeClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Both Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleAfternoonBothOpen}
+                        onChange={(e) => setHeroSubtitleAfternoonBothOpen(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {greetingsSubTab === 'evening' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Evening Greeting *</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroGreetingEvening}
+                        onChange={(e) => setHeroGreetingEvening(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Grocery Mart Closed & Cafe Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleEveningMartClosed}
+                        onChange={(e) => setHeroSubtitleEveningMartClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Cafe Closed & Grocery Mart Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleEveningCafeClosed}
+                        onChange={(e) => setHeroSubtitleEveningCafeClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Both Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleEveningBothOpen}
+                        onChange={(e) => setHeroSubtitleEveningBothOpen(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {greetingsSubTab === 'night' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Night Greeting *</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroGreetingNight}
+                        onChange={(e) => setHeroGreetingNight(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Grocery Mart Closed & Cafe Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleNightMartClosed}
+                        onChange={(e) => setHeroSubtitleNightMartClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Cafe Closed & Grocery Mart Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleNightCafeClosed}
+                        onChange={(e) => setHeroSubtitleNightCafeClosed(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Subtitle: Both Open *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={heroSubtitleNightBothOpen}
+                        onChange={(e) => setHeroSubtitleNightBothOpen(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

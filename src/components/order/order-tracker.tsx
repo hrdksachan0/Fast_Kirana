@@ -92,7 +92,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     { status: 'CONFIRMED', label: 'Confirmed', desc: 'Store has accepted your order.', icon: CheckCircle2 },
     { status: 'PACKED', label: 'Packing Items', desc: 'Packing fresh items at our dark store.', icon: Package },
     { status: 'SHIPPED', label: 'Out for Delivery', desc: 'Rider is carrying your order.', icon: Truck },
-    { status: 'DELIVERED', label: 'Delivered', desc: 'Groceries delivered to your door!', icon: Check },
+    { status: 'DELIVERED', label: 'Delivered', desc: 'Order delivered to your door!', icon: Check },
   ]
 
   // Fetch store coordinates and support phone from settings on mount

@@ -46,6 +46,11 @@ interface ReportSummary {
   totalOrders: number
   averageOrderValue: number
   profitMargin: number
+  totalMiscFee?: number
+  totalTaxes?: number
+  totalDeliveryFee?: number
+  productSales?: number
+  missingCostCount?: number
 }
 
 export function AdminReports() {
@@ -61,11 +66,17 @@ export function AdminReports() {
     totalCost: 0,
     totalOrders: 0,
     averageOrderValue: 0,
-    profitMargin: 0
+    profitMargin: 0,
+    totalMiscFee: 0,
+    totalTaxes: 0,
+    totalDeliveryFee: 0,
+    productSales: 0,
+    missingCostCount: 0
   })
   const [dailySales, setDailySales] = useState<DailySale[]>([])
   const [categorySales, setCategorySales] = useState<CategorySale[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [missingCostProducts, setMissingCostProducts] = useState<any[]>([])
 
   // Set default dates on load
   useEffect(() => {
@@ -110,6 +121,7 @@ export function AdminReports() {
       setDailySales(data.dailySales || [])
       setCategorySales(data.categorySales || [])
       setTopProducts(data.topProducts || [])
+      setMissingCostProducts(data.missingCostProducts || [])
     } catch (err) {
       console.error(err)
       toast.error('Could not generate sales reports')
@@ -165,12 +177,17 @@ export function AdminReports() {
       // 1. Prepare Summary CSV Data
       let csvContent = 'data:text/csv;charset=utf-8,'
       csvContent += 'REPORT SUMMARY\n'
-      csvContent += `Total Sales,${summary.totalSales}\n`
-      csvContent += `Total Cost Basis,${summary.totalCost}\n`
+      csvContent += `Total Sales (Collected),${summary.totalSales}\n`
+      csvContent += `Gross Product Sales,${summary.productSales || 0}\n`
+      csvContent += `GST / Taxes,${summary.totalTaxes || 0}\n`
+      csvContent += `Delivery Charges,${summary.totalDeliveryFee || 0}\n`
+      csvContent += `Miscellaneous / Packaging Fees,${summary.totalMiscFee || 0}\n`
+      csvContent += `Total Cost Basis (COGS),${summary.totalCost}\n`
       csvContent += `Total Profit,${summary.totalProfit}\n`
       csvContent += `Profit Margin (%),${summary.profitMargin}%\n`
       csvContent += `Total Orders,${summary.totalOrders}\n`
-      csvContent += `Average Order Value,${summary.averageOrderValue}\n\n`
+      csvContent += `Average Order Value,${summary.averageOrderValue}\n`
+      csvContent += `Items Missing Cost Price,${summary.missingCostCount || 0}\n\n`
 
       // 2. Add Daily sales trend log
       csvContent += 'DAILY TREND LOG\nDate,Sales (INR),Profit (INR),Orders Count\n'
@@ -324,6 +341,97 @@ export function AdminReports() {
               <p className="text-[9px] text-text-muted mt-1">Average Order Value: {formatPrice(summary.averageOrderValue)}</p>
             </div>
 
+          </div>
+
+          {/* Detailed Revenue & Cost Price Warnings */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-6">
+            {/* Revenue Breakdown */}
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <div>
+                  <h4 className="text-sm font-bold text-text-primary">Revenue & Fee Breakdown</h4>
+                  <p className="text-[10px] text-text-muted">Breakdown of gross sales, taxes, delivery fees, and packaging charges.</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-text-secondary">Gross Product Sales:</span>
+                  <span className="font-bold text-text-primary">{formatPrice(summary.productSales || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-text-secondary">GST / Taxes Collected:</span>
+                  <span className="font-bold text-[#00b140]">{formatPrice(summary.totalTaxes || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-text-secondary">Delivery Charges Collected:</span>
+                  <span className="font-bold text-blue-500">{formatPrice(summary.totalDeliveryFee || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-border/40 pb-2">
+                  <span className="text-text-secondary">Packaging / Miscellaneous Charges:</span>
+                  <span className="font-bold text-purple-500">{formatPrice(summary.totalMiscFee || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 text-sm">
+                  <span className="font-extrabold text-text-primary">Total Collected Revenue:</span>
+                  <span className="font-black text-primary">{formatPrice(summary.totalSales)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cost Price Diagnostics */}
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+                  <Activity className="h-5 w-5 text-rose-500" />
+                  <div>
+                    <h4 className="text-sm font-bold text-text-primary">Cost Price Analysis</h4>
+                    <p className="text-[10px] text-text-muted">Status of product cost prices and net margin calculations.</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-3 text-xs">
+                  {summary.missingCostCount && summary.missingCostCount > 0 ? (
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 space-y-1">
+                      <h5 className="font-bold text-[11px] flex items-center gap-1">
+                        <span>⚠️</span> Cost Price Missing: {summary.missingCostCount} Products
+                      </h5>
+                      <p className="text-[10px] text-rose-600/90 leading-relaxed font-semibold">
+                        Some items sold in this period do not have a cost price set. Profit margins for these items are currently calculated using a 25% fallback margin.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600">
+                      <h5 className="font-bold text-[11px] flex items-center gap-1">
+                        <span>✅</span> Perfect Cost Price Coverage
+                      </h5>
+                      <p className="text-[10px] text-emerald-600/90 leading-relaxed font-semibold">
+                        All items sold in this period have cost prices configured. Margins are 100% accurate.
+                      </p>
+                    </div>
+                  )}
+
+                  {missingCostProducts.length > 0 && (
+                    <div className="space-y-1.5 mt-2">
+                      <span className="text-[10px] font-bold text-text-secondary uppercase block">Items needing Cost Price update:</span>
+                      <div className="max-h-24 overflow-y-auto divide-y divide-border/40 border border-border/60 rounded-lg p-2 bg-muted/20">
+                        {missingCostProducts.map((p) => (
+                          <div key={p.id} className="flex justify-between py-1 text-[10px]">
+                            <span className="truncate max-w-[180px] font-medium text-text-primary">{p.name}</span>
+                            <span className="text-text-muted">Price: {formatPrice(p.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Suggestions Box */}
+              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-600 text-[10px] leading-relaxed font-semibold">
+                <strong>💡 Suggestion:</strong> Update product cost prices in the <em>Inventory</em> tab. Accurate cost prices are critical for matching correct profit margins, calculating actual product COGS, and generating exact tax sheets.
+              </div>
+            </div>
           </div>
 
           {/* SVG line Graph of daily sales vs. profit */}

@@ -32,7 +32,20 @@ export async function GET(request: Request) {
       ]
     }
 
-    const [ordersRaw, total] = await Promise.all([
+    const whereForCounts = { ...where }
+    delete whereForCounts.status
+
+    const [
+      ordersRaw,
+      total,
+      allCount,
+      pendingCount,
+      confirmedCount,
+      packedCount,
+      shippedCount,
+      deliveredCount,
+      cancelledCount,
+    ] = await Promise.all([
       prisma.order.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -49,6 +62,13 @@ export async function GET(request: Request) {
         take: limit,
       }),
       prisma.order.count({ where }),
+      prisma.order.count({ where: whereForCounts }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'PENDING' } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'CONFIRMED' } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'PACKED' } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'SHIPPED' } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'DELIVERED' } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED' } }),
     ])
 
     const orders = ordersRaw.map((o) => ({
@@ -71,7 +91,21 @@ export async function GET(request: Request) {
       } : null,
     }))
 
-    return NextResponse.json({ orders, total, page, limit })
+    return NextResponse.json({
+      orders,
+      total,
+      page,
+      limit,
+      counts: {
+        ALL: allCount,
+        PENDING: pendingCount,
+        CONFIRMED: confirmedCount,
+        PACKED: packedCount,
+        SHIPPED: shippedCount,
+        DELIVERED: deliveredCount,
+        CANCELLED: cancelledCount,
+      }
+    })
   } catch (error: any) {
     console.error('Failed to fetch admin orders:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })

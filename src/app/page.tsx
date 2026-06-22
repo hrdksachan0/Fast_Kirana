@@ -106,7 +106,7 @@ const getCachedFlashDeals = unstable_cache(
         { isFlashDeal: 'desc' },
         { discount: 'desc' }
       ],
-      take: 150,
+      take: 30,
       select: productSelect,
     })
   },
@@ -124,7 +124,7 @@ const getCachedBestSellers = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 150,
+      take: 30,
       select: productSelect,
     })
   },
@@ -305,6 +305,9 @@ export default async function Home() {
   let settingsRaw: any[] = []
 
   // Fetch independent data pools in parallel using cached functions to avoid sequence waterfalls and DB load
+  let manualTopPicks: any[] = []
+  let popularProducts: any[] = []
+
   try {
     const [
       bannersRes,
@@ -317,6 +320,8 @@ export default async function Home() {
       teaRes,
       nightRes,
       settingsRes,
+      manualTopPicksRes,
+      popularProductsRes,
     ] = await Promise.all([
       getCachedBanners(),
       getCachedCategories(),
@@ -328,6 +333,8 @@ export default async function Home() {
       getCachedTeaDeals(),
       getCachedNightCravings(),
       getCachedStoreSettings(),
+      getCachedManualTopPicks(),
+      getCachedPopularProducts(),
     ])
 
     promoBanners = bannersRes
@@ -340,16 +347,10 @@ export default async function Home() {
     teaRaw = teaRes
     nightRaw = nightRes
     settingsRaw = settingsRes
+    manualTopPicks = manualTopPicksRes
+    popularProducts = popularProductsRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
-  }
-
-  // Process Top Picks: Load manually pinned top picks first, then append dynamic sales trending
-  let manualTopPicks: any[] = []
-  try {
-    manualTopPicks = await getCachedManualTopPicks()
-  } catch (err) {
-    console.warn('Failed to load manual top picks:', err)
   }
 
   const trendingProductIds = trendingOrderItems.map((item) => item.productId).filter((id): id is string => id !== null)
@@ -376,13 +377,8 @@ export default async function Home() {
   // Fallback/fill: If we don't have enough dynamic trending products, pad with popular fallback products from cache
   if (topPicksRaw.length < 6) {
     const existingIds = topPicksRaw.map((p) => p.id)
-    try {
-      const popularProducts = await getCachedPopularProducts()
-      const remainingPopular = popularProducts.filter(p => !existingIds.includes(p.id))
-      topPicksRaw = [...topPicksRaw, ...remainingPopular.slice(0, 12 - topPicksRaw.length)]
-    } catch (error) {
-      console.warn('Database error in home page: failed to fetch popular fallback products', error)
-    }
+    const remainingPopular = popularProducts.filter(p => !existingIds.includes(p.id))
+    topPicksRaw = [...topPicksRaw, ...remainingPopular.slice(0, 12 - topPicksRaw.length)]
   }
 
   // Map database categories to UI schema

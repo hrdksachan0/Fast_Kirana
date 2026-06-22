@@ -8,9 +8,8 @@ import {
   ShoppingBag,
   Users,
   AlertTriangle,
-  Settings,
-  Star,
-  Ticket,
+  RotateCw,
+  CheckCircle,
 } from 'lucide-react'
 
 export const revalidate = 0 // Admin dashboard is fully dynamic
@@ -26,6 +25,9 @@ export default async function AdminPage() {
   let userCount = 0
   let lowStockCount = 0
   let revenue = 0
+  let totalOrdersCount = 0
+  let activeOrdersCount = 0
+  let deliveredOrdersCount = 0
   let ordersRaw: any[] = []
   let productsRaw: any[] = []
   let categoriesRaw: any[] = []
@@ -33,12 +35,18 @@ export default async function AdminPage() {
   let couponsRaw: any[] = []
   let usersRaw: any[] = []
   let allProductsRaw: any[] = []
+  let initialOrderCounts = {
+    ALL: 0,
+    PENDING: 0,
+    CONFIRMED: 0,
+    PACKED: 0,
+    SHIPPED: 0,
+    DELIVERED: 0,
+    CANCELLED: 0
+  }
 
   try {
     const results = await Promise.all([
-      prisma.order.count({
-        where: { status: 'DELIVERED' },
-      }),
       prisma.user.count(),
       prisma.product.count({
         where: {
@@ -119,21 +127,56 @@ export default async function AdminPage() {
             }
           }
         }
-      })
+      }),
+      prisma.order.groupBy({
+        by: ['status'],
+        _count: {
+          _all: true,
+        },
+      }),
     ])
 
-    orderCount = results[0] as number
-    userCount = results[1] as number
-    lowStockCount = results[2] as number
-    const aggregateResult = results[3] as any
+    userCount = results[0] as number
+    lowStockCount = results[1] as number
+    const aggregateResult = results[2] as any
     revenue = aggregateResult._sum?.total || 0
-    ordersRaw = results[4] as any[]
-    productsRaw = results[5] as any[]
-    categoriesRaw = results[6] as any[]
-    reviewsRaw = results[7] as any[]
-    couponsRaw = results[8] as any[]
-    usersRaw = results[9] as any[]
-    allProductsRaw = results[10] as any[]
+    ordersRaw = results[3] as any[]
+    productsRaw = results[4] as any[]
+    categoriesRaw = results[5] as any[]
+    reviewsRaw = results[6] as any[]
+    couponsRaw = results[7] as any[]
+    usersRaw = results[8] as any[]
+    allProductsRaw = results[9] as any[]
+    const statusGroups = results[10] as any[]
+
+    const statusCountsMap: Record<string, number> = {
+      PENDING: 0,
+      CONFIRMED: 0,
+      PACKED: 0,
+      SHIPPED: 0,
+      DELIVERED: 0,
+      CANCELLED: 0,
+    }
+    statusGroups.forEach((group) => {
+      if (group.status && statusCountsMap[group.status] !== undefined) {
+        statusCountsMap[group.status] = group._count._all
+      }
+    })
+
+    totalOrdersCount = Object.values(statusCountsMap).reduce((a, b) => a + b, 0)
+    activeOrdersCount = statusCountsMap.PENDING + statusCountsMap.CONFIRMED + statusCountsMap.PACKED + statusCountsMap.SHIPPED
+    deliveredOrdersCount = statusCountsMap.DELIVERED
+    orderCount = deliveredOrdersCount
+
+    initialOrderCounts = {
+      ALL: totalOrdersCount,
+      PENDING: statusCountsMap.PENDING,
+      CONFIRMED: statusCountsMap.CONFIRMED,
+      PACKED: statusCountsMap.PACKED,
+      SHIPPED: statusCountsMap.SHIPPED,
+      DELIVERED: statusCountsMap.DELIVERED,
+      CANCELLED: statusCountsMap.CANCELLED,
+    }
   } catch (error) {
     console.warn('Database connection error in admin page: using empty dashboard fallback')
   }
@@ -250,11 +293,11 @@ export default async function AdminPage() {
 
   const statsList = [
     { label: 'Total Revenue', value: formatPrice(revenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
-    { label: 'Total Orders', value: orderCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: 'Total Orders', value: totalOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: 'Active Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
+    { label: 'Delivered Orders', value: deliveredOrdersCount.toString(), icon: CheckCircle, color: 'text-[#00b140] bg-[#00b140]/10' },
     { label: 'Registered Users', value: userCount.toString(), icon: Users, color: 'text-blue-500 bg-blue-500/10' },
-    { label: 'Low Stock Items', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-discount bg-discount/10' },
-    { label: 'Customer Reviews', value: reviews.length.toString(), icon: Star, color: 'text-yellow-500 bg-yellow-500/10' },
-    { label: 'Active Coupons', value: coupons.filter((c) => c.isActive).length.toString(), icon: Ticket, color: 'text-purple-500 bg-purple-500/10' },
+    { label: 'Low Stock Alert', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-discount bg-discount/10' },
   ]
 
   return (
@@ -299,6 +342,7 @@ export default async function AdminPage() {
         initialReviews={reviews}
         initialCoupons={coupons}
         allProducts={allProducts}
+        initialOrderCounts={initialOrderCounts}
         stats={{
           revenue,
           orderCount,

@@ -38,10 +38,13 @@ export async function GET(request: NextRequest) {
         total: number
         subtotal: number
         discount: number
+        deliveryFee: number
+        taxes: number
+        miscFee: number
         createdAt: Date
       }>
     >`
-      SELECT id, total, subtotal, discount, "createdAt"
+      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
       FROM orders
       WHERE status::text = 'DELIVERED'
         AND "createdAt" >= ${start}
@@ -81,13 +84,26 @@ export async function GET(request: NextRequest) {
       itemsByOrder[item.orderId].push(item)
     }
 
+    // Track missing cost products
+    const missingCostProductsMap: Record<string, { id: string; name: string; price: number }> = {}
+
     // Helper: calculate cost and profit for an item
     const getItemMetrics = (item: typeof orderItems[0]) => {
+      const hasCostPrice = item.costPrice > 0
       // Fallback: if cost price is 0, assume 25% margin (cost is 75% of sale price)
-      const costPerUnit = item.costPrice > 0 ? item.costPrice : item.price * 0.75
+      const costPerUnit = hasCostPrice ? item.costPrice : item.price * 0.75
       const itemCost = costPerUnit * item.quantity
       const itemRevenue = item.price * item.quantity
       const itemProfit = itemRevenue - itemCost
+      
+      if (!hasCostPrice) {
+        missingCostProductsMap[item.productId] = {
+          id: item.productId,
+          name: item.name,
+          price: item.price
+        }
+      }
+      
       return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
     }
 
@@ -95,6 +111,10 @@ export async function GET(request: NextRequest) {
     let totalRevenue = 0
     let totalProfit = 0
     let totalCost = 0
+    let totalMiscFee = 0
+    let totalTaxes = 0
+    let totalDeliveryFee = 0
+    let totalProductSales = 0 // subtotal - discount
     const totalOrders = orders.length
 
     // Group by Date (YYYY-MM-DD)
@@ -129,6 +149,10 @@ export async function GET(request: NextRequest) {
       dailyData[dateString].orders++
       dailyData[dateString].sales += order.total
       totalRevenue += order.total
+      totalMiscFee += order.miscFee || 0
+      totalTaxes += order.taxes || 0
+      totalDeliveryFee += order.deliveryFee || 0
+      totalProductSales += (order.subtotal - order.discount)
 
       // Process items for profit calculation
       const items = itemsByOrder[order.id] || []
@@ -161,7 +185,6 @@ export async function GET(request: NextRequest) {
       }
 
       // Order profit = order.total - orderCost (takes discounts, taxes, delivery fee into account in proportion)
-      // For simplicity, we can do: orderProfit = order.total - orderCost
       // Note: orderCost is raw product cost, order.total includes deliveryFee, minus discount.
       // So order profit is a true reflection of net earnings.
       const orderProfit = order.total - orderCost
@@ -189,10 +212,16 @@ export async function GET(request: NextRequest) {
         totalOrders,
         averageOrderValue: Math.round(averageOrderValue * 100) / 100,
         profitMargin: Math.round(profitMargin * 10) / 10,
+        totalMiscFee: Math.round(totalMiscFee * 100) / 100,
+        totalTaxes: Math.round(totalTaxes * 100) / 100,
+        totalDeliveryFee: Math.round(totalDeliveryFee * 100) / 100,
+        productSales: Math.round(totalProductSales * 100) / 100,
+        missingCostCount: Object.keys(missingCostProductsMap).length,
       },
       dailySales: dailyList,
       categorySales: categoryList,
       topProducts: productList,
+      missingCostProducts: Object.values(missingCostProductsMap),
     })
   } catch (error: any) {
     console.error('Reports API error:', error)

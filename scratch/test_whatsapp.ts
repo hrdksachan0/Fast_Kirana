@@ -1,27 +1,20 @@
-import 'dotenv/config'
-import { sendWhatsAppOtp } from '../src/lib/whatsapp'
+import dotenv from 'dotenv'
+dotenv.config()
+
+import { sendWhatsAppOrderAlert } from '../src/lib/whatsapp'
 
 async function main() {
-  const testPhone = process.argv[2]
-  if (!testPhone) {
-    console.error('Please provide a phone number to test. Example: npx tsx scratch/test_whatsapp.ts +919876543210')
-    process.exit(1)
-  }
+  const adminPhone = '7054470303'
+  
+  console.log('--- Test 1: Sending with default (fastkirana_otp) ---')
+  process.env.WHATSAPP_ORDER_TEMPLATE_NAME = 'fastkirana_otp'
+  const alertRes1 = await sendWhatsAppOrderAlert(adminPhone, 'Test Order Alert - OTP')
+  console.log('Result 1:', alertRes1)
 
-  const testOtp = Math.floor(100000 + Math.random() * 900000).toString()
-  console.log(`Sending test OTP ${testOtp} to ${testPhone}...`)
-
-  const success = await sendWhatsAppOtp(testPhone, testOtp)
-  if (success) {
-    console.log('Test successful! OTP sent successfully.')
-  } else {
-    console.error('Test failed! Please check your Meta developer settings, token, or verified test numbers.')
-  }
+  console.log('\n--- Test 2: Sending with fastkirana_order ---')
+  process.env.WHATSAPP_ORDER_TEMPLATE_NAME = 'fastkirana_order'
+  const alertRes2 = await sendWhatsAppOrderAlert(adminPhone, 'Test Order Alert - Order')
+  console.log('Result 2:', alertRes2)
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error(err)
-    process.exit(1)
-  })

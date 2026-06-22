@@ -32,6 +32,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const settings = useUIStore((s) => s.settings) || {}
 
   useEffect(() => {
     setMounted(true)
@@ -58,8 +59,8 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
     // CASE 1: Both Grocery and Cafe are closed
     if (mounted && !groceryMartOpen && !cafeOpen) {
       return {
-        greeting: `We're resting right now 💤`,
-        subtitle: 'FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!',
+        greeting: settings.hero_greeting_closed || `We're resting right now 💤`,
+        subtitle: settings.hero_subtitle_closed || 'FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!',
         icon: <ShieldAlert className="h-4 w-4 text-rose-500 animate-pulse" />,
         modeLabel: 'Store Closed',
         gradient: 'from-zinc-100 via-stone-50 to-zinc-50',
@@ -76,12 +77,12 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       const isMartClosed = mounted && !groceryMartOpen
 
       return {
-        greeting: `${welcome}Good morning, let's get breakfast! 🌅`,
+        greeting: `${welcome}${settings.hero_greeting_morning || "Good morning, let's get breakfast! 🌅"}`,
         subtitle: isMartClosed 
-          ? 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨'
+          ? (settings.hero_subtitle_morning_mart_closed || 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨')
           : isCafeClosed
-          ? 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦'
-          : 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.',
+          ? (settings.hero_subtitle_morning_cafe_closed || 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦')
+          : (settings.hero_subtitle_morning_both_open || 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.'),
         icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 animate-pulse" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Morning Mode',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',
@@ -97,12 +98,12 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       const isMartClosed = mounted && !groceryMartOpen
 
       return {
-        greeting: `${welcome}Good afternoon! Ready for lunch? 🍛`,
+        greeting: `${welcome}${settings.hero_greeting_afternoon || "Good afternoon! Ready for lunch? 🍛"}`,
         subtitle: isMartClosed
-          ? 'Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨'
+          ? (settings.hero_subtitle_afternoon_mart_closed || 'Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨')
           : isCafeClosed
-          ? 'Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦'
-          : 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.',
+          ? (settings.hero_subtitle_afternoon_cafe_closed || 'Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦')
+          : (settings.hero_subtitle_afternoon_both_open || 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.'),
         icon: isMartClosed ? <Coffee className="h-4 w-4 text-emerald-500 animate-pulse" /> : <Utensils className="h-4 w-4 text-emerald-500" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Lunch Mode',
         gradient: 'from-emerald-50 via-teal-50/60 to-cyan-50/40',
@@ -118,12 +119,12 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       const isMartClosed = mounted && !groceryMartOpen
 
       return {
-        greeting: `${welcome}It's snack o'clock! Tea & snacks are ready ☕`,
+        greeting: `${welcome}${settings.hero_greeting_evening || "It's snack o'clock! Tea & snacks are ready ☕"}`,
         subtitle: isMartClosed
-          ? 'Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟'
+          ? (settings.hero_subtitle_evening_mart_closed || 'Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟')
           : isCafeClosed
-          ? 'Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦'
-          : 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.',
+          ? (settings.hero_subtitle_evening_cafe_closed || 'Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦')
+          : (settings.hero_subtitle_evening_both_open || 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.'),
         icon: isMartClosed ? <Coffee className="h-4 w-4 text-orange-500 animate-pulse" /> : <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Tea & Snacks Mode',
         gradient: 'from-orange-100/40 via-rose-50/40 to-amber-100/30',
@@ -139,12 +140,12 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       const isMartClosed = mounted && !groceryMartOpen
 
       return {
-        greeting: `${welcome}Late night cravings? We got you! 🌙`,
+        greeting: `${welcome}${settings.hero_greeting_night || "Late night cravings? We got you! 🌙"}`,
         subtitle: isMartClosed
-          ? 'Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨'
+          ? (settings.hero_subtitle_night_mart_closed || 'Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨')
           : isCafeClosed
-          ? 'Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦'
-          : 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.',
+          ? (settings.hero_subtitle_night_cafe_closed || 'Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦')
+          : (settings.hero_subtitle_night_both_open || 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.'),
         icon: isMartClosed ? <Coffee className="h-4 w-4 text-indigo-500 animate-pulse" /> : <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Cravings Mode',
         gradient: 'from-indigo-100/60 via-purple-50/50 to-pink-100/30',
@@ -154,7 +155,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-indigo-600 dark:text-indigo-400',
       }
     }
-  }, [currentHour, session, groceryMartOpen, cafeOpen, mounted])
+  }, [currentHour, session, groceryMartOpen, cafeOpen, mounted, settings])
 
   // Soft fallback for SSR to prevent layout shifting
   const currentGradient = mounted

@@ -28,29 +28,34 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
-async function checkOrderDetail() {
+async function main() {
+  console.log('--- DELETING CANCELLED ORDERS IN DB ---')
   try {
-    const latestOrder = await prisma.order.findFirst({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        items: true,
-        address: true,
-        user: true
+    const countBefore = await prisma.order.count({
+      where: {
+        status: 'CANCELLED'
       }
     })
+    console.log(`Found ${countBefore} CANCELLED orders in DB.`)
 
-    if (!latestOrder) {
-      console.log('No orders found in the database.')
+    if (countBefore === 0) {
+      console.log('No cancelled orders to delete.')
       return
     }
 
-    console.log(JSON.stringify(latestOrder, null, 2))
+    const deleteResult = await prisma.order.deleteMany({
+      where: {
+        status: 'CANCELLED'
+      }
+    })
+
+    console.log(`Successfully deleted ${deleteResult.count} CANCELLED orders.`)
   } catch (err) {
-    console.error('Error fetching order details:', err)
+    console.error('Error during deletion:', err)
   } finally {
     await prisma.$disconnect()
     await pool.end()
   }
 }
 
-checkOrderDetail()
+main()

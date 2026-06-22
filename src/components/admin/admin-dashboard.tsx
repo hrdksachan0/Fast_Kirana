@@ -68,6 +68,7 @@ interface AdminDashboardProps {
   initialReviews: any[]
   initialCoupons: any[]
   allProducts: any[]
+  initialOrderCounts?: Record<string, number>
   stats: {
     revenue: number
     orderCount: number
@@ -164,6 +165,7 @@ export function AdminDashboard({
   initialReviews,
   initialCoupons,
   allProducts: initialAllProducts,
+  initialOrderCounts,
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
@@ -183,6 +185,18 @@ export function AdminDashboard({
   
   // States for Orders
   const [orders, setOrders] = useState(initialOrders)
+  const [orderCounts, setOrderCounts] = useState<Record<string, number>>(() => {
+    if (initialOrderCounts) return initialOrderCounts
+    return {
+      ALL: initialOrders.length,
+      PENDING: initialOrders.filter((o: any) => o.status === 'PENDING').length,
+      CONFIRMED: initialOrders.filter((o: any) => o.status === 'CONFIRMED').length,
+      PACKED: initialOrders.filter((o: any) => o.status === 'PACKED').length,
+      SHIPPED: initialOrders.filter((o: any) => o.status === 'SHIPPED').length,
+      DELIVERED: initialOrders.filter((o: any) => o.status === 'DELIVERED').length,
+      CANCELLED: initialOrders.filter((o: any) => o.status === 'CANCELLED').length,
+    }
+  })
   const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders)
   const [orderRefreshKey, setOrderRefreshKey] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
@@ -688,6 +702,9 @@ export function AdminDashboard({
           const data = await res.json()
           setOrders(data.orders)
           setOrderTotal(data.total)
+          if (data.counts) {
+            setOrderCounts(data.counts)
+          }
         }
       } catch (err) {
         console.error('Failed to fetch orders:', err)
@@ -1985,14 +2002,14 @@ export function AdminDashboard({
                 (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase()))
               return matchesFilter && matchesSearch
             })
-            const activeOrdersCount = orders.filter(o => o.status === 'PENDING' || o.status === 'CONFIRMED').length
+            const activeOrdersCount = (orderCounts['PENDING'] ?? 0) + (orderCounts['CONFIRMED'] ?? 0)
 
             return (
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-extrabold text-text-primary text-base">Store Orders</h3>
                   <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold">
-                    Showing {filteredOrders.length} of {orders.length} orders
+                    Showing {orders.length} of {orderTotal} orders
                   </span>
                 </div>
 
@@ -2024,7 +2041,7 @@ export function AdminDashboard({
                       { key: 'DELIVERED', label: 'Delivered', color: 'bg-zinc-500/10 text-zinc-600 border border-zinc-500/20' },
                       { key: 'CANCELLED', label: 'Cancelled', color: 'bg-rose-500/10 text-rose-600 border border-rose-500/20' },
                     ].map((pill) => {
-                      const count = pill.key === 'ALL' ? orders.length : orders.filter(o => o.status === pill.key).length
+                      const count = orderCounts[pill.key] ?? 0
                       const isActive = orderStatusFilter === pill.key
                       return (
                         <button
