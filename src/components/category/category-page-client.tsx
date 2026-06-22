@@ -358,7 +358,7 @@ export function CategoryPageClient({
                   >
                     <span className="h-5 w-5 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={cat.name}>
                       {cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http')) ? (
-                        <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded" />
+                        <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover rounded" loading="lazy" />
                       ) : (
                         <span className="text-base leading-none">{cat.imageUrl || '🛒'}</span>
                       )}
@@ -387,7 +387,7 @@ export function CategoryPageClient({
               <div className="flex items-center gap-3">
                 <span className="h-10 w-10 flex items-center justify-center shrink-0 overflow-hidden" role="img" aria-label={activeCategory.name}>
                   {activeCategory.imageUrl && (activeCategory.imageUrl.startsWith('data:image/') || activeCategory.imageUrl.startsWith('/') || activeCategory.imageUrl.startsWith('http')) ? (
-                    <img src={activeCategory.imageUrl} alt={activeCategory.name} className="h-full w-full object-cover rounded-lg" />
+                    <img src={activeCategory.imageUrl} alt={activeCategory.name} className="h-full w-full object-cover rounded-lg" loading="lazy" />
                   ) : (
                     <span className="text-3xl leading-none">{activeCategory.imageUrl || '🛒'}</span>
                   )}
@@ -524,7 +524,7 @@ export function CategoryPageClient({
                   )}
                 >
                   {cat.imageUrl && (cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http') || cat.imageUrl.startsWith('data:image/')) ? (
-                    <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                   ) : (
                     <span className="text-xl leading-none">{cat.imageUrl || '🛒'}</span>
                   )}

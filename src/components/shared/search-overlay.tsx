@@ -563,6 +563,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   src={category.imageUrl}
                                   alt={category.name}
                                   className="w-full h-full object-cover"
+                                  loading="lazy"
                                 />
                               ) : (
                                 <span className="text-2xl" role="img" aria-label={category.name}>

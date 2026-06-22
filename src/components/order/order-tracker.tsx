@@ -603,6 +603,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
                     src={order.deliveryPhoto}
                     alt="Delivery confirmation proof"
                     className="w-full h-44 object-cover"
+                    loading="lazy"
                   />
                 </div>
               </div>
