@@ -497,22 +497,16 @@ export async function POST(request: NextRequest) {
 
     // Emit real-time SSE event for each newly created order and send push notifications to staff roles
     try {
-      // Fetch admin users from DB
-      const admins = await prisma.user.findMany({
-        where: { role: 'ADMIN' },
-        select: { phone: true }
-      })
+      // Build admin phones list to notify based on settings
+      const adminPhones: string[] = []
+      const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] !== 'false'
+      const notifyPhone2 = settingsMap['whatsapp_notify_8112849854'] !== 'false'
 
-      // Standard admin numbers to notify
-      const adminPhones = ['7054470303', '8112849854']
-
-      for (const a of admins) {
-        if (a.phone) {
-          const cleanP = a.phone.trim().replace(/\D/g, '')
-          if (cleanP && cleanP !== '9876543210' && cleanP !== '919876543210' && !adminPhones.includes(cleanP)) {
-            adminPhones.push(cleanP)
-          }
-        }
+      if (notifyPhone1) {
+        adminPhones.push('7054470303')
+      }
+      if (notifyPhone2) {
+        adminPhones.push('8112849854')
       }
 
       for (const order of createdOrders) {
@@ -538,7 +532,8 @@ export async function POST(request: NextRequest) {
 
         const whatsappPromises: Promise<any>[] = []
 
-        // 1. WhatsApp Alert to Customer
+        // 1. WhatsApp Alert to Customer (DISABLED per request)
+        /*
         const customerPhone = order.address?.phone
         if (customerPhone) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
@@ -549,6 +544,7 @@ export async function POST(request: NextRequest) {
               .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
           )
         }
+        */
 
         // 2. WhatsApp Alert to Admins/Staff
         if (adminPhones.length > 0) {

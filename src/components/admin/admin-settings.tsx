@@ -34,6 +34,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const [notifyPhone1, setNotifyPhone1] = useState(true)
+  const [notifyPhone2, setNotifyPhone2] = useState(true)
 
   const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
   const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
@@ -102,6 +104,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.contact_email) setContactEmail(data.contact_email)
         if (data.contact_timings) setContactTimings(data.contact_timings)
         if (data.contact_address) setContactAddress(data.contact_address)
+        if (data.whatsapp_notify_7054470303 !== undefined) setNotifyPhone1(data.whatsapp_notify_7054470303 !== 'false')
+        if (data.whatsapp_notify_8112849854 !== undefined) setNotifyPhone2(data.whatsapp_notify_8112849854 !== 'false')
 
         if (data.hero_greeting_closed) setHeroGreetingClosed(data.hero_greeting_closed)
         if (data.hero_subtitle_closed) setHeroSubtitleClosed(data.hero_subtitle_closed)
@@ -186,6 +190,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
           contact_address: contactAddress.trim(),
+          whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
+          whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
           hero_greeting_closed: heroGreetingClosed.trim(),
           hero_subtitle_closed: heroSubtitleClosed.trim(),
           hero_greeting_morning: heroGreetingMorning.trim(),
@@ -523,6 +529,34 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       onChange={(e) => setContactAddress(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                     />
+                  </div>
+
+                  {/* WhatsApp Order Notifications Settings */}
+                  <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2 space-y-2">
+                    <h4 className="text-xs font-black text-text-primary">💬 WhatsApp Order Alerts Configuration</h4>
+                    <p className="text-[10px] text-text-muted font-bold leading-relaxed">
+                      Select which admin phone numbers should receive instant WhatsApp notifications when a customer places a new order.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-5 bg-muted/20 p-4 rounded-2xl border border-border/40 w-fit">
+                      <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={notifyPhone1}
+                          onChange={(e) => setNotifyPhone1(e.target.checked)}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span>Send alerts to +91 70544 70303</span>
+                      </label>
+                      <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={notifyPhone2}
+                          onChange={(e) => setNotifyPhone2(e.target.checked)}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span>Send alerts to +91 81128 49854</span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Category-Wise Statuses Section */}
