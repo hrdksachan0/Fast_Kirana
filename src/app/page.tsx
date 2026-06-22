@@ -100,6 +100,10 @@ const getCachedFlashDeals = unstable_cache(
         OR: [
           { isFlashDeal: true },
           { discount: { gt: 10 } }
+        ],
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
         ]
       },
       orderBy: [
@@ -119,6 +123,10 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
+        ]
       },
       orderBy: [
         { isBestSeller: 'desc' },
