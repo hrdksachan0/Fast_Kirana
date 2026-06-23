@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { updateTag } from 'next/cache'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 // Helper to authenticate admin
 async function checkAdmin() {
@@ -38,9 +40,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, description, code, gradient, type, imageUrl, linkUrl, isActive, sortOrder } = body
 
-    if (!title || !description || !code) {
+    if (!title || !description) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, description, code' },
+        { error: 'Missing required fields: title, description' },
         { status: 400 }
       )
     }
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        code,
+        code: code || '',
         gradient: gradient || 'from-primary via-rose-500 to-orange-400',
         type: type || 'custom',
         imageUrl: imageUrl || null,
@@ -58,6 +60,10 @@ export async function POST(request: NextRequest) {
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : 0,
       }
     })
+
+    // Purge caches immediately
+    updateTag('banners')
+    revalidateStorefront()
 
     return NextResponse.json({ success: true, banner })
   } catch (error: any) {
@@ -104,6 +110,10 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    // Purge caches immediately
+    updateTag('banners')
+    revalidateStorefront()
+
     return NextResponse.json({ success: true, banner: updated })
   } catch (error: any) {
     console.error('Error updating banner:', error)
@@ -137,6 +147,10 @@ export async function DELETE(request: NextRequest) {
     await prisma.promoBanner.delete({
       where: { id }
     })
+
+    // Purge caches immediately
+    updateTag('banners')
+    revalidateStorefront()
 
     return NextResponse.json({ success: true, message: 'Banner deleted successfully' })
   } catch (error: any) {

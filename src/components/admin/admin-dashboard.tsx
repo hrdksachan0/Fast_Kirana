@@ -4235,7 +4235,7 @@ export function AdminDashboard({
 
       {activeTab === 'banners' && (
         <div className="animate-fade-in">
-          <AdminBanners />
+          <AdminBanners categories={categories} products={allProducts} />
         </div>
       )}
 

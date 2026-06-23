@@ -80,7 +80,12 @@ const FESTIVAL_TEMPLATES = [
   }
 ]
 
-export function AdminBanners() {
+interface AdminBannersProps {
+  categories?: any[]
+  products?: any[]
+}
+
+export function AdminBanners({ categories = [], products = [] }: AdminBannersProps) {
   const [banners, setBanners] = useState<PromoBanner[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -93,6 +98,10 @@ export function AdminBanners() {
   const [type, setType] = useState('festival')
   const [imageUrl, setImageUrl] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
+  const [linkType, setLinkType] = useState<'none' | 'category' | 'product' | 'custom'>('none')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState('')
+  const [customLinkUrl, setCustomLinkUrl] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [sortOrder, setSortOrder] = useState('0')
   const [submitting, setSubmitting] = useState(false)
@@ -187,6 +196,10 @@ export function AdminBanners() {
     setType(tpl.type)
     setImageUrl('')
     setLinkUrl('')
+    setLinkType('none')
+    setSelectedCategory('')
+    setSelectedProduct('')
+    setCustomLinkUrl('')
     toast.success(`${tpl.name} template applied! Customize below if needed.`)
   }
 
@@ -200,6 +213,10 @@ export function AdminBanners() {
     setType('festival')
     setImageUrl('')
     setLinkUrl('')
+    setLinkType('none')
+    setSelectedCategory('')
+    setSelectedProduct('')
+    setCustomLinkUrl('')
     setIsActive(true)
     setSortOrder('0')
   }
@@ -209,11 +226,37 @@ export function AdminBanners() {
     setEditingId(b.id)
     setTitle(b.title)
     setDescription(b.description)
-    setCode(b.code)
+    setCode(b.code || '')
     setGradient(b.gradient)
     setType(b.type)
     setImageUrl(b.imageUrl || '')
     setLinkUrl(b.linkUrl || '')
+    
+    const link = b.linkUrl || ''
+    if (!link) {
+      setLinkType('none')
+      setSelectedCategory('')
+      setSelectedProduct('')
+      setCustomLinkUrl('')
+    } else if (link.startsWith('/category/')) {
+      setLinkType('category')
+      const slug = link.replace('/category/', '')
+      setSelectedCategory(slug)
+      setSelectedProduct('')
+      setCustomLinkUrl('')
+    } else if (link.startsWith('/product/')) {
+      setLinkType('product')
+      const slug = link.replace('/product/', '')
+      setSelectedCategory('')
+      setSelectedProduct(slug)
+      setCustomLinkUrl('')
+    } else {
+      setLinkType('custom')
+      setSelectedCategory('')
+      setSelectedProduct('')
+      setCustomLinkUrl(link)
+    }
+
     setIsActive(b.isActive)
     setSortOrder(String(b.sortOrder))
     
@@ -224,13 +267,23 @@ export function AdminBanners() {
   // Submit banner (Create or Edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !description.trim() || !code.trim()) {
-      toast.error('Please fill in title, description, and promo code')
+    if (!title.trim() || !description.trim()) {
+      toast.error('Please fill in title and description')
       return
     }
 
     try {
       setSubmitting(true)
+
+      let computedLinkUrl: string | null = null
+      if (linkType === 'category') {
+        computedLinkUrl = selectedCategory ? `/category/${selectedCategory}` : null
+      } else if (linkType === 'product') {
+        computedLinkUrl = selectedProduct ? `/product/${selectedProduct}` : null
+      } else if (linkType === 'custom') {
+        computedLinkUrl = customLinkUrl.trim() || null
+      }
+
       const payload = {
         id: editingId || undefined,
         title: title.trim(),
@@ -239,7 +292,7 @@ export function AdminBanners() {
         gradient,
         type,
         imageUrl: imageUrl.trim() || null,
-        linkUrl: linkUrl.trim() || null,
+        linkUrl: computedLinkUrl,
         isActive,
         sortOrder: parseInt(sortOrder, 10) || 0
       }
@@ -390,13 +443,12 @@ export function AdminBanners() {
 
               {/* Promo Coupon Code */}
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Coupon Code (Promo Code) *</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Coupon Code (Optional)</label>
                 <div className="relative">
                   <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
                   <input
                     type="text"
-                    required
-                    placeholder="e.g. DIWALI100"
+                    placeholder="e.g. DIWALI100 (Leave blank for no coupon)"
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
                     className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
@@ -449,17 +501,79 @@ export function AdminBanners() {
                 </select>
               </div>
 
-              {/* Redirect Link URL */}
+              {/* Link Type Selector */}
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Click Redirect URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. /category/summer-vibes"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Click Link Type</label>
+                <select
+                  value={linkType}
+                  onChange={(e) => {
+                    const val = e.target.value as any
+                    setLinkType(val)
+                    if (val === 'category' && !selectedCategory && categories.length > 0) {
+                      setSelectedCategory(categories[0].slug)
+                    }
+                    if (val === 'product' && !selectedProduct && products.length > 0) {
+                      setSelectedProduct(products[0].slug)
+                    }
+                  }}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                />
+                >
+                  <option value="none">No Link (Unlinked)</option>
+                  <option value="category">Link to Category</option>
+                  <option value="product">Link to Product</option>
+                  <option value="custom">Custom Redirect URL</option>
+                </select>
               </div>
+
+              {/* Conditional Link Target Selector */}
+              {linkType === 'category' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Category</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                  >
+                    <option value="">-- Choose Category --</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.slug}>
+                        {cat.name} ({cat.slug})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {linkType === 'product' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Product</label>
+                  <select
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                  >
+                    <option value="">-- Choose Product --</option>
+                    {products.map((prod: any) => (
+                      <option key={prod.id} value={prod.slug}>
+                        {prod.name} ({prod.category?.name || 'Grocery'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {linkType === 'custom' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Custom Click URL</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /category/fruits-vegetables or /product/maggi"
+                    value={customLinkUrl}
+                    onChange={(e) => setCustomLinkUrl(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+              )}
 
               {/* Sorting Weight */}
               <div className="space-y-1">
@@ -620,10 +734,12 @@ export function AdminBanners() {
             ) : (
               <div className={`absolute inset-0 flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
                 <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide">
-                    <Gift className="h-2.5 w-2.5" />
-                    Use Code: {code || 'CODE100'}
-                  </span>
+                  {code.trim() && (
+                    <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide max-w-max">
+                      <Gift className="h-2.5 w-2.5" />
+                      Use Code: {code}
+                    </span>
+                  )}
                   <h4 className="text-sm font-black tracking-tight leading-tight line-clamp-1">
                     {title || 'Festive Sale Banner'}
                   </h4>
@@ -677,9 +793,18 @@ export function AdminBanners() {
                         <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? 'bg-accent' : 'bg-text-muted'}`} />
                         <strong className="text-xs text-text-primary block font-black truncate">{b.title}</strong>
                       </div>
-                      <span className="text-[9px] font-bold text-text-secondary bg-muted/40 border px-1.5 py-0.5 rounded font-mono">
-                        Code: {b.code}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {b.code && (
+                          <span className="text-[9px] font-bold text-text-secondary bg-muted/40 border px-1.5 py-0.5 rounded font-mono">
+                            Code: {b.code}
+                          </span>
+                        )}
+                        {b.linkUrl && (
+                          <span className="text-[9px] font-bold text-accent bg-accent/5 border border-accent/10 px-1.5 py-0.5 rounded font-mono">
+                            Link: {b.linkUrl}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-text-muted block truncate">{b.description}</span>
                     </div>
 
