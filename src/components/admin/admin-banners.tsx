@@ -47,6 +47,33 @@ const GRADIENT_PRESETS = [
 // Predefined Festival/Occasion Templates
 const FESTIVAL_TEMPLATES = [
   {
+    name: '📦 Fast Delivery (Ghatampur)',
+    title: 'Fast Delivery in Ghatampur',
+    description: 'Milk, Fruits, Vegetables, Snacks & more',
+    code: '',
+    gradient: 'from-rose-500 via-rose-500 to-orange-400',
+    type: 'custom',
+    linkUrl: '/category/fruits-vegetables'
+  },
+  {
+    name: '🥬 Farm Fresh Vegetables & Fruits',
+    title: 'Farm Fresh Vegetables & Fruits',
+    description: 'Directly sourced from local farms. Handpicked for premium quality.',
+    code: 'SAVE20',
+    gradient: 'from-emerald-600 via-emerald-500 to-teal-400',
+    type: 'fresh',
+    linkUrl: '/category/fruits-vegetables'
+  },
+  {
+    name: '🥛 Super Savings (First Order)',
+    title: 'Super Savings on First Order!',
+    description: 'Get flat 50% off up to ₹100 on fruits, veggies, dairy, and snacks.',
+    code: 'WELCOME50',
+    gradient: 'from-rose-600 via-rose-500 to-orange-400',
+    type: 'first-order',
+    linkUrl: '/category/fruits-vegetables'
+  },
+  {
     name: '🪔 Diwali Special',
     title: 'Shubh Deepavali Festive Offer!',
     description: 'Celebrate Diwali with sweets, dry fruits, and diyas. Get flat ₹150 off on your purchase!',
@@ -188,18 +215,40 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   }
 
   // Apply a Template
-  const handleApplyTemplate = (tpl: typeof FESTIVAL_TEMPLATES[0]) => {
+  const handleApplyTemplate = (tpl: any) => {
     setTitle(tpl.title)
     setDescription(tpl.description)
-    setCode(tpl.code)
+    setCode(tpl.code || '')
     setGradient(tpl.gradient)
     setType(tpl.type)
     setImageUrl('')
-    setLinkUrl('')
-    setLinkType('none')
-    setSelectedCategory('')
-    setSelectedProduct('')
-    setCustomLinkUrl('')
+    
+    const link = tpl.linkUrl || ''
+    setLinkUrl(link)
+    if (!link) {
+      setLinkType('none')
+      setSelectedCategory('')
+      setSelectedProduct('')
+      setCustomLinkUrl('')
+    } else if (link.startsWith('/category/')) {
+      setLinkType('category')
+      const slug = link.replace('/category/', '')
+      setSelectedCategory(slug)
+      setSelectedProduct('')
+      setCustomLinkUrl('')
+    } else if (link.startsWith('/product/')) {
+      setLinkType('product')
+      const slug = link.replace('/product/', '')
+      setSelectedCategory('')
+      setSelectedProduct(slug)
+      setCustomLinkUrl('')
+    } else {
+      setLinkType('custom')
+      setSelectedCategory('')
+      setSelectedProduct('')
+      setCustomLinkUrl(link)
+    }
+
     toast.success(`${tpl.name} template applied! Customize below if needed.`)
   }
 

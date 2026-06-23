@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
-import { updateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
 
 // Helper to authenticate admin
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Purge caches immediately
-    updateTag('banners')
+    revalidateTag('banners', 'max')
     revalidateStorefront()
 
     return NextResponse.json({ success: true, banner })
@@ -111,7 +111,7 @@ export async function PUT(request: NextRequest) {
     })
 
     // Purge caches immediately
-    updateTag('banners')
+    revalidateTag('banners', 'max')
     revalidateStorefront()
 
     return NextResponse.json({ success: true, banner: updated })
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest) {
     })
 
     // Purge caches immediately
-    updateTag('banners')
+    revalidateTag('banners', 'max')
     revalidateStorefront()
 
     return NextResponse.json({ success: true, message: 'Banner deleted successfully' })
