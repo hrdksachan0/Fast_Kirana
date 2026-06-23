@@ -1238,69 +1238,24 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Delivery Scheduling */}
-              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
+              {/* Always Instant Delivery Info Card */}
+              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-3">
                 <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                  <span>📅</span> {deliveryMethod === 'PICKUP' ? 'Choose Pickup Schedule' : 'Choose Delivery Schedule'}
+                  <span>📅</span> Delivery Speed
                 </h3>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setScheduledSlot('INSTANT')}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-xl border-2 text-center gap-1 transition-all",
-                      scheduledSlot === 'INSTANT'
-                        ? "border-primary bg-primary/5 text-primary font-bold shadow-sm"
-                        : "border-border hover:border-primary/20 text-text-secondary bg-muted/20"
-                    )}
-                  >
-                    <span className="text-sm">{deliveryMethod === 'PICKUP' ? '⚡ Instant Pickup' : '⚡ Instant Delivery'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (scheduledSlot === 'INSTANT') {
-                        setScheduledSlot('07:00 AM - 09:00 AM') // default first slot
-                      }
-                    }}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-xl border-2 text-center gap-1 transition-all",
-                      scheduledSlot !== 'INSTANT'
-                        ? "border-primary bg-primary/5 text-primary font-bold shadow-sm"
-                        : "border-border hover:border-primary/20 text-text-secondary bg-muted/20"
-                    )}
-                  >
-                    <span className="text-sm">{deliveryMethod === 'PICKUP' ? '🕒 Schedule Pickup for Later' : '🕒 Schedule for Later'}</span>
-                    <span className="text-[10px] text-text-muted">
-                      {deliveryMethod === 'PICKUP' ? 'Choose your preferred pickup time slot' : 'Choose your preferred time slot'}
-                    </span>
-                  </button>
-                </div>
-
-                {scheduledSlot !== 'INSTANT' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 animate-slide-up">
-                    {[
-                      "07:00 AM - 09:00 AM",
-                      "12:00 PM - 02:00 PM",
-                      "06:00 PM - 08:00 PM"
-                    ].map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => setScheduledSlot(slot)}
-                        className={cn(
-                          "py-2 px-3 text-xs font-semibold rounded-lg border text-center transition-all",
-                          scheduledSlot === slot
-                            ? "bg-primary text-white border-primary shadow-sm"
-                            : "bg-background border-border hover:border-primary/40 text-text-secondary"
-                        )}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center gap-3 animate-fade-in">
+                  <span className="text-2xl shrink-0">⚡</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary">
+                      {deliveryMethod === 'PICKUP' ? 'Instant Self-Pickup' : 'Always Instant Delivery'}
+                    </h4>
+                    <p className="text-[10px] text-text-secondary leading-relaxed mt-0.5 font-semibold">
+                      {deliveryMethod === 'PICKUP' 
+                        ? 'Your order will be packed and ready for pickup at our Ghatampur hub in 10-15 minutes!' 
+                        : 'Your order will be dispatched immediately and delivered to your doorstep in 10-20 minutes!'}
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Cart Items Review */}

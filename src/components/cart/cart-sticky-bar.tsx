@@ -7,7 +7,8 @@ import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import { ShoppingBag, ArrowRight, Zap, Check } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { triggerHaptic } from '@/lib/haptic'
 
 function getDeliveryETA(): string {
   const now = new Date()
@@ -25,14 +26,9 @@ export function CartStickyBar() {
   const isCartOpen = useUIStore((s) => s.isCartOpen)
   const [eta, setEta] = useState(getDeliveryETA)
   const [isBouncing, setIsBouncing] = useState(false)
-  const [slideSuccess, setSlideSuccess] = useState(false)
 
   const router = useRouter()
   const pathname = usePathname()
-  
-  // Motion values for swipe to checkout interaction
-  const x = useMotionValue(0)
-  const textOpacity = useTransform(x, [0, 80], [1, 0])
 
   // Listen for cart-bounce event to trigger visual bounce animation
   useEffect(() => {
@@ -52,11 +48,7 @@ export function CartStickyBar() {
     return () => clearInterval(interval)
   }, [])
 
-  // Reset slide success state when pathname changes or cart items change
-  useEffect(() => {
-    setSlideSuccess(false)
-    x.set(0)
-  }, [pathname, items.length, x])
+
 
   // Suppress sticky cart bar on checkout, cart, tracking, login, and worker consoles to prevent overlay clutter
   const isIgnoredPage = !pathname ||
@@ -81,18 +73,7 @@ export function CartStickyBar() {
   const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
 
-  const handleDragEnd = () => {
-    // If dragged past threshold, trigger immediate checkout redirect
-    if (x.get() > 95) {
-      setSlideSuccess(true)
-      setTimeout(() => {
-        router.push('/checkout')
-      }, 200)
-    } else {
-      // Reset position
-      x.set(0)
-    }
-  }
+
 
   return (
     <div className={cn(
@@ -142,39 +123,19 @@ export function CartStickyBar() {
           </div>
         </div>
 
-        {/* Premium Swipe to Checkout slider */}
-        <div className="relative w-[135px] h-8.5 bg-emerald-700/40 rounded-xl border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-          {slideSuccess ? (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center gap-1 text-[10px] font-black text-white"
-            >
-              <Check className="h-3 w-3 stroke-[3]" />
-              Processing...
-            </motion.div>
-          ) : (
-            <>
-              <motion.span
-                style={{ opacity: textOpacity }}
-                className="text-[9px] font-black text-white/70 select-none pointer-events-none whitespace-nowrap"
-              >
-                Swipe to Checkout ➔
-              </motion.span>
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: 0, right: 101 }}
-                dragElastic={0.05}
-                dragMomentum={false}
-                style={{ x }}
-                onDragEnd={handleDragEnd}
-                className="absolute left-0.5 top-0.5 bottom-0.5 w-7.5 bg-white rounded-lg flex items-center justify-center cursor-pointer shadow-md z-10 text-emerald-600 active:scale-95 transition-transform"
-              >
-                <ArrowRight className="h-3.5 w-3.5 stroke-[3]" />
-              </motion.div>
-            </>
-          )}
-        </div>
+        {/* Premium Checkout Button */}
+        <motion.button
+          onClick={() => {
+            triggerHaptic('light')
+            router.push('/checkout')
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="bg-white text-emerald-600 font-extrabold text-[11px] px-4.5 py-2.5 rounded-xl flex items-center gap-1 shadow-[0_8px_20px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer tracking-wider uppercase border border-white/10 hover:shadow-lg"
+        >
+          <span>Checkout</span>
+          <ArrowRight className="h-3.5 w-3.5 stroke-[3] animate-pulse" />
+        </motion.button>
       </div>
     </div>
   )
