@@ -123,8 +123,6 @@ export default function CheckoutPage() {
   const prefilledPhoneRef = useRef(false)
   const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal, updateQuantity, updateCartProduct } = useCart()
 
-  // Steps: 1 = Fulfillment & Review, 2 = Payment
-  const [step, setStep] = useState(1)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
   const [deliveryRadius, setDeliveryRadius] = useState(5.0)
@@ -407,9 +405,7 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
   const [scheduledSlot, setScheduledSlot] = useState<string>('INSTANT')
 
-
-
-
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
   // Calculations for checkout items
   const subtotal = getSubtotal()
@@ -615,7 +611,6 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     if (deliveryMethod === 'DELIVERY' && !selectedAddressId && addresses.length === 0) {
       toast.error('Please select a delivery address')
-      setStep(1)
       return
     }
 
@@ -631,14 +626,12 @@ export default function CheckoutPage() {
             triggerHaptic('warning')
             toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
           if (!c.includes('ghatampur') && !c.includes('kanpur')) {
             triggerHaptic('warning')
             toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
           const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
@@ -647,7 +640,6 @@ export default function CheckoutPage() {
             triggerHaptic('warning')
             toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
         }
@@ -792,14 +784,12 @@ export default function CheckoutPage() {
             triggerHaptic('warning')
             toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
           if (!c.includes('ghatampur') && !c.includes('kanpur')) {
             triggerHaptic('warning')
             toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
           const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
@@ -808,7 +798,6 @@ export default function CheckoutPage() {
             triggerHaptic('warning')
             toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
             setIsPlacingOrder(false)
-            setStep(1)
             return
           }
         }
@@ -911,7 +900,6 @@ export default function CheckoutPage() {
   const handlePlaceOrderClick = () => {
     if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
       toast.error('Please select a delivery address')
-      setStep(1)
       return
     }
 
@@ -973,67 +961,30 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-5xl space-y-6 md:space-y-8">
-      {/* Step Progress Tracker */}
-      <div className="flex items-center justify-center gap-1.5 min-[375px]:gap-2 md:gap-4 text-[10px] min-[375px]:text-xs md:text-sm font-bold text-text-secondary border-b border-border pb-6">
-        <button
-          onClick={() => setStep(1)}
-          className={cn(
-            "flex items-center gap-1 min-[375px]:gap-2 pb-1 transition-colors",
-            step >= 1 ? "text-primary border-b-2 border-primary" : ""
-          )}
-        >
-          <span className="flex h-4.5 w-4.5 min-[375px]:h-5 min-[375px]:w-5 items-center justify-center rounded-full bg-primary/10 text-[9px] min-[375px]:text-xs">1</span>
-          <span className="hidden min-[375px]:inline">Fulfillment & Review</span>
-          <span className="min-[375px]:hidden">Fulfillment</span>
-        </button>
-        <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-text-muted" />
-        <button
-          onClick={() => {
-            if (showNewAddressForm) {
-              toast.error('Please save your new address first by clicking Save & Select')
-              return
-            }
-            if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-              toast.error('Please select or add a delivery address')
-              return
-            }
-            setStep(2)
-          }}
-          className={cn(
-            "flex items-center gap-2 pb-1 transition-colors",
-            step === 2 ? "text-primary border-b-2 border-primary" : ""
-          )}
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs">2</span>
-          <span className="hidden min-[375px]:inline">Payment</span>
-          <span className="min-[375px]:hidden">Pay</span>
-        </button>
-      </div>
-
-      {/* Mobile Top Bill Indicator */}
-      <div className="block lg:hidden rounded-2xl bg-card border border-border p-4 shadow-sm animate-fade-in">
-        <div className="flex justify-between items-center text-xs font-semibold">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-text-secondary block">Grand Total</span>
-            <span className="text-sm font-black text-primary">
-              ₹{grandTotal.toFixed(0)}
-            </span>
-          </div>
-          <div className="text-[10px] text-accent font-bold bg-accent/10 px-2.5 py-1 rounded">
-            {deliveryMethod === 'PICKUP' ? '🏪 Store Pickup' : '🚚 Doorstep Delivery'}
-          </div>
+    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-5xl space-y-6 md:space-y-8 pb-28 md:pb-8">
+      {/* Premium Header */}
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-black text-text-primary flex items-center gap-2">
+            <span>⚡</span> Quick Checkout
+          </h1>
+          <p className="text-[11px] md:text-xs text-text-secondary mt-0.5">
+            Confirm your order details below to place order instantly
+          </p>
+        </div>
+        <div className="hidden lg:flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-extrabold border border-emerald-500/20">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          Secured Checkout
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left: Step Panels */}
+        {/* Left: Checkout Details */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* STEP 1: Fulfillment, Address & Review */}
-          {step === 1 && (
-            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
+          {/* Main Checkout Box */}
+          <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
               <div className="space-y-4">
                 <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-primary" />
@@ -1090,7 +1041,7 @@ export default function CheckoutPage() {
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div id="address-section" className="space-y-4 scroll-mt-24">
                       {addresses.map((addr) => (
                         <div
                           key={addr.id}
@@ -1372,154 +1323,127 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Action Button: Proceed to Payment */}
-              <div className="border-t border-border/40 pt-5 md:pt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (showNewAddressForm) {
-                      toast.error('Please save your new address first by clicking Save & Select')
-                      return
-                    }
-                    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-                      toast.error('Please select or add a delivery address')
-                      return
-                    }
-                    setStep(2)
-                  }}
-                  className={cn(
-                    "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                    "shimmer-btn glow-btn"
-                  )}
-                >
-                  <span>Proceed to Payment</span>
-                  <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
-                </button>
-              </div>
-            </div>
-          )}
+              {/* Integrated Payment Method Selection */}
+              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
+                <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Choose Payment Method
+                </h2>
 
-          {/* STEP 2: Payment Selection */}
-          {step === 2 && (
-            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-4 md:space-y-6 animate-fade-in">
-              <h2 className="text-lg font-black text-text-primary flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Choose Payment Method
-              </h2>
-
-              {onlyCod && (
-                <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                  <span>ℹ️</span>
-                  <span>Online payment options are temporarily disabled by the store. Please proceed with Cash on Delivery / Cash on Pickup.</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Cash on Delivery */}
-                <div
-                  onClick={() => setPaymentMethod('COD')}
-                  className={cn(
-                    "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                    paymentMethod === 'COD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    checked={paymentMethod === 'COD'}
-                    onChange={() => setPaymentMethod('COD')}
-                    className="cursor-pointer mt-1"
-                  />
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">💵</span>
-                      <h4 className="text-sm font-bold text-text-primary">
-                        {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
-                      </h4>
-                    </div>
-                    <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                      {deliveryMethod === 'PICKUP' ? 'Pay in cash or UPI at the store' : 'Pay in cash or UPI at the door'}
-                    </p>
+                {onlyCod && (
+                  <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                    <span>ℹ️</span>
+                    <span>Online payment options are temporarily disabled by the store. Please proceed with Cash on Delivery / Cash on Pickup.</span>
                   </div>
-                </div>
-
-                {!onlyCod && (
-                  <>
-                    {/* Instant UPI */}
-                    <div
-                      onClick={() => setPaymentMethod('UPI')}
-                      className={cn(
-                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                        paymentMethod === 'UPI' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        checked={paymentMethod === 'UPI'}
-                        onChange={() => setPaymentMethod('UPI')}
-                        className="cursor-pointer mt-1"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">📱</span>
-                          <h4 className="text-sm font-bold text-text-primary">Google Pay / PhonePe / Paytm UPI</h4>
-                        </div>
-                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                          Pay instantly from your mobile screen using any installed UPI application
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Credit / Debit Card */}
-                    <div
-                      onClick={() => setPaymentMethod('CARD')}
-                      className={cn(
-                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                        paymentMethod === 'CARD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        checked={paymentMethod === 'CARD'}
-                        onChange={() => setPaymentMethod('CARD')}
-                        className="cursor-pointer mt-1"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">💳</span>
-                          <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
-                        </div>
-                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                          Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner's Club cards
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Paytm Wallet / Netbanking */}
-                    <div
-                      onClick={() => setPaymentMethod('WALLET')}
-                      className={cn(
-                        "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                        paymentMethod === 'WALLET' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        checked={paymentMethod === 'WALLET'}
-                        onChange={() => setPaymentMethod('WALLET')}
-                        className="cursor-pointer mt-1"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">🏦</span>
-                          <h4 className="text-sm font-bold text-text-primary">Wallet & Netbanking</h4>
-                        </div>
-                        <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                          Pay using Paytm Wallet, Amazon Pay, Mobikwik, or Netbanking (SBI, HDFC, ICICI, etc.)
-                        </p>
-                      </div>
-                    </div>
-                  </>
                 )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Cash on Delivery */}
+                  <div
+                    onClick={() => setPaymentMethod('COD')}
+                    className={cn(
+                      "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                      paymentMethod === 'COD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      checked={paymentMethod === 'COD'}
+                      onChange={() => setPaymentMethod('COD')}
+                      className="cursor-pointer mt-1"
+                    />
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💵</span>
+                        <h4 className="text-sm font-bold text-text-primary">
+                          {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
+                        </h4>
+                      </div>
+                      <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                        {deliveryMethod === 'PICKUP' ? 'Pay in cash or UPI at the store' : 'Pay in cash or UPI at the door'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!onlyCod && (
+                    <>
+                      {/* Instant UPI */}
+                      <div
+                        onClick={() => setPaymentMethod('UPI')}
+                        className={cn(
+                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                          paymentMethod === 'UPI' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          checked={paymentMethod === 'UPI'}
+                          onChange={() => setPaymentMethod('UPI')}
+                          className="cursor-pointer mt-1"
+                        />
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📱</span>
+                            <h4 className="text-sm font-bold text-text-primary">Google Pay / PhonePe / Paytm UPI</h4>
+                          </div>
+                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                            Pay instantly from your mobile screen using any installed UPI application
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Credit / Debit Card */}
+                      <div
+                        onClick={() => setPaymentMethod('CARD')}
+                        className={cn(
+                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                          paymentMethod === 'CARD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          checked={paymentMethod === 'CARD'}
+                          onChange={() => setPaymentMethod('CARD')}
+                          className="cursor-pointer mt-1"
+                        />
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💳</span>
+                            <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
+                          </div>
+                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                            Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner's Club cards
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Paytm Wallet / Netbanking */}
+                      <div
+                        onClick={() => setPaymentMethod('WALLET')}
+                        className={cn(
+                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
+                          paymentMethod === 'WALLET' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          checked={paymentMethod === 'WALLET'}
+                          onChange={() => setPaymentMethod('WALLET')}
+                          className="cursor-pointer mt-1"
+                        />
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🏦</span>
+                            <h4 className="text-sm font-bold text-text-primary">Wallet & Netbanking</h4>
+                          </div>
+                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
+                            Pay using Paytm Wallet, Amazon Pay, Mobikwik, or Netbanking (SBI, HDFC, ICICI, etc.)
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Secure Transaction notice */}
@@ -1528,26 +1452,26 @@ export default function CheckoutPage() {
                 Your transaction is simulated safely for local demonstration.
               </div>
 
-              <div className="flex gap-4 items-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                  className="w-1/3 rounded-full h-14 font-black border-border/80 hover:bg-muted text-xs tracking-widest uppercase transition-all duration-200"
-                  disabled={isPlacingOrder}
-                >
-                  Back
-                </Button>
-                <div className="w-2/3">
-                  <SlideToOrder
-                    onConfirm={handlePlaceOrderClick}
-                    isPlacingOrder={isPlacingOrder}
-                    disabled={deliveryMethod === 'DELIVERY' && !selectedAddressId}
-                    amount={grandTotal}
-                  />
-                </div>
+              {/* Place Order Button (Desktop Only) */}
+              <div className="hidden md:block border-t border-border/40 pt-5 md:pt-6">
+                <SlideToOrder
+                  onConfirm={() => {
+                    if (showNewAddressForm) {
+                      toast.error('Please save your new address first by clicking Save & Select')
+                      return
+                    }
+                    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
+                      toast.error('Please select or add a delivery address')
+                      return
+                    }
+                    handlePlaceOrderClick()
+                  }}
+                  isPlacingOrder={isPlacingOrder}
+                  disabled={showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId)}
+                  amount={grandTotal}
+                />
               </div>
             </div>
-          )}
         </div>
 
         {/* Right Column: Mini Bill Summary (Persistent) */}
@@ -1655,6 +1579,60 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Mobile Sticky Bottom Checkout Bar (Zepto/Blinkit Style) */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-zinc-950 border-t border-border/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-3.5 flex items-center justify-between"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)' }}
+      >
+        <div className="flex flex-col">
+          <span className="text-[9px] text-text-secondary font-medium leading-none">Grand Total</span>
+          <span className="text-base font-black text-primary mt-1">₹{grandTotal.toFixed(0)}</span>
+          <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5 mt-0.5 max-w-[140px] truncate">
+            {deliveryMethod === 'PICKUP' ? (
+              <span>🏪 Store Pickup</span>
+            ) : selectedAddress ? (
+              <span className="truncate">📍 {selectedAddress.street}</span>
+            ) : (
+              <span className="text-rose-500">📍 Select Address</span>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={isPlacingOrder || showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId)}
+          onClick={() => {
+            if (showNewAddressForm) {
+              toast.error('Please save your new address first by clicking Save & Select')
+              return
+            }
+            if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
+              toast.error('Please select or add a delivery address')
+              const el = document.getElementById('address-section')
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              return
+            }
+            handlePlaceOrderClick()
+          }}
+          className={cn(
+            "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-wider uppercase px-6 h-11 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5",
+            (isPlacingOrder || showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId)) && "opacity-60 cursor-not-allowed"
+          )}
+        >
+          {isPlacingOrder ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+              <span>Processing...</span>
+            </>
+          ) : (
+            <>
+              <span>Place Order</span>
+              <ChevronsRight className="h-3.5 w-3.5 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
+            </>
+          )}
+        </button>
       </div>
     </div>
   )

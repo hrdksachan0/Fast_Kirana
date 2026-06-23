@@ -9,6 +9,18 @@ import { cn } from '@/lib/utils'
 export function MobileBottomNav() {
   const pathname = usePathname()
 
+  // Suppress bottom navigation on checkout, cart, order tracking, admin, and worker screens
+  if (
+    !pathname ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/order/') ||
+    pathname.startsWith('/picker') ||
+    pathname.startsWith('/admin') ||
+    pathname === '/cart'
+  ) {
+    return null
+  }
+
   // Navigation Items with modern symbols
   const navItems = [
     {
