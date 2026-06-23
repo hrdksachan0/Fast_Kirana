@@ -52,7 +52,7 @@ const FESTIVAL_TEMPLATES = [
     description: 'Milk, Fruits, Vegetables, Snacks & more',
     code: '',
     gradient: 'from-rose-500 via-rose-500 to-orange-400',
-    type: 'custom',
+    type: 'express-delivery',
     linkUrl: '/category/fruits-vegetables'
   },
   {
@@ -546,6 +546,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                   <option value="first-order">🥛 Milk & Fruits Essentials</option>
                   <option value="fresh">🥬 Farm Fresh (Leafy Greens)</option>
                   <option value="snacks">🥤 Cold Drinks & Snacks</option>
+                  <option value="express-delivery">🚚 Ghatampur Express Layout (Light Pink)</option>
                   <option value="custom">📦 Generic Delivery Box</option>
                 </select>
               </div>
@@ -780,6 +781,15 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 alt={title || "Custom Graphic Banner"}
                 className="w-full h-full object-cover"
               />
+            ) : type === 'express-delivery' ? (
+              <div className="absolute inset-0 flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
+                <div className="text-left space-y-0.5">
+                  <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
+                  <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || 'Ghatampur'}</h4>
+                  <p className="text-[9px] text-[#4d4d4d] font-bold line-clamp-1">{description || 'Milk, Fruits, Vegetables, Snacks & more'}</p>
+                </div>
+                <div className="text-2xl pr-2">🛍️</div>
+              </div>
             ) : (
               <div className={`absolute inset-0 flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
                 <div className="space-y-1">
