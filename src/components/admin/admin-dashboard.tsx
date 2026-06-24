@@ -1040,15 +1040,16 @@ export function AdminDashboard({
       }
 
       // Convert products array to CSV string matching the import headers
-      // Headers: Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock
+      // Headers: ID,Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock
       const headers = [
-        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
+        'ID', 'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
       ]
       
       const csvRows = [headers.join(',')]
       
       exportProducts.forEach((p: any) => {
         const row = [
+          p.id || '',
           p.name || '',
           p.category?.name || '',
           p.unit || '',
@@ -1061,7 +1062,18 @@ export function AdminDashboard({
           p.costPrice?.toString() || '0',
           p.minStock?.toString() || '10',
           p.location || '',
-          p.variants ? JSON.stringify(p.variants) : '',
+          p.variants ? (Array.isArray(p.variants) ? (p.variants as any[]).map((v) => {
+            const parts = [
+              v.name || '',
+              v.price?.toString() || '0',
+              v.mrp?.toString() || '0',
+              v.stock?.toString() || '0'
+            ]
+            if (v.costPrice !== undefined) {
+              parts.push(v.costPrice.toString())
+            }
+            return parts.join(':')
+          }).join(' | ') : typeof p.variants === 'string' ? p.variants : '') : '',
         ]
 
         

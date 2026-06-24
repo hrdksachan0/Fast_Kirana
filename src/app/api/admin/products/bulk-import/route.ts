@@ -83,14 +83,19 @@ export async function POST(request: NextRequest) {
                 const vPrice = parseFloat(subparts[1]) || 0
                 const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
                 const vStock = subparts[3] ? parseInt(subparts[3]) : 0
+                const vCostPrice = subparts[4] ? parseFloat(subparts[4]) : undefined
 
                 if (vName) {
-                  parsed.push({
+                  const variantObj: any = {
                     name: vName,
                     price: vPrice,
                     mrp: vMrp,
                     stock: vStock
-                  })
+                  }
+                  if (vCostPrice !== undefined && !isNaN(vCostPrice)) {
+                    variantObj.costPrice = vCostPrice
+                  }
+                  parsed.push(variantObj)
                 }
               }
               if (parsed.length > 0) {
@@ -131,45 +136,81 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Generate slug
-        let slug = item.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)+/g, '')
-
-        // Make slug unique
-        if (existingSlugs.has(slug)) {
-          slug = `${slug}-${Date.now().toString().slice(-4)}-${i}`
-        }
-        existingSlugs.add(slug)
-
         const discount = mrp > price ? Math.max(0, Math.round(((mrp - price) / mrp) * 100)) : 0
         const tags = item.tags
           ? item.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
           : []
         const costPrice = parseFloat(item.costPrice) || 0
 
-        const product = await prisma.product.create({
-          data: {
-            name: item.name.trim(),
-            slug,
-            description: item.description?.trim() || '',
-            imageUrl: item.imageUrl?.trim() || '📦',
-            categoryId,
-            mrp,
-            price,
-            discount,
-            unit: (item.unit && item.unit.trim()) || '',
-            stock,
-            isAvailable: true,
-            tags,
-            costPrice,
-            minStock: parseInt(item.minStock) || 10,
-            location: item.location?.trim() || null,
-            variants: productVariants || undefined,
-          },
-          include: { category: true },
-        })
+        // Check if product exists by ID
+        let product
+        let isExisting = false
+        if (item.id && item.id.trim()) {
+          const dbProduct = await prisma.product.findUnique({
+            where: { id: item.id.trim() }
+          })
+          if (dbProduct) {
+            isExisting = true
+          }
+        }
+
+        if (isExisting) {
+          product = await prisma.product.update({
+            where: { id: item.id.trim() },
+            data: {
+              name: item.name.trim(),
+              description: item.description?.trim() || '',
+              imageUrl: item.imageUrl?.trim() || '📦',
+              categoryId,
+              mrp,
+              price,
+              discount,
+              unit: (item.unit && item.unit.trim()) || '',
+              stock,
+              isAvailable: true,
+              tags,
+              costPrice,
+              minStock: parseInt(item.minStock) || 10,
+              location: item.location?.trim() || null,
+              variants: productVariants || null,
+            },
+            include: { category: true },
+          })
+        } else {
+          // Generate slug
+          let slug = item.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, '')
+
+          // Make slug unique
+          if (existingSlugs.has(slug)) {
+            slug = `${slug}-${Date.now().toString().slice(-4)}-${i}`
+          }
+          existingSlugs.add(slug)
+
+          product = await prisma.product.create({
+            data: {
+              name: item.name.trim(),
+              slug,
+              description: item.description?.trim() || '',
+              imageUrl: item.imageUrl?.trim() || '📦',
+              categoryId,
+              mrp,
+              price,
+              discount,
+              unit: (item.unit && item.unit.trim()) || '',
+              stock,
+              isAvailable: true,
+              tags,
+              costPrice,
+              minStock: parseInt(item.minStock) || 10,
+              location: item.location?.trim() || null,
+              variants: productVariants || undefined,
+            },
+            include: { category: true },
+          })
+        }
 
         createdProducts.push(product)
         results.created++

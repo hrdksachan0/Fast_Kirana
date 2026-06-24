@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ParsedProduct {
+  id?: string
   name: string
   category: string
   unit: string
@@ -96,24 +97,24 @@ function parseCSV(text: string): string[][] {
 }
 
 const GROCERY_TEMPLATE_HEADERS = [
-  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
+  'ID', 'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
 ]
 
 const GROCERY_TEMPLATE_ROWS = [
-  ['Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10', 'Aisle 2-B', ''],
-  ['Maggi Noodles', 'Snacks & Munchies', '1 pc', '', '', '', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20', 'Aisle 4-A', 'Single Pack:12:14:60 | 4-Pack:45:50:40'],
-  ['Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15', 'Aisle 1-C', ''],
+  ['', 'Amul Butter', 'Dairy & Breakfast', '500g', '280', '260', '50', 'dairy, butter, popular', 'Fresh Amul salted butter', '', '220', '10', 'Aisle 2-B', ''],
+  ['', 'Maggi Noodles', 'Snacks & Munchies', '1 pc', '', '', '', 'instant, snacks, popular', 'Classic 2-min Maggi noodles', '', '10', '20', 'Aisle 4-A', 'Single Pack:12:14:60 | 4-Pack:45:50:40'],
+  ['', 'Tata Salt', 'Atta, Rice & Dal', '1 kg', '28', '25', '80', 'salt, essential, cooking', 'Iodised Tata salt', '', '18', '15', 'Aisle 1-C', ''],
 ]
 
 const CAFE_TEMPLATE_HEADERS = [
-  'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
+  'ID', 'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Variants'
 ]
 
 const CAFE_TEMPLATE_ROWS = [
-  ['Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5', 'Kitchen Grid A', ''],
-  ['Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10', 'Chai Station', ''],
-  ['Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5', 'Kitchen Grid B', ''],
-  ['Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3', 'Pasta Station', ''],
+  ['', 'Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5', 'Kitchen Grid A', ''],
+  ['', 'Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10', 'Chai Station', ''],
+  ['', 'Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5', 'Kitchen Grid B', ''],
+  ['', 'Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3', 'Pasta Station', ''],
 ]
 
 
@@ -304,6 +305,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
           return -1
         }
 
+        const idIdx = getIdx(['id', 'product id'])
         const nameIdx = getIdx(['name', 'product name', 'product'])
         const categoryIdx = getIdx(['category', 'category name'])
         const unitIdx = getIdx(['unit', 'unit specification', 'size'])
@@ -326,6 +328,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
         const products: ParsedProduct[] = dataRows
           .filter(row => row.some(cell => cell.length > 0))
           .map(row => ({
+            id: idIdx >= 0 ? (row[idIdx] || '') : '',
             name: row[nameIdx] || '',
             category: categoryIdx >= 0 ? (row[categoryIdx] || '') : '',
             unit: unitIdx >= 0 ? (row[unitIdx] || '') : '',
@@ -546,9 +549,9 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
             💡 Easy Variants Format (Optional):
           </p>
           <p className="text-[10px] text-text-secondary leading-relaxed">
-            Specify multiple sizes/weights using: <code className="bg-muted px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-bold">VariantName:Price:MRP:Stock</code>. Separate multiple variants using a pipe (<code className="bg-muted px-1 py-0.5 rounded font-bold">|</code>).
+            Specify multiple sizes/weights using: <code className="bg-muted px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-bold">VariantName:Price:MRP:Stock:CostPrice</code> (where CostPrice is optional). Separate multiple variants using a pipe (<code className="bg-muted px-1 py-0.5 rounded font-bold">|</code>).
             <br />
-            <span className="font-extrabold">Example:</span> <code className="bg-muted px-1.5 py-0.5 rounded text-text-primary font-mono text-[9px]">500g:260:280:50 | 1kg:500:540:30</code>
+            <span className="font-extrabold">Example with Cost Price:</span> <code className="bg-muted px-1.5 py-0.5 rounded text-text-primary font-mono text-[9px]">500g:260:280:50:200 | 1kg:500:540:30:400</code>
             <br />
             <span className="text-text-muted">If variants are specified, base Price, MRP, and Stock will be automatically calculated.</span>
           </p>

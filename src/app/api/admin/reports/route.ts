@@ -67,8 +67,10 @@ export async function GET(request: NextRequest) {
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
-             COALESCE(p."costPrice", 0) as "costPrice", c.name as "categoryName",
-             p.variants, oi."selectedVariant"
+             COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+             c.name as "categoryName",
+             COALESCE(oi.variants, p.variants) as "variants", 
+             oi."selectedVariant"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
       JOIN categories c ON p."categoryId" = c.id

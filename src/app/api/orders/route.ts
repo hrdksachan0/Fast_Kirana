@@ -307,10 +307,14 @@ export async function POST(request: NextRequest) {
           const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
           
           let itemPrice = item.dbProduct.price
+          let itemCostPrice = item.dbProduct.costPrice || 0
           if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
             const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
             if (variant) {
               itemPrice = variant.price
+              if (variant.costPrice !== undefined) {
+                itemCostPrice = parseFloat(variant.costPrice) || 0
+              }
             }
           }
 
@@ -321,6 +325,8 @@ export async function POST(request: NextRequest) {
             quantity: item.quantity,
             imageUrl: item.dbProduct.imageUrl,
             selectedVariant: variantName,
+            costPrice: itemCostPrice,
+            variants: item.dbProduct.variants || null,
           }
         })
 
@@ -375,6 +381,8 @@ export async function POST(request: NextRequest) {
                 quantity: item.quantity,
                 imageUrl: item.imageUrl,
                 selectedVariant: item.selectedVariant,
+                costPrice: item.costPrice,
+                variants: item.variants,
               })),
             },
           },
