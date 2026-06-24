@@ -5,7 +5,7 @@ import { useCart } from '@/hooks/use-cart'
 import { X, Plus, Minus, ShieldCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMemo, useEffect } from 'react'
-import { formatPrice } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { Product } from '@/types'
@@ -67,8 +67,15 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
     updateQuantity(resolvedId, cartProduct.name, quantity - 1)
   }
 
+  const isSelected = quantity > 0
+
   return (
-    <div className="flex items-center justify-between p-3 sm:p-4 border border-border/60 bg-card/60 dark:bg-zinc-900/40 rounded-xl transition-all duration-300 hover:border-primary/20 hover:shadow-xs">
+    <div className={cn(
+      "flex items-center justify-between p-3 sm:p-4 rounded-xl transition-all duration-300 border-2",
+      isSelected 
+        ? "border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/10 shadow-xs" 
+        : "border-border/60 bg-card/60 dark:bg-zinc-900/40 hover:border-primary/20"
+    )}>
       <div className="flex-1 min-w-0 pr-3 text-left">
         <span className="text-xs sm:text-sm font-black text-text-primary truncate block">
           {variant.name}
@@ -182,7 +189,7 @@ export function VariantSelectorDrawer() {
             <div className="w-12 h-1.5 bg-muted/70 rounded-full mx-auto my-3 shrink-0" />
 
             {/* Content Container */}
-            <div className="px-5 pb-5 flex flex-col flex-1 overflow-y-auto space-y-4">
+            <div className="px-5 pb-8 sm:pb-10 flex flex-col flex-1 overflow-y-auto space-y-4">
               {/* Product Info Block */}
               <div className="flex gap-4 border-b border-border/40 pb-4">
                 <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border border-border/40 bg-muted/10 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -233,11 +240,11 @@ export function VariantSelectorDrawer() {
               </div>
 
               {/* Trust Badge */}
-              <div className="flex items-start gap-2.5 border border-accent/20 bg-accent/5 p-3 rounded-xl border-l-4 border-l-accent">
-                <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 border border-accent/15 bg-gradient-to-br from-accent/5 to-emerald-500/5 p-3.5 rounded-xl border-l-4 border-l-emerald-500 shadow-2xs">
+                <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                 <div className="text-[11px] font-bold text-text-primary text-left">
-                  <span className="text-accent block">FastKirana DarkStore Guaranteed</span>
-                  <p className="text-[9.5px] text-text-secondary mt-0.5 font-semibold leading-normal">
+                  <span className="text-emerald-600 dark:text-emerald-400 block font-black">FastKirana DarkStore Guaranteed</span>
+                  <p className="text-[9.5px] text-text-secondary mt-1 font-semibold leading-relaxed">
                     Packed fresh, hygiene verified, and delivered directly to your doorstep.
                   </p>
                 </div>
