@@ -29,22 +29,22 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'FastKirana - Fast Grocery Delivery',
+  title: 'Fast Kirana - Fast Grocery Delivery',
   description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service. Fresh fruits, vegetables, dairy, snacks and more.',
-  keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'FastKirana', 'kirana store'],
+  keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'Fast Kirana', 'kirana store'],
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   openGraph: {
-    title: 'FastKirana - Fast Grocery Delivery',
+    title: 'Fast Kirana - Fast Grocery Delivery',
     description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
     url: 'https://www.fastkirana.in',
-    siteName: 'FastKirana',
+    siteName: 'Fast Kirana',
     images: [
       {
         url: '/fastkirana_app_icon.png',
         width: 512,
         height: 512,
-        alt: 'FastKirana Logo',
+        alt: 'Fast Kirana Logo',
       },
     ],
     locale: 'en_IN',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FastKirana - Fast Grocery Delivery',
+    title: 'Fast Kirana - Fast Grocery Delivery',
     description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
     images: ['/fastkirana_app_icon.png'],
   },
