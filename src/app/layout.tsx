@@ -34,6 +34,28 @@ export const metadata: Metadata = {
   keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'FastKirana', 'kirana store'],
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
+  openGraph: {
+    title: 'FastKirana - Fast Grocery Delivery',
+    description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
+    url: 'https://www.fastkirana.in',
+    siteName: 'FastKirana',
+    images: [
+      {
+        url: '/fastkirana_app_icon.png',
+        width: 512,
+        height: 512,
+        alt: 'FastKirana Logo',
+      },
+    ],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FastKirana - Fast Grocery Delivery',
+    description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
+    images: ['/fastkirana_app_icon.png'],
+  },
 }
 
 export const viewport: Viewport = {

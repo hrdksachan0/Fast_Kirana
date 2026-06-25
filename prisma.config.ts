@@ -55,12 +55,44 @@ if (databaseUrl) {
   process.env.DATABASE_URL = databaseUrl
 }
 
+// Unconditionally clean the direct connection string for Migrations
+let directUrl = process.env.DIRECT_URL || ''
+if (directUrl) {
+  directUrl = directUrl.replace(/\r/g, '').trim()
+  if (directUrl.startsWith('"') && directUrl.endsWith('"')) {
+    directUrl = directUrl.substring(1, directUrl.length - 1)
+  } else if (directUrl.startsWith("'") && directUrl.endsWith("'")) {
+    directUrl = directUrl.substring(1, directUrl.length - 1)
+  }
+  directUrl = directUrl.trim()
+  
+  if (directUrl && !directUrl.includes('connect_timeout=')) {
+    const separator = directUrl.includes('?') ? '&' : '?'
+    directUrl = `${directUrl}${separator}connect_timeout=30`
+  }
+  
+  if (directUrl && !directUrl.includes('uselibpqcompat=')) {
+    const separator = directUrl.includes('?') ? '&' : '?'
+    directUrl = `${directUrl}${separator}uselibpqcompat=true`
+  }
+  
+  process.env.DIRECT_URL = directUrl
+}
+
+// Determine if running under Prisma CLI (migrations, pushes, generate, etc.)
+const isPrismaCli = process.argv.some(arg => 
+  ['migrate', 'db', 'push', 'deploy', 'studio', 'generate'].includes(arg.toLowerCase())
+)
+
+// Use direct url for Prisma CLI operations to bypass pooler
+const activeUrl = (isPrismaCli && directUrl) ? directUrl : databaseUrl
+
 export default {
   schema: 'prisma/schema.prisma',
   migrations: {
     seed: 'npx tsx prisma/seed.ts',
   },
   datasource: {
-    url: databaseUrl || 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: activeUrl || 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 }

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
-import { ShoppingBag } from 'lucide-react'
+import { ShoppingBag, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ==========================================
@@ -575,20 +575,22 @@ export function DealsCurationHub({
 
   // Group products of the active curation by their category dynamically
   const groupedProducts = useMemo(() => {
-    const groups: Record<string, { categoryName: string; categorySlug: string; products: any[] }> = {}
+    const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
       const categoryName = product.category?.name || 'Other Essentials'
       const categorySlug = product.category?.slug || ''
+      const sortOrder = product.category?.sortOrder ?? 999
       if (!groups[categoryName]) {
         groups[categoryName] = {
           categoryName,
           categorySlug,
+          sortOrder,
           products: [],
         }
       }
       groups[categoryName].products.push(product)
     })
-    return Object.values(groups)
+    return Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder)
   }, [currentCuration])
 
   return (
@@ -728,7 +730,7 @@ export function DealsCurationHub({
                       className="flex gap-2.5 md:gap-4 overflow-x-auto pb-2 md:pb-4 scroll-smooth snap-x snap-mandatory"
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
-                      {group.products.map((product) => (
+                      {group.products.slice(0, 10).map((product) => (
                         <div 
                           key={product.id} 
                           className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0 snap-start"
@@ -736,6 +738,26 @@ export function DealsCurationHub({
                           <ProductCard product={product} />
                         </div>
                       ))}
+                      {group.products.length > 10 && (
+                        <Link
+                          href={group.categorySlug === 'cafe' ? '/cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
+                          className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-xl border border-border/60 dark:border-zinc-800/60 bg-gradient-to-b from-primary/[0.02] to-primary/[0.06] dark:from-primary/[0.005] dark:to-primary/[0.02] p-4 text-center cursor-pointer transition-all duration-300 shadow-card hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] hover:border-primary/25 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] group"
+                        >
+                          <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-[1.03]">
+                            {/* Circular Icon with Soft Glow on Hover */}
+                            <div className="relative flex h-13 w-13 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-border/40 shadow-sm transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-[0_4px_12px_rgba(226,10,34,0.22)]">
+                              <ArrowRight size={20} className="stroke-[2.5] text-primary group-hover:text-white transition-transform duration-300 group-hover:translate-x-0.5" />
+                            </div>
+                            
+                            <span className="text-xs sm:text-sm font-extrabold text-zinc-800 dark:text-zinc-200 mt-4 leading-tight tracking-tight">
+                              See All
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-black text-primary bg-primary/10 dark:bg-primary/20 px-2.5 py-0.5 rounded-full mt-2.5 inline-block">
+                              +{group.products.length - 10} More
+                            </span>
+                          </div>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}

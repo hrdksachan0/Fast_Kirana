@@ -50,17 +50,29 @@ const INTERVAL_MS = 5000
 function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   if (currentBanner.imageUrl) {
     return (
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full overflow-hidden bg-black/5 dark:bg-white/5">
+        {/* Ambient blurred background copy to seamlessly fill non-matching aspect ratios */}
+        <div className="absolute inset-0 select-none pointer-events-none filter blur-2xl scale-110 opacity-70">
+          <Image
+            src={currentBanner.imageUrl}
+            alt=""
+            fill
+            sizes="20px"
+            className="object-cover"
+          />
+        </div>
+        
+        {/* Sharp main banner image centered and fully visible */}
         <Image
           src={currentBanner.imageUrl}
           alt={currentBanner.title}
           fill
           sizes="(max-width: 768px) 100vw, 1200px"
-          className="object-cover pointer-events-none"
+          className="object-contain pointer-events-none relative z-10"
           priority
         />
         {currentBanner.code && (
-          <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10">
+          <div className="absolute top-2 left-2 md:top-4 md:left-4 z-20">
             <span className="inline-flex items-center gap-1 bg-black/45 border border-white/10 px-2 py-0.5 rounded-full text-[9px] md:text-xs font-black text-white backdrop-blur-md shadow-sm">
               <Gift className="h-3 w-3" />
               Code: {currentBanner.code}
