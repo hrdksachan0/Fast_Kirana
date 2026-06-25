@@ -42,6 +42,7 @@ import {
   Utensils,
   Bell,
   BrainCircuit,
+  RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -205,6 +206,12 @@ export function AdminDashboard({
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
+  
+  // Live Active Carts States
+  const [activeCarts, setActiveCarts] = useState<any[]>([])
+  const [activeCartsCount, setActiveCartsCount] = useState<number>(0)
+  const [isLoadingCarts, setIsLoadingCarts] = useState(false)
+  const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
 
   // Parse cafe menu sections dynamically from database settings
   const CAFE_MENU_SECTIONS = useMemo(() => {
@@ -716,6 +723,57 @@ export function AdminDashboard({
     return () => { active = false }
   }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey])
 
+  // Fetch active carts count once on mount for the badge count
+  useEffect(() => {
+    let active = true
+    const fetchCartsCount = async () => {
+      try {
+        const res = await fetch('/api/admin/live-carts')
+        if (res.ok && active) {
+          const data = await res.json()
+          setActiveCartsCount(data.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch carts count on mount:', err)
+      }
+    }
+    fetchCartsCount()
+    return () => { active = false }
+  }, [])
+
+  // Poll active carts detail every 30 seconds only if activeTab is 'liveops'
+  useEffect(() => {
+    let active = true
+    let intervalId: any = null
+
+    const fetchCartsDetail = async () => {
+      if (activeTab !== 'liveops') return
+      setIsLoadingCarts(true)
+      try {
+        const res = await fetch('/api/admin/live-carts')
+        if (res.ok && active) {
+          const data = await res.json()
+          setActiveCarts(data.carts || [])
+          setActiveCartsCount(data.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch live carts detail:', err)
+      } finally {
+        if (active) setIsLoadingCarts(false)
+      }
+    }
+
+    if (activeTab === 'liveops') {
+      fetchCartsDetail()
+      intervalId = setInterval(fetchCartsDetail, 30000) // Poll every 30 seconds
+    }
+
+    return () => {
+      active = false
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [activeTab, cartsRefreshKey])
+
   // Fetch paginated/filtered products
   useEffect(() => {
     let active = true
@@ -918,6 +976,36 @@ export function AdminDashboard({
       toast.error('Failed to update status')
     } finally {
       setUpdatingOrderId(null)
+    }
+  }
+
+  const sendCartNotification = async (userId: string, userName: string) => {
+    const defaultMsg = `Hey ${userName}! Your items are waiting. Checkout now for instant delivery!`
+    const message = window.prompt(`Customize push notification for ${userName}:`, defaultMsg)
+    if (message === null) return // Canceled
+
+    setIsLoadingCarts(true)
+    try {
+      const res = await fetch('/api/admin/live-carts/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          title: 'Cart Waiting 🛒',
+          body: message || defaultMsg
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        toast.success('Push notification sent successfully!')
+      } else {
+        toast.error(data.error || 'Failed to send push notification')
+      }
+    } catch (err) {
+      toast.error('Failed to send push notification')
+    } finally {
+      setIsLoadingCarts(false)
     }
   }
 
@@ -1773,7 +1861,7 @@ export function AdminDashboard({
 
   const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { key: 'liveops', label: 'Live Ops Tracker', icon: Zap },
+    { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
     { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
     { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
@@ -4131,6 +4219,97 @@ export function AdminDashboard({
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Active Shopping Carts Tracker */}
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-extrabold text-sm text-text-primary flex items-center gap-2">
+                    Active Shopping Carts
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5">Real-time view of products customers are adding to their carts</p>
+                </div>
+                <button
+                  onClick={() => setCartsRefreshKey(prev => prev + 1)}
+                  disabled={isLoadingCarts}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-text-primary text-xs font-bold rounded-lg border border-border transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isLoadingCarts ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {activeCarts.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-2xl">🛒</span>
+                  <p className="text-xs text-text-secondary mt-2">No active customer shopping carts in the last 12 hours.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-border/60 text-xs">
+                    <thead>
+                      <tr className="text-text-secondary font-extrabold border-b border-border/40">
+                        <th className="py-2 px-3 text-left">Customer</th>
+                        <th className="py-2 px-3 text-left">Items in Cart</th>
+                        <th className="py-2 px-3 text-right">Cart Total</th>
+                        <th className="py-2 px-3 text-right">Last Active</th>
+                        <th className="py-2 px-3 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40 font-medium">
+                      {activeCarts.map(cart => {
+                        const timeAgoMin = Math.floor((new Date().getTime() - new Date(cart.updatedAt).getTime()) / 60000)
+                        let timeString = `${timeAgoMin}m ago`
+                        if (timeAgoMin === 0) timeString = 'Just now'
+                        else if (timeAgoMin >= 60) {
+                          const hours = Math.floor(timeAgoMin / 60)
+                          timeString = `${hours}h ago`
+                        }
+
+                        return (
+                          <tr key={cart.id} className="hover:bg-muted/10 transition-colors">
+                            <td className="py-3 px-3">
+                              <p className="font-extrabold text-text-primary">{cart.userName}</p>
+                              <p className="text-[10px] text-text-secondary mt-0.5">{cart.userPhone} • {cart.userEmail}</p>
+                            </td>
+                            <td className="py-3 px-3 max-w-xs md:max-w-md">
+                              <div className="flex flex-wrap gap-1.5">
+                                {cart.items.map((item: any, idx: number) => (
+                                  <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border/50 rounded-md text-[10px] text-text-primary font-bold">
+                                    {item.productName} 
+                                    {item.selectedVariant && <span className="text-text-muted text-[9px]"> ({item.selectedVariant})</span>}
+                                    <span className="text-primary font-black ml-1">x{item.quantity}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-text-primary">
+                              {formatPrice(cart.subtotal)}
+                            </td>
+                            <td className="py-3 px-3 text-right text-text-secondary font-bold">
+                              {timeString}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <button
+                                onClick={() => sendCartNotification(cart.userId, cart.userName)}
+                                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 mx-auto"
+                                title="Send Push Notification Alert to Customer"
+                              >
+                                🔔 Send Alert
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
