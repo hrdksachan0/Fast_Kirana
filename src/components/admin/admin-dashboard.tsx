@@ -4167,9 +4167,9 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'liveops' && (() => {
-        const pickTimeOrders = orders.filter(o => o.confirmedAt && o.packedAt && o.shopName !== 'FastKirana Cafe Kitchen')
-        const prepTimeOrders = orders.filter(o => o.confirmedAt && o.packedAt && o.shopName === 'FastKirana Cafe Kitchen')
-        const deliveryTimeOrders = orders.filter(o => o.shippedAt && o.deliveredAt)
+        const pickTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && o.shopName !== 'FastKirana Cafe Kitchen')
+        const prepTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && o.shopName === 'FastKirana Cafe Kitchen')
+        const deliveryTimeOrders = liveOrders.filter(o => o.shippedAt && o.deliveredAt)
 
         const avgPickTime = pickTimeOrders.length > 0 
           ? Math.round(pickTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0) / pickTimeOrders.length / 60000)
@@ -4181,11 +4181,11 @@ export function AdminDashboard({
           ? Math.round(deliveryTimeOrders.reduce((sum, o) => sum + (new Date(o.deliveredAt).getTime() - new Date(o.shippedAt).getTime()), 0) / deliveryTimeOrders.length / 60000)
           : 0
 
-        const pendingCount = orders.filter(o => o.status === 'PENDING').length
-        const confirmedCount = orders.filter(o => o.status === 'CONFIRMED').length
-        const packedCount = orders.filter(o => o.status === 'PACKED').length
-        const shippedCount = orders.filter(o => o.status === 'SHIPPED').length
-        const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length
+        const pendingCount = liveOrders.filter(o => o.status === 'PENDING').length
+        const confirmedCount = liveOrders.filter(o => o.status === 'CONFIRMED').length
+        const packedCount = liveOrders.filter(o => o.status === 'PACKED').length
+        const shippedCount = liveOrders.filter(o => o.status === 'SHIPPED').length
+        const deliveredCount = liveOrders.filter(o => o.status === 'DELIVERED').length
 
         return (
           <div className="space-y-6 animate-fade-in">
