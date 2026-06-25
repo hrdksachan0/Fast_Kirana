@@ -213,6 +213,12 @@ export function AdminDashboard({
   const [isLoadingCarts, setIsLoadingCarts] = useState(false)
   const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
 
+  // WhatsApp Custom Alert States
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
+  const [whatsappTargetUser, setWhatsappTargetUser] = useState<{ name: string; phone: string } | null>(null)
+  const [whatsappCustomMessage, setWhatsappCustomMessage] = useState('')
+  const [whatsappSelectedTemplateIdx, setWhatsappSelectedTemplateIdx] = useState(0)
+
   // Parse cafe menu sections dynamically from database settings
   const CAFE_MENU_SECTIONS = useMemo(() => {
     const customSectionsStr = settingsMap['cafe_menu_sections'] || settingsMap['CAFE_MENU_SECTIONS']
@@ -1007,6 +1013,47 @@ export function AdminDashboard({
     } finally {
       setIsLoadingCarts(false)
     }
+  }
+
+  const openWhatsAppModal = (userName: string, phone: string) => {
+    if (!phone || phone === 'N/A') {
+      toast.error('Customer phone number not available')
+      return
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
+    const templates = [
+      `Hey ${userName}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
+      `Hey ${userName}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
+      `Hey ${userName}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`
+    ]
+    setWhatsappTargetUser({ name: userName, phone })
+    setWhatsappSelectedTemplateIdx(0)
+    setWhatsappCustomMessage(templates[0])
+    setWhatsappModalOpen(true)
+  }
+
+  const handleTemplateSelect = (idx: number) => {
+    if (!whatsappTargetUser) return
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
+    const templates = [
+      `Hey ${whatsappTargetUser.name}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
+      `Hey ${whatsappTargetUser.name}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
+      `Hey ${whatsappTargetUser.name}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`
+    ]
+    setWhatsappSelectedTemplateIdx(idx)
+    setWhatsappCustomMessage(templates[idx])
+  }
+
+  const sendWhatsAppMessage = () => {
+    if (!whatsappTargetUser) return
+    let cleanPhone = whatsappTargetUser.phone.replace(/\D/g, '')
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone
+    }
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappCustomMessage)}`
+    window.open(whatsappUrl, '_blank')
+    setWhatsappModalOpen(false)
+    setWhatsappTargetUser(null)
   }
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
@@ -4297,13 +4344,22 @@ export function AdminDashboard({
                               {timeString}
                             </td>
                             <td className="py-3 px-3 text-center">
-                              <button
-                                onClick={() => sendCartNotification(cart.userId, cart.userName)}
-                                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 mx-auto"
-                                title="Send Push Notification Alert to Customer"
-                              >
-                                🔔 Send Alert
-                              </button>
+                              <div className="flex flex-col sm:flex-row gap-1.5 justify-center items-center">
+                                <button
+                                  onClick={() => sendCartNotification(cart.userId, cart.userName)}
+                                  className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                                  title="Send Push Notification Alert to Customer"
+                                >
+                                  🔔 Send Alert
+                                </button>
+                                <button
+                                  onClick={() => openWhatsAppModal(cart.userName, cart.userPhone)}
+                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                                  title="Send WhatsApp Alert to Customer"
+                                >
+                                  🟢 WhatsApp
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
@@ -5432,6 +5488,81 @@ export function AdminDashboard({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Template Modal */}
+      {whatsappModalOpen && whatsappTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
+            <div className="flex justify-between items-center border-b border-border/60 pb-3">
+              <div>
+                <h4 className="font-extrabold text-text-primary text-base flex items-center gap-1.5">
+                  <span>🟢</span> Send WhatsApp Alert
+                </h4>
+                <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
+                  To: <span className="font-extrabold text-text-primary">{whatsappTargetUser.name}</span> ({whatsappTargetUser.phone})
+                </p>
+              </div>
+              <button 
+                onClick={() => { setWhatsappModalOpen(false); setWhatsappTargetUser(null); }} 
+                className="text-text-secondary hover:text-text-primary p-1 rounded-lg hover:bg-muted cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-text-secondary block">Select a Message Template</label>
+              <div className="space-y-2">
+                {[
+                  "🛒 Cart Waiting (Standard)",
+                  "🎁 Special Offer (Discount code SAVE10)",
+                  "👋 Gentle Reminder (Before stock runs out)"
+                ].map((name, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleTemplateSelect(idx)}
+                    className={`w-full text-left px-3 py-2.5 text-xs rounded-xl border transition-all font-bold cursor-pointer ${
+                      whatsappSelectedTemplateIdx === idx
+                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-muted/10 border-border hover:bg-muted/30 text-text-primary'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-secondary block">Message Preview / Edit</label>
+                <textarea
+                  value={whatsappCustomMessage}
+                  onChange={(e) => setWhatsappCustomMessage(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-emerald-500 font-bold leading-relaxed resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+              <button
+                type="button"
+                onClick={() => { setWhatsappModalOpen(false); setWhatsappTargetUser(null); }}
+                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendWhatsAppMessage}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+              >
+                <span>🟢</span> Open WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       )}
