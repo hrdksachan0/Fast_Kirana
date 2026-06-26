@@ -132,18 +132,18 @@ export function CartStickyBar() {
           </div>
         </div>
 
-        {/* Premium Checkout Button */}
+        {/* Premium View Cart Button */}
         <motion.button
           onClick={(e) => {
             e.stopPropagation()
             triggerHaptic('light')
-            router.push('/checkout')
+            toggleCart()
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="bg-white text-emerald-600 font-extrabold text-[11px] px-4.5 py-2.5 rounded-xl flex items-center gap-1 shadow-[0_8px_20px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer tracking-wider uppercase border border-white/10 hover:shadow-lg"
         >
-          <span>Checkout</span>
+          <span>View Cart</span>
           <ArrowRight className="h-3.5 w-3.5 stroke-[3] animate-pulse" />
         </motion.button>
       </div>

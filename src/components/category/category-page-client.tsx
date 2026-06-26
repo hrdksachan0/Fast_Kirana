@@ -17,7 +17,28 @@ interface Subcategory {
 }
 
 const getSubcategories = (categorySlug: string, products: Product[]): Subcategory[] => {
-  const list: Subcategory[] = [{ id: 'all', name: 'All', emoji: '🥬', filterFn: () => true }]
+  let allEmoji = '🛒' // Default shopping cart
+  if (categorySlug === 'fruits-vegetables') {
+    allEmoji = '🥗' // Salad
+  } else if (categorySlug === 'dairy-breakfast') {
+    allEmoji = '🥣' // Cereal bowl
+  } else if (categorySlug === 'snacks-munchies') {
+    allEmoji = '🍿' // Popcorn
+  } else if (categorySlug === 'beverages') {
+    allEmoji = '🥤' // Soda cup
+  } else if (categorySlug === 'personal-care') {
+    allEmoji = '🧴' // Lotion bottle
+  } else if (categorySlug === 'household') {
+    allEmoji = '🧹' // Broom
+  } else if (categorySlug === 'bakery-biscuits') {
+    allEmoji = '🥐' // Croissant
+  } else if (categorySlug === 'atta-rice-dal') {
+    allEmoji = '🍲' // Pot of food
+  } else if (categorySlug === 'ice-cream') {
+    allEmoji = '🍦' // Ice cream cone
+  }
+
+  const list: Subcategory[] = [{ id: 'all', name: 'All', emoji: allEmoji, filterFn: () => true }]
 
   if (categorySlug === 'fruits-vegetables') {
     list.push(
@@ -152,6 +173,69 @@ const getSubcategories = (categorySlug: string, products: Product[]): Subcategor
         filterFn: (p) => /lotion|face wash|cream|nivea|vaseline|himalaya/i.test(p.name)
       }
     )
+  } else if (categorySlug === 'bakery-biscuits') {
+    list.push(
+      {
+        id: 'biscuits',
+        name: 'Biscuits & Cookies',
+        emoji: '🍪',
+        filterFn: (p) => /biscuit|cookie|oreo|bourbon|marie|monaco|krackjack|parle|bakery/i.test(p.name)
+      },
+      {
+        id: 'breads',
+        name: 'Bread & Pav',
+        emoji: '🍞',
+        filterFn: (p) => /bread|pav|bun|rusk/i.test(p.name)
+      },
+      {
+        id: 'cakes',
+        name: 'Cakes & Muffins',
+        emoji: '🍰',
+        filterFn: (p) => /cake|muffin|choco pie|brownie/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'atta-rice-dal') {
+    list.push(
+      {
+        id: 'atta',
+        name: 'Atta & Flours',
+        emoji: '🌾',
+        filterFn: (p) => /atta|flour|maida|sooji|besan|sattu/i.test(p.name)
+      },
+      {
+        id: 'rice',
+        name: 'Rice & Poha',
+        emoji: '🍚',
+        filterFn: (p) => /rice|poha|basmati/i.test(p.name)
+      },
+      {
+        id: 'dals',
+        name: 'Dals & Pulses',
+        emoji: '🫘',
+        filterFn: (p) => /dal |pulses|chana|rajma|moong|masoor|urad|arhar/i.test(p.name)
+      },
+      {
+        id: 'oils-ghee',
+        name: 'Oil & Ghee',
+        emoji: '🛢️',
+        filterFn: (p) => /oil|ghee|mustard|refine/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'ice-cream') {
+    list.push(
+      {
+        id: 'cones-cups',
+        name: 'Cones & Cups',
+        emoji: '🍦',
+        filterFn: (p) => /cone|cup|kulfi|chocobar|stick/i.test(p.name)
+      },
+      {
+        id: 'tubs-bricks',
+        name: 'Family Tubs & Bricks',
+        emoji: '🍨',
+        filterFn: (p) => /tub|brick|pack|family/i.test(p.name)
+      }
+    )
   } else {
     const uniqueTags = Array.from(
       new Set(products.flatMap((p) => p.tags || []))
@@ -171,6 +255,86 @@ const getSubcategories = (categorySlug: string, products: Product[]): Subcategor
   return list
 }
 
+const CATEGORY_THEMES: Record<string, {
+  primaryText: string
+  activeBg: string
+  glow: string
+  border: string
+  indicatorBg: string
+}> = {
+  'fruits-vegetables': {
+    primaryText: 'text-emerald-600 dark:text-emerald-400',
+    activeBg: 'bg-emerald-50/50 dark:bg-emerald-950/10',
+    glow: 'shadow-[0_0_12px_rgba(16,185,129,0.25)]',
+    border: 'border-emerald-500/50 dark:border-emerald-500/30',
+    indicatorBg: 'bg-emerald-500'
+  },
+  'dairy-breakfast': {
+    primaryText: 'text-blue-600 dark:text-blue-400',
+    activeBg: 'bg-blue-50/50 dark:bg-blue-950/10',
+    glow: 'shadow-[0_0_12px_rgba(59,130,246,0.25)]',
+    border: 'border-blue-500/50 dark:border-blue-500/30',
+    indicatorBg: 'bg-blue-500'
+  },
+  'snacks-munchies': {
+    primaryText: 'text-amber-600 dark:text-amber-400',
+    activeBg: 'bg-amber-50/50 dark:bg-amber-950/10',
+    glow: 'shadow-[0_0_12px_rgba(245,158,11,0.25)]',
+    border: 'border-amber-500/50 dark:border-amber-500/30',
+    indicatorBg: 'bg-amber-500'
+  },
+  'beverages': {
+    primaryText: 'text-slate-700 dark:text-zinc-300',
+    activeBg: 'bg-zinc-100/50 dark:bg-zinc-800/20',
+    glow: 'shadow-[0_0_12px_rgba(113,113,122,0.2)]',
+    border: 'border-zinc-400/50 dark:border-zinc-700/50',
+    indicatorBg: 'bg-zinc-650'
+  },
+  'personal-care': {
+    primaryText: 'text-pink-600 dark:text-pink-400',
+    activeBg: 'bg-pink-50/50 dark:bg-pink-950/10',
+    glow: 'shadow-[0_0_12px_rgba(236,72,153,0.25)]',
+    border: 'border-pink-500/50 dark:border-pink-500/30',
+    indicatorBg: 'bg-pink-500'
+  },
+  'household': {
+    primaryText: 'text-teal-600 dark:text-teal-400',
+    activeBg: 'bg-teal-50/50 dark:bg-teal-950/10',
+    glow: 'shadow-[0_0_12px_rgba(20,184,166,0.25)]',
+    border: 'border-teal-500/50 dark:border-teal-500/30',
+    indicatorBg: 'bg-teal-500'
+  },
+  'bakery-biscuits': {
+    primaryText: 'text-amber-800 dark:text-amber-400',
+    activeBg: 'bg-amber-50/40 dark:bg-amber-950/10',
+    glow: 'shadow-[0_0_12px_rgba(217,119,6,0.25)]',
+    border: 'border-amber-500/50 dark:border-amber-500/30',
+    indicatorBg: 'bg-amber-600'
+  },
+  'atta-rice-dal': {
+    primaryText: 'text-yellow-600 dark:text-yellow-400',
+    activeBg: 'bg-yellow-50/50 dark:bg-yellow-950/10',
+    glow: 'shadow-[0_0_12px_rgba(234,179,8,0.25)]',
+    border: 'border-yellow-500/50 dark:border-yellow-500/30',
+    indicatorBg: 'bg-yellow-500'
+  },
+  'ice-cream': {
+    primaryText: 'text-cyan-600 dark:text-cyan-400',
+    activeBg: 'bg-cyan-50/50 dark:bg-cyan-950/10',
+    glow: 'shadow-[0_0_12px_rgba(6,182,212,0.25)]',
+    border: 'border-cyan-500/50 dark:border-cyan-500/30',
+    indicatorBg: 'bg-cyan-500'
+  }
+}
+
+const DEFAULT_THEME = {
+  primaryText: 'text-[#FF2E55] dark:text-rose-400',
+  activeBg: 'bg-rose-50/50 dark:bg-rose-950/10',
+  glow: 'shadow-[0_0_12px_rgba(255,46,85,0.25)]',
+  border: 'border-[#FF2E55]/50 dark:border-rose-500/30',
+  indicatorBg: 'bg-[#FF2E55]'
+}
+
 interface CategoryPageClientProps {
   categories: Category[]
   initialProducts: Product[]
@@ -186,6 +350,7 @@ export function CategoryPageClient({
 }: CategoryPageClientProps) {
   const searchParams = useSearchParams()
   const subcatParam = searchParams.get('subcat')
+  const theme = useMemo(() => CATEGORY_THEMES[activeCategory.slug] || DEFAULT_THEME, [activeCategory.slug])
   const [searchQuery, setSearchQuery] = useState('')
   const [sort, setSort] = useState<string>('popularity')
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'nonveg'>('all')
@@ -332,11 +497,11 @@ export function CategoryPageClient({
       {/* -------------------- DESKTOP LAYOUT -------------------- */}
       <div className="hidden md:flex flex-col gap-6">
         {/* Desktop Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-text-muted">
+        <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-          <ChevronRight size={12} className="text-text-muted" />
-          <span className="font-extrabold text-primary">{activeCategory.name}</span>
-        </div>
+          <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+          <span className="text-[#FF2E55] font-extrabold">{activeCategory.name}</span>
+        </nav>
 
         <div className="flex gap-6">
           {/* Desktop Left Sidebar: Categories Navigation */}
@@ -426,6 +591,28 @@ export function CategoryPageClient({
                   })}
                 </div>
               </div>
+            </div>
+
+            {/* Desktop Subcategory Pills */}
+            <div className="flex flex-wrap gap-2 select-none">
+              {subcategories.map((subcat) => {
+                const isActive = subcat.id === activeSubcategoryId
+                return (
+                  <button
+                    key={subcat.id}
+                    onClick={() => setActiveSubcategoryId(subcat.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full transition-all duration-300 border cursor-pointer select-none active:scale-95 outline-none',
+                      isActive
+                        ? cn('bg-white dark:bg-zinc-900', theme.border, theme.glow, theme.primaryText)
+                        : 'bg-card hover:bg-muted text-zinc-500 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-800/85 hover:border-zinc-300 dark:hover:border-zinc-700'
+                    )}
+                  >
+                    <span className="text-sm filter drop-shadow-sm select-none leading-none">{subcat.emoji}</span>
+                    <span>{subcat.name}</span>
+                  </button>
+                )
+              })}
             </div>
 
             {/* Search Bar and Dynamic Filters */}
@@ -541,12 +728,14 @@ export function CategoryPageClient({
         </div>
 
         {/* Mobile Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-[9px] font-black text-text-muted uppercase tracking-widest mt-2 mb-1.5 px-4 select-none">
-          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-          <ChevronRight size={10} className="text-text-muted" />
-          <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
-          <ChevronRight size={10} className="text-text-muted" />
-          <span className="font-extrabold text-primary truncate max-w-[80px]">{activeSubcategory.name}</span>
+        <div className="px-4 mt-2 mb-1.5">
+          <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20">
+            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+            <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+            <span className="text-[#FF2E55] font-extrabold truncate max-w-[80px]">{activeSubcategory.name}</span>
+          </nav>
         </div>
 
         {/* Main Split Area */}
@@ -568,14 +757,14 @@ export function CategoryPageClient({
                   onClick={() => setActiveSubcategoryId(subcat.id)}
                   className={cn(
                     'w-full flex flex-col items-center text-center gap-1 py-3 px-1.5 relative transition-all cursor-pointer select-none z-10 outline-none border-0 bg-transparent',
-                    isActive ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 dark:text-zinc-400'
+                    isActive ? theme.primaryText : 'text-zinc-500 dark:text-zinc-400'
                   )}
                 >
                   {/* Sliding Left indicator bar */}
                   {isActive && (
                     <motion.div
                       layoutId="activeSubcategoryMobileBar"
-                      className="absolute left-0 top-2 bottom-2 w-[3.5px] bg-[#FF2E55] rounded-r-full"
+                      className={cn("absolute left-0 top-2 bottom-2 w-[3.5px] rounded-r-full", theme.indicatorBg)}
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     />
                   )}
@@ -585,7 +774,7 @@ export function CategoryPageClient({
                     className={cn(
                       'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border relative z-10 shadow-[0_2px_8px_rgba(0,0,0,0.01)]',
                       isActive
-                        ? 'border-zinc-200 dark:border-zinc-800 scale-[1.05] bg-white dark:bg-zinc-900 shadow-sm'
+                        ? cn('bg-white dark:bg-zinc-900 scale-[1.05]', theme.border, theme.glow)
                         : 'bg-white/80 dark:bg-zinc-900/60 border-zinc-100 dark:border-zinc-900/60'
                     )}
                   >
@@ -593,7 +782,7 @@ export function CategoryPageClient({
                     {isActive && (
                       <motion.div
                         layoutId="activeSubcategoryMobileCircle"
-                        className="absolute inset-0 rounded-2xl bg-rose-50/10 dark:bg-rose-950/5 -z-10"
+                        className={cn("absolute inset-0 rounded-2xl -z-10", theme.activeBg)}
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
@@ -603,7 +792,7 @@ export function CategoryPageClient({
                   {/* Subcategory Name */}
                   <span className={cn(
                     "text-[9.5px] leading-tight px-0.5 tracking-tight select-none mt-1.5 relative z-20 text-center line-clamp-2 max-w-[80px]",
-                    isActive ? "font-extrabold text-rose-600 dark:text-rose-450" : "font-semibold text-zinc-500 dark:text-zinc-400"
+                    isActive ? cn("font-extrabold", theme.primaryText) : "font-semibold text-zinc-500 dark:text-zinc-400"
                   )}>
                     {formattedName}
                   </span>

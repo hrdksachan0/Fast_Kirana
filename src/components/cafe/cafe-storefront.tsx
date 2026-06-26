@@ -661,10 +661,10 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       {/* -------------------- DESKTOP LAYOUT -------------------- */}
       <div className="hidden md:flex flex-col gap-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-xs md:text-sm font-semibold">
-          <Link href="/" className="text-text-muted hover:text-primary transition-colors">Home</Link>
-          <ChevronRight size={14} className="text-text-muted" />
-          <span className="font-bold text-rose-600">FastKirana Cafe ☕</span>
+        <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
+          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+          <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+          <span className="text-[#FF2E55] font-extrabold">FastKirana Cafe ☕</span>
         </nav>
 
         {/* Hero Cafe Banner */}
@@ -844,14 +844,16 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
       <div id="mobile-cafe-layout-root" className="md:hidden flex flex-col -mx-4 min-h-[calc(100vh-140px)]">
         {/* Mobile Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2.5 px-4 select-none">
-          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-          <ChevronRight size={10} className="text-text-muted" />
-          <span className="text-rose-600">FastKirana Cafe ☕</span>
-          <ChevronRight size={10} className="text-text-muted" />
-          <span className="font-extrabold text-primary truncate max-w-[100px]">
-            {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
-          </span>
+        <div className="px-4 mb-2.5">
+          <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20">
+            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+            <span className="text-[#FF2E55] font-extrabold">Cafe ☕</span>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+            <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">
+              {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
+            </span>
+          </nav>
         </div>
 
         {/* Main Split Area */}

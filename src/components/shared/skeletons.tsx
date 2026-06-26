@@ -221,7 +221,7 @@ export function ProductDetailSkeleton() {
   return (
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl space-y-6 md:space-y-10 animate-pulse">
       {/* Breadcrumbs */}
-      <div className="h-3.5 bg-muted/40 rounded w-64 px-1" />
+      <div className="h-[26px] bg-muted/20 border border-muted-light/10 rounded-full w-48 mb-3" />
 
       {/* Main product details section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 lg:gap-12 bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm">

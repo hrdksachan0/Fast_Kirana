@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ProductScrollSection } from '@/components/product/product-scroll-section'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Star, Truck, ShieldCheck, Heart, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag } from 'lucide-react'
+import { Star, Truck, ShieldCheck, Heart, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, ChevronRight } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
 import { ProductVariantSelector } from '@/components/product/product-variant-selector'
 
@@ -109,9 +109,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl space-y-6 md:space-y-10">
       
       {/* Breadcrumbs */}
-      <nav className="text-xs font-bold text-text-secondary flex items-center gap-1.5 px-1">
+      <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-        <span>/</span>
+        <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
         {product.category && (
           <>
             <Link 
@@ -120,10 +120,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
             >
               {product.category.name}
             </Link>
-            <span>/</span>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
           </>
         )}
-        <span className="text-text-primary line-clamp-1">{product.name}</span>
+        <span className="text-[#FF2E55] font-extrabold line-clamp-1">{product.name}</span>
       </nav>
 
       {/* Main product details section */}
