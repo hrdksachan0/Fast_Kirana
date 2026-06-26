@@ -177,5 +177,6 @@ export function useCart() {
     getMrpTotal: useCartStore((s) => s.getMrpTotal),
     getSavings: useCartStore((s) => s.getSavings),
     updateCartProduct: useCartStore((s) => s.updateCartProduct),
+    updateItemNotes: useCartStore((s) => s.updateItemNotes),
   }
 }

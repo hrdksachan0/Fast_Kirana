@@ -36,7 +36,8 @@ export function CartDrawer() {
     updateQuantity,
     removeItem,
     getSubtotal,
-    getSavings
+    getSavings,
+    updateItemNotes
   } = useCart()
 
   const [recommendations, setRecommendations] = useState<any[]>([])
@@ -138,69 +139,84 @@ export function CartDrawer() {
         transition={{ duration: 0.15, ease: 'easeOut' }}
         className="overflow-hidden"
       >
-        <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 transition-all duration-300">
-          {/* Product image */}
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/80 overflow-hidden shadow-sm">
-            <ProductImage
-              src={item.product.imageUrl}
-              alt={item.product.name}
-              categorySlug={item.product.category?.slug}
-              className="h-full w-full object-contain p-1"
-            />
-          </div>
-          
-          {/* Product details */}
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 truncate leading-snug">{item.product.name}</h4>
-            <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{item.product.unit}</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
-              {item.product.mrp > item.product.price && (
-                <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-semibold">{formatPrice(item.product.mrp)}</span>
-              )}
+        <div className="flex flex-col gap-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 transition-all duration-300">
+          <div className="flex items-center gap-3.5">
+            {/* Product image */}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/80 overflow-hidden shadow-sm">
+              <ProductImage
+                src={item.product.imageUrl}
+                alt={item.product.name}
+                categorySlug={item.product.category?.slug}
+                className="h-full w-full object-contain p-1"
+              />
             </div>
-            {/* Per-item savings */}
-            {perItemSaving > 0 && (
-              <p className="text-[10px] font-extrabold text-accent mt-1 bg-accent/5 px-2 py-0.5 rounded-md w-fit">
-                Save {formatPrice(perItemSaving)}
-              </p>
-            )}
-            {item.product.stock <= 0 || item.product.isAvailable === false ? (
-              <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
-                <span>❌</span> Out of Stock
-              </p>
-            ) : item.quantity > (isCafe ? 10 : 5) ? (
-              <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
-                <span>⚠️</span> Max limit is {isCafe ? 10 : 5} units
-              </p>
-            ) : item.quantity > item.product.stock ? (
-              <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
-                <span>⚠️</span> Only {item.product.stock} available
-              </p>
-            ) : null}
+            
+            {/* Product details */}
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 truncate leading-snug">{item.product.name}</h4>
+              <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{item.product.unit}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
+                {item.product.mrp > item.product.price && (
+                  <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-semibold">{formatPrice(item.product.mrp)}</span>
+                )}
+              </div>
+              {/* Per-item savings */}
+              {perItemSaving > 0 && (
+                <p className="text-[10px] font-extrabold text-accent mt-1 bg-accent/5 px-2 py-0.5 rounded-md w-fit">
+                  Save {formatPrice(perItemSaving)}
+                </p>
+              )}
+              {item.product.stock <= 0 || item.product.isAvailable === false ? (
+                <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
+                  <span>❌</span> Out of Stock
+                </p>
+              ) : item.quantity > (isCafe ? 10 : 5) ? (
+                <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
+                  <span>⚠️</span> Max limit is {isCafe ? 10 : 5} units
+                </p>
+              ) : item.quantity > item.product.stock ? (
+                <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+                  <span>⚠️</span> Only {item.product.stock} available
+                </p>
+              ) : null}
+            </div>
+
+            {/* Quantity controller */}
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full p-1 shadow-sm shrink-0">
+              <button
+                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
+                className="flex h-8 w-8 items-center justify-center text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                aria-label="Decrease quantity"
+              >
+                <Minus size={14} className="stroke-[2.5]" />
+              </button>
+              <span className="w-6 text-center text-xs font-black text-zinc-850 dark:text-zinc-100">
+                {item.quantity}
+              </span>
+              <button
+                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
+                disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= (isCafe ? 10 : 5)}
+                className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                aria-label="Increase quantity"
+              >
+                <Plus size={14} className="stroke-[2.5]" />
+              </button>
+            </div>
           </div>
 
-          {/* Quantity controller */}
-          <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full p-1 shadow-sm shrink-0">
-            <button
-              onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
-              className="flex h-8 w-8 items-center justify-center text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
-              aria-label="Decrease quantity"
-            >
-              <Minus size={14} className="stroke-[2.5]" />
-            </button>
-            <span className="w-6 text-center text-xs font-black text-zinc-850 dark:text-zinc-100">
-              {item.quantity}
-            </span>
-            <button
-              onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-              disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= (isCafe ? 10 : 5)}
-              className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              aria-label="Increase quantity"
-            >
-              <Plus size={14} className="stroke-[2.5]" />
-            </button>
-          </div>
+          {/* Cooking Instructions Notes for Cafe Items */}
+          {isCafe && (
+            <div className="mt-1 border-t border-zinc-100/50 dark:border-zinc-850/10 pt-2 shrink-0">
+              <input
+                type="text"
+                value={item.notes || ''}
+                onChange={(e) => updateItemNotes(item.product.id, e.target.value)}
+                placeholder="Cooking instruction (e.g. less sugar, extra spicy)..."
+                className="w-full px-3 py-1.5 border border-zinc-200/60 dark:border-zinc-800 rounded-xl text-[10px] bg-white/50 dark:bg-zinc-900/50 focus:outline-none focus:border-primary/45 font-bold"
+              />
+            </div>
+          )}
         </div>
       </motion.div>
     )

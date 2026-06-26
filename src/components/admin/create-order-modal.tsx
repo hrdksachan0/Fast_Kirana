@@ -62,6 +62,7 @@ interface SelectedItem {
   }
   quantity: number
   variantName: string | null
+  notes?: string
 }
 
 export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
@@ -229,7 +230,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setSelectedItems((prev) => {
       const existing = prev.find((item) => item.id === cartId)
       if (existing) {
-        const limit = product.category?.slug === 'cafe' || product.tags?.includes('cafe') ? 10 : 5
+        const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
+        const limit = isCafe ? 10 : 99999
         const newQty = Math.min(existing.quantity + 1, stock, limit)
         return prev.map((item) => (item.id === cartId ? { ...item, quantity: newQty } : item))
       }
@@ -258,7 +260,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   }
 
   const handleUpdateQty = (itemId: string, currentQty: number, change: number, maxStock: number, isCafe: boolean) => {
-    const limit = isCafe ? 10 : 5
+    const limit = isCafe ? 10 : 99999
     const newQty = currentQty + change
     if (newQty <= 0) {
       setSelectedItems((prev) => prev.filter((item) => item.id !== itemId))
@@ -340,13 +342,14 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     let deliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      // Grocery delivery fee check
-      if (groceryItems.length > 0 && grocerySubtotal < FREE_DELIVERY_THRESHOLD) {
-        deliveryFee += DELIVERY_FEE
-      }
-      // Cafe delivery fee check
-      if (cafeItems.length > 0 && cafeSubtotal < 200) {
-        deliveryFee += DELIVERY_FEE
+      let groceryDeliveryFee = (groceryItems.length > 0 && grocerySubtotal < FREE_DELIVERY_THRESHOLD) ? DELIVERY_FEE : 0
+      let cafeDeliveryFee = (cafeItems.length > 0 && cafeSubtotal < 200) ? 25 : 0
+
+      // Apply combined fee cap
+      if (groceryItems.length > 0 && cafeItems.length > 0 && subtotal >= 300) {
+        deliveryFee = Math.min(groceryDeliveryFee + cafeDeliveryFee, 25)
+      } else {
+        deliveryFee = groceryDeliveryFee + cafeDeliveryFee
       }
     }
 
@@ -408,6 +411,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             isAvailable: true,
           },
           quantity: item.quantity,
+          notes: item.notes || null,
         })),
       }
 
@@ -803,48 +807,68 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-2.5 border border-border/60 bg-card rounded-lg"
+                      className="flex flex-col gap-2 p-2.5 border border-border/60 bg-card rounded-lg"
                     >
-                      <div className="min-w-0 flex-1 pr-3">
-                        <span className="font-extrabold text-[11px] text-text-primary block truncate">
-                          {item.product.name}
-                        </span>
-                        {item.variantName && (
-                          <span className="inline-block text-[8px] font-bold text-primary bg-primary/5 px-1 py-0.5 rounded mt-0.5">
-                            {item.variantName}
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <span className="font-extrabold text-[11px] text-text-primary block truncate">
+                            {item.product.name}
                           </span>
-                        )}
-                        <span className="text-[10px] font-extrabold text-text-secondary block mt-0.5">
-                          {formatPrice(item.product.price)} • Stock: {item.product.stock}
-                        </span>
-                      </div>
+                          {item.variantName && (
+                            <span className="inline-block text-[8px] font-bold text-primary bg-primary/5 px-1 py-0.5 rounded mt-0.5">
+                              {item.variantName}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-extrabold text-text-secondary block mt-0.5">
+                            {formatPrice(item.product.price)} • Stock: {item.product.stock}
+                          </span>
+                        </div>
 
-                      {/* Quantity Controller & Delete */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center border border-border rounded-full p-0.5 bg-card">
+                        {/* Quantity Controller & Delete */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center border border-border rounded-full p-0.5 bg-card">
+                            <button
+                              onClick={() => handleUpdateQty(item.id, item.quantity, -1, item.product.stock, isCafe)}
+                              className="h-6 w-6 rounded-full hover:bg-muted text-text-secondary flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Minus className="h-3 w-3 stroke-[3]" />
+                            </button>
+                            <span className="w-5 text-center text-[10px] font-black text-text-primary">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => handleUpdateQty(item.id, item.quantity, 1, item.product.stock, isCafe)}
+                              className="h-6 w-6 rounded-full hover:bg-muted text-text-primary flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Plus className="h-3 w-3 stroke-[3]" />
+                            </button>
+                          </div>
                           <button
-                            onClick={() => handleUpdateQty(item.id, item.quantity, -1, item.product.stock, isCafe)}
-                            className="h-6 w-6 rounded-full hover:bg-muted text-text-secondary flex items-center justify-center transition-colors cursor-pointer"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           >
-                            <Minus className="h-3 w-3 stroke-[3]" />
-                          </button>
-                          <span className="w-5 text-center text-[10px] font-black text-text-primary">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleUpdateQty(item.id, item.quantity, 1, item.product.stock, isCafe)}
-                            className="h-6 w-6 rounded-full hover:bg-muted text-text-primary flex items-center justify-center transition-colors cursor-pointer"
-                          >
-                            <Plus className="h-3 w-3 stroke-[3]" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                        <button
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
+
+                      {/* Cooking Instructions Notes for Cafe Items */}
+                      {isCafe && (
+                        <div className="mt-1 border-t border-border/30 pt-2 shrink-0">
+                          <input
+                            type="text"
+                            value={item.notes || ''}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setSelectedItems((prev) =>
+                                prev.map((si) => (si.id === item.id ? { ...si, notes: val } : si))
+                              )
+                            }}
+                            placeholder="Cooking instruction (e.g. less sugar, extra spicy)..."
+                            className="w-full px-3 py-1.5 border border-border/80 rounded-xl text-[10px] bg-muted/20 focus:outline-none focus:border-primary/45 font-bold"
+                          />
+                        </div>
+                      )}
                     </div>
                   )
                 })

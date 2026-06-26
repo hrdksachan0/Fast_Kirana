@@ -26,6 +26,7 @@ export interface CartProduct {
 export interface CartItem {
   product: CartProduct
   quantity: number
+  notes?: string
 }
 
 interface CartState {
@@ -40,6 +41,7 @@ interface CartState {
   getMrpTotal: () => number
   getSavings: () => number
   updateCartProduct: (productId: string, updates: Partial<CartProduct>) => void
+  updateItemNotes: (productId: string, notes: string) => void
 }
 
 export const useCartStore = create<CartState>()(
@@ -136,6 +138,13 @@ export const useCartStore = create<CartState>()(
               }
               return item.quantity > 0
             }),
+        }))
+      },
+      updateItemNotes: (productId: string, notes: string) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.product.id === productId ? { ...item, notes } : item
+          ),
         }))
       },
     }),

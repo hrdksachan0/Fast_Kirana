@@ -152,9 +152,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
-      const limit = isCafeProduct(dbProduct) ? 10 : 5
-      if (item.quantity > limit) {
-        return NextResponse.json({ error: `Maximum order limit of ${limit} units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
+      if (isCafeProduct(dbProduct) && item.quantity > 10) {
+        return NextResponse.json({ error: `Maximum order limit of 10 units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
       const itemWithDb = {
@@ -234,23 +233,57 @@ export async function POST(request: Request) {
     const serverTaxRate = taxPercent / 100
     const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
 
+    const grocerySubtotal = groceryItems.reduce((sum, item) => {
+      const isVariant = item.product.id.includes('_')
+      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      let itemPrice = item.dbProduct.price
+      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+      return sum + itemPrice * item.quantity
+    }, 0)
+
+    const cafeSubtotal = cafeItems.reduce((sum, item) => {
+      const isVariant = item.product.id.includes('_')
+      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      let itemPrice = item.dbProduct.price
+      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+      return sum + itemPrice * item.quantity
+    }, 0)
+
+    let groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
+    let cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
+
+    // Apply combined delivery fee discount rule
+    if (groceryItems.length > 0 && cafeItems.length > 0 && deliveryMethod === 'DELIVERY' && !isB2B) {
+      if (combinedSubtotal >= 300) {
+        if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD && cafeSubtotal >= 200) {
+          groceryDeliveryFee = 0
+          cafeDeliveryFee = 0
+        } else {
+          if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD) {
+            groceryDeliveryFee = 0
+            cafeDeliveryFee = 25
+          } else {
+            groceryDeliveryFee = 25
+            cafeDeliveryFee = 0
+          }
+        }
+      }
+    }
+
     const ordersToCreate: any[] = []
 
     if (groceryItems.length > 0) {
-      const grocerySubtotal = groceryItems.reduce((sum, item) => {
-        const isVariant = item.product.id.includes('_')
-        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-        let itemPrice = item.dbProduct.price
-        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-          if (variant) {
-            itemPrice = variant.price
-          }
-        }
-        return sum + itemPrice * item.quantity
-      }, 0)
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
-      const groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
       const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + serverMiscFee
 
@@ -267,22 +300,11 @@ export async function POST(request: Request) {
     }
 
     if (cafeItems.length > 0) {
-      const cafeSubtotal = cafeItems.reduce((sum, item) => {
-        const isVariant = item.product.id.includes('_')
-        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-        let itemPrice = item.dbProduct.price
-        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-          if (variant) {
-            itemPrice = variant.price
-          }
-        }
-        return sum + itemPrice * item.quantity
-      }, 0)
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
-      const cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : DELIVERY_FEE)
       const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
-      const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + serverMiscFee
+      const groceryChargedMisc = groceryItems.length > 0
+      const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
+      const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + appliedMiscFee
 
       ordersToCreate.push({
         type: 'CAFE',
@@ -290,7 +312,7 @@ export async function POST(request: Request) {
         discount: cafeDiscount,
         deliveryFee: cafeDeliveryFee,
         taxes: cafeTaxes,
-        miscFee: serverMiscFee,
+        miscFee: appliedMiscFee,
         total: cafeTotal,
         items: cafeItems,
       })
@@ -322,6 +344,7 @@ export async function POST(request: Request) {
             selectedVariant: variantName,
             costPrice: item.dbProduct.costPrice || 0,
             variants: item.dbProduct.variants,
+            notes: item.notes || null,
           }
         })
 
@@ -364,6 +387,7 @@ export async function POST(request: Request) {
                 selectedVariant: item.selectedVariant,
                 costPrice: item.costPrice,
                 variants: item.variants,
+                notes: item.notes,
               })),
             },
           },

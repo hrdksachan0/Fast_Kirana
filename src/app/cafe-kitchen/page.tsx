@@ -41,6 +41,7 @@ interface OrderItem {
   product?: {
     slug: string
   }
+  notes?: string | null
 }
 
 interface CompanionOrder {
@@ -770,6 +771,11 @@ export default function CafeKitchenDashboard() {
                           <h4 className="text-xs font-extrabold text-text-primary truncate flex items-center gap-1">
                             <span>{getItemEmoji(idx)}</span> {item.name}
                           </h4>
+                          {item.notes && (
+                            <span className="inline-block text-[9px] font-black text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30 px-1.5 py-0.5 rounded mt-0.5 border border-amber-200/20">
+                              📝 Notes: {item.notes}
+                            </span>
+                          )}
                           <span className="text-[10px] text-text-secondary font-bold block mt-0.5">
                             Target: {item.quantity} | Prepared: <span className="text-rose-500 font-black">{picked}</span>
                           </span>
@@ -1157,9 +1163,16 @@ export default function CafeKitchenDashboard() {
                               idx % 2 === 0 ? 'bg-rose-500/[0.02]' : 'bg-orange-500/[0.02]'
                             } ${idx !== order.items.length - 1 ? 'border-b border-rose-100/30' : ''}`}
                           >
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-sm">{getItemEmoji(idx)}</span>
-                              {item.name}
+                            <span className="flex flex-col">
+                              <span className="flex items-center gap-1.5">
+                                <span className="text-sm">{getItemEmoji(idx)}</span>
+                                {item.name}
+                              </span>
+                              {item.notes && (
+                                <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-0.5 ml-5">
+                                  📝 Notes: {item.notes}
+                                </span>
+                              )}
                             </span>
                             <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-black">×{item.quantity}</span>
                           </div>

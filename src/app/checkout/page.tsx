@@ -425,9 +425,9 @@ export default function CheckoutPage() {
   const grocerySavings = groceryMrpSubtotal - grocerySubtotal
   const groceryB2BDiscount = 0
   const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
-  const groceryDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
+  
+  let groceryDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
   const groceryTaxes = groceryAdjustedSubtotal * taxRate
-  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + (groceryCartItems.length > 0 ? miscFee : 0)
 
   // Cafe Calculations
   const cafeSubtotal = cafeCartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
@@ -435,8 +435,29 @@ export default function CheckoutPage() {
   const cafeSavings = cafeMrpSubtotal - cafeSubtotal
   const cafeB2BDiscount = 0
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
-  const cafeDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
+  
+  let cafeDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
   const cafeTaxes = cafeAdjustedSubtotal * taxRate
+
+  // Apply combined delivery fee discount rule
+  if (groceryCartItems.length > 0 && cafeCartItems.length > 0 && deliveryMethod === 'DELIVERY') {
+    if (subtotal >= 300) {
+      if (groceryAdjustedSubtotal >= FREE_DELIVERY_THRESHOLD && cafeAdjustedSubtotal >= 200) {
+        groceryDeliveryFee = 0
+        cafeDeliveryFee = 0
+      } else {
+        if (groceryAdjustedSubtotal >= FREE_DELIVERY_THRESHOLD) {
+          groceryDeliveryFee = 0
+          cafeDeliveryFee = 25
+        } else {
+          groceryDeliveryFee = 25
+          cafeDeliveryFee = 0
+        }
+      }
+    }
+  }
+
+  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + (groceryCartItems.length > 0 ? miscFee : 0)
   const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + (groceryCartItems.length === 0 ? miscFee : 0)
 
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee

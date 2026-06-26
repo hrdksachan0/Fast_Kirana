@@ -229,21 +229,56 @@ export async function POST(request: NextRequest) {
     // Calculate details for each order to create
     const ordersToCreate: any[] = []
 
-    if (groceryItems.length > 0) {
-      const grocerySubtotal = groceryItems.reduce((sum, item) => {
-        const isVariant = item.product.id.includes('_')
-        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-        let itemPrice = item.dbProduct.price
-        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-          if (variant) {
-            itemPrice = variant.price
+    // Calculate subtotals first
+    const grocerySubtotal = groceryItems.reduce((sum, item) => {
+      const isVariant = item.product.id.includes('_')
+      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      let itemPrice = item.dbProduct.price
+      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+      return sum + itemPrice * item.quantity
+    }, 0)
+
+    const cafeSubtotal = cafeItems.reduce((sum, item) => {
+      const isVariant = item.product.id.includes('_')
+      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      let itemPrice = item.dbProduct.price
+      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+      return sum + itemPrice * item.quantity
+    }, 0)
+
+    let groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
+    let cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
+
+    // Apply combined delivery fee discount rule
+    if (groceryItems.length > 0 && cafeItems.length > 0 && deliveryMethod === 'DELIVERY' && !isB2B) {
+      if (combinedSubtotal >= 300) {
+        if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD && cafeSubtotal >= 200) {
+          groceryDeliveryFee = 0
+          cafeDeliveryFee = 0
+        } else {
+          if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD) {
+            groceryDeliveryFee = 0
+            cafeDeliveryFee = 25
+          } else {
+            groceryDeliveryFee = 25
+            cafeDeliveryFee = 0
           }
         }
-        return sum + itemPrice * item.quantity
-      }, 0)
+      }
+    }
+
+    if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
-      const groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
       const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + serverMiscFee
 
@@ -260,20 +295,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (cafeItems.length > 0) {
-      const cafeSubtotal = cafeItems.reduce((sum, item) => {
-        const isVariant = item.product.id.includes('_')
-        const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-        let itemPrice = item.dbProduct.price
-        if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-          const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-          if (variant) {
-            itemPrice = variant.price
-          }
-        }
-        return sum + itemPrice * item.quantity
-      }, 0)
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
-      const cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
       const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
       const groceryChargedMisc = groceryItems.length > 0
       const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
@@ -327,6 +349,7 @@ export async function POST(request: NextRequest) {
             selectedVariant: variantName,
             costPrice: itemCostPrice,
             variants: item.dbProduct.variants || null,
+            notes: item.notes || null,
           }
         })
 
@@ -383,6 +406,7 @@ export async function POST(request: NextRequest) {
                 selectedVariant: item.selectedVariant,
                 costPrice: item.costPrice,
                 variants: item.variants,
+                notes: item.notes,
               })),
             },
           },
