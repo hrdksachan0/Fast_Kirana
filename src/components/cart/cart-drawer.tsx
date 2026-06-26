@@ -511,7 +511,7 @@ export function CartDrawer() {
                   {isCheckoutBlocked ? (
                     <button
                       disabled
-                      className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
+                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
                     >
                       {hasClosedGroceryItems || hasClosedCafeItems ? (
                         <>Closed Items <ArrowRight size={16} /></>
@@ -523,9 +523,11 @@ export function CartDrawer() {
                     <Link
                       href="/checkout"
                       onClick={() => setCartOpen(false)}
-                      className="w-full h-12 rounded-2xl bg-accent hover:bg-accent/90 text-xs sm:text-sm font-black text-white hover:text-white transition-all active:scale-[0.98] shadow-md shadow-rose-500/10 hover:shadow-rose-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="group relative overflow-hidden w-full h-12 rounded-full bg-gradient-to-r from-accent to-accent-dark text-xs sm:text-sm font-black text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-accent/15 hover:shadow-xl hover:shadow-accent/30 flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.03]"
                     >
-                      <span>Checkout</span> <ArrowRight size={16} />
+                      <span className="relative z-10">Checkout</span>
+                      <ArrowRight size={16} className="relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
                     </Link>
                   )}
                 </div>

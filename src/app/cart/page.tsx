@@ -533,69 +533,27 @@ export default function CartPage() {
             )}
 
             {/* Confirmation triggers checkout */}
-            <>
-              <style>{`
-                @keyframes shimmer {
-                  100% {
-                    transform: translateX(100%);
-                  }
-                }
-                .shimmer-btn {
-                  position: relative;
-                  overflow: hidden;
-                }
-                .shimmer-btn::after {
-                  position: absolute;
-                  top: 0;
-                  right: 0;
-                  bottom: 0;
-                  left: 0;
-                  transform: translateX(-100%);
-                  background-image: linear-gradient(
-                    90deg,
-                    rgba(255, 255, 255, 0) 0%,
-                    rgba(255, 255, 255, 0.25) 30%,
-                    rgba(255, 255, 255, 0.5) 60%,
-                    rgba(255, 255, 255, 0) 100%
-                  );
-                  animation: shimmer 2s infinite;
-                  content: '';
-                }
-                @keyframes pulseGlow {
-                  0%, 100% {
-                    box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.45);
-                  }
-                  50% {
-                    box-shadow: 0 4px 24px 0 rgba(34, 197, 94, 0.75);
-                  }
-                }
-                .glow-btn {
-                  animation: pulseGlow 2s infinite;
-                }
-              `}</style>
-              <button
-                type="button"
-                onClick={handleCheckoutRedirect}
-                disabled={isCheckoutBlocked}
-                className={cn(
-                  "w-full h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full font-black text-xs tracking-widest uppercase shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2",
-                  "shimmer-btn",
-                  !isCheckoutBlocked && "glow-btn",
-                  isCheckoutBlocked && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                {hasClosedGroceryItems || hasClosedCafeItems ? (
-                  'Checkout Blocked (Store Closed)'
-                ) : hasInventoryIssues ? (
-                  'Fix Stock Issues to Checkout'
-                ) : (
-                  <>
-                    <span>Confirm and Checkout</span>
-                    <ChevronsRight className="h-4 w-4 text-white animate-bounce" style={{ animationDuration: '1.5s' }} />
-                  </>
-                )}
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleCheckoutRedirect}
+              disabled={isCheckoutBlocked}
+              className={cn(
+                "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-xs tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
+                isCheckoutBlocked && "opacity-60 cursor-not-allowed shadow-none"
+              )}
+            >
+              {hasClosedGroceryItems || hasClosedCafeItems ? (
+                'Checkout Blocked (Store Closed)'
+              ) : hasInventoryIssues ? (
+                'Fix Stock Issues to Checkout'
+              ) : (
+                <>
+                  <span className="relative z-10">Confirm and Checkout</span>
+                  <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

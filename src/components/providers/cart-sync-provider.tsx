@@ -27,7 +27,8 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
           return {
             productId,
             quantity: item.quantity,
-            selectedVariant: variantName
+            selectedVariant: variantName,
+            notes: item.notes || null
           }
         })
 

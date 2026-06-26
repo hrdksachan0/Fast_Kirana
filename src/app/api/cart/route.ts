@@ -30,13 +30,30 @@ export async function POST(request: Request) {
 
     // 3. Create the new cart items if any exist
     if (items.length > 0) {
+      // Merge duplicate items (same product & variant) to prevent unique constraint violations
+      const mergedItemsMap = new Map<string, any>()
+      for (const item of items) {
+        const key = `${item.productId}_${item.selectedVariant || ''}`
+        if (mergedItemsMap.has(key)) {
+          const existing = mergedItemsMap.get(key)
+          existing.quantity += item.quantity
+          // Concatenate cooking notes if both have notes
+          if (item.notes) {
+            existing.notes = existing.notes ? `${existing.notes}; ${item.notes}` : item.notes
+          }
+        } else {
+          mergedItemsMap.set(key, {
+            cartId: cart.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            selectedVariant: item.selectedVariant || null,
+            notes: item.notes || null
+          })
+        }
+      }
+
       await prisma.cartItem.createMany({
-        data: items.map((item: any) => ({
-          cartId: cart.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          selectedVariant: item.selectedVariant || null
-        }))
+        data: Array.from(mergedItemsMap.values())
       })
     }
 
