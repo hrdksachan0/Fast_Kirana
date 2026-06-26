@@ -78,10 +78,17 @@ export function CartStickyBar() {
   const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
   return (
-    <div className={cn(
-      "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden",
-      isBouncing && "animate-bounce-subtle"
-    )}>
+    <motion.div
+      onClick={() => {
+        triggerHaptic('light')
+        toggleCart()
+      }}
+      whileTap={{ scale: 0.98 }}
+      className={cn(
+        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none",
+        isBouncing && "animate-bounce-subtle"
+      )}
+    >
       {/* Integrated delivery progress bar at top edge */}
       {!hasFreeDelivery && (
         <div className="w-full h-[3px] bg-emerald-700/30">
@@ -96,7 +103,7 @@ export function CartStickyBar() {
       <div className="flex items-center justify-between px-3.5 py-2">
         <div className="flex items-center gap-2.5">
           {/* Cart Icon Container */}
-          <div onClick={toggleCart} className="relative h-8 w-8 bg-white/20 text-white rounded-lg flex items-center justify-center cursor-pointer shrink-0">
+          <div className="relative h-8 w-8 bg-white/20 text-white rounded-lg flex items-center justify-center shrink-0">
             <ShoppingBag className="h-4.5 w-4.5 stroke-[2]" />
             <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white shadow-sm border border-emerald-500">
               {totalItems}
@@ -127,7 +134,8 @@ export function CartStickyBar() {
 
         {/* Premium Checkout Button */}
         <motion.button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation()
             triggerHaptic('light')
             router.push('/checkout')
           }}
@@ -139,6 +147,6 @@ export function CartStickyBar() {
           <ArrowRight className="h-3.5 w-3.5 stroke-[3] animate-pulse" />
         </motion.button>
       </div>
-    </div>
+    </motion.div>
   )
 }
