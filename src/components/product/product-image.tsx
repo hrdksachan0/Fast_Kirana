@@ -122,6 +122,7 @@ interface ProductImageProps {
   categorySlug?: string
   className?: string
   isBestseller?: boolean
+  width?: number
 }
 
 export function ProductImage({
@@ -130,6 +131,7 @@ export function ProductImage({
   categorySlug = '',
   className = '',
   isBestseller = false,
+  width = 300,
 }: ProductImageProps) {
   const [imgError, setImgError] = useState(false)
   const [currentSrc, setCurrentSrc] = useState(src)
@@ -176,7 +178,7 @@ export function ProductImage({
   // Determine if it is a valid image URL (not an emoji or empty)
   const isValidUrl = currentSrc && (currentSrc.startsWith('/') || currentSrc.startsWith('http') || currentSrc.startsWith('https'))
 
-  const optimizedSrc = isValidUrl ? (getOptimizedImageUrl(currentSrc, 300) || currentSrc) : currentSrc
+  const optimizedSrc = isValidUrl ? (getOptimizedImageUrl(currentSrc, width) || currentSrc) : currentSrc
 
   if (!imgError && isValidUrl) {
     return (

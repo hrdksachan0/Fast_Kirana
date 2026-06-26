@@ -183,7 +183,7 @@ export function VariantSelectorDrawer() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-md bg-background border-t border-border rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden"
+            className="gpu-accelerated relative w-full max-w-md bg-background border-t border-border rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden"
           >
             {/* Header Handle */}
             <div className="w-12 h-1.5 bg-muted/70 rounded-full mx-auto my-3 shrink-0" />

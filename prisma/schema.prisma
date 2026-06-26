@@ -179,6 +179,7 @@ model Product {
   batches      ProductBatch[]
 
   @@index([categoryId])
+  @@index([name])
   @@index([slug])
   @@index([isAvailable])
   @@index([isFlashDeal])

@@ -382,6 +382,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   src={product.imageUrl}
                                   alt={product.name}
                                   categorySlug={product.category?.slug}
+                                  width={150}
                                   className="h-full w-full object-contain"
                                 />
                               </div>

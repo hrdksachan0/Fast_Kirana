@@ -237,6 +237,7 @@ export function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             categorySlug={categorySlug}
             isBestseller={product.tags?.includes('popular')}
+            width={200}
             className="h-full w-full object-contain p-1 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
           />
 

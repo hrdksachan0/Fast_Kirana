@@ -30,6 +30,11 @@ export function CartStickyBar() {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Prefetch checkout page on mount for instant page loading
+  useEffect(() => {
+    router.prefetch('/checkout')
+  }, [router])
+
   // Listen for cart-bounce event to trigger visual bounce animation
   useEffect(() => {
     const handleBounce = () => {
@@ -72,12 +77,9 @@ export function CartStickyBar() {
   const needsForFreeDelivery = FREE_DELIVERY_THRESHOLD - subtotal
   const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
-
-
-
   return (
     <div className={cn(
-      "fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden",
+      "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden",
       isBouncing && "animate-bounce-subtle"
     )}>
       {/* Integrated delivery progress bar at top edge */}

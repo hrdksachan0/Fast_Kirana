@@ -19,6 +19,13 @@ export function CartDrawer() {
   const setCartOpen = useUIStore((s) => s.setCartOpen)
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
+  // Prefetch checkout page on drawer open for instant transitions
+  useEffect(() => {
+    if (isOpen) {
+      router.prefetch('/checkout')
+    }
+  }, [isOpen, router])
+
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
@@ -237,7 +244,7 @@ export function CartDrawer() {
                 setCartOpen(false)
               }
             }}
-            className="fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[85vh] sm:h-full w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50"
+            className="gpu-accelerated fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[85vh] sm:h-full w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50"
           >
             {/* Drag handle for mobile */}
             <div className="flex justify-center py-2.5 sm:hidden cursor-grab active:cursor-grabbing shrink-0">
