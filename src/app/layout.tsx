@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
 import { PushNotificationConsent } from '@/components/shared/push-notification-consent'
 import { LiveStockProvider } from '@/components/providers/live-stock-provider'
+import { CartSyncProvider } from '@/components/providers/cart-sync-provider'
 import { PushNotificationProvider } from '@/providers/push-notification-provider'
 import { SoftPromptDialog } from '@/components/shared/soft-prompt-dialog'
 import Script from 'next/script'
@@ -92,7 +93,8 @@ export default function RootLayout({
           <AuthProvider>
             <ThemeProvider>
               <LiveStockProvider>
-                <PushNotificationProvider>
+                <CartSyncProvider>
+                  <PushNotificationProvider>
                   <Suspense fallback={null}>
                     <TopProgressBar />
                   </Suspense>
@@ -118,7 +120,8 @@ export default function RootLayout({
                   <PushNotificationConsent />
                   <SoftPromptDialog />
                 </PushNotificationProvider>
-              </LiveStockProvider>
+              </CartSyncProvider>
+            </LiveStockProvider>
             </ThemeProvider>
           </AuthProvider>
         </QueryProvider>
