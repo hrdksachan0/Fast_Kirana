@@ -47,6 +47,7 @@ import {
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import { CreateOrderModal } from './create-order-modal'
 
 const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => mod.AdminAnalytics), { ssr: false })
 const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
@@ -218,6 +219,7 @@ export function AdminDashboard({
   const [whatsappTargetUser, setWhatsappTargetUser] = useState<{ name: string; phone: string } | null>(null)
   const [whatsappCustomMessage, setWhatsappCustomMessage] = useState('')
   const [whatsappSelectedTemplateIdx, setWhatsappSelectedTemplateIdx] = useState(0)
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
 
   // Parse cafe menu sections dynamically from database settings
   const CAFE_MENU_SECTIONS = useMemo(() => {
@@ -2160,7 +2162,16 @@ export function AdminDashboard({
             return (
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-extrabold text-text-primary text-base">Store Orders</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-extrabold text-text-primary text-base">Store Orders</h3>
+                    <button
+                      onClick={() => setIsCreateOrderOpen(true)}
+                      className="bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm border border-white/5"
+                    >
+                      <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                      <span>Create Order</span>
+                    </button>
+                  </div>
                   <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold">
                     Showing {orders.length} of {orderTotal} orders
                   </span>
@@ -5567,6 +5578,13 @@ export function AdminDashboard({
         </div>
       )}
 
+      <CreateOrderModal
+        isOpen={isCreateOrderOpen}
+        onClose={() => setIsCreateOrderOpen(false)}
+        onSuccess={() => {
+          setOrderRefreshKey(prev => prev + 1)
+        }}
+      />
     </div>
   )
 }
