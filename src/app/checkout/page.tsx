@@ -1391,102 +1391,57 @@ export default function CheckoutPage() {
         <div className="bg-white/80 dark:bg-zinc-900/85 backdrop-blur-md border border-white/60 dark:border-zinc-800/60 p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-fit space-y-5">
 
           
-          <h3 className="text-sm font-black text-text-primary border-b border-border/40 pb-2 flex items-center gap-1.5">
-            <span>🧾</span> Order Calculation
+          <h3 className="text-sm font-black text-text-primary border-b border-border/40 pb-2.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span>🧾</span> Bill Summary
+            </span>
+            <span className="text-xs text-text-muted font-bold">{groceryCartItems.length + cafeCartItems.length} items</span>
           </h3>
 
-          {/* Grocery Bill Section */}
-          {groceryCartItems.length > 0 && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-primary bg-primary/5 px-2 py-1 rounded">
-                <span>📦 Grocery Bill</span>
-                <span>{groceryCartItems.length} items</span>
-              </div>
-              <div className="space-y-1.5 text-xs font-semibold pl-1">
-                <div className="flex justify-between text-text-secondary">
-                  <span>Subtotal</span>
-                  <span>₹{grocerySubtotal.toFixed(0)}</span>
-                </div>
-                {grocerySavings + groceryB2BDiscount > 0 && (
-                  <div className="flex justify-between text-accent font-bold">
-                    <span>Savings</span>
-                    <span>-₹{(grocerySavings + groceryB2BDiscount).toFixed(0)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-text-secondary items-center">
-                  <div className="flex flex-col text-left">
-                    <span>Delivery Fee</span>
-                    <span className="text-[9px] text-text-muted">FREE over ₹300</span>
-                  </div>
-                  <span className={cn(groceryDeliveryFee === 0 ? "text-accent font-bold" : "")}>
-                    {groceryDeliveryFee === 0 ? 'FREE 🎉' : `₹${groceryDeliveryFee}`}
-                  </span>
-                </div>
-                <div className="flex justify-between text-text-secondary">
-                  <span>GST / Taxes ({Math.round(taxRate * 100)}%)</span>
-                  <span>₹{groceryTaxes.toFixed(0)}</span>
-                </div>
-                {miscFee > 0 && (
-                  <div className="flex justify-between text-text-secondary">
-                    <span>{miscFeeLabel}</span>
-                    <span>₹{miscFee.toFixed(0)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-text-primary font-bold border-t border-border/20 pt-1">
-                  <span>Grocery Total</span>
-                  <span>₹{groceryTotal.toFixed(0)}</span>
-                </div>
-              </div>
+          {/* Single Consolidated Bill Breakdown */}
+          <div className="space-y-2.5 text-xs font-semibold">
+            <div className="flex justify-between text-text-secondary">
+              <span>Item Total</span>
+              <span>₹{(grocerySubtotal + cafeSubtotal).toFixed(0)}</span>
             </div>
-          )}
 
-          {/* Cafe Bill Section */}
-          {cafeCartItems.length > 0 && (
-            <div className="space-y-2.5 pt-1">
-              <div className="flex items-center justify-between text-xs font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 px-2 py-1 rounded">
-                <span>☕ Cafe Bill</span>
-                <span>{cafeCartItems.length} items</span>
+            {grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount > 0 && (
+              <div className="flex justify-between text-accent font-bold">
+                <span>Total Savings</span>
+                <span>-₹{(grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount).toFixed(0)}</span>
               </div>
-              <div className="space-y-1.5 text-xs font-semibold pl-1">
-                <div className="flex justify-between text-text-secondary">
-                  <span>Subtotal</span>
-                  <span>₹{cafeSubtotal.toFixed(0)}</span>
-                </div>
-                {cafeSavings + cafeB2BDiscount > 0 && (
-                  <div className="flex justify-between text-accent font-bold">
-                    <span>Savings</span>
-                    <span>-₹{(cafeSavings + cafeB2BDiscount).toFixed(0)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-text-secondary">
-                  <span>Delivery Fee</span>
-                  <span className={cn(cafeDeliveryFee === 0 ? "text-accent font-bold" : "")}>
-                    {cafeDeliveryFee === 0 ? 'FREE' : `₹${cafeDeliveryFee}`}
-                  </span>
-                </div>
-                <div className="flex justify-between text-text-secondary">
-                  <span>GST / Taxes ({Math.round(taxRate * 100)}%)</span>
-                  <span>₹{cafeTaxes.toFixed(0)}</span>
-                </div>
-                {miscFee > 0 && groceryCartItems.length === 0 && (
-                  <div className="flex justify-between text-text-secondary">
-                    <span>{miscFeeLabel}</span>
-                    <span>₹{miscFee.toFixed(0)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-text-primary font-bold border-t border-border/20 pt-1">
-                  <span>Cafe Total</span>
-                  <span>₹{cafeTotal.toFixed(0)}</span>
-                </div>
+            )}
+
+            <div className="flex justify-between text-text-secondary items-center">
+              <div className="flex flex-col text-left">
+                <span>Delivery Charge</span>
+                <span className="text-[9px] text-text-muted">
+                  {groceryCartItems.length > 0 && cafeCartItems.length > 0
+                    ? 'FREE on combined orders over ₹300'
+                    : 'FREE on single orders over ₹199'}
+                </span>
               </div>
+              <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
+                {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
+              </span>
             </div>
-          )}
 
-          {/* Combined Grand Total */}
-          <div className="border-t-2 border-dashed border-border/60 pt-4 mt-4 space-y-2">
-            <div className="flex justify-between text-base font-black text-text-primary">
+            <div className="flex justify-between text-text-secondary">
+              <span>GST & Taxes ({Math.round(taxRate * 100)}%)</span>
+              <span>₹{taxes.toFixed(0)}</span>
+            </div>
+
+            {miscFee > 0 && (
+              <div className="flex justify-between text-text-secondary">
+                <span>{miscFeeLabel}</span>
+                <span>₹{miscFee.toFixed(0)}</span>
+              </div>
+            )}
+
+            {/* Grand Total */}
+            <div className="border-t-2 border-dashed border-border/60 pt-3 mt-3 flex justify-between items-center text-base font-black text-text-primary">
               <span>Grand Total</span>
-              <span className="text-primary text-lg">₹{grandTotal.toFixed(0)}</span>
+              <span className="text-primary text-lg font-black">₹{grandTotal.toFixed(0)}</span>
             </div>
           </div>
           
