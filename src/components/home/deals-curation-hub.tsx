@@ -16,27 +16,27 @@ function PremiumEssentialsIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="ess-shadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3.5" flood-color="#78350F" flood-opacity="0.1" />
+          <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#78350F" floodOpacity="0.1" />
         </filter>
         <linearGradient id="basket-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#E29A5B" />
-          <stop offset="100%" stop-color="#A76632" />
+          <stop offset="0%" stopColor="#E29A5B" />
+          <stop offset="100%" stopColor="#A76632" />
         </linearGradient>
         <linearGradient id="basket-rim" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#F2B77A" />
-          <stop offset="100%" stop-color="#B77642" />
+          <stop offset="0%" stopColor="#F2B77A" />
+          <stop offset="100%" stopColor="#B77642" />
         </linearGradient>
         <linearGradient id="apple-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FF5D5D" />
-          <stop offset="100%" stop-color="#C21A1A" />
+          <stop offset="0%" stopColor="#FF5D5D" />
+          <stop offset="100%" stopColor="#C21A1A" />
         </linearGradient>
         <linearGradient id="leaf-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#4ADE80" />
-          <stop offset="100%" stop-color="#15803D" />
+          <stop offset="0%" stopColor="#4ADE80" />
+          <stop offset="100%" stopColor="#15803D" />
         </linearGradient>
         <linearGradient id="carrot-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FB923C" />
-          <stop offset="100%" stop-color="#C2410C" />
+          <stop offset="0%" stopColor="#FB923C" />
+          <stop offset="100%" stopColor="#C2410C" />
         </linearGradient>
       </defs>
 
@@ -45,29 +45,29 @@ function PremiumEssentialsIcon({ className }: { className?: string }) {
       <g filter="url(#ess-shadow)">
         {/* Lettuce Leaves */}
         <path d="M30 42C25 35 30 25 38 28C43 22 52 24 54 30C60 25 68 32 64 40" fill="url(#leaf-grad)" />
-        <path d="M33 38C31 34 32 30 35 29" stroke="#14532D" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M48 34C48 30 46 28 44 27" stroke="#14532D" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M57 36C59 32 61 31 63 32" stroke="#14532D" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M33 38C31 34 32 30 35 29" stroke="#14532D" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M48 34C48 30 46 28 44 27" stroke="#14532D" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M57 36C59 32 61 31 63 32" stroke="#14532D" strokeWidth="1.2" strokeLinecap="round" />
 
         {/* Carrot */}
         <path d="M58 22L70 40L64 42L53 24L58 22Z" fill="url(#carrot-grad)" />
-        <path d="M66 20C68 17 71 14 72 15C73 16 71 20 68 22" stroke="#15803D" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M66 20C68 17 71 14 72 15C73 16 71 20 68 22" stroke="#15803D" strokeWidth="1.8" strokeLinecap="round" />
 
         {/* Blue Milk Jug */}
         <rect x="34" y="26" width="13" height="20" rx="3" fill="#60A5FA" />
-        <path d="M34 31H47" stroke="#2563EB" stroke-width="1.2" />
+        <path d="M34 31H47" stroke="#2563EB" strokeWidth="1.2" />
         <path d="M38 22H43V26H38V22Z" fill="#E2E8F0" />
-        <path d="M31 29C29 29 28 31 28 34C28 37 29 39 31 39" stroke="#2563EB" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M31 29C29 29 28 31 28 34C28 37 29 39 31 39" stroke="#2563EB" strokeWidth="1.8" strokeLinecap="round" />
 
         {/* Baguette Bread */}
-        <rect x="44" y="20" width="9" height="24" rx="4.5" transform="rotate(25 44 20)" fill="#FDE047" stroke="#CA8A04" stroke-width="1.2" />
-        <path d="M48 22L51 25" stroke="#CA8A04" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M45 28L48 31" stroke="#CA8A04" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M42 34L45 37" stroke="#CA8A04" stroke-width="1.2" stroke-linecap="round" />
+        <rect x="44" y="20" width="9" height="24" rx="4.5" transform="rotate(25 44 20)" fill="#FDE047" stroke="#CA8A04" strokeWidth="1.2" />
+        <path d="M48 22L51 25" stroke="#CA8A04" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M45 28L48 31" stroke="#CA8A04" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M42 34L45 37" stroke="#CA8A04" strokeWidth="1.2" strokeLinecap="round" />
 
         {/* Red Apple */}
         <circle cx="34" cy="48" r="9" fill="url(#apple-grad)" />
-        <path d="M34 39C34 37 36 36 37 36" stroke="#15803D" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M34 39C34 37 36 36 37 36" stroke="#15803D" strokeWidth="1.2" strokeLinecap="round" />
 
         {/* Orange */}
         <circle cx="65" cy="49" r="8" fill="#FB923C" />
@@ -76,20 +76,20 @@ function PremiumEssentialsIcon({ className }: { className?: string }) {
 
         {/* Basket Woven Base */}
         <path d="M22 45H78L70 78H30L22 45Z" fill="url(#basket-grad)" />
-        <path d="M26 53H74" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M28 61H72" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M29 69H71" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
+        <path d="M26 53H74" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M28 61H72" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M29 69H71" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
         
-        <path d="M30 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M38 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M46 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M54 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M62 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
-        <path d="M70 45V78" stroke="#78350F" stroke-width="1.2" opacity="0.3" />
+        <path d="M30 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M38 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M46 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M54 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M62 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
+        <path d="M70 45V78" stroke="#78350F" strokeWidth="1.2" opacity="0.3" />
 
         {/* Basket Rim & Handle */}
         <rect x="20" y="42" width="60" height="5.5" rx="2.75" fill="url(#basket-rim)" />
-        <path d="M30 42C30 30 70 30 70 42" stroke="url(#basket-rim)" stroke-width="4" fill="none" stroke-linecap="round" />
+        <path d="M30 42C30 30 70 30 70 42" stroke="url(#basket-rim)" strokeWidth="4" fill="none" strokeLinecap="round" />
       </g>
     </svg>
   )
@@ -100,22 +100,22 @@ function PremiumLightningDealsIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="tag-sh" x="-15%" y="-15%" width="130%" height="130%">
-          <feDropShadow dx="1" dy="4" stdDeviation="3.5" flood-color="#EF4444" flood-opacity="0.22" />
+          <feDropShadow dx="1" dy="4" stdDeviation="3.5" floodColor="#EF4444" floodOpacity="0.22" />
         </filter>
         <linearGradient id="tag-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FF4B4B" />
-          <stop offset="100%" stop-color="#C81E1E" />
+          <stop offset="0%" stopColor="#FF4B4B" />
+          <stop offset="100%" stopColor="#C81E1E" />
         </linearGradient>
         <linearGradient id="bolt-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#FFE600" />
-          <stop offset="100%" stop-color="#FFA800" />
+          <stop offset="0%" stopColor="#FFE600" />
+          <stop offset="100%" stopColor="#FFA800" />
         </linearGradient>
       </defs>
 
       <circle cx="50" cy="50" r="46" fill="#FEF2F2" />
 
       {/* Hanging string */}
-      <path d="M50 12C46 12 40 18 42 26" stroke="#9CA3AF" stroke-width="1.8" stroke-linecap="round" fill="none" />
+      <path d="M50 12C46 12 40 18 42 26" stroke="#9CA3AF" strokeWidth="1.8" strokeLinecap="round" fill="none" />
       <circle cx="42" cy="27" r="1.8" fill="#4B5563" />
 
       <g filter="url(#tag-sh)">
@@ -126,15 +126,15 @@ function PremiumLightningDealsIcon({ className }: { className?: string }) {
         <circle cx="34" cy="36" r="3" fill="#FEF2F2" />
 
         {/* Lightning Bolt */}
-        <path d="M46 38L32 54H42L38 72L56 50H46L49 38Z" fill="url(#bolt-grad)" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round" />
+        <path d="M46 38L32 54H42L38 72L56 50H46L49 38Z" fill="url(#bolt-grad)" stroke="#FFFFFF" strokeWidth="1.2" strokeLinejoin="round" />
       </g>
 
       {/* Floating % Badge */}
       <g filter="url(#tag-sh)">
-        <circle cx="68" cy="32" r="9.5" fill="#EF4444" stroke="#FFFFFF" stroke-width="1.8" />
-        <path d="M64 36L72 28" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" />
-        <circle cx="65" cy="30" r="1.2" fill="none" stroke="#FFFFFF" stroke-width="1.2" />
-        <circle cx="71" cy="34" r="1.2" fill="none" stroke="#FFFFFF" stroke-width="1.2" />
+        <circle cx="68" cy="32" r="9.5" fill="#EF4444" stroke="#FFFFFF" strokeWidth="1.8" />
+        <path d="M64 36L72 28" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="65" cy="30" r="1.2" fill="none" stroke="#FFFFFF" strokeWidth="1.2" />
+        <circle cx="71" cy="34" r="1.2" fill="none" stroke="#FFFFFF" strokeWidth="1.2" />
       </g>
     </svg>
   )
@@ -145,17 +145,17 @@ function PremiumTrendingIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="trophy-sh" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4.5" stdDeviation="3.5" flood-color="#D97706" flood-opacity="0.15" />
+          <feDropShadow dx="0" dy="4.5" stdDeviation="3.5" floodColor="#D97706" floodOpacity="0.15" />
         </filter>
         <linearGradient id="gold-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FFEAA7" />
-          <stop offset="30%" stop-color="#F1C40F" />
-          <stop offset="70%" stop-color="#D98014" />
-          <stop offset="100%" stop-color="#9E5A00" />
+          <stop offset="0%" stopColor="#FFEAA7" />
+          <stop offset="30%" stopColor="#F1C40F" />
+          <stop offset="70%" stopColor="#D98014" />
+          <stop offset="100%" stopColor="#9E5A00" />
         </linearGradient>
         <linearGradient id="base-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#F3F4F6" />
-          <stop offset="100%" stop-color="#D1D5DB" />
+          <stop offset="0%" stopColor="#F3F4F6" />
+          <stop offset="100%" stopColor="#D1D5DB" />
         </linearGradient>
       </defs>
 
@@ -164,15 +164,15 @@ function PremiumTrendingIcon({ className }: { className?: string }) {
       <g filter="url(#trophy-sh)">
         {/* Marble Pedestal Base */}
         <path d="M26 76C26 73 34 71 50 71C66 71 74 73 74 76C74 79 66 81 50 81C34 81 26 79 26 76Z" fill="url(#base-grad)" />
-        <path d="M32 71C32 69 38 67 50 67C62 67 68 69 68 71C68 73 62 75 50 75C38 75 32 73 32 71Z" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="0.5" />
+        <path d="M32 71C32 69 38 67 50 67C62 67 68 69 68 71C68 73 62 75 50 75C38 75 32 73 32 71Z" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="0.5" />
 
         {/* Stem of Trophy */}
         <path d="M46 54H54V68H46V54Z" fill="url(#gold-grad)" />
         <path d="M42 66C42 66 45 68 50 68C55 68 58 66 58 66L56 69H44L42 66Z" fill="#D98014" />
 
         {/* Trophy Handles */}
-        <path d="M34 32C28 32 26 42 34 46C38 48 38 42 38 42" stroke="url(#gold-grad)" stroke-width="3" stroke-linecap="round" fill="none" />
-        <path d="M66 32C72 32 74 42 66 46C62 48 62 42 62 42" stroke="url(#gold-grad)" stroke-width="3" stroke-linecap="round" fill="none" />
+        <path d="M34 32C28 32 26 42 34 46C38 48 38 42 38 42" stroke="url(#gold-grad)" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d="M66 32C72 32 74 42 66 46C62 48 62 42 62 42" stroke="url(#gold-grad)" strokeWidth="3" strokeLinecap="round" fill="none" />
 
         {/* Trophy Cup Body */}
         <path d="M34 26H66V40C66 48 58 54 50 54C42 54 34 48 34 40V26Z" fill="url(#gold-grad)" />
@@ -190,12 +190,12 @@ function PremiumTrendingFlameIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="flame-sh" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4.5" stdDeviation="3.5" flood-color="#F97316" flood-opacity="0.2" />
+          <feDropShadow dx="0" dy="4.5" stdDeviation="3.5" floodColor="#F97316" floodOpacity="0.2" />
         </filter>
         <linearGradient id="flame-grad" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stop-color="#EA580C" />
-          <stop offset="50%" stop-color="#F97316" />
-          <stop offset="100%" stop-color="#FDE047" />
+          <stop offset="0%" stopColor="#EA580C" />
+          <stop offset="50%" stopColor="#F97316" />
+          <stop offset="100%" stopColor="#FDE047" />
         </linearGradient>
       </defs>
       <circle cx="50" cy="50" r="46" fill="#FFF7ED" />
@@ -215,15 +215,15 @@ function PremiumBreakfastIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="break-sh" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#CA8A04" flood-opacity="0.1" />
+          <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#CA8A04" floodOpacity="0.1" />
         </filter>
         <linearGradient id="yolk-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FBBF24" />
-          <stop offset="100%" stop-color="#D97706" />
+          <stop offset="0%" stopColor="#FBBF24" />
+          <stop offset="100%" stopColor="#D97706" />
         </linearGradient>
         <linearGradient id="cup-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#FF8A00" />
-          <stop offset="100%" stop-color="#E52E00" />
+          <stop offset="0%" stopColor="#FF8A00" />
+          <stop offset="100%" stopColor="#E52E00" />
         </linearGradient>
       </defs>
 
@@ -234,17 +234,17 @@ function PremiumBreakfastIcon({ className }: { className?: string }) {
         <ellipse cx="58" cy="58" rx="22" ry="4" fill="#E5E7EB" />
         <rect x="42" y="32" width="28" height="24" rx="4" fill="url(#cup-grad)" />
         {/* Cup handle */}
-        <path d="M70 38C74 38 78 41 78 44C78 47 74 50 70 50" stroke="#E52E00" stroke-width="4" stroke-linecap="round" fill="none" />
+        <path d="M70 38C74 38 78 41 78 44C78 47 74 50 70 50" stroke="#E52E00" strokeWidth="4" strokeLinecap="round" fill="none" />
         {/* Coffee surface */}
         <ellipse cx="56" cy="34" rx="12" ry="2" fill="#78350F" />
         {/* Steam */}
-        <path d="M50 24C50 20 52 18 52 14" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" />
-        <path d="M58 22C58 18 60 16 60 12" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" />
-        <path d="M64 24C64 20 66 18 66 14" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" />
+        <path d="M50 24C50 20 52 18 52 14" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M58 22C58 18 60 16 60 12" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M64 24C64 20 66 18 66 14" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
 
         {/* Frying Pan & Fried Egg */}
-        <circle cx="32" cy="54" r="17" fill="#374151" stroke="#111827" stroke-width="1.2" />
-        <path d="M22 66L10 78" stroke="#111827" stroke-width="4" stroke-linecap="round" />
+        <circle cx="32" cy="54" r="17" fill="#374151" stroke="#111827" strokeWidth="1.2" />
+        <path d="M22 66L10 78" stroke="#111827" strokeWidth="4" strokeLinecap="round" />
         <path d="M30 46C24 46 22 49 22 53C22 57 26 62 31 62C36 62 38 58 40 55C42 52 36 46 30 46Z" fill="#F9FAFB" />
         <circle cx="30" cy="54" r="5.5" fill="url(#yolk-grad)" />
       </g>
@@ -257,7 +257,7 @@ function PremiumLunchIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="lunch-sh" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3.5" flood-color="#059669" flood-opacity="0.1" />
+          <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#059669" floodOpacity="0.1" />
         </filter>
       </defs>
 
@@ -265,17 +265,17 @@ function PremiumLunchIcon({ className }: { className?: string }) {
 
       <g filter="url(#lunch-sh)">
         {/* Steel Plate */}
-        <circle cx="50" cy="50" r="30" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2.5" />
+        <circle cx="50" cy="50" r="30" fill="#F3F4F6" stroke="#9CA3AF" strokeWidth="2.5" />
         <circle cx="50" cy="50" r="26" fill="#E5E7EB" />
 
         {/* Bowls (Curry, Dal, Raita) */}
-        <circle cx="40" cy="34" r="7" fill="#FBBF24" stroke="#D97706" stroke-width="0.8" />
+        <circle cx="40" cy="34" r="7" fill="#FBBF24" stroke="#D97706" strokeWidth="0.8" />
         <circle cx="40" cy="34" r="4.5" fill="#F59E0B" />
         
-        <circle cx="58" cy="33" r="7" fill="#F87171" stroke="#DC2626" stroke-width="0.8" />
+        <circle cx="58" cy="33" r="7" fill="#F87171" stroke="#DC2626" strokeWidth="0.8" />
         <circle cx="58" cy="33" r="4.5" fill="#EF4444" />
         
-        <circle cx="64" cy="48" r="6" fill="#34D399" stroke="#059669" stroke-width="0.8" />
+        <circle cx="64" cy="48" r="6" fill="#34D399" stroke="#059669" strokeWidth="0.8" />
         <circle cx="64" cy="48" r="4" fill="#10B981" />
 
         {/* Steamed Rice pile */}
@@ -283,10 +283,10 @@ function PremiumLunchIcon({ className }: { className?: string }) {
         <circle cx="50" cy="55" r="1.2" fill="#10B981" />
 
         {/* Rotis overlapping */}
-        <circle cx="40" cy="54" r="9.5" fill="#FDE047" stroke="#CA8A04" stroke-width="1" opacity="0.95" />
+        <circle cx="40" cy="54" r="9.5" fill="#FDE047" stroke="#CA8A04" strokeWidth="1" opacity="0.95" />
         <circle cx="45" cy="52" r="0.8" fill="#854D0E" />
         <circle cx="38" cy="57" r="0.8" fill="#854D0E" />
-        <circle cx="42" cy="49" r="7.5" fill="#FEF08A" stroke="#CA8A04" stroke-width="0.8" opacity="0.95" />
+        <circle cx="42" cy="49" r="7.5" fill="#FEF08A" stroke="#CA8A04" strokeWidth="0.8" opacity="0.95" />
       </g>
     </svg>
   )
@@ -297,11 +297,11 @@ function PremiumSnacksIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="snack-sh" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3.5" flood-color="#F43F5E" flood-opacity="0.1" />
+          <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#F43F5E" floodOpacity="0.1" />
         </filter>
         <linearGradient id="tea-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#FDBA74" />
-          <stop offset="100%" stop-color="#EA580C" />
+          <stop offset="0%" stopColor="#FDBA74" />
+          <stop offset="100%" stopColor="#EA580C" />
         </linearGradient>
       </defs>
 
@@ -309,21 +309,21 @@ function PremiumSnacksIcon({ className }: { className?: string }) {
 
       <g filter="url(#snack-sh)">
         {/* Plate */}
-        <ellipse cx="50" cy="62" rx="31" ry="11" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5" />
+        <ellipse cx="50" cy="62" rx="31" ry="11" fill="#F1F5F9" stroke="#E2E8F0" strokeWidth="1.5" />
 
         {/* Indian Samosa */}
-        <path d="M22 62L41 28L59 62Z" fill="#FBBF24" stroke="#D97706" stroke-width="1.8" stroke-linejoin="round" />
+        <path d="M22 62L41 28L59 62Z" fill="#FBBF24" stroke="#D97706" strokeWidth="1.8" strokeLinejoin="round" />
         <path d="M26 60L41 33L55 60Z" fill="#FCD34D" />
-        <path d="M32 50L36 54" stroke="#B45309" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M45 46L47 52" stroke="#B45309" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M32 50L36 54" stroke="#B45309" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M45 46L47 52" stroke="#B45309" strokeWidth="1.2" strokeLinecap="round" />
 
         {/* Cutting Chai cutting glass */}
-        <path d="M58 32H73L69 65H62L58 32Z" fill="url(#tea-grad)" stroke="#C2410C" stroke-width="1.5" stroke-linejoin="round" />
+        <path d="M58 32H73L69 65H62L58 32Z" fill="url(#tea-grad)" stroke="#C2410C" strokeWidth="1.5" strokeLinejoin="round" />
         <rect x="61" y="36" width="9.5" height="14" fill="#EA580C" opacity="0.6" />
         <rect x="57" y="44" width="17" height="3.5" rx="0.8" fill="#9CA3AF" />
         {/* Steam */}
-        <path d="M64 24C64 24 65 21 65 23" stroke="#F97316" stroke-width="1.2" stroke-linecap="round" />
-        <path d="M69 24C69 24 70 21 70 23" stroke="#F97316" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M64 24C64 24 65 21 65 23" stroke="#F97316" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M69 24C69 24 70 21 70 23" stroke="#F97316" strokeWidth="1.2" strokeLinecap="round" />
       </g>
     </svg>
   )
@@ -338,17 +338,17 @@ function PremiumLateNightIcon({ className }: { className?: string }) {
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
         <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0F172A" />
-          <stop offset="40%" stop-color="#1E1B4B" />
-          <stop offset="100%" stop-color="#311042" />
+          <stop offset="0%" stopColor="#0F172A" />
+          <stop offset="40%" stopColor="#1E1B4B" />
+          <stop offset="100%" stopColor="#311042" />
         </linearGradient>
         <linearGradient id="moon-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FFFBEB" />
-          <stop offset="100%" stop-color="#FCD34D" />
+          <stop offset="0%" stopColor="#FFFBEB" />
+          <stop offset="100%" stopColor="#FCD34D" />
         </linearGradient>
         <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#312E81" />
-          <stop offset="100%" stop-color="#020617" />
+          <stop offset="0%" stopColor="#312E81" />
+          <stop offset="100%" stopColor="#020617" />
         </linearGradient>
         <clipPath id="dome-clip">
           <circle cx="50" cy="50" r="42" />
@@ -358,7 +358,7 @@ function PremiumLateNightIcon({ className }: { className?: string }) {
       <circle cx="50" cy="50" r="46" fill="#F5F3FF" />
 
       {/* Dome Window with Landscape inside */}
-      <g clip-path="url(#dome-clip)">
+      <g clipPath="url(#dome-clip)">
         <rect x="0" y="0" width="100" height="100" fill="url(#night-sky)" />
 
         {/* Small stars */}
