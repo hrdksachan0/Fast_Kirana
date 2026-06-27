@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
-import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
@@ -259,23 +259,21 @@ export async function POST(request: Request) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    let groceryDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (grocerySubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE)
-    let cafeDeliveryFee = (deliveryMethod === 'PICKUP' || isB2B) ? 0 : (cafeSubtotal >= 200 ? 0 : 25)
+    let groceryDeliveryFee = 0
+    let cafeDeliveryFee = 0
 
-    // Apply combined delivery fee discount rule
-    if (groceryItems.length > 0 && cafeItems.length > 0 && deliveryMethod === 'DELIVERY' && !isB2B) {
-      if (combinedSubtotal >= 300) {
-        if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD && cafeSubtotal >= 200) {
+    if (deliveryMethod === 'DELIVERY' && !isB2B) {
+      if (groceryItems.length > 0 && cafeItems.length === 0) {
+        groceryDeliveryFee = grocerySubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+      } else if (cafeItems.length > 0 && groceryItems.length === 0) {
+        cafeDeliveryFee = cafeSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+      } else if (groceryItems.length > 0 && cafeItems.length > 0) {
+        if (combinedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
           groceryDeliveryFee = 0
           cafeDeliveryFee = 0
         } else {
-          if (grocerySubtotal >= FREE_DELIVERY_THRESHOLD) {
-            groceryDeliveryFee = 0
-            cafeDeliveryFee = 25
-          } else {
-            groceryDeliveryFee = 25
-            cafeDeliveryFee = 0
-          }
+          groceryDeliveryFee = DELIVERY_FEE
+          cafeDeliveryFee = 0
         }
       }
     }

@@ -23,7 +23,7 @@ import {
   Smartphone,
   ChevronsRight,
 } from 'lucide-react'
-import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
 import { triggerHaptic } from '@/lib/haptic'
 import { Address } from '@/types'
@@ -383,8 +383,6 @@ export default function CheckoutPage() {
   const grocerySavings = groceryMrpSubtotal - grocerySubtotal
   const groceryB2BDiscount = 0
   const groceryAdjustedSubtotal = grocerySubtotal - groceryB2BDiscount
-  
-  let groceryDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (groceryCartItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0)
   const groceryTaxes = groceryAdjustedSubtotal * taxRate
 
   // Cafe Calculations
@@ -393,24 +391,23 @@ export default function CheckoutPage() {
   const cafeSavings = cafeMrpSubtotal - cafeSubtotal
   const cafeB2BDiscount = 0
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
-  
-  let cafeDeliveryFee = deliveryMethod === 'PICKUP' ? 0 : (cafeCartItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0)
   const cafeTaxes = cafeAdjustedSubtotal * taxRate
 
-  // Apply combined delivery fee discount rule
-  if (groceryCartItems.length > 0 && cafeCartItems.length > 0 && deliveryMethod === 'DELIVERY') {
-    if (subtotal >= 300) {
-      if (groceryAdjustedSubtotal >= FREE_DELIVERY_THRESHOLD && cafeAdjustedSubtotal >= 200) {
+  let groceryDeliveryFee = 0
+  let cafeDeliveryFee = 0
+
+  if (deliveryMethod === 'DELIVERY') {
+    if (groceryCartItems.length > 0 && cafeCartItems.length === 0) {
+      groceryDeliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    } else if (cafeCartItems.length > 0 && groceryCartItems.length === 0) {
+      cafeDeliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    } else if (groceryCartItems.length > 0 && cafeCartItems.length > 0) {
+      if (subtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
         groceryDeliveryFee = 0
         cafeDeliveryFee = 0
       } else {
-        if (groceryAdjustedSubtotal >= FREE_DELIVERY_THRESHOLD) {
-          groceryDeliveryFee = 0
-          cafeDeliveryFee = 25
-        } else {
-          groceryDeliveryFee = 25
-          cafeDeliveryFee = 0
-        }
+        groceryDeliveryFee = DELIVERY_FEE
+        cafeDeliveryFee = 0
       }
     }
   }

@@ -4,7 +4,7 @@ import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
 import { formatPrice } from '@/lib/utils'
-import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ProductImage } from '@/components/product/product-image'
@@ -82,12 +82,18 @@ export function CartDrawer() {
 
   const groceryAdjustedSubtotal = grocerySubtotal
   const cafeAdjustedSubtotal = cafeSubtotal
+  const combinedAdjustedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
 
-  const groceryDeliveryFee = groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
-  const cafeDeliveryFee = cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0
-  const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
+  let deliveryFee = 0
+  if (groceryItems.length > 0 && cafeItems.length === 0) {
+    deliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+  } else if (cafeItems.length > 0 && groceryItems.length === 0) {
+    deliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+  } else if (groceryItems.length > 0 && cafeItems.length > 0) {
+    deliveryFee = combinedAdjustedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+  }
 
-  const total = groceryAdjustedSubtotal + cafeAdjustedSubtotal + deliveryFee
+  const total = combinedAdjustedSubtotal + deliveryFee
 
   const hasInventoryIssues = items.some((item) => {
     const limit = isCafeProduct(item.product) ? 10 : 5
@@ -312,17 +318,39 @@ export function CartDrawer() {
               )}
               {/* Free delivery progress */}
               <div className="space-y-2.5">
-                {groceryItems.length > 0 && (
+                {groceryItems.length > 0 && cafeItems.length > 0 ? (
                   <>
-                    {groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? (
+                    {combinedAdjustedSubtotal < COMBINED_FREE_DELIVERY_THRESHOLD ? (
                       <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
                         <p className="text-xs text-primary font-extrabold">
-                          📦 Add {formatPrice(FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal)} more of groceries for FREE delivery
+                          🛍️ Add {formatPrice(COMBINED_FREE_DELIVERY_THRESHOLD - combinedAdjustedSubtotal)} more for FREE delivery (Combined order over ₹300)
                         </p>
                         <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-primary to-rose-455 transition-all duration-500"
-                            style={{ width: `${Math.min((groceryAdjustedSubtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                            className="h-full rounded-full bg-gradient-to-r from-primary to-rose-500 transition-all duration-500"
+                            style={{ width: `${Math.min((combinedAdjustedSubtotal / COMBINED_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-accent/10 border border-accent/20 p-2.5 text-center">
+                        <p className="text-xs text-accent font-black">
+                          🎉 FREE Combined Delivery unlocked!
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : groceryItems.length > 0 ? (
+                  <>
+                    {groceryAdjustedSubtotal < GROCERY_FREE_DELIVERY_THRESHOLD ? (
+                      <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
+                        <p className="text-xs text-primary font-extrabold">
+                          📦 Add {formatPrice(GROCERY_FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal)} more of groceries for FREE delivery (Over ₹199)
+                        </p>
+                        <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
+                            style={{ width: `${Math.min((groceryAdjustedSubtotal / GROCERY_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -334,19 +362,17 @@ export function CartDrawer() {
                       </div>
                     )}
                   </>
-                )}
-
-                {cafeItems.length > 0 && (
+                ) : cafeItems.length > 0 ? (
                   <>
-                    {cafeAdjustedSubtotal < 200 ? (
+                    {cafeAdjustedSubtotal < CAFE_FREE_DELIVERY_THRESHOLD ? (
                       <div className="rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-3.5">
                         <p className="text-xs text-rose-700 dark:text-rose-300 font-extrabold">
-                          ☕ Add {formatPrice(200 - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Else ₹25 applies)
+                          ☕ Add {formatPrice(CAFE_FREE_DELIVERY_THRESHOLD - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Over ₹199)
                         </p>
                         <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 dark:bg-rose-900/40 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                            style={{ width: `${Math.min((cafeAdjustedSubtotal / 200) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((cafeAdjustedSubtotal / CAFE_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -358,7 +384,7 @@ export function CartDrawer() {
                       </div>
                     )}
                   </>
-                )}
+                ) : null}
               </div>
 
               {/* Grocery Items Section */}
@@ -474,7 +500,11 @@ export function CartDrawer() {
                   <div className="flex justify-between text-xs text-zinc-500 font-bold items-center">
                     <div className="flex flex-col text-left">
                       <span>Delivery Charges</span>
-                      <span className="text-[9px] text-zinc-400 font-normal">Free for grocery orders over ₹300</span>
+                      <span className="text-[9px] text-zinc-400 font-normal">
+                        {groceryItems.length > 0 && cafeItems.length > 0
+                          ? 'FREE on combined orders over ₹300'
+                          : 'FREE on single orders over ₹199'}
+                      </span>
                     </div>
                     <span className={deliveryFee === 0 ? 'text-accent font-black' : 'font-bold'}>
                       {deliveryFee === 0 ? 'FREE 🎉' : formatPrice(deliveryFee)}

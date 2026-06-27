@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, Plus, Minus, ArrowRight, Ticket, Loader2, ShoppingBag, ChevronsRight } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
-import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
 import { cn, isCafeProduct } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
@@ -117,8 +117,23 @@ export default function CartPage() {
   const groceryDiscount = subtotal > 0 ? (grocerySubtotal / subtotal) * promoDiscount : 0
   const cafeDiscount = subtotal > 0 ? (cafeSubtotal / subtotal) * promoDiscount : 0
 
-  const groceryDeliveryFee = groceryItems.length > 0 && groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
-  const cafeDeliveryFee = cafeItems.length > 0 && cafeAdjustedSubtotal < 200 ? 25 : 0
+  let groceryDeliveryFee = 0
+  let cafeDeliveryFee = 0
+  const combinedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
+
+  if (groceryItems.length > 0 && cafeItems.length === 0) {
+    groceryDeliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+  } else if (cafeItems.length > 0 && groceryItems.length === 0) {
+    cafeDeliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+  } else if (groceryItems.length > 0 && cafeItems.length > 0) {
+    if (combinedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
+      groceryDeliveryFee = 0
+      cafeDeliveryFee = 0
+    } else {
+      groceryDeliveryFee = DELIVERY_FEE
+      cafeDeliveryFee = 0
+    }
+  }
 
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
   const taxes = (groceryAdjustedSubtotal - groceryDiscount) * taxRate + (cafeAdjustedSubtotal - cafeDiscount) * taxRate
@@ -311,15 +326,15 @@ export default function CartPage() {
               {/* Free delivery indicator progress bar */}
               {groceryItems.length > 0 && (
                 <>
-                  {groceryAdjustedSubtotal < FREE_DELIVERY_THRESHOLD ? (
+                  {groceryAdjustedSubtotal < GROCERY_FREE_DELIVERY_THRESHOLD ? (
                     <div className="rounded-xl bg-accent/5 border border-accent/20 p-3.5 mb-2">
                       <p className="text-xs font-bold text-accent">
-                        Shop for ₹{(FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal).toFixed(0)} more of groceries to get FREE delivery!
+                        Shop for ₹{(GROCERY_FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal).toFixed(0)} more of groceries to get FREE delivery! (Free over ₹199)
                       </p>
                       <div className="mt-2 h-1.5 rounded-full bg-accent/15 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-accent transition-all duration-500"
-                          style={{ width: `${(groceryAdjustedSubtotal / FREE_DELIVERY_THRESHOLD) * 100}%` }}
+                          style={{ width: `${(groceryAdjustedSubtotal / GROCERY_FREE_DELIVERY_THRESHOLD) * 100}%` }}
                         />
                       </div>
                     </div>
