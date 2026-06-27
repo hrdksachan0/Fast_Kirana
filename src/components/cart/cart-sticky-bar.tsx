@@ -85,31 +85,25 @@ export function CartStickyBar() {
       }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-white/20 dark:bg-zinc-950/20 backdrop-blur-xl text-white rounded-[36px] shadow-[0_12px_35px_rgba(16,185,129,0.35)] border border-white/40 md:hidden animate-slide-up p-3 flex flex-col gap-2.5 cursor-pointer select-none",
+        "gpu-accelerated fixed bottom-[68px] left-4 right-4 z-40 bg-gradient-to-r from-emerald-800/95 to-green-700/95 backdrop-blur-lg text-white rounded-2xl shadow-[0_8px_30px_rgba(16,185,129,0.3)] border border-white/15 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >
-      {/* Integrated delivery progress bar at top edge */}
-      <div className="w-full px-1">
-        <div className="relative pt-1">
-          <div className="w-full h-1 bg-slate-200/40 dark:bg-zinc-800/45 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-600 to-emerald-500 transition-all duration-500"
-              style={{ width: `${deliveryProgress}%` }}
-            />
-          </div>
-        </div>
-
-
+      {/* Top Edge Progress Bar */}
+      <div className="w-full h-1 bg-white/10 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500"
+          style={{ width: `${deliveryProgress}%` }}
+        />
       </div>
 
-      {/* Main content nested capsule */}
-      <div className="bg-gradient-to-r from-emerald-700/85 to-emerald-600/85 rounded-[20px] px-4 py-3 flex items-center justify-between border border-white/25">
-        <div className="flex items-center gap-3">
-          <span className="text-[13px] font-extrabold text-white leading-tight">
+      {/* Slim Content Row */}
+      <div className="px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] font-black text-white tracking-wide uppercase">
             {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
           </span>
-          <span className="text-[19px] text-amber-400 font-bold leading-none select-none">⚡</span>
+          <span className="text-base text-amber-455 animate-pulse-gentle">⚡</span>
         </div>
 
         {/* Premium View Cart Button */}
@@ -119,12 +113,12 @@ export function CartStickyBar() {
             triggerHaptic('light')
             toggleCart()
           }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="bg-white text-emerald-800 font-black text-[11px] px-5 py-2.5 rounded-full flex items-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer tracking-wider uppercase"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          className="bg-white text-emerald-800 font-extrabold text-[10px] px-4.5 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-all cursor-pointer tracking-wider uppercase"
         >
           <span>View Cart</span>
-          <ArrowRight className="h-3.5 w-3.5 stroke-[3]" />
+          <ArrowRight className="h-3 w-3 stroke-[3]" />
         </motion.button>
       </div>
     </motion.div>

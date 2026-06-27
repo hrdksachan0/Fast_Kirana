@@ -39,7 +39,17 @@ export async function POST(request: NextRequest) {
     // 1. Resolve address
     let finalAddressId = addressId
     if (deliveryMethod === 'PICKUP') {
-      // Find or create a STORE_PICKUP address for the user to satisfy DB FK constraints
+      const addressSetting = await prisma.storeSetting.findUnique({
+        where: { key: 'contact_address' }
+      })
+      const defaultPickupAddress = addressSetting?.value || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+      const addrParts = defaultPickupAddress.split(',').map(p => p.trim())
+      const houseNo = addrParts[0] || 'Vikas Medical Store'
+      const street = addrParts[1] || 'NH34, Ghatampur'
+      const area = addrParts[2] || 'Kanpur Nagar'
+      const city = addrParts[3] || 'Kanpur'
+      const pincode = addrParts[4] || '209206'
+
       let pickupAddress = await prisma.address.findFirst({
         where: { userId, label: 'STORE_PICKUP' }
       })
@@ -48,11 +58,23 @@ export async function POST(request: NextRequest) {
           data: {
             userId,
             label: 'STORE_PICKUP',
-            houseNo: 'Vikas Medical Store',
-            street: 'NH34, Ghatampur',
-            area: 'Kanpur Nagar',
-            city: 'Kanpur',
-            pincode: '209206',
+            houseNo,
+            street,
+            area,
+            city,
+            pincode,
+            phone: defaultSupportPhone,
+          }
+        })
+      } else {
+        pickupAddress = await prisma.address.update({
+          where: { id: pickupAddress.id },
+          data: {
+            houseNo,
+            street,
+            area,
+            city,
+            pincode,
             phone: defaultSupportPhone,
           }
         })

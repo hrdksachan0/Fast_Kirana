@@ -627,7 +627,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                     <div>
                       <span className="font-extrabold text-[11px] block">Self Pickup Activated</span>
                       <p className="text-[10px] leading-tight mt-0.5 font-medium">
-                        The order will be prepared for store pickup at NH34, Ghatampur. No shipping fee will apply.
+                        The order will be prepared for store pickup at the configured warehouse location. No shipping fee will apply.
                       </p>
                     </div>
                   </div>

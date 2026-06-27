@@ -520,7 +520,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
                   {/* Contact Address */}
                   <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Address *</label>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Store Pickup & Contact Address *</label>
                     <input
                       type="text"
                       required
