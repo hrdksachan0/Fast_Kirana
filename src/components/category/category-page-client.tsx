@@ -500,7 +500,17 @@ export function CategoryPageClient({
         <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-          <span className="text-[#FF2E55] font-extrabold">{activeCategory.name}</span>
+          {activeSubcategoryId && activeSubcategoryId !== 'all' ? (
+            <>
+              <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors">
+                {activeCategory.name}
+              </Link>
+              <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+              <span className="text-[#FF2E55] font-extrabold">{activeSubcategory.name}</span>
+            </>
+          ) : (
+            <span className="text-[#FF2E55] font-extrabold">{activeCategory.name}</span>
+          )}
         </nav>
 
         <div className="flex gap-6">
@@ -732,9 +742,17 @@ export function CategoryPageClient({
           <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-            <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[80px]">{activeCategory.name}</Link>
-            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-            <span className="text-[#FF2E55] font-extrabold truncate max-w-[80px]">{activeSubcategory.name}</span>
+            {activeSubcategoryId && activeSubcategoryId !== 'all' ? (
+              <>
+                <Link href={`/category/${activeCategory.slug}`} className="hover:text-primary transition-colors truncate max-w-[100px]">
+                  {activeCategory.name}
+                </Link>
+                <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+                <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">{activeSubcategory.name}</span>
+              </>
+            ) : (
+              <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">{activeCategory.name}</span>
+            )}
           </nav>
         </div>
 

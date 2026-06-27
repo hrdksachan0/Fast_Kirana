@@ -85,51 +85,31 @@ export function CartStickyBar() {
       }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#00b140] text-white rounded-2xl shadow-[0_10px_30px_rgba(0,177,64,0.22)] border border-emerald-400/20 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none",
+        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-white/20 dark:bg-zinc-950/20 backdrop-blur-xl text-white rounded-[36px] shadow-[0_10px_35px_rgba(0,176,80,0.15)] border border-white/40 md:hidden animate-slide-up p-3 flex flex-col gap-2.5 cursor-pointer select-none",
         isBouncing && "animate-bounce-subtle"
       )}
     >
       {/* Integrated delivery progress bar at top edge */}
-      {!hasFreeDelivery && (
-        <div className="w-full h-[3px] bg-emerald-700/30">
-          <div
-            className="h-full bg-white transition-all duration-500"
-            style={{ width: `${deliveryProgress}%` }}
-          />
+      <div className="w-full px-1">
+        <div className="relative pt-1">
+          <div className="w-full h-1 bg-slate-200/40 dark:bg-zinc-800/45 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-600 to-emerald-500 transition-all duration-500"
+              style={{ width: `${deliveryProgress}%` }}
+            />
+          </div>
         </div>
-      )}
 
-      {/* Main content row */}
-      <div className="flex items-center justify-between px-3.5 py-2">
-        <div className="flex items-center gap-2.5">
-          {/* Cart Icon Container */}
-          <div className="relative h-8 w-8 bg-white/20 text-white rounded-lg flex items-center justify-center shrink-0">
-            <ShoppingBag className="h-4.5 w-4.5 stroke-[2]" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white shadow-sm border border-emerald-500">
-              {totalItems}
-            </span>
-          </div>
 
-          {/* Pricing and Savings details */}
-          <div className="text-left flex flex-col justify-center">
-            <span className="text-[11px] font-black text-white leading-tight">
-              {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
-            </span>
-            {savings > 0 ? (
-              <span className="text-[9px] font-bold text-emerald-100 leading-none mt-0.5 flex items-center gap-1">
-                <Zap className="h-2.5 w-2.5 fill-amber-300 stroke-none animate-pulse-gentle" />
-                Saved {formatPrice(savings)}
-              </span>
-            ) : !hasFreeDelivery ? (
-              <span className="text-[9px] font-medium text-emerald-100 leading-none mt-0.5">
-                Add {formatPrice(needsForFreeDelivery)} for Free
-              </span>
-            ) : (
-              <span className="text-[9px] font-bold text-emerald-100 leading-none mt-0.5">
-                🎉 Free Delivery
-              </span>
-            )}
-          </div>
+      </div>
+
+      {/* Main content nested capsule */}
+      <div className="bg-gradient-to-r from-emerald-700/85 to-emerald-600/85 rounded-[20px] px-4 py-3 flex items-center justify-between border border-white/25">
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] font-extrabold text-white leading-tight">
+            {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
+          </span>
+          <span className="text-[19px] text-amber-400 font-bold leading-none select-none">⚡</span>
         </div>
 
         {/* Premium View Cart Button */}
@@ -141,10 +121,10 @@ export function CartStickyBar() {
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-white text-emerald-600 font-extrabold text-[11px] px-4.5 py-2.5 rounded-xl flex items-center gap-1 shadow-[0_8px_20px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer tracking-wider uppercase border border-white/10 hover:shadow-lg"
+          className="bg-white text-emerald-800 font-black text-[11px] px-5 py-2.5 rounded-full flex items-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer tracking-wider uppercase"
         >
           <span>View Cart</span>
-          <ArrowRight className="h-3.5 w-3.5 stroke-[3] animate-pulse" />
+          <ArrowRight className="h-3.5 w-3.5 stroke-[3]" />
         </motion.button>
       </div>
     </motion.div>

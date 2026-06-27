@@ -2,7 +2,7 @@
 
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
-import { X, Plus, Minus, ShieldCheck } from 'lucide-react'
+import { X, Plus, Minus, ShieldCheck, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMemo, useEffect } from 'react'
 import { cn, formatPrice } from '@/lib/utils'
@@ -249,6 +249,15 @@ export function VariantSelectorDrawer() {
                   </p>
                 </div>
               </div>
+
+              {/* Continue Shopping Action Button */}
+              <button
+                onClick={() => setActiveProduct(null)}
+                className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-1"
+              >
+                <span>Continue Shopping</span>
+                <ArrowRight className="h-4 w-4 stroke-[3]" />
+              </button>
             </div>
           </motion.div>
         </div>

@@ -63,6 +63,10 @@ interface Order {
   createdAt: string
   items: OrderItem[]
   address: OrderAddress
+  deliveryUser?: {
+    name: string | null
+    phone: string | null
+  } | null
 }
 
 interface OrderTrackerProps {
@@ -162,13 +166,15 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
               status: data.status,
               deliveryLat: data.deliveryLat ?? prev.deliveryLat,
               deliveryLng: data.deliveryLng ?? prev.deliveryLng,
+              deliveryUser: data.deliveryUser !== undefined ? data.deliveryUser : prev.deliveryUser,
             }
           })
-        } else if (data.deliveryLat !== undefined || data.deliveryLng !== undefined) {
+        } else if (data.deliveryLat !== undefined || data.deliveryLng !== undefined || data.deliveryUser !== undefined) {
           setOrder((prev) => ({
             ...prev,
-            deliveryLat: data.deliveryLat,
-            deliveryLng: data.deliveryLng,
+            deliveryLat: data.deliveryLat !== undefined ? data.deliveryLat : prev.deliveryLat,
+            deliveryLng: data.deliveryLng !== undefined ? data.deliveryLng : prev.deliveryLng,
+            deliveryUser: data.deliveryUser !== undefined ? data.deliveryUser : prev.deliveryUser,
           }))
         }
       } catch (err) {
@@ -571,12 +577,12 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
                 <User className="h-5 w-5" />
               </div>
               <div className="text-xs">
-                <h4 className="font-bold text-text-primary">Ramesh Kumar</h4>
+                <h4 className="font-bold text-text-primary">{order.deliveryUser?.name || 'Sonu Kumar'}</h4>
                 <p className="text-[10px] text-accent font-semibold">FastKirana Delivery Executive</p>
               </div>
             </div>
             <a
-              href={`tel:${formatPhone(supportPhone).replace(/\s+/g, '')}`}
+              href={`tel:${formatPhone(order.deliveryUser?.phone || '+919876543210').replace(/\s+/g, '')}`}
               className="flex items-center justify-center h-9 w-9 bg-accent/10 text-accent rounded-full hover:bg-accent/20 transition-colors"
               aria-label="Call Rider"
             >

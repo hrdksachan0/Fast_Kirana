@@ -16,7 +16,7 @@ export async function GET(
 
   // Verify order exists using raw SQL to avoid the enum deserialization bug
   const orders: any[] = await prisma.$queryRaw`
-    SELECT id, "userId", status::text as status, "deliveryLat", "deliveryLng" FROM orders WHERE id = ${id} LIMIT 1
+    SELECT id, "userId", status::text as status, "deliveryLat", "deliveryLng", "deliveryUserId" FROM orders WHERE id = ${id} LIMIT 1
   `
 
   if (orders.length === 0) {
@@ -41,9 +41,24 @@ export async function GET(
       let lastStatus = order.status
       let lastLat = order.deliveryLat
       let lastLng = order.deliveryLng
+      let lastUserId = order.deliveryUserId
 
       const sendEvent = (data: any) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+      }
+
+      // Fetch initial rider details
+      let deliveryUser = null
+      if (lastUserId) {
+        const riders: any[] = await prisma.$queryRaw`
+          SELECT name, phone FROM users WHERE id = ${lastUserId} LIMIT 1
+        `
+        if (riders.length > 0) {
+          deliveryUser = {
+            name: riders[0].name,
+            phone: riders[0].phone
+          }
+        }
       }
 
       // Initial push
@@ -51,13 +66,14 @@ export async function GET(
         status: lastStatus,
         deliveryLat: lastLat,
         deliveryLng: lastLng,
+        deliveryUser,
       })
 
       // Interval to poll DB and push changes
       const interval = setInterval(async () => {
         try {
           const freshOrders: any[] = await prisma.$queryRaw`
-            SELECT status::text as status, "deliveryLat", "deliveryLng" FROM orders WHERE id = ${id} LIMIT 1
+            SELECT status::text as status, "deliveryLat", "deliveryLng", "deliveryUserId" FROM orders WHERE id = ${id} LIMIT 1
           `
 
           if (freshOrders.length > 0) {
@@ -65,16 +81,32 @@ export async function GET(
             const hasStatusChanged = freshOrder.status !== lastStatus
             const hasCoordinatesChanged =
               freshOrder.deliveryLat !== lastLat || freshOrder.deliveryLng !== lastLng
+            const hasRiderChanged = freshOrder.deliveryUserId !== lastUserId
 
-            if (hasStatusChanged || hasCoordinatesChanged) {
+            if (hasStatusChanged || hasCoordinatesChanged || hasRiderChanged) {
               lastStatus = freshOrder.status
               lastLat = freshOrder.deliveryLat
               lastLng = freshOrder.deliveryLng
+              lastUserId = freshOrder.deliveryUserId
+
+              let freshDeliveryUser = null
+              if (lastUserId) {
+                const riders: any[] = await prisma.$queryRaw`
+                  SELECT name, phone FROM users WHERE id = ${lastUserId} LIMIT 1
+                `
+                if (riders.length > 0) {
+                  freshDeliveryUser = {
+                    name: riders[0].name,
+                    phone: riders[0].phone
+                  }
+                }
+              }
 
               sendEvent({
                 status: freshOrder.status,
                 deliveryLat: freshOrder.deliveryLat,
                 deliveryLng: freshOrder.deliveryLng,
+                deliveryUser: freshDeliveryUser,
               })
             }
           }

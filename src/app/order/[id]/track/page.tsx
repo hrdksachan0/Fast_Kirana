@@ -30,7 +30,8 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
              o."paymentStatus"::text as "paymentStatus",
              o."estimatedDelivery", o."createdAt", o."updatedAt",
              o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
-             o."deliveryPhoto", o."deliveryLat", o."deliveryLng"
+             o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
+             o."deliveryUserId"
       FROM orders o WHERE o.id = ${id} LIMIT 1
     `
 
@@ -47,10 +48,25 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
         where: { id: orderDb.addressId },
       })
 
+      // Fetch delivery partner user details if assigned
+      let deliveryUser = null
+      if (orderDb.deliveryUserId) {
+        const riders: any[] = await prisma.$queryRaw`
+          SELECT id, name, phone FROM users WHERE id = ${orderDb.deliveryUserId} LIMIT 1
+        `
+        if (riders.length > 0) {
+          deliveryUser = {
+            name: riders[0].name,
+            phone: riders[0].phone
+          }
+        }
+      }
+
       orderRaw = {
         ...orderDb,
         items,
         address,
+        deliveryUser,
       }
     }
   } catch (error) {
@@ -126,6 +142,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
       lat: orderRaw.address.lat,
       lng: orderRaw.address.lng,
     },
+    deliveryUser: orderRaw.deliveryUser,
   }
 
   return (

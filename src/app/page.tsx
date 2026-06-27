@@ -437,42 +437,54 @@ export default async function Home() {
   })
 
   return (
-    <div className="container mx-auto px-4 pt-3 pb-0 space-y-1.5 md:space-y-8 max-w-7xl">
-      {/* Shop Categories Circular List */}
-      <CategoryGrid categories={categories} />
+    <div className="container mx-auto px-4 pt-3 pb-0 flex flex-col gap-1.5 md:gap-8 max-w-7xl">
+      {/* 1. Trending Categories (order-1) */}
+      <div className="order-1 md:order-1">
+        <CategoryGrid categories={categories} />
+      </div>
 
-      {/* Cafe Banner with sliding menu categories */}
-      <CafeSection />
+      {/* 2. Cafe Section (order-2) */}
+      <div className="order-2 md:order-2">
+        <CafeSection />
+      </div>
 
-      {/* Hero Area (Dynamic Greeting & Banners) */}
-      <HeroArea initialBanners={promoBanners} />
+      {/* 3. Greeting Card & Hero Banners (order-3) */}
+      <div className="order-3 md:order-3">
+        <HeroArea initialBanners={promoBanners} />
+      </div>
 
-      {/* Speed ticker strip */}
-      <SpeedStrip
-        avgDelivery={settingsMap.avg_delivery_time}
-        deliveredCount={settingsMap.delivered_today}
-        freshStock={settingsMap.fresh_stock_loaded}
-        happyFamilies={settingsMap.happy_families}
-      />
+      {/* 4. Branding Speed Ticker Strip (order-4) */}
+      <div className="order-4 md:order-4">
+        <SpeedStrip
+          avgDelivery={settingsMap.avg_delivery_time}
+          deliveredCount={settingsMap.delivered_today}
+          freshStock={settingsMap.fresh_stock_loaded}
+          happyFamilies={settingsMap.happy_families}
+        />
+      </div>
 
-      {/* Your Last Order - Track active or reorder */}
-      <LastOrderBanner />
+      {/* 5. Menu / Deals & Curations Hub (order-5) */}
+      <div className="order-5 md:order-5">
+        <DealsCurationHub
+          flashDeals={flashDeals}
+          bestSellers={bestSellers}
+          topPicks={topPicks}
+          breakfastProducts={breakfastProducts}
+          lunchProducts={lunchProducts}
+          teaProducts={teaProducts}
+          nightProducts={nightProducts}
+        />
+      </div>
 
-      {/* Deals & Curations Hub */}
-      <DealsCurationHub
-        flashDeals={flashDeals}
-        bestSellers={bestSellers}
-        topPicks={topPicks}
-        breakfastProducts={breakfastProducts}
-        lunchProducts={lunchProducts}
-        teaProducts={teaProducts}
-        nightProducts={nightProducts}
-      />
+      {/* 6. Branding Value Proposition Banner (order-6) */}
+      <div className="order-6 md:order-6">
+        <DeliveryBanner />
+      </div>
 
-
-
-      {/* Value Proposition Grid */}
-      <DeliveryBanner />
+      {/* 7. Your Last Order (order-7) */}
+      <div className="order-7 md:order-7">
+        <LastOrderBanner />
+      </div>
     </div>
   )
 }

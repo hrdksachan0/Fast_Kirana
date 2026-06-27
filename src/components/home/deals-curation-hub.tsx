@@ -625,8 +625,9 @@ export function DealsCurationHub({
         </p>
       </div>
 
-      {/* Premium Curation Tab Bar: Redesigned into minimal organic category circles */}
-      <div className="flex items-center gap-6 sm:gap-10 overflow-x-auto pb-3.5 pt-2 select-none w-full justify-start sm:justify-center scroll-smooth snap-x snap-mandatory scrollbar-none px-1">
+      {/* Premium Curation Tab Bar: Redesigned into minimal organic category circles for mobile, sleek pills for desktop */}
+      {/* Mobile view: Circles */}
+      <div className="flex md:hidden items-center gap-6 overflow-x-auto pb-3.5 pt-2 select-none w-full justify-start scroll-smooth snap-x snap-mandatory scrollbar-none px-1">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
@@ -639,7 +640,7 @@ export function DealsCurationHub({
               {/* Clean minimal organic circle */}
               <div
                 className={cn(
-                  'relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
+                  'relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
                   isActive
                     ? 'shadow-md border-solid scale-105'
                     : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
@@ -655,7 +656,7 @@ export function DealsCurationHub({
               {/* Title Text Centered Below */}
               <span
                 className={cn(
-                  'text-[11px] sm:text-xs tracking-tight transition-colors duration-300 max-w-[85px] sm:max-w-[105px] text-center line-clamp-2 leading-tight h-9 flex items-center justify-center',
+                  'text-[11px] tracking-tight transition-colors duration-300 max-w-[85px] text-center line-clamp-2 leading-tight h-9 flex items-center justify-center',
                   isActive
                     ? 'text-zinc-900 dark:text-white font-extrabold'
                     : 'text-zinc-500 dark:text-zinc-400 font-medium group-hover:text-zinc-900 dark:group-hover:text-white'
@@ -669,13 +670,46 @@ export function DealsCurationHub({
               <div className="relative h-[3px] w-8 rounded-full overflow-hidden mt-0.5">
                 {isActive && (
                   <motion.div
-                    layoutId="activeCurationUnderline"
+                    layoutId="activeCurationUnderlineMobile"
                     className="absolute inset-0"
                     style={{ backgroundColor: c.activeBorderColor }}
                     transition={{ type: 'spring', stiffness: 280, damping: 24 }}
                   />
                 )}
               </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Desktop view: Elegant, minimal rounded pills */}
+      <div className="hidden md:flex items-center justify-center gap-4 flex-wrap pb-6 pt-2 select-none w-full">
+        {curations.map((c) => {
+          const isActive = activeCuration === c.id
+          return (
+            <button
+              key={c.id}
+              onClick={() => setActiveCuration(c.id)}
+              className={cn(
+                "group flex items-center gap-2.5 px-5 py-2.5 rounded-full border text-sm font-black transition-all duration-300 cursor-pointer outline-none select-none active:scale-97 shadow-sm",
+                isActive
+                  ? "bg-white dark:bg-zinc-900 border-solid"
+                  : "bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-250 hover:bg-white dark:hover:bg-zinc-900/70"
+              )}
+              style={isActive ? { 
+                borderColor: c.activeBorderColor, 
+                color: c.activeBorderColor,
+                boxShadow: `0 4px 20px ${c.activeBorderColor}18`
+              } : {}}
+              suppressHydrationWarning
+            >
+              {/* Small sized vector icon inside the pill */}
+              {c.icon && (
+                <div className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-zinc-950 p-0.5 border border-zinc-100 dark:border-zinc-800 shadow-2xs group-hover:scale-108 transition-transform">
+                  <c.icon className="w-full h-full" />
+                </div>
+              )}
+              <span>{c.title}</span>
             </button>
           )
         })}

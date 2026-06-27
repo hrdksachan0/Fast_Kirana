@@ -664,7 +664,17 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
         <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-          <span className="text-[#FF2E55] font-extrabold">FastKirana Cafe ☕</span>
+          {currentActiveTag && currentActiveTag !== 'all' ? (
+            <>
+              <Link href="/cafe" onClick={() => setActiveCategory('')} className="hover:text-primary transition-colors">
+                FastKirana Cafe ☕
+              </Link>
+              <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+              <span className="text-[#FF2E55] font-extrabold">{activeSectionTitle}</span>
+            </>
+          ) : (
+            <span className="text-[#FF2E55] font-extrabold">FastKirana Cafe ☕</span>
+          )}
         </nav>
 
         {/* Hero Cafe Banner */}
@@ -848,11 +858,19 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
           <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-            <span className="text-[#FF2E55] font-extrabold">Cafe ☕</span>
-            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-            <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">
-              {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
-            </span>
+            {currentActiveTag && currentActiveTag !== 'all' ? (
+              <>
+                <Link href="/cafe" onClick={() => setActiveCategory('')} className="hover:text-primary transition-colors">
+                  Cafe ☕
+                </Link>
+                <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+                <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">
+                  {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
+                </span>
+              </>
+            ) : (
+              <span className="text-[#FF2E55] font-extrabold">Cafe ☕</span>
+            )}
           </nav>
         </div>
 

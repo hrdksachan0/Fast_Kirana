@@ -240,30 +240,36 @@ export function CafeSection() {
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10" />
 
           {/* Banner content */}
-          <div className="absolute inset-0 flex items-center justify-between px-6 sm:px-8 z-20">
-            <div className="text-left space-y-1 sm:space-y-1.5">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-200 to-white font-black text-lg sm:text-2xl md:text-3xl tracking-tight group-hover:from-white group-hover:to-amber-200 transition-all duration-300 flex items-center gap-1">
-                  Cafe
-                  <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-amber-350 group-hover:translate-x-1.5 transition-transform duration-300 stroke-[3.5] self-center" />
-                </h3>
+          <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8 z-20">
+            <div className="text-left space-y-1 sm:space-y-1.5 max-w-[62%] sm:max-w-[70%]">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {isCafeActive ? (
-                  <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-inner">
-                    <span className="relative flex h-1.5 w-1.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    </span>
-                    Live Kitchen
+                  <span className="inline-flex items-center gap-1 bg-[#00b140] text-white px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm">
+                    ● Live Kitchen
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 bg-zinc-800/80 text-zinc-400 border border-zinc-700/55 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider">
-                    🔴 Kitchen Closed
+                  <span className="inline-flex items-center gap-1 bg-zinc-600 text-zinc-350 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm">
+                    ● Kitchen Closed
                   </span>
                 )}
+                <span className="text-[10px] sm:text-xs animate-pulse-gentle">🔥</span>
               </div>
-              <p className="text-zinc-100 text-[10px] sm:text-xs font-semibold leading-relaxed max-w-[200px] sm:max-w-md">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <h3 className="text-white font-black text-sm min-[375px]:text-base sm:text-2xl md:text-3xl tracking-tight leading-tight">
+                  FastKirana Café
+                </h3>
+                <span className="text-xs sm:text-base animate-float">☕</span>
+              </div>
+              <p className="text-zinc-200 text-[8.5px] min-[375px]:text-[9.5px] sm:text-xs font-semibold leading-normal min-[375px]:leading-relaxed line-clamp-2">
                 Freshly prepared sandwiches, rolls, Chinese, Italian pasta & beverages — delivered hot!
               </p>
+            </div>
+
+            <div className="shrink-0 pl-2 self-end mb-2.5 sm:mb-3.5">
+              <span className="inline-flex items-center gap-1 bg-[#e20a22] hover:bg-[#c8081c] text-white font-extrabold px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[8.5px] sm:text-xs shadow-md transition-all duration-300 group-hover:scale-105 active:scale-95 cursor-pointer uppercase tracking-wider">
+                <span>Open Menu</span>
+                <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+              </span>
             </div>
           </div>
         </div>

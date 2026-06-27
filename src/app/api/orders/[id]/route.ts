@@ -27,7 +27,8 @@ export async function GET(
              o."paymentMethod"::text as "paymentMethod",
              o."paymentStatus"::text as "paymentStatus",
              o."estimatedDelivery", o."createdAt", o."updatedAt",
-             o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
+             o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+             o."deliveryUserId"
       FROM orders o WHERE o.id = ${id} LIMIT 1
     `
 
@@ -52,7 +53,21 @@ export async function GET(
       where: { id: order.addressId },
     })
 
-    return NextResponse.json({ ...order, items, address })
+    // Fetch delivery partner user details if assigned
+    let deliveryUser = null
+    if (order.deliveryUserId) {
+      const riders: any[] = await prisma.$queryRaw`
+        SELECT id, name, phone FROM users WHERE id = ${order.deliveryUserId} LIMIT 1
+      `
+      if (riders.length > 0) {
+        deliveryUser = {
+          name: riders[0].name,
+          phone: riders[0].phone
+        }
+      }
+    }
+
+    return NextResponse.json({ ...order, items, address, deliveryUser })
   } catch (error: any) {
     console.error('Order detail API error:', error)
     return NextResponse.json({ error: 'Failed to fetch order details' }, { status: 500 })
