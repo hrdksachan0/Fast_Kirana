@@ -4,7 +4,7 @@ import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
 import { formatPrice } from '@/lib/utils'
-import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ProductImage } from '@/components/product/product-image'
@@ -422,7 +422,7 @@ export function CartDrawer() {
               )}
 
               {/* Smart Add-on Suggestions */}
-              {subtotal < FREE_DELIVERY_THRESHOLD && recommendations.length > 0 && (
+              {deliveryFee > 0 && recommendations.length > 0 && (
                 <div className="mt-6 border-t border-zinc-100 dark:border-zinc-900 pt-4 space-y-3 pb-4">
                   <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 px-1">
                     <span>💡</span> Add items to unlock FREE Delivery
