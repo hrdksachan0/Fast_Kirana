@@ -43,9 +43,6 @@ import {
   Bell,
   BrainCircuit,
   RefreshCw,
-  ChefHat,
-  Truck,
-  Activity,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -82,7 +79,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'picker' | 'rider' | 'chef'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
 
 const PRODUCT_TEMPLATES = [
   {
@@ -174,6 +171,17 @@ export function AdminDashboard({
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
+  const [activeHub, setActiveHub] = useState<'insights' | 'fulfillment' | 'catalog' | 'marketing'>('insights')
+
+  // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
+  useEffect(() => {
+    const parentHub = HUB_CONFIG.find((hub) =>
+      (hub.tabs as readonly string[]).includes(activeTab)
+    )
+    if (parentHub && parentHub.key !== activeHub) {
+      setActiveHub(parentHub.key)
+    }
+  }, [activeTab, activeHub])
 
 
   
@@ -1900,31 +1908,24 @@ export function AdminDashboard({
     return matchesSearch && matchesCategory && matchesType
   })
 
-  const pickerCount = liveOrders.filter(o => o.status === 'PENDING').length
-  const riderCount = liveOrders.filter(o => o.status === 'PACKED' || o.status === 'SHIPPED').length
-  const chefCount = liveOrders.filter(o => (o.status === 'PENDING' || o.status === 'CONFIRMED') && o.shopName === 'FastKirana Cafe Kitchen').length
-
   const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { key: 'liveops', label: 'LiveOps', icon: Activity, count: activeCartsCount },
-    { key: 'reports', label: 'Reports', icon: FileText },
-    { key: 'forecast', label: 'AI Forecast', icon: BrainCircuit },
-    { key: 'alerts', label: 'Alerts', icon: AlertCircle, count: stats.lowStockCount },
-    { key: 'inward', label: 'GRN Inward', icon: Building2 },
+    { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
+    { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
+    { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
+    { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
-    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
-    { key: 'orders', label: 'Store Orders', icon: ShoppingBag, count: orderTotal },
-    { key: 'settings', label: 'Store Settings', icon: Settings },
+    { key: 'reports', label: 'Reports', icon: FileText },
+    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'products', label: 'Products', icon: Package, count: productTotal },
-    { key: 'users', label: 'Customers', icon: Users, count: userTotal },
+    { key: 'categories', label: 'Categories & Café Sections', icon: Layers, count: categories.length },
+    { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
-    { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
-    { key: 'banners', label: 'Promo Banners', icon: Image },
-    { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
-    { key: 'picker', label: 'Picker Mode', icon: Package, count: pickerCount },
-    { key: 'rider', label: 'Rider Mode', icon: Truck, count: riderCount },
-    { key: 'chef', label: 'Chef Kitchen', icon: ChefHat, count: chefCount }
+    { key: 'banners', label: 'Promo Banners', icon: Image },
+    { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
+    { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
+    { key: 'settings', label: 'Store Settings', icon: Settings },
   ]
 
   return (
@@ -2061,33 +2062,78 @@ export function AdminDashboard({
         </motion.div>
       )}
 
-      {/* Mobile-Style Flat Operations Tab Bar */}
-      <div className="bg-slate-900 border border-slate-800 p-2 overflow-x-auto whitespace-nowrap scrollbar-none rounded-2xl flex gap-1.5 select-none shadow-inner">
-        {tabConfig.map((tab) => {
-          const isActive = activeTab === tab.key
-          const TabIcon = tab.icon
+      {/* Consolidated Operational Hub Selection Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {HUB_CONFIG.map((hub) => {
+          const HubIcon = hub.icon
+          const isActive = activeHub === hub.key
           return (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 py-2 px-3.5 rounded-xl border transition-all duration-200 cursor-pointer text-[10px] font-black uppercase tracking-wider ${
-                isActive 
-                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/20' 
-                  : 'bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              key={hub.key}
+              type="button"
+              onClick={() => {
+                setActiveHub(hub.key)
+                setActiveTab(hub.tabs[0])
+              }}
+              className={`relative text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden select-none ${
+                isActive
+                  ? `bg-gradient-to-br ${hub.color} ${hub.activeBorder} shadow-md`
+                  : 'bg-card hover:bg-muted/40 border-border/50 shadow-sm hover:shadow-md'
               }`}
             >
-              <TabIcon className="h-3.5 w-3.5" />
-              <span>{tab.label}</span>
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-black ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-slate-700 text-slate-400'
+              {/* Dynamic decorative background glow */}
+              <div className={`absolute right-0 bottom-0 -mr-6 -mb-6 h-16 w-16 rounded-full bg-gradient-to-br ${hub.color} blur-lg opacity-40 transition-transform duration-500 ${isActive ? 'scale-150' : 'scale-100'}`} />
+              
+              <div className="flex items-center gap-3.5 relative z-10">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-text-secondary'
                 }`}>
-                  {tab.count}
-                </span>
-              )}
+                  <HubIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-text-primary">{hub.label}</h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5 line-clamp-1">{hub.description}</p>
+                </div>
+              </div>
             </button>
           )
         })}
+      </div>
+
+      {/* Sub-Tab Navigation inside active Hub */}
+      <div className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative">
+        {(() => {
+          const activeHubData = HUB_CONFIG.find(h => h.key === activeHub)
+          const activeHubSubTabs = activeHubData 
+            ? tabConfig.filter(tab => (activeHubData.tabs as readonly string[]).includes(tab.key)) 
+            : []
+          
+          return activeHubSubTabs.map((tab) => {
+            const TabIcon = tab.icon
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer select-none ${
+                  isActive
+                    ? 'text-primary'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBackground"
+                    className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-lg -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <TabIcon className="h-3.5 w-3.5 z-10" />
+                <span className="z-10">{tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}</span>
+              </button>
+            )
+          })
+        })()}
       </div>
 
       <AnimatePresence mode="wait">
@@ -4466,36 +4512,6 @@ export function AdminDashboard({
       {activeTab === 'flash-deals' && (
         <div className="animate-fade-in">
           <AdminPromotions />
-        </div>
-      )}
-
-      {activeTab === 'picker' && (
-        <div className="animate-fade-in w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-background">
-          <iframe 
-            src="/picker" 
-            className="w-full h-full border-0" 
-            title="Picker Mode Console"
-          />
-        </div>
-      )}
-
-      {activeTab === 'rider' && (
-        <div className="animate-fade-in w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-background">
-          <iframe 
-            src="/delivery" 
-            className="w-full h-full border-0" 
-            title="Rider Mode Console"
-          />
-        </div>
-      )}
-
-      {activeTab === 'chef' && (
-        <div className="animate-fade-in w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-background">
-          <iframe 
-            src="/cafe-kitchen" 
-            className="w-full h-full border-0" 
-            title="Chef Kitchen Console"
-          />
         </div>
       )}
         </motion.div>
