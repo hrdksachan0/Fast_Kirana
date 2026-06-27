@@ -471,10 +471,13 @@ export function CartDrawer() {
                     <span>Items Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-zinc-500 font-bold">
-                    <span>Delivery Charges</span>
-                    <span className={deliveryFee === 0 ? 'text-accent' : ''}>
-                      {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
+                  <div className="flex justify-between text-xs text-zinc-500 font-bold items-center">
+                    <div className="flex flex-col text-left">
+                      <span>Delivery Charges</span>
+                      <span className="text-[9px] text-zinc-400 font-normal">Free for grocery orders over ₹300</span>
+                    </div>
+                    <span className={deliveryFee === 0 ? 'text-accent font-black' : 'font-bold'}>
+                      {deliveryFee === 0 ? 'FREE 🎉' : formatPrice(deliveryFee)}
                     </span>
                   </div>
                 </div>

@@ -415,7 +415,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                         </span>
                       )}
                     </div>
-                    <p className="text-text-secondary leading-relaxed font-semibold">
+                    <p className="text-text-secondary leading-relaxed font-semibold truncate" title={formatAddress(addr)}>
                       {formatAddress(addr)}
                     </p>
                     {addr.phone && (

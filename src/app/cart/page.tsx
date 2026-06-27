@@ -463,10 +463,13 @@ export default function CartPage() {
                 </div>
               )}
 
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Handling & Delivery</span>
-                <span className={cn(deliveryFee === 0 ? "text-accent font-bold" : "")}>
-                  {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col text-left">
+                  <span className="text-text-secondary">Handling & Delivery</span>
+                  <span className="text-[10px] text-text-muted">FREE on orders over ₹300</span>
+                </div>
+                <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
+                  {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
                 </span>
               </div>
 

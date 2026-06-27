@@ -85,7 +85,7 @@ export function CartStickyBar() {
       }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-white/20 dark:bg-zinc-950/20 backdrop-blur-xl text-white rounded-[36px] shadow-[0_10px_35px_rgba(0,176,80,0.15)] border border-white/40 md:hidden animate-slide-up p-3 flex flex-col gap-2.5 cursor-pointer select-none",
+        "gpu-accelerated fixed bottom-[68px] left-3.5 right-3.5 z-40 bg-white/20 dark:bg-zinc-950/20 backdrop-blur-xl text-white rounded-[36px] shadow-[0_12px_35px_rgba(16,185,129,0.35)] border border-white/40 md:hidden animate-slide-up p-3 flex flex-col gap-2.5 cursor-pointer select-none",
         isBouncing && "animate-bounce-subtle"
       )}
     >

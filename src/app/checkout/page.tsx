@@ -1416,10 +1416,13 @@ export default function CheckoutPage() {
                     <span>-₹{(grocerySavings + groceryB2BDiscount).toFixed(0)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-text-secondary">
-                  <span>Delivery Fee</span>
+                <div className="flex justify-between text-text-secondary items-center">
+                  <div className="flex flex-col text-left">
+                    <span>Delivery Fee</span>
+                    <span className="text-[9px] text-text-muted">FREE over ₹300</span>
+                  </div>
                   <span className={cn(groceryDeliveryFee === 0 ? "text-accent font-bold" : "")}>
-                    {groceryDeliveryFee === 0 ? 'FREE' : `₹${groceryDeliveryFee}`}
+                    {groceryDeliveryFee === 0 ? 'FREE 🎉' : `₹${groceryDeliveryFee}`}
                   </span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
