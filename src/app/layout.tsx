@@ -104,11 +104,13 @@ export default function RootLayout({
                     <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full bg-rose-400/5 blur-[100px] animate-float" />
                   </div>
 
-                  <Navbar />
-                  <main className="min-h-screen pt-[96px] md:pt-[80px]">
-                    {children}
-                  </main>
-                  <Footer />
+                  <div className="flex flex-col min-h-screen">
+                    <Navbar />
+                    <main className="flex-grow pt-[96px] md:pt-[80px]">
+                      {children}
+                    </main>
+                    <Footer />
+                  </div>
                   <MobileBottomNav />
                   <CartStickyBar />
                   <CartDrawer />

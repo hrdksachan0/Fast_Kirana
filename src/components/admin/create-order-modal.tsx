@@ -5,6 +5,7 @@ import { Search, X, User, MapPin, Plus, Minus, Trash2, Loader2, Check, ShoppingB
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { useUIStore } from '@/stores/ui-store'
 
 interface CreateOrderModalProps {
   isOpen: boolean
@@ -339,15 +340,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     const cafeSubtotal = cafeItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
     const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
 
+    const settings = useUIStore.getState().settings || {}
+    const groceryThreshold = settings.grocery_free_delivery_threshold ? parseFloat(settings.grocery_free_delivery_threshold) : FREE_DELIVERY_THRESHOLD
+    const cafeThreshold = settings.cafe_free_delivery_threshold ? parseFloat(settings.cafe_free_delivery_threshold) : 199
+    const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : 200
+    const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
+
     let deliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      let groceryDeliveryFee = (groceryItems.length > 0 && grocerySubtotal < FREE_DELIVERY_THRESHOLD) ? DELIVERY_FEE : 0
-      let cafeDeliveryFee = (cafeItems.length > 0 && cafeSubtotal < 200) ? 25 : 0
+      let groceryDeliveryFee = (groceryItems.length > 0 && grocerySubtotal < groceryThreshold) ? deliveryFeeVal : 0
+      let cafeDeliveryFee = (cafeItems.length > 0 && cafeSubtotal < cafeThreshold) ? deliveryFeeVal : 0
 
       // Apply combined fee cap
-      if (groceryItems.length > 0 && cafeItems.length > 0 && subtotal >= 300) {
-        deliveryFee = Math.min(groceryDeliveryFee + cafeDeliveryFee, 25)
+      if (groceryItems.length > 0 && cafeItems.length > 0 && subtotal >= combinedThreshold) {
+        deliveryFee = 0
       } else {
         deliveryFee = groceryDeliveryFee + cafeDeliveryFee
       }

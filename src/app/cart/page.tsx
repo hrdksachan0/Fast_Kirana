@@ -117,20 +117,26 @@ export default function CartPage() {
   const groceryDiscount = subtotal > 0 ? (grocerySubtotal / subtotal) * promoDiscount : 0
   const cafeDiscount = subtotal > 0 ? (cafeSubtotal / subtotal) * promoDiscount : 0
 
+  const settings = useUIStore((s) => s.settings) || {}
+  const groceryThreshold = settings.grocery_free_delivery_threshold ? parseFloat(settings.grocery_free_delivery_threshold) : GROCERY_FREE_DELIVERY_THRESHOLD
+  const cafeThreshold = settings.cafe_free_delivery_threshold ? parseFloat(settings.cafe_free_delivery_threshold) : CAFE_FREE_DELIVERY_THRESHOLD
+  const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
+  const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
+
   let groceryDeliveryFee = 0
   let cafeDeliveryFee = 0
   const combinedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
 
   if (groceryItems.length > 0 && cafeItems.length === 0) {
-    groceryDeliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    groceryDeliveryFee = groceryAdjustedSubtotal >= groceryThreshold ? 0 : deliveryFeeVal
   } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-    cafeDeliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    cafeDeliveryFee = cafeAdjustedSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
   } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-    if (combinedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
+    if (combinedSubtotal >= combinedThreshold) {
       groceryDeliveryFee = 0
       cafeDeliveryFee = 0
     } else {
-      groceryDeliveryFee = DELIVERY_FEE
+      groceryDeliveryFee = deliveryFeeVal
       cafeDeliveryFee = 0
     }
   }
@@ -319,22 +325,22 @@ export default function CartPage() {
                   📦 Grocery & Daily Essentials
                 </h2>
                 <p className="text-xs text-text-muted mt-1 font-bold">
-                  Delivered in 10 minutes from FastKirana Darkstore
+                  Delivered from FastKirana Darkstore
                 </p>
               </div>
 
               {/* Free delivery indicator progress bar */}
               {groceryItems.length > 0 && (
                 <>
-                  {groceryAdjustedSubtotal < GROCERY_FREE_DELIVERY_THRESHOLD ? (
+                  {groceryAdjustedSubtotal < groceryThreshold ? (
                     <div className="rounded-xl bg-accent/5 border border-accent/20 p-3.5 mb-2">
                       <p className="text-xs font-bold text-accent">
-                        Shop for ₹{(GROCERY_FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal).toFixed(0)} more of groceries to get FREE delivery! (Free over ₹199)
+                        Shop for ₹{(groceryThreshold - groceryAdjustedSubtotal).toFixed(0)} more of groceries to get FREE delivery! (Free over ₹{groceryThreshold})
                       </p>
                       <div className="mt-2 h-1.5 rounded-full bg-accent/15 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-accent transition-all duration-500"
-                          style={{ width: `${(groceryAdjustedSubtotal / GROCERY_FREE_DELIVERY_THRESHOLD) * 100}%` }}
+                          style={{ width: `${(groceryAdjustedSubtotal / groceryThreshold) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -371,15 +377,15 @@ export default function CartPage() {
               {/* Free delivery indicator progress bar for cafe */}
               {cafeItems.length > 0 && (
                 <>
-                  {cafeAdjustedSubtotal < 200 ? (
+                  {cafeAdjustedSubtotal < cafeThreshold ? (
                     <div className="rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-3.5 mb-2">
                       <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
-                        Shop for ₹{(200 - cafeAdjustedSubtotal).toFixed(0)} more from Cafe to get FREE delivery! (Else ₹25 delivery fee applies)
+                        Shop for ₹{(cafeThreshold - cafeAdjustedSubtotal).toFixed(0)} more from Cafe to get FREE delivery! (Else ₹{deliveryFeeVal} delivery fee applies)
                       </p>
                       <div className="mt-2 h-1.5 rounded-full bg-rose-100 dark:bg-rose-900/40 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                          style={{ width: `${(cafeAdjustedSubtotal / 200) * 100}%` }}
+                          style={{ width: `${(cafeAdjustedSubtotal / cafeThreshold) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -556,7 +562,7 @@ export default function CartPage() {
               onClick={handleCheckoutRedirect}
               disabled={isCheckoutBlocked}
               className={cn(
-                "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-xs tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
+                "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm sm:text-base tracking-wide uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
                 isCheckoutBlocked && "opacity-60 cursor-not-allowed shadow-none"
               )}
             >

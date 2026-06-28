@@ -188,8 +188,8 @@ export function VariantSelectorDrawer() {
             {/* Header Handle */}
             <div className="w-12 h-1.5 bg-muted/70 rounded-full mx-auto my-3 shrink-0" />
 
-            {/* Content Container */}
-            <div className="px-5 pb-8 sm:pb-10 flex flex-col flex-1 overflow-y-auto space-y-4">
+            {/* Scrollable Content Container */}
+            <div className="px-5 pb-4 flex-1 overflow-y-auto space-y-4">
               {/* Product Info Block */}
               <div className="flex gap-4 border-b border-border/40 pb-4">
                 <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border border-border/40 bg-muted/10 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -249,11 +249,13 @@ export function VariantSelectorDrawer() {
                   </p>
                 </div>
               </div>
+            </div>
 
-              {/* Continue Shopping Action Button */}
+            {/* Sticky Action Footer */}
+            <div className="p-5 bg-background border-t border-border/40 shrink-0">
               <button
                 onClick={() => setActiveProduct(null)}
-                className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-1"
+                className="w-full py-3.5 px-4 rounded-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Continue Shopping</span>
                 <ArrowRight className="h-4 w-4 stroke-[3]" />

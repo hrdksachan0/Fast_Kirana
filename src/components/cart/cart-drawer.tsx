@@ -84,13 +84,19 @@ export function CartDrawer() {
   const cafeAdjustedSubtotal = cafeSubtotal
   const combinedAdjustedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
 
+  const settings = useUIStore((s) => s.settings) || {}
+  const groceryThreshold = settings.grocery_free_delivery_threshold ? parseFloat(settings.grocery_free_delivery_threshold) : GROCERY_FREE_DELIVERY_THRESHOLD
+  const cafeThreshold = settings.cafe_free_delivery_threshold ? parseFloat(settings.cafe_free_delivery_threshold) : CAFE_FREE_DELIVERY_THRESHOLD
+  const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
+  const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
+
   let deliveryFee = 0
   if (groceryItems.length > 0 && cafeItems.length === 0) {
-    deliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    deliveryFee = groceryAdjustedSubtotal >= groceryThreshold ? 0 : deliveryFeeVal
   } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-    deliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    deliveryFee = cafeAdjustedSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
   } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-    deliveryFee = combinedAdjustedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+    deliveryFee = combinedAdjustedSubtotal >= combinedThreshold ? 0 : deliveryFeeVal
   }
 
   const total = combinedAdjustedSubtotal + deliveryFee
@@ -320,15 +326,15 @@ export function CartDrawer() {
               <div className="space-y-2.5">
                 {groceryItems.length > 0 && cafeItems.length > 0 ? (
                   <>
-                    {combinedAdjustedSubtotal < COMBINED_FREE_DELIVERY_THRESHOLD ? (
+                    {combinedAdjustedSubtotal < combinedThreshold ? (
                       <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
                         <p className="text-xs text-primary font-extrabold">
-                          🛍️ Add {formatPrice(COMBINED_FREE_DELIVERY_THRESHOLD - combinedAdjustedSubtotal)} more for FREE delivery (Combined order over ₹300)
+                          🛍️ Add {formatPrice(combinedThreshold - combinedAdjustedSubtotal)} more for FREE delivery (Combined order over {formatPrice(combinedThreshold)})
                         </p>
                         <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-primary to-rose-500 transition-all duration-500"
-                            style={{ width: `${Math.min((combinedAdjustedSubtotal / COMBINED_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((combinedAdjustedSubtotal / combinedThreshold) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -342,15 +348,15 @@ export function CartDrawer() {
                   </>
                 ) : groceryItems.length > 0 ? (
                   <>
-                    {groceryAdjustedSubtotal < GROCERY_FREE_DELIVERY_THRESHOLD ? (
+                    {groceryAdjustedSubtotal < groceryThreshold ? (
                       <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5">
                         <p className="text-xs text-primary font-extrabold">
-                          📦 Add {formatPrice(GROCERY_FREE_DELIVERY_THRESHOLD - groceryAdjustedSubtotal)} more of groceries for FREE delivery (Over ₹199)
+                          📦 Add {formatPrice(groceryThreshold - groceryAdjustedSubtotal)} more of groceries for FREE delivery (Over {formatPrice(groceryThreshold)})
                         </p>
                         <div className="mt-2.5 h-1.5 rounded-full bg-primary/10 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
-                            style={{ width: `${Math.min((groceryAdjustedSubtotal / GROCERY_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((groceryAdjustedSubtotal / groceryThreshold) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -364,15 +370,15 @@ export function CartDrawer() {
                   </>
                 ) : cafeItems.length > 0 ? (
                   <>
-                    {cafeAdjustedSubtotal < CAFE_FREE_DELIVERY_THRESHOLD ? (
+                    {cafeAdjustedSubtotal < cafeThreshold ? (
                       <div className="rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-3.5">
                         <p className="text-xs text-rose-700 dark:text-rose-300 font-extrabold">
-                          ☕ Add {formatPrice(CAFE_FREE_DELIVERY_THRESHOLD - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Over ₹199)
+                          ☕ Add {formatPrice(cafeThreshold - cafeAdjustedSubtotal)} more from Cafe for FREE delivery (Over {formatPrice(cafeThreshold)})
                         </p>
                         <div className="mt-2.5 h-1.5 rounded-full bg-rose-100 dark:bg-rose-900/40 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                            style={{ width: `${Math.min((cafeAdjustedSubtotal / CAFE_FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((cafeAdjustedSubtotal / cafeThreshold) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -395,7 +401,7 @@ export function CartDrawer() {
                       📦 Grocery & Daily Essentials
                     </span>
                     <span className="text-[10px] text-zinc-500 font-bold ml-0.5 mt-0.5">
-                      Delivered in 10 minutes from FastKirana Darkstore
+                      Delivered from FastKirana Darkstore
                     </span>
                   </div>
                   <AnimatePresence initial={false}>
@@ -544,7 +550,7 @@ export function CartDrawer() {
                   {isCheckoutBlocked ? (
                     <button
                       disabled
-                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs sm:text-sm font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
+                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm sm:text-base font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
                     >
                       {hasClosedGroceryItems || hasClosedCafeItems ? (
                         <>Closed Items <ArrowRight size={16} /></>
@@ -556,7 +562,7 @@ export function CartDrawer() {
                     <Link
                       href="/checkout"
                       onClick={() => setCartOpen(false)}
-                      className="group relative overflow-hidden w-full h-12 rounded-full bg-gradient-to-r from-accent to-accent-dark text-xs sm:text-sm font-black text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-accent/15 hover:shadow-xl hover:shadow-accent/30 flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.03]"
+                      className="group relative overflow-hidden w-full h-12 rounded-full bg-gradient-to-r from-accent to-accent-dark text-sm sm:text-base font-black text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-accent/15 hover:shadow-xl hover:shadow-accent/30 flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.03]"
                     >
                       <span className="relative z-10">Checkout</span>
                       <ArrowRight size={16} className="relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />

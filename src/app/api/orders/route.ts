@@ -108,8 +108,35 @@ export async function POST(request: NextRequest) {
       return acc
     }, {} as Record<string, string>)
 
-    const groceryMartOpen = settingsMap['grocery_mart_open'] !== 'false'
-    const cafeOpen = settingsMap['cafe_open'] !== 'false'
+    function getStoreStatus(prefix: 'grocery' | 'cafe'): boolean {
+      const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
+      if (!autoTiming) {
+        return settingsMap[prefix === 'grocery' ? 'grocery_mart_open' : 'cafe_open'] !== 'false'
+      }
+
+      const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
+      const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
+
+      const now = new Date()
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
+      const istTime = new Date(utcTime + (3600000 * 5.5))
+      const currentTotal = istTime.getHours() * 60 + istTime.getMinutes()
+
+      const [openH, openM] = openTime.split(':').map(Number)
+      const openTotal = openH * 60 + openM
+
+      const [closeH, closeM] = closeTime.split(':').map(Number)
+      const closeTotal = closeH * 60 + closeM
+
+      if (closeTotal >= openTotal) {
+        return currentTotal >= openTotal && currentTotal <= closeTotal
+      } else {
+        return currentTotal >= openTotal || currentTotal <= closeTotal
+      }
+    }
+
+    const groceryMartOpen = getStoreStatus('grocery')
+    const cafeOpen = getStoreStatus('cafe')
 
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
@@ -278,23 +305,28 @@ export async function POST(request: NextRequest) {
       return sum + itemPrice * item.quantity
     }, 0)
 
+    const groceryThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
+    const cafeThreshold = settingsMap['cafe_free_delivery_threshold'] ? parseFloat(settingsMap['cafe_free_delivery_threshold']) : CAFE_FREE_DELIVERY_THRESHOLD
+    const combinedThreshold = settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : COMBINED_FREE_DELIVERY_THRESHOLD
+    const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
+
     let groceryDeliveryFee = 0
     let cafeDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (groceryItems.length > 0 && cafeItems.length === 0) {
-        // Grocery Only Order: Free above 199
-        groceryDeliveryFee = grocerySubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+        // Grocery Only Order: Free above threshold
+        groceryDeliveryFee = grocerySubtotal >= groceryThreshold ? 0 : deliveryFeeVal
       } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-        // Cafe Only Order: Free above 199
-        cafeDeliveryFee = cafeSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+        // Cafe Only Order: Free above threshold
+        cafeDeliveryFee = cafeSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
       } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-        // Combined Order (Both Grocery & Cafe): Free above 300
-        if (combinedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
+        // Combined Order (Both Grocery & Cafe): Free above combined threshold
+        if (combinedSubtotal >= combinedThreshold) {
           groceryDeliveryFee = 0
           cafeDeliveryFee = 0
         } else {
-          groceryDeliveryFee = DELIVERY_FEE
+          groceryDeliveryFee = deliveryFeeVal
           cafeDeliveryFee = 0
         }
       }

@@ -337,6 +337,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     }
                   }}
                   disabled={isStoreClosed && resolvedStock > 0}
+                  variant="outline"
                   className={cn(
                     "w-full h-full border text-[10px] sm:text-xs font-black rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
                     isStoreClosed && resolvedStock > 0

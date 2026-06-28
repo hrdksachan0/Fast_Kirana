@@ -55,7 +55,7 @@ function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: SlideToOr
       disabled={disabled || isPlacingOrder}
       onClick={onConfirm}
       className={cn(
-        "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-xs tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
+        "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm sm:text-base tracking-wide uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
         (disabled || isPlacingOrder) && "opacity-60 cursor-not-allowed shadow-none"
       )}
     >
@@ -95,6 +95,10 @@ export default function CheckoutPage() {
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
   const [isSettingsLoading, setIsSettingsLoading] = useState(true)
+  const [groceryThreshold, setGroceryThreshold] = useState(GROCERY_FREE_DELIVERY_THRESHOLD)
+  const [cafeThreshold, setCafeThreshold] = useState(CAFE_FREE_DELIVERY_THRESHOLD)
+  const [combinedThreshold, setCombinedThreshold] = useState(COMBINED_FREE_DELIVERY_THRESHOLD)
+  const [deliveryFeeVal, setDeliveryFeeVal] = useState(DELIVERY_FEE)
 
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
@@ -132,6 +136,18 @@ export default function CheckoutPage() {
         }
         if (data.contact_address) {
           setContactAddress(data.contact_address)
+        }
+        if (data.grocery_free_delivery_threshold) {
+          setGroceryThreshold(parseFloat(data.grocery_free_delivery_threshold))
+        }
+        if (data.cafe_free_delivery_threshold) {
+          setCafeThreshold(parseFloat(data.cafe_free_delivery_threshold))
+        }
+        if (data.combined_free_delivery_threshold) {
+          setCombinedThreshold(parseFloat(data.combined_free_delivery_threshold))
+        }
+        if (data.delivery_fee) {
+          setDeliveryFeeVal(parseFloat(data.delivery_fee))
         }
         setIsSettingsLoading(false)
       })
@@ -398,15 +414,15 @@ export default function CheckoutPage() {
 
   if (deliveryMethod === 'DELIVERY') {
     if (groceryCartItems.length > 0 && cafeCartItems.length === 0) {
-      groceryDeliveryFee = groceryAdjustedSubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+      groceryDeliveryFee = groceryAdjustedSubtotal >= groceryThreshold ? 0 : deliveryFeeVal
     } else if (cafeCartItems.length > 0 && groceryCartItems.length === 0) {
-      cafeDeliveryFee = cafeAdjustedSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+      cafeDeliveryFee = cafeAdjustedSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
     } else if (groceryCartItems.length > 0 && cafeCartItems.length > 0) {
-      if (subtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
+      if (subtotal >= combinedThreshold) {
         groceryDeliveryFee = 0
         cafeDeliveryFee = 0
       } else {
-        groceryDeliveryFee = DELIVERY_FEE
+        groceryDeliveryFee = deliveryFeeVal
         cafeDeliveryFee = 0
       }
     }
@@ -1488,7 +1504,7 @@ export default function CheckoutPage() {
             handlePlaceOrderClick()
           }}
           className={cn(
-            "group relative overflow-hidden bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-xs tracking-wider uppercase px-6 h-11 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/40",
+            "group relative overflow-hidden bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm tracking-wide uppercase px-6 h-11 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/40",
             (isPlacingOrder || showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId)) && "opacity-60 cursor-not-allowed shadow-none"
           )}
         >

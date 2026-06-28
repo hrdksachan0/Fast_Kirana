@@ -18,6 +18,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
+  const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
+  const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
+  const [cafeAutoTiming, setCafeAutoTiming] = useState(false)
+  const [cafeOpenTime, setCafeOpenTime] = useState('06:00')
+  const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
@@ -36,6 +42,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
   const [notifyPhone1, setNotifyPhone1] = useState(true)
   const [notifyPhone2, setNotifyPhone2] = useState(true)
+  const [groceryFreeDeliveryThreshold, setGroceryFreeDeliveryThreshold] = useState('199')
+  const [cafeFreeDeliveryThreshold, setCafeFreeDeliveryThreshold] = useState('199')
+  const [combinedFreeDeliveryThreshold, setCombinedFreeDeliveryThreshold] = useState('200')
+  const [deliveryFee, setDeliveryFee] = useState('25')
 
   const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
   const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
@@ -88,6 +98,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.trusted_text) setTrustedText(data.trusted_text)
         if (data.grocery_mart_open !== undefined) setGroceryMartOpen(data.grocery_mart_open === 'true')
         if (data.cafe_open !== undefined) setCafeOpen(data.cafe_open === 'true')
+        if (data.grocery_auto_timing !== undefined) setGroceryAutoTiming(data.grocery_auto_timing === 'true')
+        if (data.grocery_open_time) setGroceryOpenTime(data.grocery_open_time)
+        if (data.grocery_close_time) setGroceryCloseTime(data.grocery_close_time)
+        if (data.cafe_auto_timing !== undefined) setCafeAutoTiming(data.cafe_auto_timing === 'true')
+        if (data.cafe_open_time) setCafeOpenTime(data.cafe_open_time)
+        if (data.cafe_close_time) setCafeCloseTime(data.cafe_close_time)
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.cloudinary_cloud_name) setCloudinaryCloudName(data.cloudinary_cloud_name)
@@ -106,6 +122,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.contact_address) setContactAddress(data.contact_address)
         if (data.whatsapp_notify_7054470303 !== undefined) setNotifyPhone1(data.whatsapp_notify_7054470303 !== 'false')
         if (data.whatsapp_notify_8112849854 !== undefined) setNotifyPhone2(data.whatsapp_notify_8112849854 !== 'false')
+        if (data.grocery_free_delivery_threshold) setGroceryFreeDeliveryThreshold(data.grocery_free_delivery_threshold)
+        if (data.cafe_free_delivery_threshold) setCafeFreeDeliveryThreshold(data.cafe_free_delivery_threshold)
+        if (data.combined_free_delivery_threshold) setCombinedFreeDeliveryThreshold(data.combined_free_delivery_threshold)
+        if (data.delivery_fee) setDeliveryFee(data.delivery_fee)
 
         if (data.hero_greeting_closed) setHeroGreetingClosed(data.hero_greeting_closed)
         if (data.hero_subtitle_closed) setHeroSubtitleClosed(data.hero_subtitle_closed)
@@ -148,6 +168,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     e.preventDefault()
     
     if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
+        !groceryFreeDeliveryThreshold.trim() || !cafeFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
         !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
         !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
         !heroGreetingAfternoon.trim() || !heroSubtitleAfternoonMartClosed.trim() || !heroSubtitleAfternoonCafeClosed.trim() || !heroSubtitleAfternoonBothOpen.trim() ||
@@ -174,6 +195,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           trusted_text: trustedText.trim(),
           grocery_mart_open: groceryMartOpen ? 'true' : 'false',
           cafe_open: cafeOpen ? 'true' : 'false',
+          grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
+          grocery_open_time: groceryOpenTime,
+          grocery_close_time: groceryCloseTime,
+          cafe_auto_timing: cafeAutoTiming ? 'true' : 'false',
+          cafe_open_time: cafeOpenTime,
+          cafe_close_time: cafeCloseTime,
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           cloudinary_cloud_name: cloudinaryCloudName.trim(),
@@ -186,6 +213,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           tax_rate: taxRate.trim(),
           misc_fee: miscFee.trim(),
           misc_fee_label: miscFeeLabel.trim(),
+          grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
+          cafe_free_delivery_threshold: cafeFreeDeliveryThreshold.trim(),
+          combined_free_delivery_threshold: combinedFreeDeliveryThreshold.trim(),
+          delivery_fee: deliveryFee.trim(),
           contact_phone: contactPhone.trim(),
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
@@ -399,30 +430,104 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
             {settingsTab === 'ops' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Grocery Mart Toggle */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Mart Status</label>
-                    <select
-                      value={groceryMartOpen ? 'true' : 'false'}
-                      onChange={(e) => setGroceryMartOpen(e.target.value === 'true')}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                    >
-                      <option value="true">🟢 Open (Active)</option>
-                      <option value="false">🔴 Closed (Temporarily)</option>
-                    </select>
+                  {/* Grocery Mart Control */}
+                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Mart Control Mode</label>
+                      <select
+                        value={groceryAutoTiming ? 'auto' : 'manual'}
+                        onChange={(e) => setGroceryAutoTiming(e.target.value === 'auto')}
+                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                      >
+                        <option value="manual">⚙️ Manual Control</option>
+                        <option value="auto">⏰ Auto-Schedule by Timing</option>
+                      </select>
+                    </div>
+
+                    {!groceryAutoTiming ? (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Manual Status Override</label>
+                        <select
+                          value={groceryMartOpen ? 'true' : 'false'}
+                          onChange={(e) => setGroceryMartOpen(e.target.value === 'true')}
+                          className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                        >
+                          <option value="true">🟢 Open (Active)</option>
+                          <option value="false">🔴 Closed (Temporarily)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Open Time</label>
+                          <input
+                            type="time"
+                            value={groceryOpenTime}
+                            onChange={(e) => setGroceryOpenTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Close Time</label>
+                          <input
+                            type="time"
+                            value={groceryCloseTime}
+                            onChange={(e) => setGroceryCloseTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Cafe Toggle */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Status</label>
-                    <select
-                      value={cafeOpen ? 'true' : 'false'}
-                      onChange={(e) => setCafeOpen(e.target.value === 'true')}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                    >
-                      <option value="true">🟢 Open (Active)</option>
-                      <option value="false">🔴 Closed (Temporarily)</option>
-                    </select>
+                  {/* Cafe Control */}
+                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Control Mode</label>
+                      <select
+                        value={cafeAutoTiming ? 'auto' : 'manual'}
+                        onChange={(e) => setCafeAutoTiming(e.target.value === 'auto')}
+                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                      >
+                        <option value="manual">⚙️ Manual Control</option>
+                        <option value="auto">⏰ Auto-Schedule by Timing</option>
+                      </select>
+                    </div>
+
+                    {!cafeAutoTiming ? (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Manual Status Override</label>
+                        <select
+                          value={cafeOpen ? 'true' : 'false'}
+                          onChange={(e) => setCafeOpen(e.target.value === 'true')}
+                          className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                        >
+                          <option value="true">🟢 Open (Active)</option>
+                          <option value="false">🔴 Closed (Temporarily)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Open Time</label>
+                          <input
+                            type="time"
+                            value={cafeOpenTime}
+                            onChange={(e) => setCafeOpenTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Close Time</label>
+                          <input
+                            type="time"
+                            value={cafeCloseTime}
+                            onChange={(e) => setCafeCloseTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Only Cash on Delivery */}
@@ -635,6 +740,68 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       onChange={(e) => setMiscFeeLabel(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                     />
+                  </div>
+                </div>
+
+                {/* Delivery Fees & Free Thresholds */}
+                <div className="border-t border-border/40 pt-4 mt-2">
+                  <h4 className="text-xs font-black text-text-primary mb-3">🚚 Delivery Fees & Free Delivery Thresholds</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Delivery Fee */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Standard Delivery Fee (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 25"
+                        value={deliveryFee}
+                        onChange={(e) => setDeliveryFee(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+
+                    {/* Combined Free Delivery Threshold */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Combined Order Free Delivery Threshold (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 200"
+                        value={combinedFreeDeliveryThreshold}
+                        onChange={(e) => setCombinedFreeDeliveryThreshold(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+
+                    {/* Grocery Free Delivery Threshold */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Order Free Delivery Threshold (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 199"
+                        value={groceryFreeDeliveryThreshold}
+                        onChange={(e) => setGroceryFreeDeliveryThreshold(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+
+                    {/* Cafe Free Delivery Threshold */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Order Free Delivery Threshold (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 199"
+                        value={cafeFreeDeliveryThreshold}
+                        onChange={(e) => setCafeFreeDeliveryThreshold(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
                   </div>
                 </div>
 

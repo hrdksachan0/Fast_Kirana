@@ -282,20 +282,25 @@ export async function POST(request: Request) {
       return sum + itemPrice * item.quantity
     }, 0)
 
+    const groceryThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
+    const cafeThreshold = settingsMap['cafe_free_delivery_threshold'] ? parseFloat(settingsMap['cafe_free_delivery_threshold']) : CAFE_FREE_DELIVERY_THRESHOLD
+    const combinedThreshold = settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : COMBINED_FREE_DELIVERY_THRESHOLD
+    const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
+
     let groceryDeliveryFee = 0
     let cafeDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (groceryItems.length > 0 && cafeItems.length === 0) {
-        groceryDeliveryFee = grocerySubtotal >= GROCERY_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+        groceryDeliveryFee = grocerySubtotal >= groceryThreshold ? 0 : deliveryFeeVal
       } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-        cafeDeliveryFee = cafeSubtotal >= CAFE_FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
+        cafeDeliveryFee = cafeSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
       } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-        if (combinedSubtotal >= COMBINED_FREE_DELIVERY_THRESHOLD) {
+        if (combinedSubtotal >= combinedThreshold) {
           groceryDeliveryFee = 0
           cafeDeliveryFee = 0
         } else {
-          groceryDeliveryFee = DELIVERY_FEE
+          groceryDeliveryFee = deliveryFeeVal
           cafeDeliveryFee = 0
         }
       }

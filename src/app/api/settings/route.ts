@@ -11,6 +11,12 @@ const DEFAULT_SETTINGS = {
   trusted_text: '✨ Trusted by 5,000+ families in your town',
   grocery_mart_open: 'true',
   cafe_open: 'true',
+  grocery_auto_timing: 'false',
+  grocery_open_time: '06:00',
+  grocery_close_time: '23:59',
+  cafe_auto_timing: 'false',
+  cafe_open_time: '06:00',
+  cafe_close_time: '23:59',
   delivery_radius: '5',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
@@ -21,6 +27,10 @@ const DEFAULT_SETTINGS = {
   tax_rate: '5',
   misc_fee: '0',
   misc_fee_label: 'Miscellaneous Additions',
+  grocery_free_delivery_threshold: '199',
+  cafe_free_delivery_threshold: '199',
+  combined_free_delivery_threshold: '200',
+  delivery_fee: '25',
   contact_phone: '+91 70544 70303',
   contact_email: 'help@fastkirana.com',
   contact_timings: '6 AM - 12 AM',
@@ -45,27 +55,58 @@ const DEFAULT_SETTINGS = {
   hero_subtitle_night_both_open: "Indulge in ice creams, chocolates, late night munchies, and cafe specialties.",
 }
 
+export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe'): boolean {
+  const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
+  if (!autoTiming) {
+    return settingsMap[prefix === 'grocery' ? 'grocery_mart_open' : 'cafe_open'] !== 'false'
+  }
+
+  const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
+  const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
+
+  // Get current Indian Standard Time (IST) (UTC + 5:30)
+  const now = new Date()
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
+  const istTime = new Date(utcTime + (3600000 * 5.5))
+  const currentHours = istTime.getHours()
+  const currentMinutes = istTime.getMinutes()
+  const currentTotal = currentHours * 60 + currentMinutes
+
+  const [openH, openM] = openTime.split(':').map(Number)
+  const openTotal = openH * 60 + openM
+
+  const [closeH, closeM] = closeTime.split(':').map(Number)
+  const closeTotal = closeH * 60 + closeM
+
+  if (closeTotal >= openTotal) {
+    return currentTotal >= openTotal && currentTotal <= closeTotal
+  } else {
+    // Midnight crossing
+    return currentTotal >= openTotal || currentTotal <= closeTotal
+  }
+}
+
 export async function GET() {
   try {
     const cached = getCachedSettings()
+    let settingsMap: Record<string, string>
+
     if (cached) {
-      return NextResponse.json(cached, {
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        }
+      settingsMap = { ...cached }
+    } else {
+      const settings = await prisma.storeSetting.findMany()
+      settingsMap = { ...DEFAULT_SETTINGS }
+
+      settings.forEach((s) => {
+        settingsMap[s.key] = s.value
       })
+
+      setCachedSettings(settingsMap)
     }
 
-    const settings = await prisma.storeSetting.findMany()
-    const settingsMap: Record<string, string> = { ...DEFAULT_SETTINGS }
-
-    settings.forEach((s) => {
-      settingsMap[s.key] = s.value
-    })
-
-    setCachedSettings(settingsMap)
+    // Dynamically override based on live IST scheduler timings
+    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+    settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
 
     return NextResponse.json(settingsMap, {
       headers: {
@@ -76,7 +117,12 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Settings API error:', error)
-    return NextResponse.json(DEFAULT_SETTINGS, {
+    
+    const settingsMap = { ...DEFAULT_SETTINGS }
+    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+    settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+
+    return NextResponse.json(settingsMap, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
