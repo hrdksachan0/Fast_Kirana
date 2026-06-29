@@ -36,7 +36,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
   const { id } = await params
 
-  let order = null
+  let order: any = null
   let companionOrder = null
 
   try {

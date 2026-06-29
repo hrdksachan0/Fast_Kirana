@@ -427,7 +427,7 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
           </a>
           {order.deliveryMethod === 'PICKUP' && (
             <a
-              href="https://www.google.com/maps/search/?api=1&query=FastKirana+Central+Hub+Main+Market+Road+Sector+3+Town+Center"
+              href={`https://www.google.com/maps/dir/?api=1&destination=${storeLat},${storeLng}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-accent/20 bg-accent/5 hover:bg-accent/10 text-accent font-black text-xs rounded-xl transition-all"
@@ -680,22 +680,39 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
         <div className="text-xs space-y-3">
           <p className="text-text-secondary leading-relaxed font-semibold">
             {formatAddress(order.address)}
+            {order.deliveryMethod === 'PICKUP' && (
+              <span className="block text-[10px] text-text-muted mt-1 font-bold">
+                📍 Coordinates: {storeLat}, {storeLng}
+              </span>
+            )}
           </p>
-          <a
-            href={
-              order.address.lat && order.address.lng
-                ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    formatAddress(order.address)
-                  )}`
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-black rounded-xl transition-all shadow-sm w-fit"
-          >
-            <Navigation className="h-3.5 w-3.5" />
-            Locate Delivery Address on Google Maps
-          </a>
+          {order.deliveryMethod === 'PICKUP' ? (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${storeLat},${storeLng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-black rounded-xl transition-all shadow-sm w-fit"
+            >
+              <Navigation className="h-3.5 w-3.5" />
+              Get Store Directions (Lat: {storeLat}, Lng: {storeLng})
+            </a>
+          ) : (
+            <a
+              href={
+                order.address.lat && order.address.lng
+                  ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      formatAddress(order.address)
+                    )}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-black rounded-xl transition-all shadow-sm w-fit"
+            >
+              <Navigation className="h-3.5 w-3.5" />
+              Locate Delivery Address on Google Maps
+            </a>
+          )}
         </div>
       </div>
 

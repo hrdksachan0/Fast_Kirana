@@ -34,7 +34,7 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
 
   const { id } = await params
 
-  let orderRaw = null
+  let orderRaw: any = null
   let companionOrder = null
 
   try {
