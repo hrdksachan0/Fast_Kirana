@@ -138,57 +138,73 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   useEffect(() => {
     if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return
 
-    const eventSource = new EventSource(`/api/orders/${order.id}/live`)
+    let eventSource: EventSource | null = null
+    let retryTimeout: NodeJS.Timeout | null = null
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        
-        if (data.status && data.status !== order.status) {
-          setOrder((prev) => {
-            const statusLabels: Record<string, string> = {
-              CONFIRMED: 'Confirmed by Store',
-              PACKED: 'Packed & Ready',
-              SHIPPED: 'On the Way (Out for Delivery)',
-              DELIVERED: 'Delivered Successfully',
-              CANCELLED: 'Cancelled',
-            }
-            
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification(`Order Update: ${statusLabels[data.status] || data.status}`, {
-                body: `Your FastKirana order status has changed to: ${statusLabels[data.status] || data.status}`,
-                icon: '/manifest.json',
-              })
-            }
-            
-            return {
+    const connectSSE = () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+
+      eventSource = new EventSource(`/api/orders/${order.id}/live`)
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          
+          if (data.status && data.status !== order.status) {
+            setOrder((prev) => {
+              const statusLabels: Record<string, string> = {
+                CONFIRMED: 'Confirmed by Store',
+                PACKED: 'Packed & Ready',
+                SHIPPED: 'On the Way (Out for Delivery)',
+                DELIVERED: 'Delivered Successfully',
+                CANCELLED: 'Cancelled',
+              }
+              
+              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification(`Order Update: ${statusLabels[data.status] || data.status}`, {
+                  body: `Your FastKirana order status has changed to: ${statusLabels[data.status] || data.status}`,
+                  icon: '/manifest.json',
+                })
+              }
+              
+              return {
+                ...prev,
+                status: data.status,
+                deliveryLat: data.deliveryLat ?? prev.deliveryLat,
+                deliveryLng: data.deliveryLng ?? prev.deliveryLng,
+                deliveryUser: data.deliveryUser !== undefined ? data.deliveryUser : prev.deliveryUser,
+              }
+            })
+          } else if (data.deliveryLat !== undefined || data.deliveryLng !== undefined || data.deliveryUser !== undefined) {
+            setOrder((prev) => ({
               ...prev,
-              status: data.status,
-              deliveryLat: data.deliveryLat ?? prev.deliveryLat,
-              deliveryLng: data.deliveryLng ?? prev.deliveryLng,
+              deliveryLat: data.deliveryLat !== undefined ? data.deliveryLat : prev.deliveryLat,
+              deliveryLng: data.deliveryLng !== undefined ? data.deliveryLng : prev.deliveryLng,
               deliveryUser: data.deliveryUser !== undefined ? data.deliveryUser : prev.deliveryUser,
-            }
-          })
-        } else if (data.deliveryLat !== undefined || data.deliveryLng !== undefined || data.deliveryUser !== undefined) {
-          setOrder((prev) => ({
-            ...prev,
-            deliveryLat: data.deliveryLat !== undefined ? data.deliveryLat : prev.deliveryLat,
-            deliveryLng: data.deliveryLng !== undefined ? data.deliveryLng : prev.deliveryLng,
-            deliveryUser: data.deliveryUser !== undefined ? data.deliveryUser : prev.deliveryUser,
-          }))
+            }))
+          }
+        } catch (err) {
+          console.error('Error parsing SSE event:', err)
         }
-      } catch (err) {
-        console.error('Error parsing SSE event:', err)
+      }
+
+      eventSource.onerror = (err) => {
+        console.error('EventSource connection error in order-tracker:', err)
+        if (eventSource) {
+          eventSource.close()
+        }
+        // Retry connection in 5 seconds
+        retryTimeout = setTimeout(connectSSE, 5000)
       }
     }
 
-    eventSource.onerror = (err) => {
-      console.error('EventSource connection error:', err)
-      eventSource.close()
-    }
+    connectSSE()
 
     return () => {
-      eventSource.close()
+      if (eventSource) eventSource.close()
+      if (retryTimeout) clearTimeout(retryTimeout)
     }
   }, [order.id, order.status])
 

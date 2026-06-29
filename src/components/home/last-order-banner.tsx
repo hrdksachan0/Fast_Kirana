@@ -74,26 +74,42 @@ export function LastOrderBanner() {
     const isActive = !['DELIVERED', 'CANCELLED'].includes(lastOrder.status)
     if (!isActive) return
 
-    const eventSource = new EventSource(`/api/orders/${lastOrder.id}/live`)
+    let eventSource: EventSource | null = null
+    let retryTimeout: NodeJS.Timeout | null = null
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.status && data.status !== lastOrder.status) {
-          setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
+    const connectSSE = () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+
+      eventSource = new EventSource(`/api/orders/${lastOrder.id}/live`)
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.status && data.status !== lastOrder.status) {
+            setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
+          }
+        } catch (err) {
+          console.error('Error parsing SSE event in last-order-banner:', err)
         }
-      } catch (err) {
-        console.error('Error parsing SSE event in last-order-banner:', err)
+      }
+
+      eventSource.onerror = (err) => {
+        console.error('EventSource connection error in last-order-banner:', err)
+        if (eventSource) {
+          eventSource.close()
+        }
+        // Retry connection in 5 seconds
+        retryTimeout = setTimeout(connectSSE, 5000)
       }
     }
 
-    eventSource.onerror = (err) => {
-      console.error('EventSource connection error in last-order-banner:', err)
-      eventSource.close()
-    }
+    connectSSE()
 
     return () => {
-      eventSource.close()
+      if (eventSource) eventSource.close()
+      if (retryTimeout) clearTimeout(retryTimeout)
     }
   }, [lastOrder?.id, lastOrder?.status])
 
