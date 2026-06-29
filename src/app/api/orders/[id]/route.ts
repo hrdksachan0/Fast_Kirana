@@ -28,7 +28,8 @@ export async function GET(
              o."paymentStatus"::text as "paymentStatus",
              o."estimatedDelivery", o."createdAt", o."updatedAt",
              o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
-             o."deliveryUserId"
+             o."deliveryUserId",
+             o."deliveryPhoto", o."deliveryLat", o."deliveryLng"
       FROM orders o WHERE o.id = ${id} LIMIT 1
     `
 
