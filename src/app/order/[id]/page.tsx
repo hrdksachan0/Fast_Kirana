@@ -12,6 +12,22 @@ interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
 }
 
+async function runWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1500): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      console.warn(`Database query attempt ${i + 1} failed. Retrying in ${delay}ms...`, err);
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export default async function OrderConfirmPage({ params }: OrderConfirmPageProps) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -24,38 +40,40 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   let companionOrder = null
 
   try {
-    const orders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o."userId", o."addressId",
-             o.status::text as status,
-             o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-             o."paymentMethod"::text as "paymentMethod",
-             o."paymentStatus"::text as "paymentStatus",
-             o."estimatedDelivery", o."createdAt", o."updatedAt",
-             o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
-      FROM orders o WHERE o.id = ${id} LIMIT 1
-    `
+    await runWithRetry(async () => {
+      const orders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."updatedAt",
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
+        FROM orders o WHERE o.id = ${id} LIMIT 1
+      `
 
-    if (orders.length > 0) {
-      const orderRaw = orders[0]
+      if (orders.length > 0) {
+        const orderRaw = orders[0]
 
-      // Fetch items
-      const items = await prisma.orderItem.findMany({
-        where: { orderId: id },
-      })
+        // Fetch items
+        const items = await prisma.orderItem.findMany({
+          where: { orderId: id },
+        })
 
-      // Fetch address
-      const address = await prisma.address.findUnique({
-        where: { id: orderRaw.addressId },
-      })
+        // Fetch address
+        const address = await prisma.address.findUnique({
+          where: { id: orderRaw.addressId },
+        })
 
-      order = {
-        ...orderRaw,
-        items,
-        address,
+        order = {
+          ...orderRaw,
+          items,
+          address,
+        }
       }
-    }
+    })
   } catch (error) {
-    console.error('Database connection error: failed to fetch order details', error)
+    console.error('Database connection error after retries: failed to fetch order details', error)
     throw error
   }
 
