@@ -46,19 +46,19 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 interface SlideToOrderProps {
   onConfirm: () => void
   isPlacingOrder: boolean
-  disabled: boolean
+  disabled?: boolean
   amount: number
 }
 
-function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: SlideToOrderProps) {
+function SlideToOrder({ onConfirm, isPlacingOrder, amount }: SlideToOrderProps) {
   return (
     <button
       type="button"
-      disabled={disabled || isPlacingOrder}
+      disabled={isPlacingOrder}
       onClick={onConfirm}
       className={cn(
         "group relative overflow-hidden w-full h-14 bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm sm:text-base tracking-wide uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/45",
-        (disabled || isPlacingOrder) && "opacity-60 cursor-not-allowed shadow-none"
+        isPlacingOrder && "opacity-60 cursor-not-allowed shadow-none"
       )}
     >
       {isPlacingOrder ? (
@@ -467,19 +467,6 @@ export default function CheckoutPage() {
     if (selectedAddress.lat && selectedAddress.lng) {
       distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
       deliveryRules = getDeliveryRules(distanceKm)
-      
-      if (deliveryRules.isServiceable) {
-        minOrderRequired = deliveryRules.minOrder
-        if (adjustedSubtotal < minOrderRequired) {
-          isBelowMinOrder = true
-        }
-      }
-    } else {
-      // Fallback if no GPS coordinates: default to ₹200 minimum
-      minOrderRequired = 200
-      if (adjustedSubtotal < minOrderRequired) {
-        isBelowMinOrder = true
-      }
     }
   }
 
@@ -487,27 +474,12 @@ export default function CheckoutPage() {
   let cafeDeliveryFee = 0
 
   if (deliveryMethod === 'DELIVERY') {
-    if (deliveryRules && deliveryRules.isServiceable) {
-      // Charge distance-based delivery fee on grocery order if present, otherwise cafe order
+    if (adjustedSubtotal < 200) {
+      const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
       if (groceryCartItems.length > 0) {
-        groceryDeliveryFee = deliveryRules.deliveryFee
+        groceryDeliveryFee = feeToCharge
       } else if (cafeCartItems.length > 0) {
-        cafeDeliveryFee = deliveryRules.deliveryFee
-      }
-    } else {
-      // Fallback: no GPS coordinates or not serviceable (handled by validation)
-      if (groceryCartItems.length > 0 && cafeCartItems.length === 0) {
-        groceryDeliveryFee = groceryAdjustedSubtotal >= groceryThreshold ? 0 : deliveryFeeVal
-      } else if (cafeCartItems.length > 0 && groceryCartItems.length === 0) {
-        cafeDeliveryFee = cafeAdjustedSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
-      } else if (groceryCartItems.length > 0 && cafeCartItems.length > 0) {
-        if (subtotal >= combinedThreshold) {
-          groceryDeliveryFee = 0
-          cafeDeliveryFee = 0
-        } else {
-          groceryDeliveryFee = deliveryFeeVal
-          cafeDeliveryFee = 0
-        }
+        cafeDeliveryFee = feeToCharge
       }
     }
   }
@@ -720,27 +692,13 @@ export default function CheckoutPage() {
             return
           }
 
-          // Distance and minimum order checks
+          // Distance checks
           if (selectedAddr.lat && selectedAddr.lng) {
             const dist = getDistanceKm(storeLat, storeLng, selectedAddr.lat, selectedAddr.lng)
             const rules = getDeliveryRules(dist)
             if (!rules.isServiceable) {
               triggerHaptic('warning')
               toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 4 km.`)
-              setIsPlacingOrder(false)
-              return
-            }
-            if (adjustedSubtotal < rules.minOrder) {
-              triggerHaptic('warning')
-              toast.error(`Minimum order for your area (${rules.zoneName}) is ₹${rules.minOrder}. Please add ₹${(rules.minOrder - adjustedSubtotal).toFixed(0)} more items.`)
-              setIsPlacingOrder(false)
-              return
-            }
-          } else {
-            // Fallback default minimum
-            if (adjustedSubtotal < 200) {
-              triggerHaptic('warning')
-              toast.error(`Minimum order for delivery is ₹200. Please add ₹${(200 - adjustedSubtotal).toFixed(0)} more items.`)
               setIsPlacingOrder(false)
               return
             }
@@ -905,27 +863,13 @@ export default function CheckoutPage() {
             return
           }
 
-          // Distance and minimum order checks
+          // Distance checks
           if (selectedAddr.lat && selectedAddr.lng) {
             const dist = getDistanceKm(storeLat, storeLng, selectedAddr.lat, selectedAddr.lng)
             const rules = getDeliveryRules(dist)
             if (!rules.isServiceable) {
               triggerHaptic('warning')
               toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 4 km.`)
-              setIsPlacingOrder(false)
-              return
-            }
-            if (adjustedSubtotal < rules.minOrder) {
-              triggerHaptic('warning')
-              toast.error(`Minimum order for your area (${rules.zoneName}) is ₹${rules.minOrder}. Please add ₹${(rules.minOrder - adjustedSubtotal).toFixed(0)} more items.`)
-              setIsPlacingOrder(false)
-              return
-            }
-          } else {
-            // Fallback default minimum
-            if (adjustedSubtotal < 200) {
-              triggerHaptic('warning')
-              toast.error(`Minimum order for delivery is ₹200. Please add ₹${(200 - adjustedSubtotal).toFixed(0)} more items.`)
               setIsPlacingOrder(false)
               return
             }
@@ -1029,9 +973,31 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrderClick = () => {
-    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-      toast.error('Please select a delivery address')
+    if (isPlacingOrder) return
+
+    if (showNewAddressForm) {
+      triggerHaptic('warning')
+      toast.error('Please save your new address first by clicking Save & Select')
+      const el = document.getElementById('new-address-form')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
+    }
+
+    if (deliveryMethod === 'DELIVERY') {
+      const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+      if (!targetId) {
+        triggerHaptic('warning')
+        toast.error('Please select or add a delivery address')
+        const el = document.getElementById('address-section')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+
+      if (deliveryRules && !deliveryRules.isServiceable) {
+        triggerHaptic('warning')
+        toast.error(`Your address is outside our delivery zone (${distanceKm?.toFixed(1)} km away). We deliver only up to 4 km.`)
+        return
+      }
     }
 
     if (paymentMethod !== 'COD') {
@@ -1523,19 +1489,8 @@ export default function CheckoutPage() {
               {/* Place Order Button (Desktop Only) */}
               <div className="hidden md:block border-t border-border/40 pt-5 md:pt-6">
                 <SlideToOrder
-                  onConfirm={() => {
-                    if (showNewAddressForm) {
-                      toast.error('Please save your new address first by clicking Save & Select')
-                      return
-                    }
-                    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-                      toast.error('Please select or add a delivery address')
-                      return
-                    }
-                    handlePlaceOrderClick()
-                  }}
+                  onConfirm={handlePlaceOrderClick}
                   isPlacingOrder={isPlacingOrder}
-                  disabled={showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId) || isBelowMinOrder || (deliveryRules && !deliveryRules.isServiceable)}
                   amount={grandTotal}
                 />
               </div>
@@ -1571,9 +1526,7 @@ export default function CheckoutPage() {
               <div className="flex flex-col text-left">
                 <span>Delivery Charge</span>
                 <span className="text-[9px] text-text-muted">
-                  {deliveryMethod === 'PICKUP' ? 'Store Pickup' : deliveryRules && deliveryRules.isServiceable 
-                    ? `Zone: ${deliveryRules.zoneName} (Min order ₹${deliveryRules.minOrder})` 
-                    : 'Based on distance from store'}
+                  {deliveryMethod === 'PICKUP' ? 'Store Pickup' : adjustedSubtotal >= 200 ? 'Free delivery on orders ₹200+' : '₹25 fee on orders under ₹200'}
                 </span>
               </div>
               <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
@@ -1609,10 +1562,10 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-                {isBelowMinOrder && (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-2.5 rounded-xl text-center mt-2">
-                    <p className="text-[10px] font-black text-amber-600 dark:text-amber-400">
-                      ⚠️ Min order for {deliveryRules?.zoneName || 'your area'} is ₹{minOrderRequired}. Add ₹${(minOrderRequired - adjustedSubtotal).toFixed(0)} more items.
+                {adjustedSubtotal < 200 && (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl text-center mt-2">
+                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                      💡 Add ₹{(200 - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
                     </p>
                   </div>
                 )}
@@ -1654,23 +1607,11 @@ export default function CheckoutPage() {
 
         <button
           type="button"
-          disabled={isPlacingOrder || showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId) || isBelowMinOrder || (deliveryRules && !deliveryRules.isServiceable)}
-          onClick={() => {
-            if (showNewAddressForm) {
-              toast.error('Please save your new address first by clicking Save & Select')
-              return
-            }
-            if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-              toast.error('Please select or add a delivery address')
-              const el = document.getElementById('address-section')
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              return
-            }
-            handlePlaceOrderClick()
-          }}
+          disabled={isPlacingOrder}
+          onClick={handlePlaceOrderClick}
           className={cn(
             "group relative overflow-hidden bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm tracking-wide uppercase px-6 h-11 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/40",
-            (isPlacingOrder || showNewAddressForm || (deliveryMethod === 'DELIVERY' && !selectedAddressId) || isBelowMinOrder || (deliveryRules && !deliveryRules.isServiceable)) && "opacity-60 cursor-not-allowed shadow-none"
+            isPlacingOrder && "opacity-60 cursor-not-allowed shadow-none"
           )}
         >
           {isPlacingOrder ? (

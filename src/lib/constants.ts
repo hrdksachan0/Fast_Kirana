@@ -2,10 +2,10 @@ export const APP_NAME = 'FastKirana'
 export const APP_DESCRIPTION = 'Fast grocery delivery at your doorstep'
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-export const GROCERY_FREE_DELIVERY_THRESHOLD = 199
-export const CAFE_FREE_DELIVERY_THRESHOLD = 199
+export const GROCERY_FREE_DELIVERY_THRESHOLD = 200
+export const CAFE_FREE_DELIVERY_THRESHOLD = 200
 export const COMBINED_FREE_DELIVERY_THRESHOLD = 200
-export const FREE_DELIVERY_THRESHOLD = 199
+export const FREE_DELIVERY_THRESHOLD = 200
 export const DELIVERY_FEE = 25
 export const TAX_RATE = 0.05 // 5% GST
 

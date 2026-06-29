@@ -377,38 +377,21 @@ export async function POST(request: NextRequest) {
     let cafeDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      if (deliveryRules && deliveryRules.isServiceable) {
-        // Distance-based delivery fee and minimum order enforcement
-        if (combinedSubtotal < deliveryRules.minOrder) {
-          return NextResponse.json({
-            error: `Minimum order for your area (${deliveryRules.zoneName}) is ₹${deliveryRules.minOrder}. Your current subtotal is ₹${combinedSubtotal.toFixed(0)}.`
-          }, { status: 400 })
-        }
+      if (deliveryRules && !deliveryRules.isServiceable) {
+        return NextResponse.json({
+          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver only up to 4 km.`
+        }, { status: 400 })
+      }
 
-        // Charge distance-based delivery fee on grocery order (or cafe if no grocery)
+      const freeDeliveryThreshold = 200
+      const appliesDeliveryFee = combinedSubtotal < freeDeliveryThreshold
+
+      if (appliesDeliveryFee) {
+        const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
         if (groceryItems.length > 0) {
-          groceryDeliveryFee = deliveryRules.deliveryFee
+          groceryDeliveryFee = feeToCharge
         } else if (cafeItems.length > 0) {
-          cafeDeliveryFee = deliveryRules.deliveryFee
-        }
-      } else {
-        // Fallback: no GPS coordinates on address → use flat fee system
-        const groceryThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
-        const cafeThreshold = settingsMap['cafe_free_delivery_threshold'] ? parseFloat(settingsMap['cafe_free_delivery_threshold']) : CAFE_FREE_DELIVERY_THRESHOLD
-        const combinedThreshold = settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : COMBINED_FREE_DELIVERY_THRESHOLD
-
-        if (groceryItems.length > 0 && cafeItems.length === 0) {
-          groceryDeliveryFee = grocerySubtotal >= groceryThreshold ? 0 : deliveryFeeVal
-        } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-          cafeDeliveryFee = cafeSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
-        } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-          if (combinedSubtotal >= combinedThreshold) {
-            groceryDeliveryFee = 0
-            cafeDeliveryFee = 0
-          } else {
-            groceryDeliveryFee = deliveryFeeVal
-            cafeDeliveryFee = 0
-          }
+          cafeDeliveryFee = feeToCharge
         }
       }
     }
