@@ -13,6 +13,7 @@ import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED
 import { toast } from 'sonner'
 import { cn, isCafeProduct } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+import { useCartStore } from '@/stores/cart-store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function CartPage() {
@@ -52,6 +53,9 @@ export default function CartPage() {
       .catch(err => console.error('Error fetching settings in cart page:', err))
   }, [])
 
+  const appliedCouponCode = useCartStore((s) => s.appliedCouponCode)
+  const setAppliedCouponCode = useCartStore((s) => s.setAppliedCouponCode)
+
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string
@@ -63,6 +67,39 @@ export default function CartPage() {
   const mrpTotal = getMrpTotal()
   const itemDiscount = getSavings()
 
+  // Auto-validate coupon on mount if already applied
+  useEffect(() => {
+    if (appliedCouponCode && items.length > 0 && !appliedCoupon) {
+      fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: appliedCouponCode,
+          subtotal,
+          items: items.map(i => ({
+            id: i.product.id,
+            price: i.product.price,
+            categoryId: i.product.categoryId,
+            quantity: i.quantity
+          }))
+        })
+      })
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error('Invalid')
+      })
+      .then(data => {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          discountAmount: data.coupon.discountAmount,
+        })
+      })
+      .catch(() => {
+        setAppliedCouponCode(null)
+      })
+    }
+  }, [appliedCouponCode, items.length])
+
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!couponCode.trim()) return
@@ -72,7 +109,16 @@ export default function CartPage() {
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode, subtotal }),
+        body: JSON.stringify({
+          code: couponCode,
+          subtotal,
+          items: items.map(i => ({
+            id: i.product.id,
+            price: i.product.price,
+            categoryId: i.product.categoryId,
+            quantity: i.quantity
+          }))
+        }),
       })
 
       const data = await res.json()
@@ -84,6 +130,7 @@ export default function CartPage() {
           code: data.coupon.code,
           discountAmount: data.coupon.discountAmount,
         })
+        setAppliedCouponCode(data.coupon.code)
         toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
       }
     } catch (err) {
@@ -95,6 +142,7 @@ export default function CartPage() {
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null)
+    setAppliedCouponCode(null)
     setCouponCode('')
     toast.success('Coupon removed')
   }

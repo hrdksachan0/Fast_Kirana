@@ -283,14 +283,22 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       if (!silent) toast.error('Please enter a coupon code')
       return
     }
-
     setIsApplyingCoupon(true)
     try {
       const subtotal = calculateSubtotal()
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.toUpperCase(), subtotal }),
+        body: JSON.stringify({ 
+          code: couponCode.toUpperCase(), 
+          subtotal,
+          items: selectedItems.map(item => ({
+            id: item.product.id,
+            price: item.product.price,
+            categoryId: item.product.categoryId,
+            quantity: item.quantity
+          }))
+        }),
       })
 
       if (res.ok) {
@@ -303,7 +311,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         if (!silent) toast.error(data.error || 'Invalid coupon code')
       }
     } catch (err) {
-      console.error('Failed to validate coupon:', err)
       setAppliedCoupon(null)
     } finally {
       setIsApplyingCoupon(false)

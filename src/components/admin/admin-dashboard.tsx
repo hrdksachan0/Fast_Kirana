@@ -885,6 +885,8 @@ export function AdminDashboard({
     maxUses: '',
     isActive: true,
     expiresAt: '',
+    categoryId: '',
+    oncePerCustomer: false,
   })
   
   // Modal Edit states for Coupons
@@ -899,6 +901,8 @@ export function AdminDashboard({
     maxUses: '',
     isActive: true,
     expiresAt: '',
+    categoryId: '',
+    oncePerCustomer: false,
   })
 
   const toggleTag = (form: 'new' | 'edit', tag: string, checked: boolean) => {
@@ -1781,6 +1785,8 @@ export function AdminDashboard({
           maxUses: '',
           isActive: true,
           expiresAt: '',
+          categoryId: '',
+          oncePerCustomer: false,
         })
       } else {
         const errData = await res.json()
@@ -1804,6 +1810,8 @@ export function AdminDashboard({
       maxUses: c.maxUses ? String(c.maxUses) : '',
       expiresAt: c.expiresAt ? c.expiresAt.slice(0, 10) : '',
       isActive: c.isActive !== false,
+      categoryId: c.categoryId || '',
+      oncePerCustomer: c.oncePerCustomer === true,
     })
   }
 
@@ -1826,6 +1834,8 @@ export function AdminDashboard({
           maxUses: couponEditForm.maxUses ? parseInt(couponEditForm.maxUses) : null,
           expiresAt: couponEditForm.expiresAt || null,
           isActive: couponEditForm.isActive,
+          categoryId: couponEditForm.categoryId || null,
+          oncePerCustomer: couponEditForm.oncePerCustomer,
         }),
       })
 
@@ -3993,17 +4003,46 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div className="flex items-center gap-2 pt-5">
-                  <input
-                    type="checkbox"
-                    id="couponActive"
-                    checked={newCoupon.isActive}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, isActive: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="couponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Activate Immediately
-                  </label>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Restricted Category (Optional)</label>
+                  <select
+                    value={newCoupon.categoryId}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  >
+                    <option value="">All Categories (No restriction)</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-3 pt-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="couponActive"
+                      checked={newCoupon.isActive}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, isActive: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="couponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Activate Immediately
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="oncePerCustomer"
+                      checked={newCoupon.oncePerCustomer}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, oncePerCustomer: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="oncePerCustomer" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Limit to once per customer
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -5462,17 +5501,44 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                <div className="flex items-center gap-2 pt-5">
-                  <input
-                    type="checkbox"
-                    id="editCouponActive"
-                    checked={couponEditForm.isActive}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, isActive: e.target.checked })}
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                  />
-                  <label htmlFor="editCouponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                    Coupon is Active
-                  </label>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Restricted Category (Optional)</label>
+                  <select
+                    value={couponEditForm.categoryId}
+                    onChange={(e) => setCouponEditForm({ ...couponEditForm, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  >
+                    <option value="">All Categories (No restriction)</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-3 pt-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editCouponActive"
+                      checked={couponEditForm.isActive}
+                      onChange={(e) => setCouponEditForm({ ...couponEditForm, isActive: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editCouponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Coupon is Active
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editOncePerCustomer"
+                      checked={couponEditForm.oncePerCustomer}
+                      onChange={(e) => setCouponEditForm({ ...couponEditForm, oncePerCustomer: e.target.checked })}
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
+                    />
+                    <label htmlFor="editOncePerCustomer" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                      Limit to once per customer
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">

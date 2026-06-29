@@ -140,6 +140,7 @@ model Category {
   parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
   children Category[] @relation("CategoryToCategory")
   products Product[]
+  coupons  Coupon[]
 
   @@map("categories")
 }
@@ -255,6 +256,7 @@ model Order {
   shippedAt         DateTime?
   deliveredAt       DateTime?
   notes             String?
+  couponCode        String?
 
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
@@ -296,17 +298,21 @@ model OrderItem {
 }
 
 model Coupon {
-  id           String       @id @default(cuid())
-  code         String       @unique
-  discountType DiscountType
-  value        Float
-  minOrder     Float        @default(0)
-  maxDiscount  Float?
-  maxUses      Int?
-  usedCount    Int          @default(0)
-  isActive     Boolean      @default(true)
-  expiresAt    DateTime?
-  createdAt    DateTime     @default(now())
+  id              String       @id @default(cuid())
+  code            String       @unique
+  discountType    DiscountType
+  value           Float
+  minOrder        Float        @default(0)
+  maxDiscount     Float?
+  maxUses         Int?
+  usedCount       Int          @default(0)
+  isActive        Boolean      @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime     @default(now())
+  categoryId      String?
+  oncePerCustomer Boolean      @default(false)
+
+  category        Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("coupons")
 }

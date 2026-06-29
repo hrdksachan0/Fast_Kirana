@@ -12,6 +12,8 @@ import { isCafeProduct, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRouter } from 'next/navigation'
+import { useCartStore } from '@/stores/cart-store'
+import { toast } from 'sonner'
 
 export function CartDrawer() {
   const router = useRouter()
@@ -44,6 +46,59 @@ export function CartDrawer() {
   const [showBillDetails, setShowBillDetails] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
+  const appliedCouponCode = useCartStore((s) => s.appliedCouponCode)
+  const setAppliedCouponCode = useCartStore((s) => s.setAppliedCouponCode)
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
+  const [isCouponLoading, setIsCouponLoading] = useState(false)
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!couponInput.trim()) return
+
+    setIsCouponLoading(true)
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponInput.trim().toUpperCase(),
+          subtotal,
+          items: items.map(i => ({
+            id: i.product.id,
+            price: i.product.price,
+            categoryId: i.product.categoryId,
+            quantity: i.quantity
+          }))
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to apply coupon')
+      } else {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          discountAmount: data.coupon.discountAmount,
+        })
+        setAppliedCouponCode(data.coupon.code)
+        toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
+      }
+    } catch (err) {
+      toast.error('Failed to validate coupon code')
+    } finally {
+      setIsCouponLoading(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setAppliedCouponCode(null)
+    setCouponInput('')
+    toast.success('Coupon removed')
+  }
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 640)
@@ -75,6 +130,42 @@ export function CartDrawer() {
   const cafeItems = items.filter((item) => isCafeProduct(item.product))
 
   const subtotal = getSubtotal()
+
+  // Auto-validate coupon on cart drawer load
+  useEffect(() => {
+    if (appliedCouponCode && items.length > 0 && !appliedCoupon) {
+      fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: appliedCouponCode,
+          subtotal,
+          items: items.map(i => ({
+            id: i.product.id,
+            price: i.product.price,
+            categoryId: i.product.categoryId,
+            quantity: i.quantity
+          }))
+        })
+      })
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error('Invalid')
+      })
+      .then(data => {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          discountAmount: data.coupon.discountAmount,
+        })
+      })
+      .catch(() => {
+        setAppliedCouponCode(null)
+        setAppliedCoupon(null)
+      })
+    } else if (!appliedCouponCode) {
+      setAppliedCoupon(null)
+    }
+  }, [appliedCouponCode, items.length, subtotal])
   const savings = getSavings()
 
   const grocerySubtotal = groceryItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
@@ -99,7 +190,8 @@ export function CartDrawer() {
     deliveryFee = combinedAdjustedSubtotal >= combinedThreshold ? 0 : deliveryFeeVal
   }
 
-  const total = combinedAdjustedSubtotal + deliveryFee
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
+  const total = Math.max(0, combinedAdjustedSubtotal - couponDiscount) + deliveryFee
 
   const hasInventoryIssues = items.some((item) => {
     const limit = isCafeProduct(item.product) ? 10 : 5
@@ -491,6 +583,44 @@ export function CartDrawer() {
                   </div>
                 </div>
               )}
+              {/* Coupon Code Section */}
+              <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 p-3.5 rounded-2xl space-y-2 mt-4 mx-1">
+                <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-250 flex items-center gap-1.5 leading-none">
+                  <span>🎟️</span> Apply Promo / Coupon Code
+                </h4>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between border border-accent/20 bg-accent/5 p-2 rounded-xl">
+                    <div className="text-left">
+                      <span className="text-[10px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                        {appliedCoupon.code}
+                      </span>
+                      <p className="text-[9px] text-accent font-semibold mt-1">Saved ₹{couponDiscount.toFixed(0)}</p>
+                    </div>
+                    <button
+                      onClick={handleRemoveCoupon}
+                      className="text-[10px] text-red-500 hover:bg-red-500/10 font-bold px-2 py-1 rounded cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                    <input
+                      placeholder="Enter Coupon (e.g. CAFE50)"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      className="uppercase w-full px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-white dark:bg-zinc-900 focus:outline-none focus:border-primary/45 font-bold"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isCouponLoading || !couponInput.trim()}
+                      className="bg-primary text-white hover:bg-primary/95 text-xs font-black px-4 py-1.5 rounded-xl disabled:opacity-50 cursor-pointer"
+                    >
+                      {isCouponLoading ? 'Applying...' : 'Apply'}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
 
             {/* Sticky Footer Area */}
@@ -503,6 +633,12 @@ export function CartDrawer() {
                     <span>Items Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-450 font-bold">
+                      <span>Coupon Applied ({appliedCoupon?.code})</span>
+                      <span>-₹{couponDiscount.toFixed(0)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs text-zinc-500 font-bold items-center">
                     <div className="flex flex-col text-left">
                       <span>Delivery Charges</span>

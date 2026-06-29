@@ -73,10 +73,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning>
-      <head />
-      <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
+      <head>
         <script
-          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -88,6 +86,8 @@ export default function RootLayout({
             `,
           }}
         />
+      </head>
+      <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
@@ -115,7 +115,7 @@ export default function RootLayout({
                   <CartStickyBar />
                   <CartDrawer />
                   <VariantSelectorDrawer />
-                  <Toaster position="bottom-center" richColors closeButton visibleToasts={1} />
+                  <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />
                   <PWARegistration />
                   <PushNotificationConsent />
                   <SoftPromptDialog />

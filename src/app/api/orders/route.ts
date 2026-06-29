@@ -253,16 +253,67 @@ export async function POST(request: NextRequest) {
       if (coupon) {
         const hasExpired = coupon.expiresAt && new Date(coupon.expiresAt) < new Date()
         const limitReached = coupon.maxUses && coupon.usedCount >= coupon.maxUses
-        const minOrderMet = combinedSubtotal >= coupon.minOrder
 
-        if (!hasExpired && !limitReached && minOrderMet) {
-          couponId = coupon.id
-          if (coupon.discountType === 'FLAT') {
-            combinedDiscount = coupon.value
-          } else if (coupon.discountType === 'PERCENT') {
-            combinedDiscount = (combinedSubtotal * coupon.value) / 100
-            if (coupon.maxDiscount) {
-              combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+        if (!hasExpired && !limitReached) {
+          // Check once per customer restriction
+          let canUse = true
+          if (coupon.oncePerCustomer) {
+            const alreadyUsed = await prisma.order.findFirst({
+              where: {
+                userId: userId,
+                couponCode: coupon.code,
+                status: { not: 'CANCELLED' }
+              }
+            })
+            if (alreadyUsed) {
+              canUse = false
+            }
+          }
+
+          if (canUse) {
+            let eligibleSubtotal = combinedSubtotal
+            let meetsMinOrder = true
+
+            if (coupon.categoryId) {
+              // Calculate category-specific subtotal
+              const categoryItems = items.filter((item: any) => {
+                const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                return dbProduct && dbProduct.categoryId === coupon.categoryId
+              })
+              const categorySubtotal = categoryItems.reduce((sum: number, item: any) => {
+                const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                let itemPrice = dbProduct ? dbProduct.price : 0
+                const isVariant = item.product.id.includes('_')
+                if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                  const [_, variantName] = item.product.id.split('_')
+                  const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+                  if (variant) {
+                    itemPrice = variant.price
+                  }
+                }
+                return sum + itemPrice * item.quantity
+              }, 0)
+
+              if (categorySubtotal === 0 || categorySubtotal < coupon.minOrder) {
+                meetsMinOrder = false
+              }
+              eligibleSubtotal = categorySubtotal
+            } else {
+              if (combinedSubtotal < coupon.minOrder) {
+                meetsMinOrder = false
+              }
+            }
+
+            if (meetsMinOrder) {
+              couponId = coupon.id
+              if (coupon.discountType === 'FLAT') {
+                combinedDiscount = Math.min(coupon.value, eligibleSubtotal)
+              } else if (coupon.discountType === 'PERCENT') {
+                combinedDiscount = (eligibleSubtotal * coupon.value) / 100
+                if (coupon.maxDiscount) {
+                  combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                }
+              }
             }
           }
         }
@@ -447,6 +498,7 @@ export async function POST(request: NextRequest) {
             estimatedDelivery,
             deliveryMethod,
             isB2B,
+            couponCode: couponCode ? couponCode.toUpperCase() : null,
             shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
             shopPhone: orderInfo.type === 'CAFE' ? (settingsMap['contact_phone'] || '+91 70544 70303') : shopPhone,
             deliveryLat: address.lat,

@@ -76,6 +76,13 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
   const quantity = getItemQuantity(product.id)
   const [showAdded, setShowAdded] = useState(false)
 
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const resolvedQuantity = mounted ? quantity : 0
+
   const liveState = useLiveStock(product.id)
   const resolvedStock = liveState !== null ? liveState.stock : product.stock
   const resolvedPrice = liveState !== null ? liveState.price : product.price
@@ -216,7 +223,7 @@ export function CafeProductRow({ product, cafeOpen }: CafeProductRowProps) {
 
         <div className="absolute -bottom-2 h-7.5 w-[76px] sm:w-[84px] z-10 shrink-0">
           <AnimatePresence mode="wait">
-            {quantity === 0 ? (
+            {resolvedQuantity === 0 ? (
               <motion.div
                 key="add-btn"
                 initial={{ opacity: 0, scale: 0.92 }}

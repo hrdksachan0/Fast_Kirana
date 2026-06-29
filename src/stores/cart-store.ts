@@ -42,12 +42,16 @@ interface CartState {
   getSavings: () => number
   updateCartProduct: (productId: string, updates: Partial<CartProduct>) => void
   updateItemNotes: (productId: string, notes: string) => void
+  appliedCouponCode: string | null
+  setAppliedCouponCode: (code: string | null) => void
 }
 
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      appliedCouponCode: null,
+      setAppliedCouponCode: (code) => set({ appliedCouponCode: code }),
 
       addItem: (product: CartProduct) => {
         if (product.stock <= 0) return
@@ -90,7 +94,7 @@ export const useCartStore = create<CartState>()(
         })
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], appliedCouponCode: null }),
 
       getItemQuantity: (productId: string) => {
         const item = get().items.find((i) => i.product.id === productId)

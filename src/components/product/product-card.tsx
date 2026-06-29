@@ -26,6 +26,11 @@ export function ProductCard({ product }: ProductCardProps) {
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
   
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
   const variantsList = hasVariants ? (product.variants as any[]) : []
   
@@ -63,8 +68,8 @@ export function ProductCard({ product }: ProductCardProps) {
       .filter((item) => item.product.id === product.id || item.product.id.startsWith(`${product.id}_`))
       .reduce((sum, item) => sum + item.quantity, 0)
   }, [items, hasVariants, product.id, getItemQuantity])
-
   const quantity = totalQuantity
+  const resolvedQuantity = mounted ? quantity : 0
   const [showAdded, setShowAdded] = useState(false)
   const imageRef = useRef<HTMLDivElement>(null)
 
@@ -319,7 +324,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Right Side: Add to Cart Actions */}
         <div className="relative h-8 sm:h-9 w-[64px] min-[375px]:w-[72px] sm:w-20 shrink-0 flex-shrink-0">
           <AnimatePresence mode="wait">
-            {quantity === 0 ? (
+            {resolvedQuantity === 0 ? (
               <motion.div
                 key="add-to-cart-button"
                 initial={{ opacity: 0, scale: 0.92 }}

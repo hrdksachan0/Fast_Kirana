@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { code, discountType, value, minOrder, maxDiscount, maxUses, isActive, expiresAt } = await request.json()
+    const { code, discountType, value, minOrder, maxDiscount, maxUses, isActive, expiresAt, categoryId, oncePerCustomer } = await request.json()
 
     if (!code || !discountType || value === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Use raw SQL to bypass PrismaPg enum casting issue
     await prisma.$executeRaw`
-      INSERT INTO coupons (id, code, "discountType", value, "minOrder", "maxDiscount", "maxUses", "usedCount", "isActive", "expiresAt", "createdAt")
+      INSERT INTO coupons (id, code, "discountType", value, "minOrder", "maxDiscount", "maxUses", "usedCount", "isActive", "expiresAt", "createdAt", "categoryId", "oncePerCustomer")
       VALUES (
         gen_random_uuid()::text,
         ${code.toUpperCase()},
@@ -50,7 +50,9 @@ export async function POST(request: Request) {
         0,
         ${isActive !== false},
         ${expiresAt ? new Date(expiresAt) : null},
-        NOW()
+        NOW(),
+        ${categoryId || null},
+        ${oncePerCustomer === true}
       )
     `
 
@@ -72,7 +74,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const { couponId, isActive, value, minOrder, maxDiscount, maxUses, expiresAt, code, discountType } = await request.json()
+    const { couponId, isActive, value, minOrder, maxDiscount, maxUses, expiresAt, code, discountType, categoryId, oncePerCustomer } = await request.json()
 
     if (!couponId) {
       return NextResponse.json({ error: 'Missing coupon ID' }, { status: 400 })
@@ -85,6 +87,8 @@ export async function PATCH(request: Request) {
     if (maxDiscount !== undefined) updateData.maxDiscount = maxDiscount ? parseFloat(maxDiscount) : null
     if (maxUses !== undefined) updateData.maxUses = maxUses ? parseInt(maxUses) : null
     if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null
+    if (categoryId !== undefined) updateData.categoryId = categoryId ? categoryId : null
+    if (oncePerCustomer !== undefined) updateData.oncePerCustomer = oncePerCustomer
 
     if (code !== undefined) {
       const codeUpper = code.toUpperCase().trim()

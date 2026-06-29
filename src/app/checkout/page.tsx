@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useCart } from '@/hooks/use-cart'
+import { useCartStore } from '@/stores/cart-store'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -80,6 +81,12 @@ export default function CheckoutPage() {
   const { data: session } = useSession()
   const prefilledPhoneRef = useRef(false)
   const { items, removeItem, clearCart, getSubtotal, getSavings, getMrpTotal, updateQuantity, updateCartProduct } = useCart()
+  const appliedCouponCode = useCartStore((s) => s.appliedCouponCode)
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string
+    discountAmount: number
+  } | null>(null)
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
 
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
@@ -383,6 +390,46 @@ export default function CheckoutPage() {
 
   // Calculations for checkout items
   const subtotal = getSubtotal()
+
+  // Auto-validate coupon on checkout page load
+  useEffect(() => {
+    if (appliedCouponCode && items.length > 0) {
+      setIsValidatingCoupon(true)
+      fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: appliedCouponCode,
+          subtotal,
+          items: items.map(i => ({
+            id: i.product.id,
+            price: i.product.price,
+            categoryId: i.product.categoryId,
+            quantity: i.quantity
+          }))
+        })
+      })
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error('Invalid')
+      })
+      .then(data => {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          discountAmount: data.coupon.discountAmount,
+        })
+      })
+      .catch(() => {
+        useCartStore.getState().setAppliedCouponCode(null)
+        setAppliedCoupon(null)
+      })
+      .finally(() => {
+        setIsValidatingCoupon(false)
+      })
+    } else {
+      setAppliedCoupon(null)
+    }
+  }, [appliedCouponCode, items.length, subtotal])
   const mrpTotal = getMrpTotal()
   const savings = getSavings()
   const b2bDiscount = 0
@@ -431,9 +478,10 @@ export default function CheckoutPage() {
   const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + (groceryCartItems.length > 0 ? miscFee : 0)
   const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + (groceryCartItems.length === 0 ? miscFee : 0)
 
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
-  const taxes = adjustedSubtotal * taxRate
-  const grandTotal = adjustedSubtotal + deliveryFee + taxes + miscFee
+  const taxes = Math.max(0, adjustedSubtotal - couponDiscount) * taxRate
+  const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + miscFee
 
   // Fetch Saved Addresses
   useEffect(() => {
@@ -671,6 +719,7 @@ export default function CheckoutPage() {
           scheduledSlot,
           shopName: 'FastKirana Dark Store',
           shopPhone: contactPhone,
+          couponCode: appliedCouponCode || null,
         }),
       })
 
@@ -810,6 +859,7 @@ export default function CheckoutPage() {
           scheduledSlot,
           shopName: 'FastKirana Dark Store',
           shopPhone: contactPhone,
+          couponCode: appliedCouponCode || null,
         }),
       })
 
@@ -1441,6 +1491,13 @@ export default function CheckoutPage() {
                 {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
               </span>
             </div>
+
+            {couponDiscount > 0 && (
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                <span>Coupon Applied ({appliedCoupon?.code})</span>
+                <span>-₹{couponDiscount.toFixed(0)}</span>
+              </div>
+            )}
 
             <div className="flex justify-between text-text-secondary">
               <span>GST & Taxes ({Math.round(taxRate * 100)}%)</span>
