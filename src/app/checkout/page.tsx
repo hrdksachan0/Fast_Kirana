@@ -474,8 +474,9 @@ export default function CheckoutPage() {
   let cafeDeliveryFee = 0
 
   if (deliveryMethod === 'DELIVERY') {
-    if (adjustedSubtotal < 200) {
-      const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
+    const targetThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200
+    const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
+    if (adjustedSubtotal < targetThreshold) {
       if (groceryCartItems.length > 0) {
         groceryDeliveryFee = feeToCharge
       } else if (cafeCartItems.length > 0) {
@@ -1526,7 +1527,11 @@ export default function CheckoutPage() {
               <div className="flex flex-col text-left">
                 <span>Delivery Charge</span>
                 <span className="text-[9px] text-text-muted">
-                  {deliveryMethod === 'PICKUP' ? 'Store Pickup' : adjustedSubtotal >= 200 ? 'Free delivery on orders ₹200+' : '₹25 fee on orders under ₹200'}
+                  {deliveryMethod === 'PICKUP' 
+                    ? 'Store Pickup' 
+                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200)
+                    ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200}+`
+                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200}`}
                 </span>
               </div>
               <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
@@ -1562,10 +1567,10 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-                {adjustedSubtotal < 200 && (
+                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200) && (
                   <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl text-center mt-2">
                     <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                      💡 Add ₹{(200 - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
+                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
                     </p>
                   </div>
                 )}

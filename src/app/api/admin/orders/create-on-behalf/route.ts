@@ -311,7 +311,7 @@ export async function POST(request: Request) {
         }, { status: 400 })
       }
 
-      const freeDeliveryThreshold = 200
+      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200
       const appliesDeliveryFee = combinedSubtotal < freeDeliveryThreshold
 
       if (appliesDeliveryFee) {

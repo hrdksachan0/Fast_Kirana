@@ -33,6 +33,7 @@ export interface DeliveryRules {
   distanceKm: number
   minOrder: number
   deliveryFee: number
+  freeDeliveryThreshold: number
   isServiceable: boolean
   zoneName: string
 }
@@ -43,6 +44,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
       distanceKm,
       minOrder: 0,
       deliveryFee: 25,
+      freeDeliveryThreshold: 200,
       isServiceable: true,
       zoneName: '0-2 km',
     }
@@ -52,6 +54,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
       distanceKm,
       minOrder: 0,
       deliveryFee: 35,
+      freeDeliveryThreshold: 300,
       isServiceable: true,
       zoneName: '2-3 km',
     }
@@ -61,6 +64,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
       distanceKm,
       minOrder: 0,
       deliveryFee: 45,
+      freeDeliveryThreshold: 400,
       isServiceable: true,
       zoneName: '3-4 km',
     }
@@ -69,6 +73,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
     distanceKm,
     minOrder: 0,
     deliveryFee: 0,
+    freeDeliveryThreshold: 400,
     isServiceable: false,
     zoneName: '4+ km (out of range)',
   }
