@@ -26,7 +26,8 @@ export async function POST(request: Request) {
       isB2B = false,
       scheduledSlot = 'INSTANT',
       shopName = null,
-      shopPhone = null
+      shopPhone = null,
+      noGst = false
     } = await request.json()
 
     if (!customerId || !paymentMethod || !items || items.length === 0) {
@@ -241,16 +242,10 @@ export async function POST(request: Request) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    if (isB2B && combinedSubtotal < 1000) {
-      return NextResponse.json({ error: 'B2B Wholesale orders require a minimum subtotal of ₹1,000' }, { status: 400 })
-    }
-
     let combinedDiscount = 0
     let couponId = null
 
-    if (isB2B) {
-      combinedDiscount = combinedSubtotal * 0.1
-    } else if (couponCode) {
+    if (couponCode) {
       const coupon = await prisma.coupon.findUnique({
         where: { code: couponCode.toUpperCase(), isActive: true },
       })
@@ -275,7 +270,7 @@ export async function POST(request: Request) {
     }
 
     const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
-    const serverTaxRate = taxPercent / 100
+    const serverTaxRate = noGst ? 0 : (taxPercent / 100)
     const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
 
     const grocerySubtotal = groceryItems.reduce((sum, item) => {

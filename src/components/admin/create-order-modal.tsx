@@ -92,8 +92,10 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   // Variant selector state
   const [variantProduct, setVariantProduct] = useState<Product | null>(null)
 
-  // B2B & coupon states
-  const [isB2B, setIsB2B] = useState(false)
+  // Order configuration states
+  const [noGst, setNoGst] = useState(false)
+  const [activeCartItems, setActiveCartItems] = useState<any[]>([])
+  const [isLoadingActiveCart, setIsLoadingActiveCart] = useState(false)
   const [couponCode, setCouponCode] = useState('')
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
@@ -165,15 +167,16 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     }
   }, [productSearch])
 
-  // Fetch addresses once customer is selected
+  // Fetch addresses and active cart once customer is selected
   useEffect(() => {
     if (!selectedCustomer) {
       setAddresses([])
       setSelectedAddressId('')
+      setActiveCartItems([])
       return
     }
 
-    const fetchAddresses = async () => {
+    const fetchAddressesAndCart = async () => {
       try {
         const res = await fetch(`/api/admin/users/${selectedCustomer.id}/addresses`)
         if (res.ok) {
@@ -186,18 +189,35 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       } catch (err) {
         console.error('Failed to fetch addresses:', err)
       }
+
+      try {
+        setIsLoadingActiveCart(true)
+        const cartRes = await fetch(`/api/admin/users/${selectedCustomer.id}/cart`)
+        if (cartRes.ok) {
+          const cartData = await cartRes.json()
+          if (cartData && cartData.items && cartData.items.length > 0) {
+            setActiveCartItems(cartData.items)
+          } else {
+            setActiveCartItems([])
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch customer cart:', err)
+      } finally {
+        setIsLoadingActiveCart(false)
+      }
     }
 
-    fetchAddresses()
+    fetchAddressesAndCart()
   }, [selectedCustomer])
 
-  // Recalculate coupon if items or B2B status changes
+  // Recalculate coupon if items change
   useEffect(() => {
     if (appliedCoupon) {
       // Re-validate coupon
       handleApplyCoupon(true)
     }
-  }, [selectedItems, isB2B])
+  }, [selectedItems])
 
   const handleSelectCustomer = (user: CustomerUser) => {
     setSelectedCustomer(user)
@@ -338,9 +358,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   }
 
   const calculateDiscount = (subtotal: number) => {
-    if (isB2B) {
-      return subtotal * 0.1 // Wholesale 10% discount
-    }
     if (appliedCoupon) {
       return appliedCoupon.discountAmount || 0
     }
@@ -365,7 +382,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
     let deliveryFee = 0
 
-    if (deliveryMethod === 'DELIVERY' && !isB2B) {
+    if (deliveryMethod === 'DELIVERY') {
       let groceryDeliveryFee = (groceryItems.length > 0 && grocerySubtotal < groceryThreshold) ? deliveryFeeVal : 0
       let cafeDeliveryFee = (cafeItems.length > 0 && cafeSubtotal < cafeThreshold) ? deliveryFeeVal : 0
 
@@ -378,7 +395,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     }
 
     const discountedSubtotal = Math.max(0, subtotal - discount)
-    const taxes = discountedSubtotal * 0.05 // 5% standard tax
+    const taxes = noGst ? 0 : (discountedSubtotal * 0.05) // 5% standard tax unless noGst is selected
     const miscFee = 5 // Standard ₹5 platform handling fee
 
     const total = discountedSubtotal + deliveryFee + taxes + miscFee
@@ -406,10 +423,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     }
 
     const subtotal = calculateSubtotal()
-    if (isB2B && subtotal < 1000) {
-      toast.error('B2B Wholesale orders require a minimum subtotal of ₹1,000')
-      return
-    }
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -420,7 +433,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         addressId: deliveryMethod === 'PICKUP' ? null : selectedAddressId,
         deliveryMethod,
         paymentMethod,
-        isB2B,
+        noGst,
         couponCode: appliedCoupon ? appliedCoupon.code : null,
         items: selectedItems.map((item) => ({
           product: {
@@ -474,7 +487,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setProductsList([])
     setSelectedItems([])
     setVariantProduct(null)
-    setIsB2B(false)
     setCouponCode('')
     setAppliedCoupon(null)
     setPaymentMethod('COD')
@@ -557,30 +569,57 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   )}
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-3.5 border border-primary/20 bg-primary/5 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                      <User className="h-4.5 w-4.5" />
+                <div>
+                  <div className="flex items-center justify-between p-3.5 border border-primary/20 bg-primary/5 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                        <User className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-black text-xs block text-text-primary">
+                          {selectedCustomer.name || 'Anonymous User'}
+                        </span>
+                        <span className="text-[10px] font-bold text-text-secondary block mt-0.5">
+                          {selectedCustomer.email} {selectedCustomer.phone && `• ${selectedCustomer.phone}`}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <span className="font-black text-xs block text-text-primary">
-                        {selectedCustomer.name || 'Anonymous User'}
-                      </span>
-                      <span className="text-[10px] font-bold text-text-secondary block mt-0.5">
-                        {selectedCustomer.email} {selectedCustomer.phone && `• ${selectedCustomer.phone}`}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedCustomer(null)
+                        setAddresses([])
+                        setSelectedAddressId('')
+                        setActiveCartItems([])
+                      }}
+                      className="text-[10px] font-black text-rose-500 hover:underline tracking-wider uppercase cursor-pointer"
+                    >
+                      Change
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedCustomer(null)
-                      setAddresses([])
-                      setSelectedAddressId('')
-                    }}
-                    className="text-[10px] font-black text-rose-500 hover:underline tracking-wider uppercase cursor-pointer"
-                  >
-                    Change
-                  </button>
+
+                  {/* Import Customer Active Cart Action Banner */}
+                  {activeCartItems.length > 0 && (
+                    <div className="mt-2.5 p-3 bg-accent/10 border border-accent/30 rounded-xl flex items-center justify-between animate-slide-down">
+                      <div className="text-left">
+                        <span className="text-xs font-black text-accent block flex items-center gap-1">
+                          🛒 Active Cart Found ({activeCartItems.length} items)
+                        </span>
+                        <span className="text-[10px] font-semibold text-text-secondary block mt-0.5">
+                          Directly import customer's live shopping cart into this order
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedItems(activeCartItems)
+                          toast.success(`Imported ${activeCartItems.length} active items from customer's cart!`)
+                        }}
+                        className="px-3.5 py-1.5 bg-accent hover:bg-accent/90 text-white text-[11px] font-black rounded-lg transition-all shrink-0 cursor-pointer shadow-sm active:scale-95"
+                      >
+                        Import Cart ⚡
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -659,80 +698,75 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               </div>
             )}
 
-            {/* 3. Wholesale B2B & Coupon Configuration */}
+            {/* 3. Order Configuration */}
             {selectedCustomer && (
               <div className="space-y-3.5 text-left border-t border-border/40 pt-4 animate-slide-up">
                 <label className="text-[11px] font-black uppercase tracking-wider text-text-muted block">
                   3. Order Configuration
                 </label>
 
-                {/* B2B Toggle */}
+                {/* No GST Toggle */}
                 <label className="flex items-center gap-2.5 cursor-pointer bg-muted/10 border border-border/50 p-2.5 rounded-xl hover:bg-muted/20 transition-all select-none">
                   <input
                     type="checkbox"
-                    checked={isB2B}
-                    onChange={(e) => {
-                      setIsB2B(e.target.checked)
-                      if (e.target.checked) handleRemoveCoupon() // B2B disables coupon
-                    }}
+                    checked={noGst}
+                    onChange={(e) => setNoGst(e.target.checked)}
                     className="accent-primary h-4.5 w-4.5"
                   />
                   <div className="text-left">
                     <span className="text-xs font-black block text-text-primary">
-                      B2B Wholesale Order
+                      No GST / Tax Exempt (0% Tax)
                     </span>
                     <span className="text-[9.5px] font-semibold text-text-secondary block mt-0.5">
-                      Apply flat 10% wholesale discount (minimum subtotal ₹1,000 required).
+                      Bypass 5% standard GST tax calculation for this order.
                     </span>
                   </div>
                 </label>
 
                 {/* Coupon Code Input */}
-                {!isB2B && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-secondary block">
-                      Apply Promo Coupon
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="ENTER COUPON CODE..."
-                        disabled={!!appliedCoupon || isApplyingCoupon}
-                        className="flex-1 px-3 py-2 border border-border rounded-xl text-xs bg-muted/20 focus:outline-none focus:border-primary/50 uppercase font-black tracking-wider disabled:opacity-70"
-                      />
-                      {!appliedCoupon ? (
-                        <button
-                          type="button"
-                          onClick={() => handleApplyCoupon()}
-                          disabled={isApplyingCoupon || !couponCode.trim()}
-                          className="bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                        >
-                          {isApplyingCoupon ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            'APPLY'
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleRemoveCoupon}
-                          className="bg-zinc-200 dark:bg-zinc-800 text-text-primary hover:bg-zinc-300 dark:hover:bg-zinc-700 font-extrabold text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer"
-                        >
-                          REMOVE
-                        </button>
-                      )}
-                    </div>
-                    {appliedCoupon && (
-                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 mt-1">
-                        <Percent className="h-3 w-3" />
-                        Coupon Applied! (Save {formatPrice(appliedCoupon.discountAmount)})
-                      </p>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-text-secondary block">
+                    Apply Promo Coupon
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="ENTER COUPON CODE..."
+                      disabled={!!appliedCoupon || isApplyingCoupon}
+                      className="flex-1 px-3 py-2 border border-border rounded-xl text-xs bg-muted/20 focus:outline-none focus:border-primary/50 uppercase font-black tracking-wider disabled:opacity-70"
+                    />
+                    {!appliedCoupon ? (
+                      <button
+                        type="button"
+                        onClick={() => handleApplyCoupon()}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                        className="bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isApplyingCoupon ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'APPLY'
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="bg-zinc-200 dark:bg-zinc-800 text-text-primary hover:bg-zinc-300 dark:hover:bg-zinc-700 font-extrabold text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer"
+                      >
+                        REMOVE
+                      </button>
                     )}
                   </div>
-                )}
+                  {appliedCoupon && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 mt-1">
+                      <Percent className="h-3 w-3" />
+                      Coupon Applied! (Save {formatPrice(appliedCoupon.discountAmount)})
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -908,7 +942,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               
               {(discount > 0) && (
                 <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
-                  <span>Discount {isB2B && '(B2B Wholesale 10%)'}</span>
+                  <span>Discount</span>
                   <span>-{formatPrice(discount)}</span>
                 </div>
               )}

@@ -256,18 +256,11 @@ export async function POST(request: NextRequest) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    // Enforce B2B Wholesale minimum order value
-    if (isB2B && combinedSubtotal < 1000) {
-      return NextResponse.json({ error: 'B2B Wholesale orders require a minimum subtotal of ₹1,000' }, { status: 400 })
-    }
-
-    // 3. Resolve Coupon/Wholesale Discount
+    // 3. Resolve Coupon Discount
     let combinedDiscount = 0
     let couponId = null
 
-    if (isB2B) {
-      combinedDiscount = combinedSubtotal * 0.1 // Flat 10% wholesale discount
-    } else if (couponCode) {
+    if (couponCode) {
       const coupon = await prisma.coupon.findUnique({
         where: { code: couponCode.toUpperCase(), isActive: true },
       })
