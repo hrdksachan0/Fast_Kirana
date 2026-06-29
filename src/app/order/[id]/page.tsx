@@ -68,7 +68,16 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         order = {
           ...orderRaw,
           items,
-          address,
+          address: address || {
+            label: 'Pickup Location',
+            houseNo: '',
+            street: '',
+            area: 'Hub Store',
+            city: 'Kanpur',
+            pincode: '209206',
+            lat: 26.1534185,
+            lng: 80.1714024,
+          },
         }
       }
     })
