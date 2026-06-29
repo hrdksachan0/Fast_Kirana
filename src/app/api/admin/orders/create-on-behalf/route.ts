@@ -515,7 +515,7 @@ export async function POST(request: Request) {
       }
 
       return results
-    })
+    }, { timeout: 20000 })
 
     // Invalidate caches
     try {

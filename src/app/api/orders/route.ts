@@ -617,7 +617,7 @@ export async function POST(request: NextRequest) {
       }
 
       return results
-    })
+    }, { timeout: 20000 })
 
     // Invalidate storefront caches on-demand since stock levels changed
     try {

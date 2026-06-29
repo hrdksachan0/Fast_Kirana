@@ -55,7 +55,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       }
     }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch order details', error)
+    console.error('Database connection error: failed to fetch order details', error)
+    throw error
   }
 
   if (!order) {

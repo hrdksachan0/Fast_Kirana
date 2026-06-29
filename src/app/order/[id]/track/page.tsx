@@ -70,7 +70,8 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
       }
     }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch tracking order', error)
+    console.error('Database connection error: failed to fetch tracking order', error)
+    throw error
   }
 
   if (!orderRaw) {
