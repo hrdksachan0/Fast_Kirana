@@ -295,7 +295,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           items: selectedItems.map(item => ({
             id: item.product.id,
             price: item.product.price,
-            categoryId: item.product.categoryId,
+            categoryId: item.product.category?.id,
             quantity: item.quantity
           }))
         }),

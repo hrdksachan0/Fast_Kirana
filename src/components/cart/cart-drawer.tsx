@@ -67,7 +67,7 @@ export function CartDrawer() {
           items: items.map(i => ({
             id: i.product.id,
             price: i.product.price,
-            categoryId: i.product.categoryId,
+            categoryId: i.product.category?.id,
             quantity: i.quantity
           }))
         }),
@@ -143,7 +143,7 @@ export function CartDrawer() {
           items: items.map(i => ({
             id: i.product.id,
             price: i.product.price,
-            categoryId: i.product.categoryId,
+            categoryId: i.product.category?.id,
             quantity: i.quantity
           }))
         })
