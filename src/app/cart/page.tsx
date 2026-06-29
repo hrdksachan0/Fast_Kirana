@@ -360,15 +360,27 @@ export default function CartPage() {
                 </p>
               </div>
 
-              {/* Distance-based delivery info banner */}
-              <div className="rounded-xl bg-accent/5 border border-accent/20 p-3 mb-2">
-                <p className="text-xs font-bold text-accent">
-                  📍 Distance-based Minimum Orders (FREE Delivery):
-                </p>
-                <div className="text-[10px] text-text-secondary mt-1 space-y-1 font-semibold pl-1">
-                  <div>• 0-2 km: Min order ₹200 (FREE Delivery 🎉)</div>
-                  <div>• 2-3 km: Min order ₹300 (FREE Delivery 🎉)</div>
-                  <div>• 3-4 km: Min order ₹400 (FREE Delivery 🎉)</div>
+              {/* Premium Distance & Delivery Banner */}
+              <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/10 border border-emerald-200/60 dark:border-emerald-900/40 p-3.5 mb-3 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-emerald-200/50 dark:border-emerald-900/30 pb-2 mb-2">
+                  <span className="text-sm">🚚</span>
+                  <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">
+                    Distance Delivery Zones (FREE Delivery 🎉)
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-emerald-900 dark:text-emerald-200">
+                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                    <span>📍 0–2 km</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹200 • FREE</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                    <span>📍 2–3 km</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹300 • FREE</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                    <span>📍 3–4 km</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹400 • FREE</span>
+                  </div>
                 </div>
               </div>
 
