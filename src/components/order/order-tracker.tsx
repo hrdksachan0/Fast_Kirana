@@ -209,16 +209,13 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     }
   }, [])
 
-  // 4. Initialize and control tracking map
+  // 4. Initialize map ONCE when Leaflet loads
   useEffect(() => {
     if (!leafletLoaded || !mapContainerRef.current) return
     const L = (window as any).L
     if (!L) return
 
-    if (mapRef.current) {
-      mapRef.current.remove()
-      mapRef.current = null
-    }
+    if (mapRef.current) return
 
     const destLat = order.address?.lat || storeLat + 0.004
     const destLng = order.address?.lng || storeLng + 0.005
@@ -273,34 +270,43 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     const riderMarker = L.marker([riderLat, riderLng], { icon: riderIcon }).addTo(map)
     riderMarkerRef.current = riderMarker
 
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [leafletLoaded, storeLat, storeLng])
+
+  // 5. Update rider marker position smoothly without re-rendering the whole map
+  useEffect(() => {
+    if (!mapRef.current || !riderMarkerRef.current) return
+    const destLat = order.address?.lat || storeLat + 0.004
+    const destLng = order.address?.lng || storeLng + 0.005
+
     let animationFrame: number
     let startTime = Date.now()
     
     const animateRider = () => {
+      if (!riderMarkerRef.current) return
       if (order.status === 'SHIPPED' && !order.deliveryLat) {
         const elapsed = (Date.now() - startTime) % 20000
         const t = elapsed / 20000
         const currentLat = storeLat + (destLat - storeLat) * t
         const currentLng = storeLng + (destLng - storeLng) * t
-        riderMarker.setLatLng([currentLat, currentLng])
+        riderMarkerRef.current.setLatLng([currentLat, currentLng])
       } else if (order.deliveryLat && order.deliveryLng) {
-        riderMarker.setLatLng([order.deliveryLat, order.deliveryLng])
+        riderMarkerRef.current.setLatLng([order.deliveryLat, order.deliveryLng])
       } else {
-        riderMarker.setLatLng([storeLat, storeLng])
+        riderMarkerRef.current.setLatLng([storeLat, storeLng])
       }
       animationFrame = requestAnimationFrame(animateRider)
     }
 
     animateRider()
 
-    return () => {
-      cancelAnimationFrame(animationFrame)
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
-      }
-    }
-  }, [leafletLoaded, order.status, order.deliveryLat, order.deliveryLng, order.address, order.shopName])
+    return () => cancelAnimationFrame(animationFrame)
+  }, [order.status, order.deliveryLat, order.deliveryLng, storeLat, storeLng, order.address?.lat, order.address?.lng])
 
   const isScheduled = order.estimatedDelivery && order.createdAt && 
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 15 * 60 * 1000)
