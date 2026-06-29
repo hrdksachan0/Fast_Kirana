@@ -59,6 +59,11 @@ interface SelectedItem {
     stock: number
     imageUrl: string | null
     variants: any[]
+    category?: {
+      id: string
+      name: string
+      slug: string
+    }
     categorySlug: string
   }
   quantity: number
@@ -249,6 +254,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             stock,
             imageUrl: null,
             variants: Array.isArray(product.variants) ? product.variants : [],
+            category: product.category ? {
+              id: product.category.id,
+              name: product.category.name,
+              slug: product.category.slug
+            } : undefined,
             categorySlug: product.category?.slug || '',
           },
           quantity: 1,
