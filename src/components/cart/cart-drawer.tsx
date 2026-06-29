@@ -177,10 +177,8 @@ export function CartDrawer() {
 
   const settings = useUIStore((s) => s.settings) || {}
 
-  // In the cart drawer we don't know the delivery address yet,
-  // so show the base delivery fee (₹20 for 0-2km zone).
-  // The exact fee is calculated at checkout based on actual address distance.
-  const deliveryFee = 20
+  // In the cart drawer, delivery is FREE when minimum order for zone is met.
+  const deliveryFee = 0
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const total = Math.max(0, combinedAdjustedSubtotal - couponDiscount) + deliveryFee
@@ -576,11 +574,11 @@ export function CartDrawer() {
                     <div className="flex flex-col text-left">
                       <span>Delivery Charges</span>
                       <span className="text-[9px] text-zinc-400 font-normal">
-                        Based on distance from store (₹20-₹40)
+                        FREE when minimum order is met
                       </span>
                     </div>
-                    <span className="font-bold">
-                      from {formatPrice(20)}
+                    <span className="text-accent font-black text-xs">
+                      FREE 🎉
                     </span>
                   </div>
                 </div>

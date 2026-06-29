@@ -171,9 +171,8 @@ export default function CartPage() {
   const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
   const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
 
-  // For the cart page, since the address is not yet selected, we show a default delivery fee estimate (₹25).
-  // The exact distance-based fee and minimum order check are run on the checkout page.
-  const deliveryFee = 25
+  // For the cart page, delivery is FREE when minimum order for zone is met.
+  const deliveryFee = 0
   const taxes = (groceryAdjustedSubtotal - groceryDiscount) * taxRate + (cafeAdjustedSubtotal - cafeDiscount) * taxRate
   const grandTotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount) + deliveryFee + taxes + miscFee
 
@@ -364,12 +363,12 @@ export default function CartPage() {
               {/* Distance-based delivery info banner */}
               <div className="rounded-xl bg-accent/5 border border-accent/20 p-3 mb-2">
                 <p className="text-xs font-bold text-accent">
-                  📍 Distance-based Delivery Charges:
+                  📍 Distance-based Minimum Orders (FREE Delivery):
                 </p>
                 <div className="text-[10px] text-text-secondary mt-1 space-y-1 font-semibold pl-1">
-                  <div>• 0-2 km: Min order ₹200 (Delivery ₹25)</div>
-                  <div>• 2-3 km: Min order ₹300 (Delivery ₹35)</div>
-                  <div>• 3-4 km: Min order ₹400 (Delivery ₹40)</div>
+                  <div>• 0-2 km: Min order ₹200 (FREE Delivery 🎉)</div>
+                  <div>• 2-3 km: Min order ₹300 (FREE Delivery 🎉)</div>
+                  <div>• 3-4 km: Min order ₹400 (FREE Delivery 🎉)</div>
                 </div>
               </div>
 
@@ -483,10 +482,10 @@ export default function CartPage() {
               <div className="flex justify-between items-center">
                 <div className="flex flex-col text-left">
                   <span className="text-text-secondary">Delivery Charges</span>
-                  <span className="text-[10px] text-text-muted">Based on distance (from ₹25)</span>
+                  <span className="text-[10px] text-text-muted">FREE when minimum order is met</span>
                 </div>
-                <span className="font-bold text-text-primary">
-                  ₹{deliveryFee}
+                <span className="text-accent font-black text-xs">
+                  FREE 🎉
                 </span>
               </div>
 

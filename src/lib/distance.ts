@@ -42,7 +42,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
     return {
       distanceKm,
       minOrder: 200,
-      deliveryFee: 25,
+      deliveryFee: 0,
       isServiceable: true,
       zoneName: '0-2 km',
     }
@@ -51,7 +51,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
     return {
       distanceKm,
       minOrder: 300,
-      deliveryFee: 35,
+      deliveryFee: 0,
       isServiceable: true,
       zoneName: '2-3 km',
     }
@@ -60,7 +60,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
     return {
       distanceKm,
       minOrder: 400,
-      deliveryFee: 40,
+      deliveryFee: 0,
       isServiceable: true,
       zoneName: '3-4 km',
     }
