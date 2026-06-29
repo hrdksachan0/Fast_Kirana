@@ -37,10 +37,18 @@ self.addEventListener('notificationclick', (event) => {
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If user already has the tracking page (or any page for this order) open, just focus it
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
+        if (orderId && client.url.includes(`/order/${orderId}`) && 'focus' in client) {
           return client.focus();
+        }
+      }
+      // If user has any FastKirana tab open, navigate that tab instead of opening new window
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if ('focus' in client && 'navigate' in client) {
+          return client.focus().then(() => client.navigate(urlToOpen));
         }
       }
       if (clients.openWindow) {
