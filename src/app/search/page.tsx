@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/product/product-card'
 import { Product } from '@/types'
 import { Search, Frown } from 'lucide-react'
+import { sortProductsByStock } from '@/lib/utils'
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string }>
@@ -36,7 +37,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       },
     }).catch(() => [])
 
-    products = productsRaw.map((p) => ({
+    products = sortProductsByStock(productsRaw.map((p) => ({
       id: p.id,
       name: p.name,
       slug: p.slug,
@@ -60,7 +61,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         parentId: p.category.parentId,
         sortOrder: p.category.sortOrder,
       } : undefined,
-    }))
+    })))
   }
 
   // Get dynamic suggestions (trending/popular items in DB)

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { CategoryPageClient } from '@/components/category/category-page-client'
 import { Category, Product } from '@/types'
 import { Suspense } from 'react'
+import { sortProductsByStock } from '@/lib/utils'
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -63,7 +64,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     sortOrder: c.sortOrder,
   }))
 
-  const products: Product[] = productsRaw.map((p) => ({
+  const products: Product[] = sortProductsByStock(productsRaw.map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
@@ -87,7 +88,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       parentId: activeCategory.parentId,
       sortOrder: activeCategory.sortOrder,
     },
-  }))
+  })))
 
   return (
     <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>

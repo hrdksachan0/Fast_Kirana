@@ -71,4 +71,15 @@ export function formatAddress(
   return parts.join(', ')
 }
 
+export function sortProductsByStock<T extends { stock?: number | null }>(products: T[]): T[] {
+  return [...products].sort((a, b) => {
+    const aInStock = (a.stock ?? 0) > 0
+    const bInStock = (b.stock ?? 0) > 0
+    if (aInStock && !bInStock) return -1
+    if (!aInStock && bInStock) return 1
+    return 0
+  })
+}
+
+
 

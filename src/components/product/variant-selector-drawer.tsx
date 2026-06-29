@@ -183,7 +183,7 @@ export function VariantSelectorDrawer() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="gpu-accelerated relative w-full max-w-md bg-background border-t border-border rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden"
+            className="gpu-accelerated relative w-full max-w-md bg-background border-t border-border rounded-t-3xl shadow-2xl flex flex-col max-h-[80dvh] md:max-h-[80vh] overflow-hidden"
           >
             {/* Header Handle */}
             <div className="w-12 h-1.5 bg-muted/70 rounded-full mx-auto my-3 shrink-0" />
@@ -252,7 +252,10 @@ export function VariantSelectorDrawer() {
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="p-5 bg-background border-t border-border/40 shrink-0">
+            <div 
+              className="p-5 bg-background border-t border-border/40 shrink-0"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+            >
               <button
                 onClick={() => setActiveProduct(null)}
                 className="w-full py-3.5 px-4 rounded-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"

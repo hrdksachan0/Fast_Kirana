@@ -11,6 +11,7 @@ import { CafeSection } from '@/components/home/cafe-section'
 import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { Category, Product } from '@/types'
 import Link from 'next/link'
+import { sortProductsByStock } from '@/lib/utils'
 
 import { unstable_cache } from 'next/cache'
 
@@ -418,13 +419,13 @@ export default async function Home() {
     } : undefined,
   })
 
-  const topPicks = topPicksRaw.map(mapProduct)
-  const flashDeals = flashDealsRaw.map(mapProduct)
-  const bestSellers = bestSellersRaw.map(mapProduct)
-  const breakfastProducts = breakfastRaw.map(mapProduct)
-  const lunchProducts = lunchRaw.map(mapProduct)
-  const teaProducts = teaRaw.map(mapProduct)
-  const nightProducts = nightRaw.map(mapProduct)
+  const topPicks = sortProductsByStock(topPicksRaw.map(mapProduct))
+  const flashDeals = sortProductsByStock(flashDealsRaw.map(mapProduct))
+  const bestSellers = sortProductsByStock(bestSellersRaw.map(mapProduct))
+  const breakfastProducts = sortProductsByStock(breakfastRaw.map(mapProduct))
+  const lunchProducts = sortProductsByStock(lunchRaw.map(mapProduct))
+  const teaProducts = sortProductsByStock(teaRaw.map(mapProduct))
+  const nightProducts = sortProductsByStock(nightRaw.map(mapProduct))
 
   const settingsMap: Record<string, string> = {
     avg_delivery_time: '8 min',
