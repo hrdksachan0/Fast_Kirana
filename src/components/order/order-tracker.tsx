@@ -141,54 +141,41 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${order.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data && data.status) {
-            setOrder((prev) => {
-              // Avoid state updates if nothing has changed
-              if (
-                data.status === prev.status &&
-                data.deliveryLat === prev.deliveryLat &&
-                data.deliveryLng === prev.deliveryLng &&
-                JSON.stringify(data.deliveryUser) === JSON.stringify(prev.deliveryUser)
-              ) {
-                return prev
-              }
+        if (!res.ok) return
+        const data = await res.json()
+        if (!data || !data.status) return
 
-              const statusLabels: Record<string, string> = {
-                CONFIRMED: 'Confirmed by Store',
-                PACKED: 'Packed & Ready',
-                SHIPPED: 'On the Way (Out for Delivery)',
-                DELIVERED: 'Delivered Successfully',
-                CANCELLED: 'Cancelled',
-              }
+        setOrder((prev) => {
+          if (data.status === prev.status) return prev
 
-              // Send browser push notification if status changed
-              if (data.status !== prev.status && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                new Notification(`Order Update: ${statusLabels[data.status] || data.status}`, {
-                  body: `Your FastKirana order status has changed to: ${statusLabels[data.status] || data.status}`,
-                  icon: '/manifest.json',
-                })
-              }
-
-              return {
-                ...prev,
-                status: data.status,
-                deliveryLat: data.deliveryLat,
-                deliveryLng: data.deliveryLng,
-                deliveryUser: data.deliveryUser,
-              }
-            })
+          const statusLabels: Record<string, string> = {
+            CONFIRMED: 'Confirmed by Store ✅',
+            PACKED: 'Packed & Ready 📦',
+            SHIPPED: 'Out for Delivery 🚴',
+            DELIVERED: 'Delivered! 🎉',
+            CANCELLED: 'Cancelled ❌',
           }
-        }
-      } catch (err) {
-        console.error('Error polling order status:', err)
+
+          toast.success(statusLabels[data.status] || `Status: ${data.status}`, {
+            description: 'Your order status has been updated',
+            duration: 4000,
+          })
+
+          return {
+            ...prev,
+            status: data.status,
+            deliveryLat: data.deliveryLat ?? prev.deliveryLat,
+            deliveryLng: data.deliveryLng ?? prev.deliveryLng,
+            deliveryPhoto: data.deliveryPhoto ?? prev.deliveryPhoto,
+            deliveryUser: data.deliveryUser ?? prev.deliveryUser,
+          }
+        })
+      } catch {
+        // silently ignore polling errors
       }
     }, 5000)
 
-    return () => {
-      clearInterval(pollInterval)
-    }
+    return () => clearInterval(pollInterval)
   }, [order.id, order.status])
 
   // 3. Dynamically load Leaflet assets on client

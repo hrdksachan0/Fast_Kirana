@@ -171,25 +171,9 @@ export default function CartPage() {
   const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
   const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
 
-  let groceryDeliveryFee = 0
-  let cafeDeliveryFee = 0
-  const combinedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
-
-  if (groceryItems.length > 0 && cafeItems.length === 0) {
-    groceryDeliveryFee = groceryAdjustedSubtotal >= groceryThreshold ? 0 : deliveryFeeVal
-  } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-    cafeDeliveryFee = cafeAdjustedSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
-  } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-    if (combinedSubtotal >= combinedThreshold) {
-      groceryDeliveryFee = 0
-      cafeDeliveryFee = 0
-    } else {
-      groceryDeliveryFee = deliveryFeeVal
-      cafeDeliveryFee = 0
-    }
-  }
-
-  const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
+  // For the cart page, since the address is not yet selected, we show a default delivery fee estimate (₹25).
+  // The exact distance-based fee and minimum order check are run on the checkout page.
+  const deliveryFee = 25
   const taxes = (groceryAdjustedSubtotal - groceryDiscount) * taxRate + (cafeAdjustedSubtotal - cafeDiscount) * taxRate
   const grandTotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount) + deliveryFee + taxes + miscFee
 
@@ -377,30 +361,17 @@ export default function CartPage() {
                 </p>
               </div>
 
-              {/* Free delivery indicator progress bar */}
-              {groceryItems.length > 0 && (
-                <>
-                  {groceryAdjustedSubtotal < groceryThreshold ? (
-                    <div className="rounded-xl bg-accent/5 border border-accent/20 p-3.5 mb-2">
-                      <p className="text-xs font-bold text-accent">
-                        Shop for ₹{(groceryThreshold - groceryAdjustedSubtotal).toFixed(0)} more of groceries to get FREE delivery! (Free over ₹{groceryThreshold})
-                      </p>
-                      <div className="mt-2 h-1.5 rounded-full bg-accent/15 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all duration-500"
-                          style={{ width: `${(groceryAdjustedSubtotal / groceryThreshold) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl bg-accent/10 border border-accent/30 p-3 text-center mb-2">
-                      <p className="text-xs text-accent font-black">
-                        🎉 FREE Grocery delivery unlocked!
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
+              {/* Distance-based delivery info banner */}
+              <div className="rounded-xl bg-accent/5 border border-accent/20 p-3 mb-2">
+                <p className="text-xs font-bold text-accent">
+                  📍 Distance-based Delivery Charges:
+                </p>
+                <div className="text-[10px] text-text-secondary mt-1 space-y-1 font-semibold pl-1">
+                  <div>• 0-2 km: Min order ₹200 (Delivery ₹25)</div>
+                  <div>• 2-3 km: Min order ₹300 (Delivery ₹35)</div>
+                  <div>• 3-4 km: Min order ₹400 (Delivery ₹40)</div>
+                </div>
+              </div>
 
               <div className="flex flex-col">
                 <AnimatePresence initial={false}>
@@ -422,30 +393,7 @@ export default function CartPage() {
                 </p>
               </div>
 
-              {/* Free delivery indicator progress bar for cafe */}
-              {cafeItems.length > 0 && (
-                <>
-                  {cafeAdjustedSubtotal < cafeThreshold ? (
-                    <div className="rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-3.5 mb-2">
-                      <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
-                        Shop for ₹{(cafeThreshold - cafeAdjustedSubtotal).toFixed(0)} more from Cafe to get FREE delivery! (Else ₹{deliveryFeeVal} delivery fee applies)
-                      </p>
-                      <div className="mt-2 h-1.5 rounded-full bg-rose-100 dark:bg-rose-900/40 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                          style={{ width: `${(cafeAdjustedSubtotal / cafeThreshold) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl bg-rose-100/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/30 p-3 text-center mb-2">
-                      <p className="text-xs text-rose-700 dark:text-rose-300 font-black">
-                        🎉 FREE Cafe delivery unlocked!
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
+              {/* Cafe items list container */}
 
               <div className="flex flex-col">
                 <AnimatePresence initial={false}>
@@ -534,11 +482,11 @@ export default function CartPage() {
 
               <div className="flex justify-between items-center">
                 <div className="flex flex-col text-left">
-                  <span className="text-text-secondary">Handling & Delivery</span>
-                  <span className="text-[10px] text-text-muted">FREE on orders over ₹300</span>
+                  <span className="text-text-secondary">Delivery Charges</span>
+                  <span className="text-[10px] text-text-muted">Based on distance (from ₹25)</span>
                 </div>
-                <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
-                  {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
+                <span className="font-bold text-text-primary">
+                  ₹{deliveryFee}
                 </span>
               </div>
 

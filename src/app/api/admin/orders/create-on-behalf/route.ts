@@ -7,6 +7,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -103,6 +104,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Selected address is invalid for this customer' }, { status: 400 })
     }
 
+    // Distance-based delivery validation
+    let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
+
     if (deliveryMethod === 'DELIVERY') {
       const p = address.pincode.trim()
       const c = address.city.trim().toLowerCase()
@@ -111,6 +115,24 @@ export async function POST(request: Request) {
       }
       if (!c.includes('ghatampur') && !c.includes('kanpur')) {
         return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
+      }
+
+      // Calculate distance if address has GPS coordinates
+      if (address.lat && address.lng) {
+        // Fetch store coordinates from settings (will be fetched below with other settings)
+        const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
+        const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
+        const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
+        const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
+
+        const distanceKm = getDistanceKm(storeLat, storeLng, address.lat, address.lng)
+        deliveryRules = getDeliveryRules(distanceKm)
+
+        if (!deliveryRules.isServiceable) {
+          return NextResponse.json({
+            error: `Your address is ${distanceKm.toFixed(1)} km away. We deliver only within 4 km of our store.`
+          }, { status: 400 })
+        }
       }
     }
 
@@ -282,26 +304,44 @@ export async function POST(request: Request) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    const groceryThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
-    const cafeThreshold = settingsMap['cafe_free_delivery_threshold'] ? parseFloat(settingsMap['cafe_free_delivery_threshold']) : CAFE_FREE_DELIVERY_THRESHOLD
-    const combinedThreshold = settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : COMBINED_FREE_DELIVERY_THRESHOLD
     const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
 
     let groceryDeliveryFee = 0
     let cafeDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      if (groceryItems.length > 0 && cafeItems.length === 0) {
-        groceryDeliveryFee = grocerySubtotal >= groceryThreshold ? 0 : deliveryFeeVal
-      } else if (cafeItems.length > 0 && groceryItems.length === 0) {
-        cafeDeliveryFee = cafeSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
-      } else if (groceryItems.length > 0 && cafeItems.length > 0) {
-        if (combinedSubtotal >= combinedThreshold) {
-          groceryDeliveryFee = 0
-          cafeDeliveryFee = 0
-        } else {
-          groceryDeliveryFee = deliveryFeeVal
-          cafeDeliveryFee = 0
+      if (deliveryRules && deliveryRules.isServiceable) {
+        // Distance-based delivery fee and minimum order enforcement
+        if (combinedSubtotal < deliveryRules.minOrder) {
+          return NextResponse.json({
+            error: `Minimum order for your area (${deliveryRules.zoneName}) is ₹${deliveryRules.minOrder}. Your current subtotal is ₹${combinedSubtotal.toFixed(0)}.`
+          }, { status: 400 })
+        }
+
+        // Charge distance-based delivery fee on grocery order (or cafe if no grocery)
+        if (groceryItems.length > 0) {
+          groceryDeliveryFee = deliveryRules.deliveryFee
+        } else if (cafeItems.length > 0) {
+          cafeDeliveryFee = deliveryRules.deliveryFee
+        }
+      } else {
+        // Fallback: no GPS coordinates on address → use flat fee system
+        const groceryThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
+        const cafeThreshold = settingsMap['cafe_free_delivery_threshold'] ? parseFloat(settingsMap['cafe_free_delivery_threshold']) : CAFE_FREE_DELIVERY_THRESHOLD
+        const combinedThreshold = settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : COMBINED_FREE_DELIVERY_THRESHOLD
+
+        if (groceryItems.length > 0 && cafeItems.length === 0) {
+          groceryDeliveryFee = grocerySubtotal >= groceryThreshold ? 0 : deliveryFeeVal
+        } else if (cafeItems.length > 0 && groceryItems.length === 0) {
+          cafeDeliveryFee = cafeSubtotal >= cafeThreshold ? 0 : deliveryFeeVal
+        } else if (groceryItems.length > 0 && cafeItems.length > 0) {
+          if (combinedSubtotal >= combinedThreshold) {
+            groceryDeliveryFee = 0
+            cafeDeliveryFee = 0
+          } else {
+            groceryDeliveryFee = deliveryFeeVal
+            cafeDeliveryFee = 0
+          }
         }
       }
     }
