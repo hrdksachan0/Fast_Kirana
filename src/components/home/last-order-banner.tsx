@@ -74,42 +74,22 @@ export function LastOrderBanner() {
     const isActive = !['DELIVERED', 'CANCELLED'].includes(lastOrder.status)
     if (!isActive) return
 
-    let eventSource: EventSource | null = null
-    let retryTimeout: NodeJS.Timeout | null = null
-
-    const connectSSE = () => {
-      if (eventSource) {
-        eventSource.close()
-      }
-
-      eventSource = new EventSource(`/api/orders/${lastOrder.id}/live`)
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.status && data.status !== lastOrder.status) {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/${lastOrder.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data && data.status && data.status !== lastOrder.status) {
             setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
           }
-        } catch (err) {
-          console.error('Error parsing SSE event in last-order-banner:', err)
         }
+      } catch (err) {
+        console.error('Error polling last order status in banner:', err)
       }
-
-      eventSource.onerror = (err) => {
-        console.error('EventSource connection error in last-order-banner:', err)
-        if (eventSource) {
-          eventSource.close()
-        }
-        // Retry connection in 5 seconds
-        retryTimeout = setTimeout(connectSSE, 5000)
-      }
-    }
-
-    connectSSE()
+    }, 5000)
 
     return () => {
-      if (eventSource) eventSource.close()
-      if (retryTimeout) clearTimeout(retryTimeout)
+      clearInterval(pollInterval)
     }
   }, [lastOrder?.id, lastOrder?.status])
 

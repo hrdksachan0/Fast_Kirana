@@ -21,26 +21,22 @@ export function OrderConfirmationStatus({
   useEffect(() => {
     if (status === 'DELIVERED' || status === 'CANCELLED') return
 
-    const eventSource = new EventSource(`/api/orders/${orderId}/live`)
-
-    eventSource.onmessage = (event) => {
+    const pollInterval = setInterval(async () => {
       try {
-        const data = JSON.parse(event.data)
-        if (data.status && data.status !== status) {
-          setStatus(data.status)
+        const res = await fetch(`/api/orders/${orderId}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data && data.status && data.status !== status) {
+            setStatus(data.status)
+          }
         }
       } catch (err) {
-        console.error('Error parsing SSE event in order-confirmation-status:', err)
+        console.error('Error polling order confirmation status:', err)
       }
-    }
-
-    eventSource.onerror = (err) => {
-      console.error('EventSource connection error in order-confirmation-status:', err)
-      eventSource.close()
-    }
+    }, 5000)
 
     return () => {
-      eventSource.close()
+      clearInterval(pollInterval)
     }
   }, [orderId, status])
 
