@@ -29,14 +29,23 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Fast Kirana - Fast Grocery Delivery',
-  description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service. Fresh fruits, vegetables, dairy, snacks and more.',
-  keywords: ['grocery delivery', 'online grocery', 'fast delivery', 'Fast Kirana', 'kirana store'],
+  title: 'Fast Kirana - Fast Grocery Delivery in Ghatampur, Kanpur',
+  description: 'Order groceries online and get them delivered to your doorstep in Ghatampur, Kanpur in minutes. Fresh fruits, vegetables, dairy, atta, rice, dal, snacks and more.',
+  keywords: [
+    'grocery delivery in Ghatampur',
+    'online grocery store Kanpur',
+    'Fast Kirana Ghatampur',
+    'online kirana shop Ghatampur',
+    'buy milk online Ghatampur',
+    'fresh vegetables delivery Ghatampur',
+    'fast grocery delivery',
+    'kirana store near me'
+  ],
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   openGraph: {
-    title: 'Fast Kirana - Fast Grocery Delivery',
-    description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
+    title: 'Fast Kirana - Fast Grocery Delivery in Ghatampur',
+    description: 'Order groceries online and get them delivered in minutes in Ghatampur, Kanpur.',
     url: 'https://www.fastkirana.in',
     siteName: 'Fast Kirana',
     images: [
@@ -52,8 +61,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fast Kirana - Fast Grocery Delivery',
-    description: 'Order groceries online and get them delivered to your doorstep with our fast delivery service.',
+    title: 'Fast Kirana - Fast Grocery Delivery in Ghatampur',
+    description: 'Order groceries online and get them delivered in minutes in Ghatampur, Kanpur.',
     images: ['/fastkirana_app_icon.png'],
   },
 }

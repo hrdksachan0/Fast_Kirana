@@ -12,8 +12,16 @@ import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { Category, Product } from '@/types'
 import Link from 'next/link'
 import { sortProductsByStock } from '@/lib/utils'
-
 import { unstable_cache } from 'next/cache'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Fast Kirana - Online Grocery & Cafe Delivery in Ghatampur, Kanpur',
+  description: 'Fast Kirana delivers fresh grocery staples, daily dairy items, fruits, vegetables, and hot snacks from Fast Kirana Cafe to your home in Ghatampur, Kanpur in minutes.',
+  alternates: {
+    canonical: 'https://www.fastkirana.in',
+  }
+}
 
 // Revalidate home page every 24 hours (on-demand revalidation handles updates)
 export const revalidate = 86400
@@ -486,6 +494,50 @@ export default async function Home() {
       <div className="order-7 md:order-7">
         <LastOrderBanner />
       </div>
+
+      {/* LocalBusiness JSON-LD Schema Markup */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Store",
+            "name": "Fast Kirana",
+            "image": "https://www.fastkirana.in/fastkirana_app_icon.png",
+            "description": "Fast online grocery, daily dairy items, fresh vegetables, and cafe food delivery service in Ghatampur, Kanpur Nagar.",
+            "telephone": "+917054470303",
+            "url": "https://www.fastkirana.in",
+            "priceRange": "$$",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "NH34, Ghatampur",
+              "addressLocality": "Kanpur Nagar",
+              "addressRegion": "Uttar Pradesh",
+              "postalCode": "209206",
+              "addressCountry": "IN"
+            },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": 26.1534185,
+              "longitude": 80.1714024
+            },
+            "openingHoursSpecification": {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday"
+              ],
+              "opens": "06:00",
+              "closes": "23:59"
+            }
+          })
+        }}
+      />
     </div>
   )
 }
