@@ -201,7 +201,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <motion.div
       whileHover={{ y: -6, scale: 1.015, transition: { type: 'spring', stiffness: 350, damping: 18 } }}
       whileTap={{ scale: 0.97 }}
-      className="group relative flex flex-col overflow-hidden rounded-xl border border-border/60 dark:border-zinc-800/60 bg-card p-1.5 min-[375px]:p-2 sm:p-3 shadow-card transition-all duration-300 md:hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] md:dark:hover:shadow-[0_8px_30px_rgba(226,10,34,0.2),0_2px_8px_rgba(0,0,0,0.3)] md:hover:border-primary/25 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-150 dark:border-zinc-800/80 bg-card p-2 min-[375px]:p-2.5 sm:p-3 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all duration-300 md:hover:shadow-[0_12px_30px_-6px_rgba(226,10,34,0.14)] md:hover:border-primary/30 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
@@ -211,7 +211,7 @@ export function ProductCard({ product }: ProductCardProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/10 rounded-xl pointer-events-none"
+            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/10 rounded-2xl pointer-events-none"
           >
             <motion.div
               initial={{ scale: 0.6, opacity: 0 }}
@@ -230,13 +230,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
-          <div className="absolute left-0 top-0 z-10 rounded-tl-xl rounded-br-lg bg-[#FF2E55] px-2 py-0.5 text-[9px] min-[375px]:text-[10px] font-extrabold text-white shadow-sm whitespace-nowrap pointer-events-none select-none">
+          <div className="absolute left-0 top-0 z-10 rounded-tl-2xl rounded-br-lg bg-gradient-to-r from-rose-500 to-red-600 px-2.5 py-0.5 text-[9px] min-[375px]:text-[10px] font-black text-white shadow-md tracking-wider whitespace-nowrap pointer-events-none select-none">
             {resolvedDiscount}% OFF
           </div>
         )}
 
         {/* Image Container */}
-        <div ref={imageRef} className="relative w-full h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px] overflow-hidden rounded-lg bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
+        <div ref={imageRef} className="relative w-full h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px] overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
@@ -248,8 +248,15 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Bestseller Tag */}
           {product.tags?.includes('popular') && (
-            <div className="absolute bottom-0.5 left-0.5 z-10 flex items-center gap-0.5 rounded bg-amber-500/90 px-1 py-0.5 text-[7px] min-[375px]:text-[8px] font-bold text-white shadow-sm">
+            <div className="absolute bottom-1 left-1 z-10 flex items-center gap-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
               ⭐ Bestseller
+            </div>
+          )}
+
+          {/* Cafe Fresh Tag */}
+          {isCafe && (
+            <div className="absolute bottom-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-gradient-to-r from-amber-700 to-amber-900 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(180,83,9,0.3)]">
+              ☕ Cafe Fresh
             </div>
           )}
 
@@ -260,7 +267,7 @@ export function ProductCard({ product }: ProductCardProps) {
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="absolute top-0.5 right-0.5 z-10 flex items-center gap-0.5 rounded bg-red-500/90 px-1 min-[375px]:px-1.5 py-0.5 text-[7px] min-[375px]:text-[8px] font-bold text-white shadow-sm pointer-events-none select-none"
+              className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
             >
               Only {resolvedStock} left
             </motion.div>
@@ -276,8 +283,8 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Unit / Customisable — fixed height container */}
           <div className="h-4 min-[375px]:h-[18px] sm:h-5 flex items-center">
             {hasVariants ? (
-              <span className="inline-flex items-center gap-0.5 text-[8px] min-[375px]:text-[9px] sm:text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-md w-fit border border-primary/10 leading-none">
-                Customisable ▾
+              <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] font-black text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 leading-none">
+                {variantsList.length} Options ▾
               </span>
             ) : (
               <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted leading-none">
