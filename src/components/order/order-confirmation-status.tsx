@@ -22,6 +22,7 @@ export function OrderConfirmationStatus({
     if (status === 'DELIVERED' || status === 'CANCELLED') return
 
     const pollInterval = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
       try {
         const res = await fetch(`/api/orders/${orderId}`)
         if (res.ok) {
@@ -34,6 +35,7 @@ export function OrderConfirmationStatus({
         console.error('Error polling order confirmation status:', err)
       }
     }, 5000)
+
 
     return () => {
       clearInterval(pollInterval)

@@ -92,8 +92,11 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
   // Background polling effect (every 30 seconds)
   useEffect(() => {
     const interval = setInterval(() => {
-      triggerBatchFetch()
+      if (document.visibilityState === 'visible') {
+        triggerBatchFetch()
+      }
     }, 30000)
+
 
     // Also fetch on window focus to ensure freshness
     const handleFocus = () => {

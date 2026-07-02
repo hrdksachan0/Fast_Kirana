@@ -159,16 +159,33 @@ export function Navbar() {
     // Initial fetch
     fetchStatus()
 
-    // Gentle periodic background polling (every 10 seconds) to ensure real-time status updates without refresh
-    const statusInterval = setInterval(fetchStatus, 10000)
+    // Background polling (every 60 seconds) only when tab is visible to avoid Vercel resource exhaustion
+    const statusInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchStatus()
+      }
+    }, 60000)
 
     // Re-fetch status immediately when user refocusses or returns to the window tab
-    window.addEventListener('focus', fetchStatus)
+    const handleFocus = () => {
+      fetchStatus()
+    }
+    window.addEventListener('focus', handleFocus)
+
+    // Re-fetch status immediately when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       clearInterval(statusInterval)
-      window.removeEventListener('focus', fetchStatus)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
+
   }, [hydrateLocation, setStoreStatus, setSettings, setSelectedLocation, setUserCoords])
 
   const handleScroll = useCallback(() => {

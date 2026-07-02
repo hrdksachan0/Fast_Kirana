@@ -147,11 +147,13 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
     if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return
 
     const pollInterval = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
       try {
         const res = await fetch(`/api/orders/${order.id}`)
         if (!res.ok) return
         const data = await res.json()
         if (!data || !data.status) return
+
 
         setOrder((prev) => {
           if (data.status === prev.status) return prev
