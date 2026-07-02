@@ -68,15 +68,6 @@ export default async function AdminPage() {
         ORDER BY o."createdAt" DESC
         LIMIT 10
       ` as Promise<any[]>,
-      prisma.product.findMany({
-        include: {
-          category: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 10,
-      }),
       prisma.category.findMany({
         include: {
           _count: {
@@ -86,43 +77,6 @@ export default async function AdminPage() {
         orderBy: {
           sortOrder: 'asc',
         },
-      }),
-      prisma.review.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          product: { select: { id: true, name: true, slug: true, imageUrl: true } },
-        },
-      }),
-      prisma.coupon.findMany({
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.$queryRaw`
-        SELECT u.id, u.name, u.email, u.phone, u.role::text as role, u."createdAt",
-               (SELECT COUNT(*)::int FROM orders o WHERE o."userId" = u.id) as order_count
-        FROM users u ORDER BY u."createdAt" DESC LIMIT 10
-      `,
-      prisma.product.findMany({
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          mrp: true,
-          costPrice: true,
-          stock: true,
-          minStock: true,
-          isAvailable: true,
-          tags: true,
-          variants: true,
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            }
-          }
-        }
       }),
       prisma.$queryRaw`
         SELECT o.status::text as status, COUNT(*)::int as count
@@ -136,13 +90,14 @@ export default async function AdminPage() {
     const aggregateResult = results[2] as any
     revenue = aggregateResult._sum?.total || 0
     ordersRaw = results[3] as any[]
-    productsRaw = results[4] as any[]
-    categoriesRaw = results[5] as any[]
-    reviewsRaw = results[6] as any[]
-    couponsRaw = results[7] as any[]
-    usersRaw = results[8] as any[]
-    allProductsRaw = results[9] as any[]
-    const statusGroups = results[10] as any[]
+    categoriesRaw = results[4] as any[]
+    const statusGroups = results[5] as any[]
+
+    productsRaw = []
+    reviewsRaw = []
+    couponsRaw = []
+    usersRaw = []
+    allProductsRaw = []
 
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)

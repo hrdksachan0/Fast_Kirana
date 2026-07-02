@@ -71,9 +71,10 @@ interface Order {
 
 interface OrderTrackerProps {
   initialOrder: Order
+  isCafeOpen?: boolean
 }
 
-export function OrderTracker({ initialOrder }: OrderTrackerProps) {
+export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = true }: OrderTrackerProps) {
   const router = useRouter()
   const [order, setOrder] = useState<Order>(initialOrder)
   const [activeStep, setActiveStep] = useState(0)
@@ -81,6 +82,9 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [supportPhone, setSupportPhone] = useState('+91 70544 70303')
+  const [isCafeOpen, setIsCafeOpen] = useState(initialIsCafeOpen)
+
+
 
   const statusSteps = order.status === 'CANCELLED' ? [
     { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
@@ -107,6 +111,10 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
         if (data.store_lat) setStoreLat(parseFloat(data.store_lat))
         if (data.store_lng) setStoreLng(parseFloat(data.store_lng))
         if (data.contact_phone) setSupportPhone(data.contact_phone)
+        if (data.cafe_open !== undefined) {
+          setIsCafeOpen(data.cafe_open === 'true')
+        }
+
       })
       .catch(err => console.error('Error fetching settings in order-tracker:', err))
   }, [])
@@ -308,12 +316,29 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
     return () => cancelAnimationFrame(animationFrame)
   }, [order.status, order.deliveryLat, order.deliveryLng, storeLat, storeLng, order.address?.lat, order.address?.lng])
 
+  const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
   const isScheduled = order.estimatedDelivery && order.createdAt && 
-    (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 15 * 60 * 1000)
+    (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)
+
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {isCafeOrder && !isCafeOpen && (order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-4 rounded-2xl flex items-start gap-3">
+          <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold">
+            ⚠️
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-amber-800 dark:text-amber-400">Cafe is currently Closed</h2>
+            <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5 leading-relaxed">
+              FastKirana Cafe Kitchen is closed. Active orders placed before closing are still processed and delivered. If you have any concerns or want to cancel/refund, please call support.
+            </p>
+          </div>
+        </div>
+      )}
+
       {order.status === 'CANCELLED' && (
+
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex items-start gap-3">
           <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 font-bold">
             ❌
@@ -374,6 +399,12 @@ export function OrderTracker({ initialOrder }: OrderTrackerProps) {
               <Clock className="h-3.5 w-3.5 shrink-0" /> Scheduled: {new Date(order.estimatedDelivery).toLocaleDateString()} {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
+          {!isScheduled && order.estimatedDelivery && order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+            <span className="text-[10px] font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0" /> Estimated Delivery: {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+
         </div>
 
                 {!order.isB2B && order.shopName && (

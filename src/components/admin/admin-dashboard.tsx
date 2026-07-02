@@ -63,13 +63,13 @@ const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod
 const AdminCafeSections = dynamic(() => import('./admin-cafe-sections').then((mod) => mod.AdminCafeSections), { ssr: false })
 
 interface AdminDashboardProps {
-  initialOrders: any[]
-  initialProducts: any[]
-  initialCategories: any[]
-  initialUsers: any[]
-  initialReviews: any[]
-  initialCoupons: any[]
-  allProducts: any[]
+  initialOrders?: any[]
+  initialProducts?: any[]
+  initialCategories?: any[]
+  initialUsers?: any[]
+  initialReviews?: any[]
+  initialCoupons?: any[]
+  allProducts?: any[]
   initialOrderCounts?: Record<string, number>
   stats: {
     revenue: number
@@ -186,20 +186,21 @@ export function AdminDashboard({
 
   
   // States for Orders
-  const [orders, setOrders] = useState(initialOrders)
+  const [orders, setOrders] = useState(initialOrders || [])
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>(() => {
     if (initialOrderCounts) return initialOrderCounts
+    const ordersList = initialOrders || []
     return {
-      ALL: initialOrders.length,
-      PENDING: initialOrders.filter((o: any) => o.status === 'PENDING').length,
-      CONFIRMED: initialOrders.filter((o: any) => o.status === 'CONFIRMED').length,
-      PACKED: initialOrders.filter((o: any) => o.status === 'PACKED').length,
-      SHIPPED: initialOrders.filter((o: any) => o.status === 'SHIPPED').length,
-      DELIVERED: initialOrders.filter((o: any) => o.status === 'DELIVERED').length,
-      CANCELLED: initialOrders.filter((o: any) => o.status === 'CANCELLED').length,
+      ALL: ordersList.length,
+      PENDING: ordersList.filter((o: any) => o.status === 'PENDING').length,
+      CONFIRMED: ordersList.filter((o: any) => o.status === 'CONFIRMED').length,
+      PACKED: ordersList.filter((o: any) => o.status === 'PACKED').length,
+      SHIPPED: ordersList.filter((o: any) => o.status === 'SHIPPED').length,
+      DELIVERED: ordersList.filter((o: any) => o.status === 'DELIVERED').length,
+      CANCELLED: ordersList.filter((o: any) => o.status === 'CANCELLED').length,
     }
   })
-  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders)
+  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders || [])
   const [orderRefreshKey, setOrderRefreshKey] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [isChimeMuted, setIsChimeMuted] = useState(false)
@@ -496,8 +497,8 @@ export function AdminDashboard({
   const riderDelays = delayedOrders.filter(o => o.status === 'PACKED')
 
   // States for Products
-  const [products, setProducts] = useState(initialProducts)
-  const [allProducts, setAllProducts] = useState(initialAllProducts)
+  const [products, setProducts] = useState(initialProducts || [])
+  const [allProducts, setAllProducts] = useState(initialAllProducts || [])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
   
@@ -534,7 +535,7 @@ export function AdminDashboard({
     name: '',
     description: '',
     imageUrl: '',
-    categoryId: initialCategories[0]?.id || '',
+    categoryId: initialCategories?.[0]?.id || '',
     mrp: '',
     price: '',
     unit: '',
@@ -623,7 +624,7 @@ export function AdminDashboard({
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'grocery' | 'cafe'>('all')
 
   // States for Categories
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState(initialCategories || [])
   const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe'>('grocery')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
@@ -672,7 +673,7 @@ export function AdminDashboard({
   })
 
   // States for Users
-  const [users, setUsers] = useState(initialUsers)
+  const [users, setUsers] = useState(initialUsers || [])
   const [updatingUserRoleId, setUpdatingUserRoleId] = useState<string | null>(null)
   const [settingPasswordUserId, setSettingPasswordUserId] = useState<string | null>(null)
   const [passwordInput, setPasswordInput] = useState('')
@@ -680,15 +681,15 @@ export function AdminDashboard({
 
   // States for Pagination
   const [orderPage, setOrderPage] = useState(1)
-  const [orderTotal, setOrderTotal] = useState(stats.orderCount || initialOrders.length)
+  const [orderTotal, setOrderTotal] = useState(stats.orderCount || (initialOrders || []).length)
   const [isLoadingOrders, setIsLoadingOrders] = useState(false)
 
   const [productPage, setProductPage] = useState(1)
-  const [productTotal, setProductTotal] = useState(initialProducts.length)
+  const [productTotal, setProductTotal] = useState((initialProducts || []).length)
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
 
   const [userPage, setUserPage] = useState(1)
-  const [userTotal, setUserTotal] = useState(stats.userCount || initialUsers.length)
+  const [userTotal, setUserTotal] = useState(stats.userCount || (initialUsers || []).length)
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('ALL')
@@ -859,7 +860,8 @@ export function AdminDashboard({
   }
 
   // States for Reviews
-  const [reviews, setReviews] = useState(initialReviews)
+  const [reviews, setReviews] = useState(initialReviews || [])
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null)
   const [reviewSearch, setReviewSearch] = useState('')
   
@@ -872,7 +874,8 @@ export function AdminDashboard({
   })
 
   // States for Coupons
-  const [coupons, setCoupons] = useState(initialCoupons)
+  const [coupons, setCoupons] = useState(initialCoupons || [])
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
   const [showAddCoupon, setShowAddCoupon] = useState(false)
   const [isCreatingCoupon, setIsCreatingCoupon] = useState(false)
   const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null)
@@ -904,6 +907,68 @@ export function AdminDashboard({
     categoryId: '',
     oncePerCustomer: false,
   })
+
+  // 1. Lazy loader for reviews
+  useEffect(() => {
+    if (activeTab === 'reviews' && reviews.length === 0) {
+      const loadReviews = async () => {
+        setIsLoadingReviews(true)
+        try {
+          const res = await fetch('/api/admin/reviews')
+          if (res.ok) {
+            const data = await res.json()
+            setReviews(data)
+          }
+        } catch (err) {
+          console.error('Failed to load reviews:', err)
+        } finally {
+          setIsLoadingReviews(false)
+        }
+      }
+      loadReviews()
+    }
+  }, [activeTab, reviews.length])
+
+  // 2. Lazy loader for coupons
+  useEffect(() => {
+    if (activeTab === 'coupons' && coupons.length === 0) {
+      const loadCoupons = async () => {
+        setIsLoadingCoupons(true)
+        try {
+          const res = await fetch('/api/admin/coupons')
+          if (res.ok) {
+            const data = await res.json()
+            setCoupons(data)
+          }
+        } catch (err) {
+          console.error('Failed to load coupons:', err)
+        } finally {
+          setIsLoadingCoupons(false)
+        }
+      }
+      loadCoupons()
+    }
+  }, [activeTab, coupons.length])
+
+  // 3. Background loader for all products (used in dropdown selectors, banners, etc.)
+  useEffect(() => {
+    if (allProducts.length === 0) {
+      const loadAllProducts = async () => {
+        try {
+          const res = await fetch('/api/products?limit=1000')
+          if (res.ok) {
+            const data = await res.json()
+            if (data.products) {
+              setAllProducts(data.products)
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load full products list:', err)
+        }
+      }
+      loadAllProducts()
+    }
+  }, [allProducts.length])
 
   const toggleTag = (form: 'new' | 'edit', tag: string, checked: boolean) => {
     const currentForm = form === 'new' ? newProduct : productEditForm
@@ -1504,7 +1569,7 @@ export function AdminDashboard({
           name: '',
           description: '',
           imageUrl: '',
-          categoryId: initialCategories[0]?.id || '',
+          categoryId: initialCategories?.[0]?.id || '',
           mrp: '',
           price: '',
           unit: '',
@@ -3798,7 +3863,14 @@ export function AdminDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 font-semibold">
-                  {filteredReviews.length === 0 ? (
+                  {isLoadingReviews ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-10 text-text-secondary">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                        Loading reviews...
+                      </td>
+                    </tr>
+                  ) : filteredReviews.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-10 text-text-secondary">
                         <MessageSquare className="h-8 w-8 mx-auto mb-2 text-text-muted" />
@@ -4091,7 +4163,14 @@ export function AdminDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 font-semibold">
-                  {coupons.length === 0 ? (
+                  {isLoadingCoupons ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-10 text-text-secondary">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                        Loading coupons...
+                      </td>
+                    </tr>
+                  ) : coupons.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="text-center py-10 text-text-secondary">
                         <Ticket className="h-8 w-8 mx-auto mb-2 text-text-muted" />

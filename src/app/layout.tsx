@@ -21,6 +21,8 @@ import { SoftPromptDialog } from '@/components/shared/soft-prompt-dialog'
 import Script from 'next/script'
 import { Suspense } from 'react'
 import { TopProgressBar } from '@/components/shared/top-progress-bar'
+import { SwipeToBack } from '@/components/shared/swipe-to-back'
+
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -128,6 +130,8 @@ export default function RootLayout({
                   <PWARegistration />
                   <PushNotificationConsent />
                   <SoftPromptDialog />
+                  <SwipeToBack />
+
                 </PushNotificationProvider>
               </CartSyncProvider>
             </LiveStockProvider>

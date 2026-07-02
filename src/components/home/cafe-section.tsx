@@ -243,7 +243,11 @@ export function CafeSection() {
           <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8 z-20">
             <div className="text-left space-y-1 sm:space-y-1.5 max-w-[62%] sm:max-w-[70%]">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {isCafeActive ? (
+                {Object.keys(settings).length === 0 ? (
+                  <span className="inline-flex items-center gap-1 bg-zinc-700/50 text-zinc-300 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold uppercase tracking-wider animate-pulse">
+                    ● Checking status...
+                  </span>
+                ) : isCafeActive ? (
                   <span className="inline-flex items-center gap-1 bg-[#00b140] text-white px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm">
                     ● Live Kitchen
                   </span>

@@ -14,13 +14,26 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
   const [companionOrder, setCompanionOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isCafeOpen, setIsCafeOpen] = useState(true)
+
 
   useEffect(() => {
     let isMounted = true
 
     async function fetchOrder() {
       try {
-        const res = await fetch(`/api/orders/${orderId}`)
+        const [res, settingsRes] = await Promise.all([
+          fetch(`/api/orders/${orderId}`),
+          fetch('/api/settings', { cache: 'no-store' }).catch(() => null)
+        ])
+
+        if (settingsRes && settingsRes.ok) {
+          const settingsData = await settingsRes.json()
+          if (settingsData && settingsData.cafe_open !== undefined) {
+            setIsCafeOpen(settingsData.cafe_open === 'true')
+          }
+        }
+
         if (!res.ok) {
           if (res.status === 401) {
             window.location.href = '/login'
@@ -30,6 +43,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
         }
 
         const data = await res.json()
+
         if (!isMounted) return
 
         // Map API response to tracker format
@@ -175,7 +189,8 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
         )}
       </div>
 
-      <OrderTracker initialOrder={order} />
+      <OrderTracker initialOrder={order} isCafeOpen={isCafeOpen} />
     </div>
+
   )
 }

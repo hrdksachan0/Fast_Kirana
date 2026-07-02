@@ -77,7 +77,42 @@ function SlideToOrder({ onConfirm, isPlacingOrder, amount }: SlideToOrderProps) 
   )
 }
 
+function formatTime12h(timeStr?: string): string {
+  if (!timeStr) return ''
+  const [hStr, mStr] = timeStr.split(':')
+  const h = parseInt(hStr, 10)
+  if (isNaN(h)) return timeStr
+  const m = parseInt(mStr, 10) || 0
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  const mPad = m === 0 ? '' : `:${String(m).padStart(2, '0')}`
+  return `${h12}${mPad} ${ampm}`
+}
+
+function isNearClosing(closeTimeStr: string): boolean {
+  if (!closeTimeStr) return false
+  const [closeHStr, closeMStr] = closeTimeStr.split(':')
+  const closeH = parseInt(closeHStr, 10)
+  const closeM = parseInt(closeMStr, 10) || 0
+  if (isNaN(closeH)) return false
+
+  const now = new Date()
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
+  const istTime = new Date(utcTime + (3600000 * 5.5))
+  const currentTotal = istTime.getHours() * 60 + istTime.getMinutes()
+  
+  const closeTotal = closeH * 60 + closeM
+  let diff = closeTotal - currentTotal
+  
+  if (closeTotal < 300 && currentTotal > 1200) {
+    diff = (closeTotal + 1440) - currentTotal
+  }
+  
+  return diff > 0 && diff <= 30
+}
+
 export default function CheckoutPage() {
+
   const router = useRouter()
   const { data: session } = useSession()
   const prefilledPhoneRef = useRef(false)
@@ -107,6 +142,9 @@ export default function CheckoutPage() {
   const [cafeThreshold, setCafeThreshold] = useState(CAFE_FREE_DELIVERY_THRESHOLD)
   const [combinedThreshold, setCombinedThreshold] = useState(COMBINED_FREE_DELIVERY_THRESHOLD)
   const [deliveryFeeVal, setDeliveryFeeVal] = useState(DELIVERY_FEE)
+  const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
+  const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
+
 
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
@@ -157,8 +195,15 @@ export default function CheckoutPage() {
         if (data.delivery_fee) {
           setDeliveryFeeVal(parseFloat(data.delivery_fee))
         }
+        if (data.grocery_close_time) {
+          setGroceryCloseTime(data.grocery_close_time)
+        }
+        if (data.cafe_close_time) {
+          setCafeCloseTime(data.cafe_close_time)
+        }
         setIsSettingsLoading(false)
       })
+
       .catch(err => {
         console.error('Error fetching settings on checkout mount:', err)
         setIsSettingsLoading(false)
@@ -391,6 +436,13 @@ export default function CheckoutPage() {
 
   // Calculations for checkout items
   const subtotal = getSubtotal()
+
+  const hasCafeItems = items.some(item => isCafeProduct(item.product))
+  const hasGroceryItems = items.some(item => !isCafeProduct(item.product))
+
+  const isCafeNearClosing = hasCafeItems && isNearClosing(cafeCloseTime) && cafeOpen
+  const isGroceryNearClosing = hasGroceryItems && isNearClosing(groceryCloseTime) && groceryMartOpen
+
 
   // Auto-validate coupon on checkout page load
   useEffect(() => {
@@ -1075,6 +1127,29 @@ export default function CheckoutPage() {
           Secured Checkout
         </div>
       </div>
+
+      {/* Near Closing Time Warnings */}
+      {(isCafeNearClosing || isGroceryNearClosing) && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-200 dark:border-amber-900/50 p-4 rounded-2xl flex items-start gap-3 shadow-md animate-pulse-gentle">
+          <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold text-lg select-none">
+            ⚠️
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xs sm:text-sm font-black text-amber-800 dark:text-amber-400 tracking-tight">Hurry Up! Shop is closing soon</h2>
+            <p className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-500 leading-relaxed font-bold">
+              {isCafeNearClosing && isGroceryNearClosing ? (
+                `FastKirana Cafe (closes at ${formatTime12h(cafeCloseTime)}) and Mart (closes at ${formatTime12h(groceryCloseTime)}) are closing in less than 30 minutes! Place your order now to ensure tonight's delivery.`
+              ) : isCafeNearClosing ? (
+                `Our Cafe kitchen closes at ${formatTime12h(cafeCloseTime)} (in less than 30 minutes!). Please place your order immediately to get your hot food prepared and dispatched.`
+              ) : (
+                `Our Grocery Mart closes at ${formatTime12h(groceryCloseTime)} (in less than 30 minutes!). Please complete your checkout now to receive your groceries tonight.`
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

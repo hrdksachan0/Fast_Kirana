@@ -24,15 +24,28 @@ interface ThemeConfig {
   accentColor: string
 }
 
+function formatTime12h(timeStr?: string): string {
+  if (!timeStr) return ''
+  const [hStr, mStr] = timeStr.split(':')
+  const h = parseInt(hStr, 10)
+  if (isNaN(h)) return timeStr
+  const m = parseInt(mStr, 10) || 0
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  const mPad = m === 0 ? '' : `:${String(m).padStart(2, '0')}`
+  return `${h12}${mPad} ${ampm}`
+}
+
 export function HeroArea({ initialBanners }: HeroAreaProps) {
+
   const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
   const [currentHour, setCurrentHour] = useState<number>(8) // Default to 8 AM (Morning) for SSR fallback
-  const isReady = mounted && status !== 'loading'
-
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const settings = useUIStore((s) => s.settings) || {}
+  const isReady = mounted && status !== 'loading' && Object.keys(settings).length > 0
+
 
   useEffect(() => {
     setMounted(true)
@@ -206,7 +219,23 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
             <p className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm text-text-secondary max-w-2xl font-bold leading-relaxed">
               {themeConfig.subtitle}
             </p>
+            {/* Timings row if closed */}
+            {(!groceryMartOpen || !cafeOpen) && (
+              <div className="flex flex-wrap gap-2 mt-2 pt-1">
+                {!groceryMartOpen && (
+                  <span className="inline-flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                    🛒 Mart: {formatTime12h(settings.grocery_open_time || '06:00')} - {formatTime12h(settings.grocery_close_time || '23:59')}
+                  </span>
+                )}
+                {!cafeOpen && (
+                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                    ☕ Cafe: {formatTime12h(settings.cafe_open_time || '06:00')} - {formatTime12h(settings.cafe_close_time || '23:59')}
+                  </span>
+                )}
+              </div>
+            )}
           </motion.div>
+
         ) : (
           /* Subtle skeleton to maintain height and prevent shifting / layout flicker */
           <div className="space-y-2 animate-pulse">

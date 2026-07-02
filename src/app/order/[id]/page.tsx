@@ -133,7 +133,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   const isCompanionCafe = companionOrder?.shopName === 'FastKirana Cafe Kitchen'
 
   const isScheduled = order.estimatedDelivery && order.createdAt && 
-    (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 15 * 60 * 1000)
+    (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)
+
 
   return (
     <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6 md:space-y-8 bg-background relative">
@@ -208,9 +209,10 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <div className="flex justify-between">
               <span className="text-text-secondary">Estimated Arrival</span>
               <span className="text-accent font-bold">
-                {isScheduled && order.estimatedDelivery
+                {order.estimatedDelivery
                   ? `${new Date(order.estimatedDelivery).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
                   : order.deliveryMethod === 'PICKUP' ? 'Instant Pickup' : 'Fast Delivery'}
+
               </span>
             </div>
             <div className="flex justify-between">
