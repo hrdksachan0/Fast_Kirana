@@ -118,7 +118,85 @@ const CAFE_TEMPLATE_ROWS = [
 ]
 
 
+function parseVariantsClient(variantsStr: string, mainCostPrice: number = 0): any[] | null {
+  try {
+    const parts = variantsStr.split('|')
+    const parsed: any[] = []
+    
+    for (const part of parts) {
+      const trimmedPart = part.trim()
+      if (!trimmedPart) continue
+
+      // Try parsing key-value parenthesis format first: Name (price=15, mrp=20, stock=45, cost=10)
+      if (trimmedPart.includes('(') && trimmedPart.endsWith(')')) {
+        const openParenIdx = trimmedPart.indexOf('(')
+        const name = trimmedPart.substring(0, openParenIdx).trim()
+        const paramsStr = trimmedPart.substring(openParenIdx + 1, trimmedPart.length - 1)
+        
+        const params = paramsStr.split(/[,;]/)
+        let price = 0
+        let mrp = 0
+        let stock = 0
+        let costPrice = mainCostPrice
+
+        for (const param of params) {
+          const [key, val] = param.split('=').map((s: string) => s.trim().toLowerCase())
+          if (!key || !val) continue
+          const numVal = parseFloat(val) || 0
+          
+          if (['price', 'selling', 'selling_price'].includes(key)) {
+            price = numVal
+          } else if (['mrp', 'mrp_price'].includes(key)) {
+            mrp = numVal
+          } else if (['stock', 'qty', 'quantity'].includes(key)) {
+            stock = parseInt(val) || 0
+          } else if (['cost', 'cost_price', 'costprice'].includes(key)) {
+            costPrice = numVal
+          }
+        }
+
+        if (name) {
+          parsed.push({
+            name,
+            price,
+            mrp: mrp || price,
+            stock,
+            costPrice
+          })
+          continue
+        }
+      }
+
+      // Fallback to colon-separated format: Name:Price:MRP:Stock:CostPrice
+      const subparts = trimmedPart.split(':')
+      const vName = subparts[0]?.trim()
+      const vPrice = parseFloat(subparts[1]) || 0
+      const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
+      const vStock = subparts[3] ? parseInt(subparts[3]) : 0
+      let vCostPrice = subparts[4] ? parseFloat(subparts[4]) : undefined
+
+      if (vCostPrice === undefined || isNaN(vCostPrice)) {
+        vCostPrice = mainCostPrice
+      }
+
+      if (vName) {
+        parsed.push({
+          name: vName,
+          price: vPrice,
+          mrp: vMrp,
+          stock: vStock,
+          costPrice: vCostPrice
+        })
+      }
+    }
+    return parsed
+  } catch (e) {
+    return null
+  }
+}
+
 export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminCsvImportProps) {
+
   const [importType, setImportType] = useState<'grocery' | 'cafe'>('grocery')
   const [parsedProducts, setParsedProducts] = useState<ParsedProduct[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
@@ -216,62 +294,30 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
           errors.push({ row, field: 'Price', message: 'Price cannot exceed MRP' })
         }
       } else {
-        // Validate variants format
-        const variantsStr = p.variants.trim()
-        if (variantsStr.startsWith('[') && variantsStr.endsWith(']')) {
-          try {
-            const parsed = JSON.parse(variantsStr)
-            if (!Array.isArray(parsed) || parsed.length === 0) {
-              errors.push({ row, field: 'Variants', message: 'Variants JSON must be a non-empty array' })
-            } else {
-              parsed.forEach((v, vIdx) => {
-                if (!v.name) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} is missing Name` })
-                if (typeof v.mrp !== 'number' || v.mrp <= 0) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid MRP` })
-                if (typeof v.price !== 'number' || v.price <= 0) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid Price` })
-                if (v.price > v.mrp) errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) Price cannot exceed MRP` })
-              })
-            }
-          } catch (e) {
-            errors.push({ row, field: 'Variants', message: 'Invalid JSON format in Variants column' })
-          }
+        const mainCostPrice = parseFloat(p.costPrice) || 0
+        const parsed = parseVariantsClient(p.variants, mainCostPrice)
+        if (!parsed || parsed.length === 0) {
+          errors.push({ row, field: 'Variants', message: 'No valid variants specified or failed to parse variants format' })
         } else {
-          // Validate colon-and-pipe syntax: Name:Price:MRP:Stock | ...
-          const parts = variantsStr.split('|')
-          let hasValidVariant = false
-          for (let partIdx = 0; partIdx < parts.length; partIdx++) {
-            const part = parts[partIdx].trim()
-            if (!part) continue
-            const subparts = part.split(':')
-            if (subparts.length < 2) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} must have Name:Price (e.g. 500g:260)` })
-              continue
+          parsed.forEach((v, vIdx) => {
+            if (!v.name) {
+              errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} Name cannot be empty` })
             }
-            const vName = subparts[0]?.trim()
-            const vPrice = parseFloat(subparts[1])
-            const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
-            const vStock = subparts[3] ? parseInt(subparts[3]) : 0
-
-            if (!vName) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} Name cannot be empty` })
+            if (isNaN(v.price) || v.price <= 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid Price` })
             }
-            if (isNaN(vPrice) || vPrice <= 0) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid Price` })
+            if (isNaN(v.mrp) || v.mrp <= 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid MRP` })
+            } else if (v.price > v.mrp) {
+              errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) Price cannot exceed MRP` })
             }
-            if (isNaN(vMrp) || vMrp <= 0) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid MRP` })
-            } else if (vPrice > vMrp) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) Price cannot exceed MRP` })
+            if (isNaN(v.stock) || v.stock < 0) {
+              errors.push({ row, field: 'Variants', message: `Variant #${vIdx + 1} (${v.name || 'unknown'}) has invalid Stock` })
             }
-            if (isNaN(vStock) || vStock < 0) {
-              errors.push({ row, field: 'Variants', message: `Variant #${partIdx + 1} (${vName || 'unknown'}) has invalid Stock` })
-            }
-            hasValidVariant = true
-          }
-          if (!hasValidVariant) {
-            errors.push({ row, field: 'Variants', message: 'No valid variants specified' })
-          }
+          })
         }
       }
+
     })
     return errors
   }, [categories, categoryNames, categorySlugs])
@@ -665,37 +711,16 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
                     let isFromVariants = false
 
                     if (p.variants && p.variants.trim()) {
-                      const vStr = p.variants.trim()
-                      if (vStr.startsWith('[') && vStr.endsWith(']')) {
-                        try {
-                          const parsed = JSON.parse(vStr)
-                          if (Array.isArray(parsed) && parsed.length > 0) {
-                            displayMrp = parsed[0].mrp?.toString()
-                            displayPrice = parsed[0].price?.toString()
-                            displayStock = parsed.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0).toString()
-                            isFromVariants = true
-                          }
-                        } catch(e) {}
-                      } else {
-                        try {
-                          const parts = vStr.split('|')
-                          const parsed = parts.map(part => {
-                            const sub = part.trim().split(':')
-                            return {
-                              price: parseFloat(sub[1]) || 0,
-                              mrp: sub[2] ? parseFloat(sub[2]) : (parseFloat(sub[1]) || 0),
-                              stock: sub[3] ? parseInt(sub[3]) : 0
-                            }
-                          }).filter(v => v.price > 0)
-                          if (parsed.length > 0) {
-                            displayMrp = parsed[0].mrp.toString()
-                            displayPrice = parsed[0].price.toString()
-                            displayStock = parsed.reduce((sum, v) => sum + v.stock, 0).toString()
-                            isFromVariants = true
-                          }
-                        } catch(e) {}
+                      const mainCostPrice = parseFloat(p.costPrice) || 0
+                      const parsed = parseVariantsClient(p.variants, mainCostPrice)
+                      if (parsed && parsed.length > 0) {
+                        displayMrp = parsed[0].mrp?.toString()
+                        displayPrice = parsed[0].price?.toString()
+                        displayStock = parsed.reduce((sum, v) => sum + (v.stock || 0), 0).toString()
+                        isFromVariants = true
                       }
                     }
+
 
                     return (
                       <tr key={i} className={`${hasRowError ? 'bg-red-500/5' : 'hover:bg-muted/20'} transition-colors`}>
