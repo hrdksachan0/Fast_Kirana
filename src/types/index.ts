@@ -76,6 +76,9 @@ export interface Order {
   createdAt: string
   items: OrderItem[]
   address?: Address
+  combinedId?: string | null
+  isCombined?: boolean
+  subOrders?: any[]
 }
 
 export interface OrderItem {

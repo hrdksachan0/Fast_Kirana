@@ -29,6 +29,7 @@ interface OrderItem {
   name: string
   price: number
   quantity: number
+  selectedVariant?: string | null
 }
 
 interface OrderAddress {
@@ -49,6 +50,7 @@ interface Order {
   discount: number
   deliveryFee: number
   taxes: number
+  miscFee: number
   total: number
   paymentMethod: string
   paymentStatus: string
@@ -67,6 +69,8 @@ interface Order {
     name: string | null
     phone: string | null
   } | null
+  isCombined?: boolean
+  subOrders?: any[]
 }
 
 interface OrderTrackerProps {
@@ -156,29 +160,27 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
 
 
         setOrder((prev) => {
-          if (data.status === prev.status) return prev
+          const hasStatusChange = data.status !== prev.status
+          const hasSubOrdersChange = JSON.stringify(data.subOrders) !== JSON.stringify(prev.subOrders)
+          
+          if (!hasStatusChange && !hasSubOrdersChange) return prev
 
-          const statusLabels: Record<string, string> = {
-            CONFIRMED: 'Confirmed by Store ✅',
-            PACKED: 'Packed & Ready 📦',
-            SHIPPED: 'Out for Delivery 🚴',
-            DELIVERED: 'Delivered! 🎉',
-            CANCELLED: 'Cancelled ❌',
+          if (hasStatusChange) {
+            const statusLabels: Record<string, string> = {
+              CONFIRMED: 'Confirmed by Store ✅',
+              PACKED: 'Packed & Ready 📦',
+              SHIPPED: 'Out for Delivery 🚴',
+              DELIVERED: 'Delivered! 🎉',
+              CANCELLED: 'Cancelled ❌',
+            }
+
+            toast.success(statusLabels[data.status] || `Status: ${data.status}`, {
+              description: 'Your order status has been updated',
+              duration: 4000,
+            })
           }
 
-          toast.success(statusLabels[data.status] || `Status: ${data.status}`, {
-            description: 'Your order status has been updated',
-            duration: 4000,
-          })
-
-          return {
-            ...prev,
-            status: data.status,
-            deliveryLat: data.deliveryLat ?? prev.deliveryLat,
-            deliveryLng: data.deliveryLng ?? prev.deliveryLng,
-            deliveryPhoto: data.deliveryPhoto ?? prev.deliveryPhoto,
-            deliveryUser: data.deliveryUser ?? prev.deliveryUser,
-          }
+          return data
         })
       } catch {
         // silently ignore polling errors
@@ -409,20 +411,69 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
 
         </div>
 
-                {!order.isB2B && order.shopName && (
-          <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 flex items-center justify-between text-xs font-semibold text-text-secondary">
-            <div className="flex items-center gap-2">
-              <Store className="h-4 w-4 text-primary shrink-0" />
-              <div>
-                <span className="text-text-primary font-bold">Fulfillment:</span> {order.shopName}
-              </div>
+        {order.isCombined && order.subOrders && order.subOrders.length > 0 ? (
+          <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 space-y-3 text-xs font-semibold text-text-secondary">
+            <h3 className="text-text-primary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <Store className="h-4 w-4 text-primary shrink-0" /> Combined Order Details
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {order.subOrders.map((sub: any) => {
+                const isSubCafe = sub.type === 'CAFE'
+                const statusLabels: Record<string, string> = {
+                  PENDING: 'Pending Confirmation ⏳',
+                  CONFIRMED: 'Confirmed by Kitchen ✅' ,
+                  PACKED: 'Prepared & Packed 📦',
+                  SHIPPED: 'Out for Delivery 🚴',
+                  DELIVERED: 'Delivered 🎉',
+                  CANCELLED: 'Cancelled ❌',
+                }
+                const groceryLabels: Record<string, string> = {
+                  PENDING: 'Pending Confirmation ⏳',
+                  CONFIRMED: 'Confirmed by Store ✅' ,
+                  PACKED: 'Packed & Ready 📦',
+                  SHIPPED: 'Out for Delivery 🚴',
+                  DELIVERED: 'Delivered 🎉',
+                  CANCELLED: 'Cancelled ❌',
+                }
+                return (
+                  <div key={sub.id} className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{isSubCafe ? '☕' : '🛒'}</span>
+                      <div>
+                        <div className="text-text-primary font-extrabold text-[11px]">{isSubCafe ? 'Cafe Items' : 'Grocery Items'}</div>
+                        <div className="text-[10px] text-text-muted mt-0.5">#{sub.id.slice(-6).toUpperCase()} • {sub.itemsCount} items</div>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                      sub.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                      sub.status === 'CANCELLED' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                      sub.status === 'SHIPPED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                      'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    )}>
+                      {isSubCafe ? (statusLabels[sub.status] || sub.status) : (groceryLabels[sub.status] || sub.status)}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-            {order.shopPhone && (
-              <a href={`tel:${formatPhone(order.shopPhone).replace(/\s+/g, '')}`} className="text-primary hover:underline font-black flex items-center gap-1.5 shrink-0">
-                <Phone className="h-3.5 w-3.5" /> Support Hotline
-              </a>
-            )}
           </div>
+        ) : (
+          !order.isB2B && order.shopName && (
+            <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 flex items-center justify-between text-xs font-semibold text-text-secondary">
+              <div className="flex items-center gap-2">
+                <Store className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <span className="text-text-primary font-bold">Fulfillment:</span> {order.shopName}
+                </div>
+              </div>
+              {order.shopPhone && (
+                <a href={`tel:${formatPhone(order.shopPhone).replace(/\s+/g, '')}`} className="text-primary hover:underline font-black flex items-center gap-1.5 shrink-0">
+                  <Phone className="h-3.5 w-3.5" /> Support Hotline
+                </a>
+              )}
+            </div>
+          )
         )}
 
         {/* Support Call Buttons */}
@@ -725,21 +776,51 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
         </div>
       </div>
 
-      {/* Reciept mini summary */}
-      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3">
+      {/* Receipt mini summary */}
+      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
           Receipt details
         </h3>
-        <div className="space-y-1.5 text-xs font-semibold text-text-secondary">
+        <div className="space-y-2 text-xs font-semibold text-text-secondary">
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between">
-              <span>{item.name} (×{item.quantity})</span>
+              <span>{item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''} (×{item.quantity})</span>
               <span>₹{item.price * item.quantity}</span>
             </div>
           ))}
-          <div className="flex justify-between text-text-primary font-extrabold border-t border-border-light pt-2 mt-2">
+          
+          <div className="border-t border-border/40 pt-3 space-y-1.5">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{order.subtotal}</span>
+            </div>
+            {order.discount > 0 && (
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                <span>Discount</span>
+                <span>-₹{order.discount}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>Delivery Fee</span>
+              <span>{order.deliveryFee > 0 ? `₹${order.deliveryFee}` : 'FREE'}</span>
+            </div>
+            {order.taxes > 0 && (
+              <div className="flex justify-between">
+                <span>Taxes & GST</span>
+                <span>₹{order.taxes.toFixed(1)}</span>
+              </div>
+            )}
+            {order.miscFee > 0 && (
+              <div className="flex justify-between">
+                <span>Handling / Miscellaneous Fee</span>
+                <span>₹{order.miscFee}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between text-text-primary font-black border-t border-border/80 pt-3 mt-3 text-sm">
             <span>Grand Total</span>
-            <span className="text-primary">₹{order.total.toFixed(0)}</span>
+            <span className="text-primary text-base font-extrabold">₹{order.total.toFixed(0)}</span>
           </div>
         </div>
       </div>

@@ -91,6 +91,7 @@ model User {
   phone         String?
   passwordHash  String?
   role          Role      @default(USER)
+  assignedStoreId String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -104,6 +105,7 @@ model User {
   pickerOrders   Order[]   @relation("PickerOrders")
   chefOrders     Order[]   @relation("ChefOrders")
   pushSubscriptions PushSubscription[]
+  assignedStore  DarkStore? @relation("StoreStaff", fields: [assignedStoreId], references: [id])
 
   @@map("users")
 }
@@ -178,6 +180,7 @@ model Product {
   stockAlerts  StockAlert[]
   priceHistory PriceHistory[]
   batches      ProductBatch[]
+  inventories  StoreInventory[]
 
   @@index([categoryId])
   @@index([name])
@@ -232,6 +235,8 @@ model Order {
   id                String        @id @default(cuid())
   userId            String
   addressId         String
+  combinedId        String?
+
   status            OrderStatus   @default(PENDING)
   subtotal          Float
   discount          Float         @default(0)
@@ -249,6 +254,7 @@ model Order {
   isB2B             Boolean       @default(false)
   shopName          String?
   shopPhone         String?
+  storeId           String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   confirmedAt       DateTime?
@@ -261,6 +267,7 @@ model Order {
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[]
+  store   DarkStore?  @relation(fields: [storeId], references: [id])
   
   deliveryUserId String?
   deliveryUser   User?      @relation("DeliveryOrders", fields: [deliveryUserId], references: [id])
@@ -274,6 +281,8 @@ model Order {
   @@index([deliveryUserId])
   @@index([assignedPickerId])
   @@index([assignedChefId])
+  @@index([storeId])
+  @@index([combinedId])
   @@index([createdAt])
   @@map("orders")
 }
@@ -448,5 +457,37 @@ model PushNotification {
   failureCount Int      @default(0)
 
   @@map("push_notifications")
+}
+
+model DarkStore {
+  id              String   @id @default(cuid())
+  name            String
+  latitude        Float
+  longitude       Float
+  deliveryPolygon Json?    // Array of lat/lng coordinates defining the geofence
+  isActive        Boolean  @default(true)
+  surgeCharge     Float    @default(0.0)
+  groceryOpen     Boolean  @default(true)
+  cafeOpen        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  inventories     StoreInventory[]
+  orders          Order[]
+  staffMembers    User[]           @relation("StoreStaff")
+
+  @@map("dark_stores")
+}
+
+model StoreInventory {
+  productId String
+  storeId   String
+  stock     Int    @default(0)
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store     DarkStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, storeId])
+  @@map("store_inventories")
 }
 

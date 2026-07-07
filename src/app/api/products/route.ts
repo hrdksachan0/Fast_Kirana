@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
     const includeUnavailable = searchParams.get('admin') === 'true'
     const trending = searchParams.get('trending') === 'true'
+    const storeId = searchParams.get('storeId')
 
     let isAdmin = false
     if (includeUnavailable) {
@@ -264,6 +265,25 @@ export async function GET(request: NextRequest) {
       ])
       products = dbProducts
       total = dbTotal
+    }
+
+    // Override stock and availability with localized dark store inventory
+    if (storeId && products.length > 0) {
+      const inventories = await prisma.storeInventory.findMany({
+        where: {
+          storeId,
+          productId: { in: products.map(p => p.id) }
+        }
+      })
+      const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
+      products = products.map(p => {
+        const localStock = inventoryMap.get(p.id) ?? 0
+        return {
+          ...p,
+          stock: localStock,
+          isAvailable: p.isAvailable && localStock > 0
+        }
+      })
     }
 
     const responseData = {

@@ -29,7 +29,8 @@ export async function GET(
              o."estimatedDelivery", o."createdAt", o."updatedAt",
              o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
              o."deliveryUserId",
-             o."deliveryPhoto", o."deliveryLat", o."deliveryLng"
+             o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
+             o."combinedId"
       FROM orders o WHERE o.id = ${id} LIMIT 1
     `
 
@@ -44,10 +45,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch items
-    const items = await prisma.orderItem.findMany({
-      where: { orderId: id },
-    })
+    const isWorker = session.user.role === 'ADMIN' || session.user.role === 'DELIVERY' || session.user.role === 'PICKER' || session.user.role === 'CHEF'
 
     // Fetch address
     const address = await prisma.address.findUnique({
@@ -56,9 +54,10 @@ export async function GET(
 
     // Fetch delivery partner user details if assigned
     let deliveryUser = null
-    if (order.deliveryUserId) {
+    const deliveryUserIdToFetch = order.deliveryUserId
+    if (deliveryUserIdToFetch) {
       const riders: any[] = await prisma.$queryRaw`
-        SELECT id, name, phone FROM users WHERE id = ${order.deliveryUserId} LIMIT 1
+        SELECT id, name, phone FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
       `
       if (riders.length > 0) {
         deliveryUser = {
@@ -67,6 +66,87 @@ export async function GET(
         }
       }
     }
+
+    if (!isWorker && order.combinedId) {
+      // Fetch all sub-orders of this combined order
+      const combinedOrders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."updatedAt",
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."deliveryUserId",
+               o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
+               o."combinedId"
+        FROM orders o WHERE o."combinedId" = ${order.combinedId}
+      `
+
+      const combinedOrderIds = combinedOrders.map(o => o.id)
+      const allItems = await prisma.orderItem.findMany({
+        where: { orderId: { in: combinedOrderIds } }
+      })
+
+      // Fetch delivery user details from any sub-order that has one assigned
+      if (!deliveryUser) {
+        const assignedOrder = combinedOrders.find(o => o.deliveryUserId)
+        if (assignedOrder) {
+          const riders: any[] = await prisma.$queryRaw`
+            SELECT id, name, phone FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
+          `
+          if (riders.length > 0) {
+            deliveryUser = {
+              name: riders[0].name,
+              phone: riders[0].phone
+            }
+          }
+        }
+      }
+
+      function getCombinedStatus(statuses: string[]): string {
+        const active = statuses.filter(s => s !== 'CANCELLED')
+        if (active.length === 0) return 'CANCELLED'
+        if (active.includes('PENDING')) return 'PENDING'
+        if (active.includes('CONFIRMED')) return 'CONFIRMED'
+        if (active.includes('PACKED')) return 'PACKED'
+        if (active.includes('SHIPPED')) return 'SHIPPED'
+        return 'DELIVERED'
+      }
+
+      const statuses = combinedOrders.map(o => o.status)
+      const combinedStatus = getCombinedStatus(statuses)
+
+      const subOrders = combinedOrders.map(o => ({
+        id: o.id,
+        type: o.shopName === 'FastKirana Cafe Kitchen' ? 'CAFE' : 'GROCERY',
+        status: o.status,
+        total: o.total,
+        itemsCount: allItems.filter(item => item.orderId === o.id).length
+      }))
+
+      const mergedOrder = {
+        ...order,
+        status: combinedStatus,
+        subtotal: combinedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
+        discount: combinedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
+        deliveryFee: combinedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
+        taxes: combinedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
+        miscFee: combinedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
+        total: combinedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+        items: allItems,
+        address,
+        deliveryUser,
+        isCombined: true,
+        subOrders
+      }
+      return NextResponse.json(mergedOrder)
+    }
+
+    // Default individual order details for workers or non-combined orders
+    const items = await prisma.orderItem.findMany({
+      where: { orderId: id },
+    })
 
     return NextResponse.json({ ...order, items, address, deliveryUser })
   } catch (error: any) {

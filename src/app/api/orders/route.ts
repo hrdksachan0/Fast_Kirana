@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null } = await request.json()
+    const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null } = await request.json()
 
     if (!paymentMethod || !items || items.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -441,6 +441,9 @@ export async function POST(request: NextRequest) {
     const createdOrders = await prisma.$transaction(async (tx) => {
       const results: any[] = []
       const now = new Date()
+      const isCombined = ordersToCreate.length > 1
+      const combinedId = isCombined ? `combined_${Math.random().toString(36).substring(2, 11)}_${Date.now().toString(36)}` : null
+
 
       for (const orderInfo of ordersToCreate) {
         const orderItemsData = orderInfo.items.map((item: any) => {
@@ -499,7 +502,9 @@ export async function POST(request: NextRequest) {
           data: {
             userId: userId,
             addressId: finalAddressId,
+            combinedId: combinedId,
             status: OrderStatus.PENDING,
+
             subtotal: orderInfo.subtotal,
             discount: orderInfo.discount,
             deliveryFee: orderInfo.deliveryFee,
@@ -511,6 +516,7 @@ export async function POST(request: NextRequest) {
             estimatedDelivery,
             deliveryMethod,
             isB2B,
+            storeId,
             couponCode: couponCode ? couponCode.toUpperCase() : null,
             shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
             shopPhone: orderInfo.type === 'CAFE' ? (settingsMap['contact_phone'] || '+91 70544 70303') : shopPhone,
@@ -773,7 +779,8 @@ export async function GET(request: NextRequest) {
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
-               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."combinedId"
         FROM orders o WHERE o."userId" = ${userId}
         ORDER BY o."createdAt" DESC
       `
@@ -797,9 +804,71 @@ export async function GET(request: NextRequest) {
       address: allAddresses.find(a => a.id === o.addressId),
     }))
 
-    return NextResponse.json(result)
+    if (isAdmin && all) {
+      return NextResponse.json(result)
+    }
+
+    function getCombinedStatus(statuses: string[]): string {
+      const active = statuses.filter(s => s !== 'CANCELLED')
+      if (active.length === 0) return 'CANCELLED'
+      if (active.includes('PENDING')) return 'PENDING'
+      if (active.includes('CONFIRMED')) return 'CONFIRMED'
+      if (active.includes('PACKED')) return 'PACKED'
+      if (active.includes('SHIPPED')) return 'SHIPPED'
+      return 'DELIVERED'
+    }
+
+    // Customer grouping
+    const groupedResult: any[] = []
+    const combinedGroups = new Map<string, any[]>()
+
+    result.forEach((order: any) => {
+      if (order.combinedId) {
+        if (!combinedGroups.has(order.combinedId)) {
+          combinedGroups.set(order.combinedId, [])
+        }
+        combinedGroups.get(order.combinedId)!.push(order)
+      } else {
+        groupedResult.push(order)
+      }
+    })
+
+    combinedGroups.forEach((groupOrders, combinedId) => {
+      const mainOrder = groupOrders.find(o => o.shopName !== 'FastKirana Cafe Kitchen') || groupOrders[0]
+      const statuses = groupOrders.map(o => o.status)
+      const combinedStatus = getCombinedStatus(statuses)
+
+      const subOrders = groupOrders.map(o => ({
+        id: o.id,
+        type: o.shopName === 'FastKirana Cafe Kitchen' ? 'CAFE' : 'GROCERY',
+        status: o.status,
+        total: o.total,
+        itemsCount: o.items?.length || 0
+      }))
+
+      const mergedOrder = {
+        ...mainOrder,
+        id: mainOrder.id,
+        status: combinedStatus,
+        subtotal: groupOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
+        discount: groupOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
+        deliveryFee: groupOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
+        taxes: groupOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
+        miscFee: groupOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
+        total: groupOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+        items: groupOrders.flatMap(o => o.items || []),
+        isCombined: true,
+        subOrders
+      }
+      groupedResult.push(mergedOrder)
+    })
+
+    groupedResult.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    return NextResponse.json(groupedResult)
   } catch (error) {
     console.error('Orders list API error:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }
+
