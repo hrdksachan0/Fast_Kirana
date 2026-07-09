@@ -8,8 +8,18 @@ export default function MobileCallbackPage() {
   
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      // Retrieve the dynamic mobile deep link from sessionStorage
-      const redirectBase = sessionStorage.getItem('mobile_redirect_url') || 'fastkirana://'
+      // Helper to read cookie
+      const getCookie = (name: string): string | null => {
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) {
+          return decodeURIComponent(parts.pop()?.split(';').shift() || '')
+        }
+        return null
+      }
+
+      // Retrieve the dynamic mobile deep link from cookie
+      const redirectBase = getCookie('mobile_redirect_url') || 'fastkirana://'
       const user = {
         id: session.user.id,
         name: session.user.name,
@@ -22,9 +32,10 @@ export default function MobileCallbackPage() {
       const separator = redirectBase.includes('?') ? '&' : '?'
       const target = `${redirectBase}${separator}user=${encodeURIComponent(JSON.stringify(user))}`
       
-      // Clear the storage
-      sessionStorage.removeItem('mobile_redirect_url')
+      // Clear the cookie by setting max-age to 0
+      document.cookie = 'mobile_redirect_url=; path=/; max-age=0; SameSite=Lax; Secure'
       
+      console.log('Redirecting to mobile deep link:', target)
       // Redirect back to the mobile app
       window.location.href = target
     }

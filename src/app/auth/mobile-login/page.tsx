@@ -10,8 +10,8 @@ export default function MobileLoginPage() {
   useEffect(() => {
     const redirectUrl = searchParams.get('redirect')
     if (redirectUrl) {
-      // Safely store the dynamic mobile deep link callback in session storage
-      sessionStorage.setItem('mobile_redirect_url', redirectUrl)
+      // Store the dynamic mobile deep link callback in a cookie (valid for 10 minutes)
+      document.cookie = `mobile_redirect_url=${encodeURIComponent(redirectUrl)}; path=/; max-age=600; SameSite=Lax; Secure`
     }
 
     console.log('Initiating Google sign-in redirect to Google Identity Provider...')
