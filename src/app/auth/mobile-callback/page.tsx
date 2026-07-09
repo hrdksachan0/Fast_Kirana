@@ -1,16 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
 export default function MobileCallbackPage() {
-  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
   
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      const redirectBase = searchParams.get('redirect') || 'fastkirana://'
+      // Retrieve the dynamic mobile deep link from sessionStorage
+      const redirectBase = sessionStorage.getItem('mobile_redirect_url') || 'fastkirana://'
       const user = {
         id: session.user.id,
         name: session.user.name,
@@ -23,10 +22,13 @@ export default function MobileCallbackPage() {
       const separator = redirectBase.includes('?') ? '&' : '?'
       const target = `${redirectBase}${separator}user=${encodeURIComponent(JSON.stringify(user))}`
       
+      // Clear the storage
+      sessionStorage.removeItem('mobile_redirect_url')
+      
       // Redirect back to the mobile app
       window.location.href = target
     }
-  }, [session, status, searchParams])
+  }, [session, status])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white p-6">
