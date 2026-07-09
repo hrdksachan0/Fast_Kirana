@@ -26,6 +26,20 @@ export async function GET(request: Request) {
             name: true,
             email: true,
             phone: true,
+            addresses: {
+              select: {
+                id: true,
+                label: true,
+                houseNo: true,
+                street: true,
+                area: true,
+                city: true,
+                pincode: true,
+                lat: true,
+                lng: true,
+                isDefault: true
+              }
+            }
           }
         },
         items: {
@@ -78,6 +92,8 @@ export async function GET(request: Request) {
         }
       })
 
+      const defaultAddress = cart.user.addresses.find((a: any) => a.isDefault) || cart.user.addresses[0] || null
+
       return {
         id: cart.id,
         userId: cart.userId,
@@ -86,7 +102,10 @@ export async function GET(request: Request) {
         userPhone: cart.user.phone || 'N/A',
         updatedAt: cart.updatedAt,
         items,
-        subtotal
+        subtotal,
+        address: defaultAddress ? `${defaultAddress.houseNo}, ${defaultAddress.street}, ${defaultAddress.area}, ${defaultAddress.city} - ${defaultAddress.pincode}` : null,
+        lat: defaultAddress ? defaultAddress.lat : null,
+        lng: defaultAddress ? defaultAddress.lng : null
       }
     })
 
