@@ -45,16 +45,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
     }
 
+    // Allow saving any address; distance/serviceability is validated during checkout/ordering
     const cleanPincode = pincode.toString().trim()
     const cleanCity = city.toString().trim().toLowerCase()
-
-    if (cleanPincode !== '209206') {
-      return NextResponse.json({ error: 'FastKirana only delivers to Ghatampur area (Pincode: 209206)' }, { status: 400 })
-    }
-
-    if (!cleanCity.includes('ghatampur') && !cleanCity.includes('kanpur')) {
-      return NextResponse.json({ error: 'FastKirana delivery is currently only available in Ghatampur / Kanpur' }, { status: 400 })
-    }
 
     // If setting default, reset existing defaults
     if (isDefault) {
