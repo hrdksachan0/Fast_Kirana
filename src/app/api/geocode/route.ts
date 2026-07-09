@@ -51,6 +51,12 @@ export async function GET(request: NextRequest) {
         const formattedResults = [
           {
             formatted_address: osmData.display_name,
+            geometry: {
+              location: {
+                lat: parseFloat(osmData.lat),
+                lng: parseFloat(osmData.lon)
+              }
+            },
             address_components: [
               {
                 long_name: address.road || '',
@@ -90,6 +96,12 @@ export async function GET(request: NextRequest) {
           const formattedResults = [
             {
               formatted_address: firstResult.display_name,
+              geometry: {
+                location: {
+                  lat: parseFloat(firstResult.lat),
+                  lng: parseFloat(firstResult.lon)
+                }
+              },
               address_components: [
                 {
                   long_name: firstResult.name || '',
