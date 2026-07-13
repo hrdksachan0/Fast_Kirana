@@ -9,14 +9,10 @@ export default function MobileLoginPage() {
 
   useEffect(() => {
     const redirectUrl = searchParams.get('redirect')
-    if (redirectUrl) {
-      // Store the dynamic mobile deep link callback in a cookie (valid for 10 minutes)
-      document.cookie = `mobile_redirect_url=${encodeURIComponent(redirectUrl)}; path=/; max-age=600; SameSite=Lax; Secure`
-    }
-
-    console.log('Initiating Google sign-in redirect to Google Identity Provider...')
-    // Automatically trigger NextAuth Google login and route back to mobile-callback
-    signIn('google', { callbackUrl: '/auth/mobile-callback' })
+    const callbackUrl = `/auth/mobile-callback?redirect=${encodeURIComponent(redirectUrl || 'fastkirana://')}`
+    
+    console.log('Initiating Google sign-in redirect to callbackUrl:', callbackUrl)
+    signIn('google', { callbackUrl })
   }, [searchParams])
 
   return (

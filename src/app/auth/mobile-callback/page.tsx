@@ -2,24 +2,16 @@
 
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 
 export default function MobileCallbackPage() {
   const { data: session, status } = useSession()
+  const searchParams = useSearchParams()
   
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      // Helper to read cookie
-      const getCookie = (name: string): string | null => {
-        const value = `; ${document.cookie}`
-        const parts = value.split(`; ${name}=`)
-        if (parts.length === 2) {
-          return decodeURIComponent(parts.pop()?.split(';').shift() || '')
-        }
-        return null
-      }
-
-      // Retrieve the dynamic mobile deep link from cookie
-      const redirectBase = getCookie('mobile_redirect_url') || 'fastkirana://'
+      // Retrieve the dynamic mobile deep link from query parameters
+      const redirectBase = searchParams.get('redirect') || 'fastkirana://'
       const user = {
         id: session.user.id,
         name: session.user.name,
@@ -32,14 +24,11 @@ export default function MobileCallbackPage() {
       const separator = redirectBase.includes('?') ? '&' : '?'
       const target = `${redirectBase}${separator}user=${encodeURIComponent(JSON.stringify(user))}`
       
-      // Clear the cookie by setting max-age to 0
-      document.cookie = 'mobile_redirect_url=; path=/; max-age=0; SameSite=Lax; Secure'
-      
       console.log('Redirecting to mobile deep link:', target)
       // Redirect back to the mobile app
       window.location.href = target
     }
-  }, [session, status])
+  }, [session, status, searchParams])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white p-6">
