@@ -15,7 +15,10 @@ export default function MobileLoginPage() {
     }
     
     console.log('Initiating Google sign-in redirect to callback...')
-    signIn('google', { callbackUrl: '/auth/mobile-callback' })
+    signIn('google', { 
+      redirectTo: '/auth/mobile-callback', 
+      callbackUrl: '/auth/mobile-callback' 
+    })
   }, [searchParams])
 
   return (
