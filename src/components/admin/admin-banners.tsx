@@ -542,6 +542,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                   onChange={(e) => setType(e.target.value)}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                 >
+                  <option value="grocery">🛒 Grocery Banner (Storefront Home)</option>
+                  <option value="cafe">🍕 Café Banner (Café Storefront)</option>
                   <option value="festival">🌸 Festival/Holiday (Diyas / Floral)</option>
                   <option value="first-order">🥛 Milk & Fruits Essentials</option>
                   <option value="fresh">🥬 Farm Fresh (Leafy Greens)</option>
