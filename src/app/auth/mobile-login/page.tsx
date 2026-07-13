@@ -9,10 +9,13 @@ export default function MobileLoginPage() {
 
   useEffect(() => {
     const redirectUrl = searchParams.get('redirect')
-    const callbackUrl = `/auth/mobile-callback?redirect=${encodeURIComponent(redirectUrl || 'fastkirana://')}`
+    if (redirectUrl) {
+      // Store redirect URL in localStorage (persists across OAuth redirect loops)
+      localStorage.setItem('mobile_redirect_url', redirectUrl)
+    }
     
-    console.log('Initiating Google sign-in redirect to callbackUrl:', callbackUrl)
-    signIn('google', { callbackUrl })
+    console.log('Initiating Google sign-in redirect to callback...')
+    signIn('google', { callbackUrl: '/auth/mobile-callback' })
   }, [searchParams])
 
   return (
