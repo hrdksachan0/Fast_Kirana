@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const categories = await prisma.category.findMany({
       where: {
-        slug: { not: 'cafe' },
+        slug: { notIn: ['cafe', 'restaurant'] },
       },
       orderBy: {
         sortOrder: 'asc',
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         slug: finalSlug,
         imageUrl: imageUrl || '📦',
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : 0,
+        parentId: body.parentId || null,
       }
     })
 

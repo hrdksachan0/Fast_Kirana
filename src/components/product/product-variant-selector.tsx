@@ -93,8 +93,21 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
         )}
       </div>
 
+      {/* Dynamic Add to Cart and Buy Buttons */}
+      <div className="pt-2">
+        <ProductDetailActions product={resolvedProductForActions} />
+      </div>
+
+      {/* Dynamic Stock Alert Warning Banner */}
+      <ProductStockBanner
+        productId={resolvedId}
+        initialStock={initialStock}
+        categorySlug={product.category?.slug}
+        tags={product.tags}
+      />
+
       {/* Delivery banner CTA inside product details */}
-      <div className="flex items-center gap-3 border border-border/60 bg-muted/30 p-3 rounded-xl">
+      <div className="flex items-center gap-3 border border-border/60 bg-muted/30 p-3 rounded-xl mt-1">
         <Truck className="h-5 w-5 text-accent animate-pulse-gentle" />
         <span className="text-xs font-bold text-text-primary">
           Delivered to your door with <span className="text-accent">Fast Delivery</span>
@@ -110,19 +123,6 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
             Sourced directly, stored in a hygiene-controlled environment, and packed under strict guidelines. Freshness guaranteed with zero retail shelf dust.
           </p>
         </div>
-      </div>
-
-      {/* Dynamic Stock Alert Warning Banner */}
-      <ProductStockBanner
-        productId={resolvedId}
-        initialStock={initialStock}
-        categorySlug={product.category?.slug}
-        tags={product.tags}
-      />
-
-      {/* Dynamic Add to Cart and Buy Buttons */}
-      <div className="pt-1">
-        <ProductDetailActions product={resolvedProductForActions} />
       </div>
     </div>
   )

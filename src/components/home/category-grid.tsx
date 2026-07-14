@@ -193,7 +193,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="w-[70px] shrink-0 snap-start"
               >
                 <Link
-                  href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' ? '/?mode=cafe' : category.isCafeSection ? `/?mode=cafe&section=${category.slug}` : `/category/${category.slug}`}
                   className="group flex flex-col items-center text-center cursor-pointer"
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
@@ -242,7 +242,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Desktop Header */}
       <h2 className="hidden md:flex text-lg md:text-2xl font-black text-text-primary tracking-tight mb-4 px-1 items-center gap-2">
-        <span className="h-5 w-1.5 rounded-full bg-primary animate-pulse-gentle" />
+        <span className="h-5 w-1.5 rounded-full bg-primary" />
         Trending Categories
       </h2>
 
@@ -263,18 +263,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             const isClosed = isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
 
             return (
-              <motion.div
+              <div
                 key={category.id}
-                whileHover={{ 
-                  scale: 1.05, 
-                  rotate: 1.5,
-                  transition: { type: 'spring', stiffness: 300, damping: 15 } 
-                }}
-                whileTap={{ scale: 0.95 }}
-                className="p-3 rounded-2xl transition-all duration-300 hover:shadow-card hover:-translate-y-1 group"
+                className="p-3 rounded-2xl border border-transparent hover:border-zinc-200/50 dark:hover:border-zinc-800/40 hover:bg-white/70 dark:hover:bg-zinc-900/30 shadow-2xs hover:shadow-sm transition-all duration-300 group"
               >
                 <Link
-                  href={category.slug === 'cafe' ? '/cafe' : category.isCafeSection ? `/cafe?section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' ? '/?mode=cafe' : category.isCafeSection ? `/?mode=cafe&section=${category.slug}` : `/category/${category.slug}`}
                   className="flex flex-col items-center text-center"
                 >
                   <div
@@ -313,7 +307,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     {category.isCafeSection ? 'Freshly Made' : `${itemCount} items`}
                   </span>
                 </Link>
-              </motion.div>
+              </div>
             )
           })}
       </div>

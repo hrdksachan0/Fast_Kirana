@@ -17,13 +17,17 @@ export function Footer() {
   const contactAddress = settings.contact_address || 'NH34, Ghatampur, Kanpur Nagar'
 
   return (
-    <footer className="bg-text-primary text-white mt-0 md:mt-0 pb-[80px] md:pb-8">
-      {/* Social proof strip */}
-      <div className="bg-accent/10 border-b border-accent/20">
-        <div className="mx-auto max-w-7xl px-4 py-3 text-center">
-          <p className="text-sm font-bold text-accent min-h-[20px] flex items-center justify-center">
+    <footer className="relative bg-[#09090b] text-zinc-400 mt-0 overflow-hidden border-t border-zinc-900/60 pb-[80px] md:pb-12 select-none">
+      
+      {/* Apple Liquid Display Ambient Bottom Glow */}
+      <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full bg-gradient-to-t from-rose-500/10 via-orange-500/[0.03] to-transparent blur-[120px] pointer-events-none select-none z-0" />
+
+      {/* Social Proof Glass Strip */}
+      <div className="relative z-10 bg-white/[0.02] border-b border-white/[0.05] backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 py-3.5 text-center">
+          <p className="text-xs md:text-sm font-semibold tracking-wide text-zinc-300 min-h-[20px] flex items-center justify-center">
             {trustedText === null ? (
-              <span className="inline-block h-4 w-52 animate-pulse bg-accent/20 rounded-md" />
+              <span className="inline-block h-4 w-52 animate-pulse bg-white/10 rounded-md" />
             ) : (
               trustedText
             )}
@@ -31,21 +35,22 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+      <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:py-16">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <div className="mb-4">
+          
+          {/* Brand & Socials */}
+          <div className="col-span-2 md:col-span-1 space-y-4">
+            <div>
               <Logo lightMode={true} />
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed">
-              Groceries and daily essentials delivered instantly from our local dark stores. Fresh fruits, vegetables, dairy, and snacks at your doorstep in 10 minutes.
+            <p className="text-xs md:text-[13px] text-zinc-500 leading-relaxed font-medium">
+              Groceries and daily essentials delivered instantly from local dark stores. Fresh fruits, vegetables, dairy, and kitchen specials at your door.
             </p>
-            {/* Social media links */}
-            <div className="flex items-center gap-3 mt-4">
+            {/* Social Links */}
+            <div className="flex items-center gap-3 pt-2">
               <a
                 href="#"
-                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/10 text-gray-400 hover:bg-accent/20 hover:text-accent transition-all duration-200 hover:scale-110"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Instagram"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -54,7 +59,7 @@ export function Footer() {
               </a>
               <a
                 href="#"
-                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/10 text-gray-400 hover:bg-accent/20 hover:text-accent transition-all duration-200 hover:scale-110"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Twitter"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -63,7 +68,7 @@ export function Footer() {
               </a>
               <a
                 href="#"
-                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/10 text-gray-400 hover:bg-accent/20 hover:text-accent transition-all duration-200 hover:scale-110"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Facebook"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -75,57 +80,60 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-gray-300 uppercase tracking-wider">Shop</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/category/fruits-vegetables" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Fruits & Vegetables</Link></li>
-              <li><Link href="/category/dairy-breakfast" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Dairy & Breakfast</Link></li>
-              <li><Link href="/category/snacks-munchies" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Snacks</Link></li>
-              <li><Link href="/category/beverages" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Beverages</Link></li>
+            <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Shop</h4>
+            <ul className="space-y-3">
+              <li><Link href="/category/fruits-vegetables" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Fruits &amp; Vegetables</Link></li>
+              <li><Link href="/category/dairy-breakfast" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Dairy &amp; Breakfast</Link></li>
+              <li><Link href="/category/snacks-munchies" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Snacks</Link></li>
+              <li><Link href="/category/beverages" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Beverages</Link></li>
             </ul>
           </div>
 
           {/* Account */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-gray-300 uppercase tracking-wider">Account</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/account?tab=profile" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Profile</Link></li>
-              <li><Link href="/account?tab=orders" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">My Orders</Link></li>
-              <li><Link href="/account?tab=addresses" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Saved Addresses</Link></li>
-              <li><Link href="/cart" className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">Cart</Link></li>
+            <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Account</h4>
+            <ul className="space-y-3">
+              <li><Link href="/account?tab=profile" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Profile</Link></li>
+              <li><Link href="/account?tab=orders" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Orders</Link></li>
+              <li><Link href="/account?tab=addresses" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Saved Addresses</Link></li>
+              <li><Link href="/cart" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Cart</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-gray-300 uppercase tracking-wider">Contact</h4>
-            <ul className="space-y-2.5">
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Phone size={14} className="shrink-0" /> {formatPhone(contactPhone)}
+            <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Contact</h4>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+                <Phone size={13} className="shrink-0 text-zinc-500" /> 
+                <span className="hover:text-white transition-colors cursor-pointer">{formatPhone(contactPhone)}</span>
               </li>
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Mail size={14} className="shrink-0" /> {contactEmail}
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+                <Mail size={13} className="shrink-0 text-zinc-500" /> 
+                <span className="hover:text-white transition-colors cursor-pointer">{contactEmail}</span>
               </li>
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Clock size={14} className="shrink-0" /> {contactTimings}
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+                <Clock size={13} className="shrink-0 text-zinc-500" /> {contactTimings}
               </li>
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <MapPin size={14} className="shrink-0" /> {contactAddress}
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450 leading-relaxed">
+                <MapPin size={13} className="shrink-0 text-zinc-500" /> {contactAddress}
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-10 border-t border-gray-700 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">
+        {/* Footer Bottom Rights */}
+        <div className="mt-12 border-t border-white/[0.06] pt-6.5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-550 select-none">
             © {new Date().getFullYear()} FastKirana. All rights reserved.
           </p>
-          <p className="text-xs text-gray-500 order-3 md:order-none">
+          <p className="text-[11px] font-medium text-zinc-650 dark:text-zinc-550 order-3 md:order-none select-none">
             We accept: UPI • Cards • COD • Wallets
           </p>
-          <div className="flex items-center gap-4">
-            <Link href="#" className="text-xs text-gray-500 hover:text-gray-300 hover:translate-x-1 transition-all duration-200 inline-block">Privacy Policy</Link>
-            <Link href="#" className="text-xs text-gray-500 hover:text-gray-300 hover:translate-x-1 transition-all duration-200 inline-block">Terms of Service</Link>
-            <Link href="#" className="text-xs text-gray-500 hover:text-gray-300 hover:translate-x-1 transition-all duration-200 inline-block">Refund Policy</Link>
+          <div className="flex items-center gap-4.5">
+            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Privacy Policy</Link>
+            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Terms of Service</Link>
+            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Refund Policy</Link>
           </div>
         </div>
       </div>

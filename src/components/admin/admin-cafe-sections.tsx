@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Coffee, Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2 } from 'lucide-react'
-import { DEFAULT_CAFE_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
+import { Coffee, ChefHat, Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2 } from 'lucide-react'
+import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 import Image from 'next/image'
 
 const getCafeSectionImage = (tag: string) => {
@@ -32,10 +32,13 @@ const getCafeSectionImage = (tag: string) => {
 
 interface AdminCafeSectionsProps {
   onSectionsSaved?: () => void
+  type?: 'cafe' | 'restaurant'
 }
 
-export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
-  const [cafeMenuSections, setCafeMenuSections] = useState<CafeMenuSection[]>(DEFAULT_CAFE_MENU_SECTIONS)
+export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeSectionsProps) {
+  const isRestaurant = type === 'restaurant'
+  const defaultSections = isRestaurant ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS
+  const [cafeMenuSections, setCafeMenuSections] = useState<CafeMenuSection[]>(defaultSections)
   
   // Section Editing Form States
   const [isAddingNewSec, setIsAddingNewSec] = useState(false)
@@ -58,26 +61,27 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
         if (!res.ok) throw new Error('Failed to load settings')
         const data = await res.json()
         
-        if (data.cafe_menu_sections) {
+        const settingKey = isRestaurant ? 'restaurant_menu_sections' : 'cafe_menu_sections'
+        if (data[settingKey]) {
           try {
-            const parsed = JSON.parse(data.cafe_menu_sections)
+            const parsed = JSON.parse(data[settingKey])
             if (Array.isArray(parsed)) {
               setCafeMenuSections(parsed)
             }
           } catch (e) {
-            console.error('Failed to parse cafe menu sections setting:', e)
+            console.error(`Failed to parse ${settingKey} setting:`, e)
           }
         }
       } catch (err: any) {
         console.error(err)
-        toast.error('Could not fetch café sections')
+        toast.error(isRestaurant ? 'Could not fetch restaurant sections' : 'Could not fetch café sections')
       } finally {
         setLoading(false)
       }
     }
 
     loadSettings()
-  }, [])
+  }, [isRestaurant])
 
   const handleEditSection = (index: number) => {
     const sec = cafeMenuSections[index]
@@ -137,12 +141,12 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
         return
       }
       setCafeMenuSections([...cafeMenuSections, updatedSec])
-      toast.success('Section added! (Click Save Café Sections below to apply permanently)')
+      toast.success(isRestaurant ? 'Section added! (Click Save Restaurant Sections below to apply permanently)' : 'Section added! (Click Save Café Sections below to apply permanently)')
     } else if (editingSecIndex !== null) {
       const copy = [...cafeMenuSections]
       copy[editingSecIndex] = updatedSec
       setCafeMenuSections(copy)
-      toast.success('Section updated! (Click Save Café Sections below to apply permanently)')
+      toast.success(isRestaurant ? 'Section updated! (Click Save Restaurant Sections below to apply permanently)' : 'Section updated! (Click Save Café Sections below to apply permanently)')
     }
 
     handleCancelSectionEdit()
@@ -153,7 +157,7 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
     const copy = [...cafeMenuSections]
     copy.splice(index, 1)
     setCafeMenuSections(copy)
-    toast.success('Section deleted! (Click Save Café Sections below to apply permanently)')
+    toast.success(isRestaurant ? 'Section deleted! (Click Save Restaurant Sections below to apply permanently)' : 'Section deleted! (Click Save Café Sections below to apply permanently)')
   }
 
   const handleMoveSection = (index: number, direction: 'up' | 'down') => {
@@ -170,21 +174,22 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
   const handleSaveMenuSections = async () => {
     try {
       setSavingSections(true)
+      const settingKey = isRestaurant ? 'restaurant_menu_sections' : 'cafe_menu_sections'
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cafe_menu_sections: JSON.stringify(cafeMenuSections),
+          [settingKey]: JSON.stringify(cafeMenuSections),
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to update café menu sections')
+      if (!res.ok) throw new Error(isRestaurant ? 'Failed to update restaurant menu sections' : 'Failed to update café menu sections')
       
-      toast.success('Café menu sections saved successfully!')
+      toast.success(isRestaurant ? 'Restaurant menu sections saved successfully!' : 'Café menu sections saved successfully!')
       if (onSectionsSaved) onSectionsSaved()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || 'Error saving café menu sections')
+      toast.error(err.message || (isRestaurant ? 'Error saving restaurant menu sections' : 'Error saving café menu sections'))
     } finally {
       setSavingSections(false)
     }
@@ -203,11 +208,15 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-text-primary flex items-center gap-1.5">
-            <Coffee className="h-5 w-5 text-accent" />
-            Café Menu Sections Editor
+            {isRestaurant ? (
+              <ChefHat className="h-5 w-5 text-accent" />
+            ) : (
+              <Coffee className="h-5 w-5 text-accent" />
+            )}
+            {isRestaurant ? 'Restaurant Menu Sections Editor' : 'Café Menu Sections Editor'}
           </h3>
           <p className="text-xs text-text-secondary mt-0.5 font-medium">
-            Manage the sections shown on the Café page storefront. Reorder, add, edit, or delete them.
+            Manage the sections shown on the {isRestaurant ? 'Restaurant' : 'Café'} page storefront. Reorder, add, edit, or delete them.
           </p>
         </div>
         
@@ -227,7 +236,9 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
       {(isAddingNewSec || editingSecIndex !== null) && (
         <form onSubmit={handleSaveSection} className="bg-muted/30 border border-border p-4 rounded-xl space-y-4">
           <h4 className="text-xs font-black text-text-primary">
-            {isAddingNewSec ? '✨ Add New Café Menu Section' : '📝 Edit Café Menu Section'}
+            {isAddingNewSec 
+              ? `✨ Add New ${isRestaurant ? 'Restaurant' : 'Café'} Menu Section` 
+              : `📝 Edit ${isRestaurant ? 'Restaurant' : 'Café'} Menu Section`}
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -411,7 +422,7 @@ export function AdminCafeSections({ onSectionsSaved }: AdminCafeSectionsProps) {
           ) : (
             <>
               <Save className="h-4 w-4" />
-              Save Café Sections
+              {isRestaurant ? 'Save Restaurant Sections' : 'Save Café Sections'}
             </>
           )}
         </button>

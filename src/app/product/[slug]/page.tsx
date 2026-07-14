@@ -115,7 +115,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {product.category && (
           <>
             <Link 
-              href={product.category.slug === 'cafe' ? '/cafe' : `/category/${product.category.slug}`} 
+              href={product.category.slug === 'cafe' ? '/?mode=cafe' : `/category/${product.category.slug}`} 
               className="hover:text-primary transition-colors"
             >
               {product.category.name}

@@ -74,7 +74,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       return {
         greeting: settings.hero_greeting_closed || `We're resting right now 💤`,
         subtitle: settings.hero_subtitle_closed || 'FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!',
-        icon: <ShieldAlert className="h-4 w-4 text-rose-500 animate-pulse" />,
+        icon: <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0" />,
         modeLabel: 'Store Closed',
         gradient: 'from-zinc-100 via-stone-50 to-zinc-50',
         darkGradient: 'dark:from-zinc-950/20 dark:via-zinc-900/10 dark:to-zinc-900/5',
@@ -96,7 +96,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
           : isCafeClosed
           ? (settings.hero_subtitle_morning_cafe_closed || 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦')
           : (settings.hero_subtitle_morning_both_open || 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 animate-pulse" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 shrink-0" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Morning Mode',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',
         darkGradient: 'dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-zinc-900/10',
@@ -117,7 +117,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
           : isCafeClosed
           ? (settings.hero_subtitle_afternoon_cafe_closed || 'Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦')
           : (settings.hero_subtitle_afternoon_both_open || 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-emerald-500 animate-pulse" /> : <Utensils className="h-4 w-4 text-emerald-500" />,
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-emerald-500 shrink-0" /> : <Utensils className="h-4 w-4 text-emerald-500 shrink-0" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Lunch Mode',
         gradient: 'from-emerald-50 via-teal-50/60 to-cyan-50/40',
         darkGradient: 'dark:from-emerald-950/20 dark:via-teal-950/10 dark:to-zinc-900/10',
@@ -138,7 +138,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
           : isCafeClosed
           ? (settings.hero_subtitle_evening_cafe_closed || 'Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦')
           : (settings.hero_subtitle_evening_both_open || 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-orange-500 animate-pulse" /> : <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10" />,
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-orange-500 shrink-0" /> : <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10 shrink-0" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Tea & Snacks Mode',
         gradient: 'from-orange-100/40 via-rose-50/40 to-amber-100/30',
         darkGradient: 'dark:from-orange-950/25 dark:via-rose-950/15 dark:to-zinc-900/10',
@@ -159,7 +159,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
           : isCafeClosed
           ? (settings.hero_subtitle_night_cafe_closed || 'Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦')
           : (settings.hero_subtitle_night_both_open || 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-indigo-500 animate-pulse" /> : <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20" />,
+        icon: isMartClosed ? <Coffee className="h-4 w-4 text-indigo-500 shrink-0" /> : <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20 shrink-0" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Cravings Mode',
         gradient: 'from-indigo-100/60 via-purple-50/50 to-pink-100/30',
         darkGradient: 'dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-zinc-900/10',
@@ -210,7 +210,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
                 {themeConfig.icon}
                 {themeConfig.modeLabel}
               </span>
-              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </div>
 
             <h1 className="text-base min-[375px]:text-lg sm:text-2xl md:text-3xl font-black text-text-primary tracking-tight leading-tight select-none">

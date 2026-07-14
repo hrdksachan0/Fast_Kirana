@@ -131,7 +131,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
             alt="Grocery bag with fresh vegetables"
             fill
             sizes="(max-width: 768px) 30vw, 300px"
-            className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2 animate-float"
+            className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2"
           />
         </div>
       </div>
@@ -142,9 +142,9 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
     <div className={`absolute inset-0 flex items-center justify-between p-3 md:p-12 text-white bg-gradient-to-br ${currentBanner.gradient}`}>
       {/* Floating Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-2 right-[30%] h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/10 animate-float-slow" />
-        <div className="absolute bottom-3 right-[20%] h-6 w-6 md:h-10 md:w-10 rounded-full bg-white/10 animate-float-reverse" />
-        <div className="absolute top-[65%] left-[10%] h-5 w-5 md:h-8 md:w-8 rounded-full bg-white/5 animate-float" />
+        <div className="absolute top-2 right-[30%] h-10 w-10 md:h-16 md:w-16 rounded-full bg-white/10" />
+        <div className="absolute bottom-3 right-[20%] h-6 w-6 md:h-10 md:w-10 rounded-full bg-white/10" />
+        <div className="absolute top-[65%] left-[10%] h-5 w-5 md:h-8 md:w-8 rounded-full bg-white/5" />
       </div>
 
       {/* Content */}
@@ -157,7 +157,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 bg-white/25 border border-white/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[9px] md:text-xs font-black backdrop-blur-md shadow-sm">
-            <Zap className="h-3 w-3 text-amber-300 fill-amber-300 animate-bounce-subtle" />
+            <Zap className="h-3 w-3 text-amber-300 fill-amber-300" />
             Fast Delivery
           </span>
         )}
@@ -184,7 +184,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
             alt="Grocery bag with fresh vegetables"
             fill
             sizes="(max-width: 768px) 30vw, 300px"
-            className="object-contain max-h-[95px] sm:max-h-[135px] md:max-h-[220px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2 animate-float"
+            className="object-contain max-h-[95px] sm:max-h-[135px] md:max-h-[220px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] translate-y-1 md:translate-y-2"
           />
         </div>
       ) : (
@@ -195,10 +195,10 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
           
           {currentBanner.type === 'first-order' && (
             <div className="relative flex items-center justify-center w-full h-full">
-              <div className="absolute top-1 left-1 md:top-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+              <div className="absolute top-1 left-1 md:top-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md">
                 <Apple className="h-4 w-4 md:h-9 md:w-9 text-rose-100 fill-rose-600/20" />
               </div>
-              <div className="absolute bottom-1 right-1 md:bottom-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+              <div className="absolute bottom-1 right-1 md:bottom-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md">
                 <Milk className="h-4 w-4 md:h-9 md:w-9 text-blue-100 fill-blue-600/20" />
               </div>
             </div>
@@ -206,10 +206,10 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
 
           {currentBanner.type === 'fresh' && (
             <div className="relative flex items-center justify-center w-full h-full">
-              <div className="absolute top-1 right-1 md:top-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float">
+              <div className="absolute top-1 right-1 md:top-4 md:right-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md">
                 <Leaf className="h-4 w-4 md:h-9 md:w-9 text-emerald-100 fill-emerald-600/20" />
               </div>
-              <div className="absolute bottom-1 left-1 md:bottom-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md animate-float-reverse">
+              <div className="absolute bottom-1 left-1 md:bottom-4 md:left-4 h-7 w-7 md:h-16 md:w-16 rounded-full bg-white/25 flex items-center justify-center shadow-md">
                 <Salad className="h-4 w-4 md:h-9 md:w-9 text-green-100 fill-green-600/20" />
               </div>
             </div>

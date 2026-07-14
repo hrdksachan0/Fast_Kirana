@@ -27,6 +27,7 @@ export async function PATCH(
     const updateData: any = {}
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl
     if (sortOrder !== undefined) updateData.sortOrder = parseInt(sortOrder) || 0
+    if (body.parentId !== undefined) updateData.parentId = body.parentId || null
 
     if (name !== undefined && name !== category.name) {
       updateData.name = name

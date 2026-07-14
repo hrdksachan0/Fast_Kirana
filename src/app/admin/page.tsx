@@ -14,6 +14,22 @@ import {
 
 export const revalidate = 0 // Admin dashboard is fully dynamic
 
+async function retryQuery<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      console.warn(`Database query failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export default async function AdminPage() {
   const session = await auth()
   if (!session || session.user.role !== 'ADMIN') {
@@ -48,7 +64,7 @@ export default async function AdminPage() {
   }
 
   try {
-    const results = await Promise.all([
+    const results = await retryQuery(() => Promise.all([
       prisma.user.count(),
       prisma.product.count({
         where: {
@@ -83,7 +99,7 @@ export default async function AdminPage() {
         FROM orders o
         GROUP BY o.status
       ` as Promise<any[]>,
-    ])
+    ]))
 
     userCount = results[0] as number
     lowStockCount = results[1] as number
@@ -102,7 +118,7 @@ export default async function AdminPage() {
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
 
-    const [fetchedUsers, fetchedAddresses] = await Promise.all([
+    const [fetchedUsers, fetchedAddresses] = await retryQuery(() => Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -111,7 +127,7 @@ export default async function AdminPage() {
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds } } })
         : [],
-    ])
+    ]))
     allUsers = fetchedUsers
     allAddresses = fetchedAddresses
 
@@ -144,7 +160,33 @@ export default async function AdminPage() {
       CANCELLED: statusCountsMap.CANCELLED,
     }
   } catch (error) {
-    console.warn('Database connection error in admin page: using empty dashboard fallback')
+    console.error('Database connection error in admin page:', error)
+    return (
+      <div className="container mx-auto px-4 py-24 flex items-center justify-center min-h-[70vh]">
+        <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-lg text-center space-y-6 animate-fade-in">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+            <AlertTriangle className="h-7 w-7" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-text-primary">Database Waking Up</h2>
+            <p className="text-sm text-text-secondary">
+              The store database is currently resuming from its serverless sleep. This typically takes 5 to 7 seconds.
+            </p>
+          </div>
+          <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 text-xs text-text-muted text-left border border-border/40">
+            <strong>What happened?</strong> To save resources, our Neon Postgres database pauses when idle. It automatically starts up the moment a new request comes in.
+          </div>
+          <div className="pt-2">
+            <a 
+              href="/admin" 
+              className="inline-flex w-full items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold py-3 px-4 text-sm transition-colors shadow-sm active:scale-[0.98]"
+            >
+              Refresh Admin Panel
+            </a>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Compute total revenue

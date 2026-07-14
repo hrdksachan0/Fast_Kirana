@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { ChevronRight, Menu as MenuIcon, X, Plus, Minus, Check } from 'lucide-react'
+import { ChevronRight, Menu as MenuIcon, X, Plus, Minus, Check, Clock, Award, Tag, ShoppingBag, Utensils, Coffee, ChefHat } from 'lucide-react'
 import { Product } from '@/types'
 import { ProductCard } from '@/components/product/product-card'
 import Link from 'next/link'
@@ -310,9 +310,12 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState<boolean>(false)
   const [navbarHeight, setNavbarHeight] = useState<number>(96)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSticky, setIsSticky] = useState<boolean>(false)
+  const [experienceMode, setExperienceMode] = useState<'cafe' | 'restaurant'>('cafe')
 
   const isScrollingRef = useRef(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const categoriesBarRef = useRef<HTMLDivElement>(null)
 
   // Measure and update navbar height only on mount and window resize (prevents layout thrashing on scroll)
   useEffect(() => {
@@ -504,26 +507,30 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const menuCategories = useMemo(() => {
     const list = []
     filteredCategorySections.sections.forEach(sec => {
+      if (experienceMode === 'restaurant') return
+
       const predef = (customSections || DEFAULT_CAFE_MENU_SECTIONS).find(c => c.tag === sec.tag) as any
       list.push({
         tag: sec.tag,
         title: sec.title,
         emoji: sec.emoji,
         image: predef?.imageUrl || predef?.image || getCafeSectionImage(sec.tag),
-        count: sec.products.length
+        count: sec.products.length,
+        products: sec.products
       })
     })
-    if (filteredCategorySections.moreItems.length > 0) {
+    if (filteredCategorySections.moreItems.length > 0 && experienceMode === 'cafe') {
       list.push({
         tag: 'more',
         title: 'More Specials',
         emoji: '🍽️',
         image: '/cafe_all_menu_category.png',
-        count: filteredCategorySections.moreItems.length
+        count: filteredCategorySections.moreItems.length,
+        products: filteredCategorySections.moreItems
       })
     }
     return list
-  }, [filteredCategorySections, customSections])
+  }, [filteredCategorySections, customSections, experienceMode])
 
   // Scroll spy scrollend event listener to unlock scrollspy tracking when smooth scroll completes
   useEffect(() => {
@@ -541,45 +548,45 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     }
   }, [])
 
-  // Scroll tracker logic (scrollspy)
+  // Scroll tracker logic (scrollspy + sticky bar)
   useEffect(() => {
     const handleScroll = () => {
       // Determine if floating menu button should appear (after scrolling past hero banner)
-      setShowFloatingMenuBtn(window.scrollY > 250)
+      setShowFloatingMenuBtn(window.scrollY > 300)
+
+      // Determine if categories bar should be sticky
+      if (categoriesBarRef.current) {
+        const barTop = categoriesBarRef.current.offsetTop
+        const threshold = barTop - navbarHeight
+        setIsSticky(window.scrollY > threshold)
+      }
 
       if (isScrollingRef.current) return
 
-      const headerOffset = navbarHeight + 16
+      const headerOffset = navbarHeight + 85
       const scrollPosition = window.scrollY + headerOffset
 
       let currentActive = ''
-      const isMobile = window.innerWidth < 768
-      const idPrefix = isMobile ? 'mobile-category-section-' : 'category-section-'
-
-      // Dynamic tags sections
-      filteredCategorySections.sections.forEach(sec => {
-        const el = document.getElementById(`${idPrefix}${sec.tag}`)
+      
+      // Check active category row
+      menuCategories.filter(c => c.tag !== 'all').forEach(cat => {
+        const el = document.getElementById(`cafe-section-${cat.tag}`)
         if (el && scrollPosition >= el.offsetTop) {
-          currentActive = sec.tag
+          currentActive = cat.tag
         }
       })
-
-      // More specials section
-      const moreEl = document.getElementById(`${idPrefix}more`)
-      if (moreEl && scrollPosition >= moreEl.offsetTop) {
-        currentActive = 'more'
-      }
 
       // If we've scrolled to the very bottom of the page, highlight the last category
       const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 12
       if (isAtBottom && menuCategories.length > 0) {
-        currentActive = menuCategories[menuCategories.length - 1].tag
+        const visibleCats = menuCategories.filter(c => c.tag !== 'all')
+        if (visibleCats.length > 0) {
+          currentActive = visibleCats[visibleCats.length - 1].tag
+        }
       }
 
       if (currentActive) {
         setActiveCategory(currentActive)
-      } else if (menuCategories.length > 0) {
-        setActiveCategory(menuCategories[0].tag)
       }
     }
 
@@ -664,489 +671,297 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
   const activeSectionDescription = activeSection ? activeSection.description : (currentActiveTag === 'more' ? 'Additional cafe items and specials' : 'Prepared Fresh & Delivered Fast')
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl relative">
-      {/* -------------------- DESKTOP LAYOUT -------------------- */}
-      <div className="hidden md:flex flex-col gap-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
-          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-          <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-          {currentActiveTag && currentActiveTag !== 'all' ? (
-            <>
-              <Link href="/cafe" onClick={() => setActiveCategory('')} className="hover:text-primary transition-colors">
-                FastKirana Cafe ☕
-              </Link>
-              <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-              <span className="text-[#FF2E55] font-extrabold">{activeSectionTitle}</span>
-            </>
-          ) : (
-            <span className="text-[#FF2E55] font-extrabold">FastKirana Cafe ☕</span>
-          )}
-        </nav>
+    <div className="container mx-auto px-4 py-6 max-w-4xl relative select-none">
+      {/* Premium ambient glow background effects */}
+      <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full blur-3xl pointer-events-none opacity-40 dark:opacity-20"
+           style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.3) 0%, transparent 70%)' }} />
 
-        {/* Hero Cafe Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2a1711] via-[#1d0e0a] to-[#120805] dark:from-[#1b0d09] dark:via-[#0e0604] dark:to-black text-white p-4 md:p-8 flex items-center justify-between min-h-[130px] md:min-h-[165px] shadow-[0_8px_30px_rgba(35,21,16,0.15)] border border-[#3e241b] dark:border-[#20110c]">
-          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/15 dark:bg-amber-500/10 blur-[50px] pointer-events-none animate-pulse-gentle" />
-          <div className="relative z-10 max-w-[62%] flex flex-col items-start text-left space-y-0.5 md:space-y-1">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg md:text-2xl font-black tracking-tight flex items-center gap-1.5">
-                <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-yellow-100 bg-clip-text text-transparent font-black">Café</span>
-                <span className="text-base animate-float">☕</span>
-              </h1>
-            </div>
-            <span className="inline-flex text-[8px] md:text-[10px] font-black bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-full px-2.5 py-0.5 tracking-wider uppercase mb-1">
-              Freshly Prepared. Fast Delivered.
-            </span>
-            <p className="text-[10px] md:text-xs text-white/70 leading-snug font-semibold max-w-[320px]">
-              Coffee, Beverages, South Indian, Chinese & more from your favorite café.
+      {/* 1. Full-width Segment Controller Switcher */}
+      <div className="w-full select-none mb-5">
+        <div className="relative flex w-full h-12 p-1 bg-zinc-150/50 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/50 dark:border-white/[0.04] overflow-hidden items-center">
+          <Link
+            href="/?mode=grocery"
+            className="relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer text-zinc-600 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white"
+          >
+            <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+            <span>Grocery</span>
+          </Link>
+          <button
+            disabled
+            className="relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 text-white scale-102"
+          >
+            <Utensils className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+            <span>Food</span>
+          </button>
+          
+          {/* Sliding indicator positioned on Food (right tab) */}
+          <div
+            className="absolute top-1 bottom-1 rounded-xl -z-0 bg-gradient-to-r from-orange-600 to-amber-500 shadow-[0_4px_16px_rgba(249,115,22,0.35)]"
+            style={{
+              width: 'calc(50% - 4px)',
+              left: 'calc(50% + 2px)',
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6.5">
+        {/* 2. Full-bleed Cafe Cute Promo Banner */}
+        <div className="relative w-full aspect-[21/9] sm:aspect-[16/6] md:aspect-[16/5] rounded-3xl overflow-hidden shadow-lg border border-zinc-150/20 dark:border-zinc-800/35">
+          <Image
+            src="/cafe_banner.png"
+            alt="Café & Restaurant Promo Banner"
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority
+          />
+        </div>
+
+
+        {/* 4. Experience Switcher */}
+        <div className="space-y-3 select-none">
+          <div className="relative flex w-full p-1 bg-[#e4e2de]/60 dark:bg-zinc-900/50 rounded-full border border-zinc-200/20 dark:border-zinc-800/40 overflow-hidden">
+            <button
+              onClick={() => {
+                setExperienceMode('cafe')
+                setActiveCategory('hot-beverage')
+                const target = document.getElementById('cafe-categories-start')
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className={cn(
+                "relative flex-1 py-3.5 text-sm font-semibold transition-all duration-300 z-15 flex items-center justify-center gap-2 cursor-pointer rounded-full",
+                experienceMode === 'cafe'
+                  ? "text-zinc-900 dark:text-white"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+              )}
+            >
+              <Coffee className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+              <span>Cafe</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                setExperienceMode('restaurant')
+                setActiveCategory('chinese')
+                const target = document.getElementById('cafe-categories-start')
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className={cn(
+                "relative flex-1 py-3.5 text-sm font-semibold transition-all duration-300 z-15 flex items-center justify-center gap-2 cursor-pointer rounded-full",
+                experienceMode === 'restaurant'
+                  ? "text-zinc-900 dark:text-white"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+              )}
+            >
+              <ChefHat className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+              <span>Restaurant</span>
+            </button>
+
+            {/* Sliding Pill Indicator */}
+            <div
+              className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-zinc-800 shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.25)] border border-white/50 dark:border-zinc-700/35 transition-all duration-300 z-10"
+              style={{
+                width: 'calc(50% - 4px)',
+                left: experienceMode === 'cafe' ? '4px' : 'calc(50%)',
+              }}
+            />
+          </div>
+        </div>
+
+        {experienceMode === 'restaurant' ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-8 mt-4">
+            <span className="text-5xl animate-bounce-gentle">🛎️</span>
+            <h3 className="text-base font-extrabold text-text-primary mt-4">Restaurant Dine is coming soon!</h3>
+            <p className="text-xs text-text-secondary max-w-[280px] mt-1.5 leading-relaxed">
+              We are partnering with your favorite local restaurants to bring delicious full meals to your doorstep shortly. Stay tuned!
             </p>
           </div>
-          <div className="absolute right-4 md:right-8 bottom-0 top-0 w-[35%] md:w-[40%] flex items-center justify-end select-none pointer-events-none">
-            <div className="relative w-full h-[110px] md:h-[145px] lg:h-[165px]">
-              <Image
-                src="/cafe_banner.png"
-                alt="South Indian and Chinese Cafe Specials"
-                fill
-                sizes="(max-width: 768px) 35vw, 300px"
-                className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.4)] animate-float"
-                priority
-              />
+        ) : (
+          <>
+            {/* 5. Offers for you */}
+        <div className="space-y-3 select-none">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs sm:text-sm font-black text-text-primary tracking-tight uppercase">
+              Offers for you
+            </h3>
+            <span className="text-[11px] font-black text-orange-600 hover:underline cursor-pointer">See all</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Left wide card */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-50 to-rose-100/70 dark:from-rose-950/15 dark:to-rose-900/10 p-4 border border-rose-200/40 dark:border-rose-800/20 flex flex-col justify-between min-h-[155px]">
+              <div className="text-left">
+                <span className="text-[8px] font-black uppercase tracking-wider text-rose-500 block mb-0.5">Special Cafe Coupon</span>
+                <h4 className="text-sm font-black text-zinc-950 dark:text-white leading-tight">Flat 20% OFF</h4>
+                <p className="text-[9.5px] font-bold text-zinc-550 mt-0.5">On all cafe orders</p>
+              </div>
+              <div className="absolute right-1 bottom-1 w-14 h-14 pointer-events-none">
+                <Image src="/cafe_brews_category.png" alt="Coffee Cup" fill sizes="56px" className="object-contain" />
+              </div>
+              <div className="mt-3 flex flex-col gap-1.5 self-start">
+                <span className="px-2 py-0.5 bg-white dark:bg-zinc-800 border border-dashed border-rose-300 dark:border-rose-800 text-[9.5px] font-black text-rose-600 dark:text-rose-455 rounded-lg">
+                  CAFE20
+                </span>
+                <span className="text-[7.5px] font-bold text-zinc-450 dark:text-zinc-500">T&C Apply</span>
+              </div>
+            </div>
+
+            {/* Right stacked cards */}
+            <div className="flex flex-col gap-3">
+              <div className="relative overflow-hidden rounded-2.5xl bg-zinc-50 dark:bg-zinc-900/30 p-3 border border-zinc-150/40 dark:border-zinc-800/30 flex items-center justify-between min-h-[72px] sm:min-h-[76px]">
+                <div className="text-left max-w-[65%] min-w-0">
+                  <h4 className="text-xs font-black text-text-primary leading-tight truncate">Up to 30% OFF</h4>
+                  <p className="text-[8.5px] font-bold text-text-secondary mt-0.5 truncate">On restaurant orders</p>
+                </div>
+                <div className="w-10 h-10 relative shrink-0">
+                  <Image src="/cafe_burgers_category.png" alt="Burger Offer" fill sizes="40px" className="object-contain" />
+                </div>
+              </div>
+              
+              <div className="relative overflow-hidden rounded-2.5xl bg-zinc-50 dark:bg-zinc-900/30 p-3 border border-zinc-150/40 dark:border-zinc-800/30 flex items-center justify-between min-h-[72px] sm:min-h-[76px]">
+                <div className="text-left max-w-[65%] min-w-0">
+                  <h4 className="text-xs font-black text-text-primary leading-tight truncate">Free Delivery</h4>
+                  <p className="text-[8.5px] font-bold text-text-secondary mt-0.5 truncate">On orders above ₹199</p>
+                </div>
+                <div className="w-10 h-10 relative shrink-0">
+                  <Image src="/delivered_package_proof.png" alt="Free Delivery" fill sizes="40px" className="object-contain" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Split layout: Sidebar categories for desktop */}
-        <div className="flex gap-8 items-start">
-          <aside 
-            style={{ 
-              top: `${navbarHeight + 16}px`, 
-              maxHeight: `calc(100vh - ${navbarHeight + 40}px)` 
-            }}
-            className="w-64 shrink-0 sticky overflow-y-auto pr-2 border-r border-border/40 space-y-1 scrollbar-none py-1"
+        {/* 6. Popular near you */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs sm:text-sm font-black text-text-primary tracking-tight uppercase">
+              Popular near you
+            </h3>
+            <span className="text-[11px] font-black text-orange-600 hover:underline cursor-pointer">See all</span>
+          </div>
+          
+          <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
+            {mappedProducts
+              .filter(p => p.tags?.includes('popular') || p.tags?.includes('bestseller') || p.tags?.includes('top-pick') || p.price < 150)
+              .slice(0, 10)
+              .map((p: any) => (
+                <div key={p.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] shrink-0 snap-start">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Sticky Glassmorphic Category Quick-Bar (ScrollSpy) */}
+        <div ref={categoriesBarRef} className="h-14 w-full scroll-mt-24 select-none">
+          <div className={cn(
+            "w-full transition-all duration-300 z-30",
+            isSticky 
+              ? "fixed left-0 right-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-150/40 dark:border-zinc-900/40 shadow-[0_4px_25px_rgba(0,0,0,0.03)] px-4 py-2.5" 
+              : "py-1"
+          )}
+          style={isSticky ? { top: `${navbarHeight}px` } : {}}
           >
-            <div className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider px-3 mb-2">
-              Menu Categories
-            </div>
-            {menuCategories.map((cat) => {
-              const isActive = activeCategory === cat.tag
-              return (
-                <button
-                  key={cat.tag}
-                  onClick={() => scrollToCategory(cat.tag)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left relative z-10',
-                    isActive
-                      ? 'text-rose-600 dark:text-rose-400 font-extrabold shadow-sm'
-                      : 'text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                  )}
-                >
-                  {/* Sliding active background */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeCafeCategoryDesktop"
-                      className="absolute inset-0 rounded-xl bg-rose-50 dark:bg-rose-950/20 -z-10"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 relative">
+            <div className="max-w-4xl mx-auto flex gap-3 overflow-x-auto scrollbar-premium py-1 px-1">
+              {menuCategories.filter(c => c.tag !== 'all').map((cat) => {
+                const isActive = activeCategory === cat.tag
+                return (
+                  <button
+                    key={cat.tag}
+                    onClick={() => {
+                      setActiveCategory(cat.tag)
+                      const target = document.getElementById(`cafe-section-${cat.tag}`)
+                      if (target) {
+                        const offset = isSticky ? (navbarHeight + 64) : (navbarHeight + 110)
+                        const targetPosition = target.offsetTop - offset
+                        window.scrollTo({ top: targetPosition, behavior: 'smooth' })
+                      }
+                    }}
+                    className={cn(
+                      "px-4 py-2.5 rounded-full text-xs font-semibold shrink-0 transition-all duration-200 cursor-pointer flex items-center gap-1.5 border border-transparent shadow-[0_2px_8px_rgba(0,0,0,0.015)]",
+                      isActive
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_4px_12px_rgba(249,115,22,0.25)] scale-[1.03]"
+                        : "bg-[#f4f2ee] dark:bg-zinc-900/60 text-zinc-650 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/80"
+                    )}
+                  >
+                    <div className="w-4 h-4 rounded-full overflow-hidden relative shrink-0">
                       {cat.image ? (
-                        <Image
-                          src={cat.image}
-                          alt={cat.title}
-                          fill
-                          sizes="24px"
-                          className="object-cover"
-                        />
+                        <Image src={cat.image} alt={cat.title} fill sizes="16px" className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-xs select-none">
-                          {cat.emoji}
-                        </div>
+                        <span className="text-[10px]">{cat.emoji}</span>
                       )}
                     </div>
-                    <span className="text-xs truncate">{cat.title}</span>
-                  </div>
-                  <span className={cn(
-                    'text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 relative z-20 transition-all duration-200',
-                    isActive
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-muted-foreground/10 text-text-secondary'
-                  )}>
-                    {cat.count}
-                  </span>
-                </button>
-              )
-            })}
-          </aside>
-
-          {/* Desktop Categories Content */}
-          <div className="flex-1 space-y-8">
-            {/* Desktop Filters & Search Bar */}
-            <div className="flex justify-between items-center bg-card border border-border/50 rounded-2xl p-4 shadow-sm select-none mb-2">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-extrabold text-text-primary uppercase tracking-wider">Cafe Menu</span>
-              </div>
-              {/* Café Search Input */}
-              <div className="relative flex-1 max-w-sm">
-                <input
-                  type="text"
-                  placeholder="Search in Cafe Menu..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-9 pl-9 pr-8 text-xs font-semibold bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border/80 focus:border-rose-500/30 rounded-xl focus:outline-none transition-all"
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs select-none">🔍</span>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-muted-foreground/15 hover:bg-muted-foreground/25 text-text-secondary text-[9px] font-black cursor-pointer"
-                  >
-                    ✕
+                    <span>{cat.title}</span>
                   </button>
-                )}
-              </div>
+                )
+              })}
             </div>
-
-            {filteredCategorySections.sections.map((section) => (
-              <section key={section.tag} id={`category-section-${section.tag}`} className="space-y-4 pt-2 scroll-mt-24">
-                <div className="flex items-center gap-2 px-1">
-                  <span className="text-xl">{section.emoji}</span>
-                  <div>
-                    <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">{section.title}</h2>
-                    <p className="text-xs text-text-secondary">{section.description}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                  {section.products.map((p: any) => (
-                    <ProductCard key={p.id} product={p} />
-                  ))}
-                </div>
-              </section>
-            ))}
-
-            {filteredCategorySections.moreItems.length > 0 && (
-              <section id="category-section-more" className="space-y-4 pt-2 scroll-mt-24">
-                <div className="flex items-center gap-2 px-1">
-                  <span className="text-xl">🍽️</span>
-                  <div>
-                    <h2 className="text-lg md:text-xl font-extrabold text-text-primary tracking-tight">More Specials</h2>
-                    <p className="text-xs text-text-secondary">Additional cafe items and specials</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                  {filteredCategorySections.moreItems.map((p: any) => (
-                    <ProductCard key={p.id} product={p} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {filteredCategorySections.sections.length === 0 && filteredCategorySections.moreItems.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
-                <span className="text-4xl animate-bounce-gentle">🥗</span>
-                <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
-                <p className="text-xs text-text-secondary max-w-[280px] mt-1">Try clearing your search query to see all items.</p>
-                <button
-                  onClick={() => { setSearchQuery('') }}
-                  className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  Show All Items
-                </button>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
-      <div id="mobile-cafe-layout-root" className="md:hidden flex flex-col -mx-4 min-h-[calc(100vh-140px)]">
-        {/* Mobile Breadcrumbs */}
-        <div className="px-4 mb-2.5">
-          <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20">
-            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-            {currentActiveTag && currentActiveTag !== 'all' ? (
-              <>
-                <Link href="/cafe" onClick={() => setActiveCategory('')} className="hover:text-primary transition-colors">
-                  Cafe ☕
-                </Link>
-                <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-                <span className="text-[#FF2E55] font-extrabold truncate max-w-[100px]">
-                  {menuCategories.find(c => c.tag === currentActiveTag)?.title || 'All'}
-                </span>
-              </>
-            ) : (
-              <span className="text-[#FF2E55] font-extrabold">Cafe ☕</span>
-            )}
-          </nav>
-        </div>
+        {/* Categories Start Anchor */}
+        <div id="cafe-categories-start" className="w-full scroll-mt-36" />
 
-        {/* Main Split Area */}
-        <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
-          {/* Mobile Left Sidebar: Categories */}
-          <aside 
-            id="mobile-cafe-sidebar" 
-            className="w-[84px] shrink-0 border-r border-zinc-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950/70 backdrop-blur-md py-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none sticky top-[56px] self-start shadow-sm"
-          >
-            {menuCategories.map((cat) => {
-              const isActive = currentActiveTag === cat.tag
-              return (
-                <motion.button
-                  key={cat.tag}
-                  id={`mobile-category-tab-${cat.tag}`}
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => scrollToCategory(cat.tag)}
-                  className={cn(
-                    'w-full flex flex-col items-center text-center gap-1.5 py-3.5 px-1 relative transition-all cursor-pointer select-none z-10',
-                    isActive ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-text-secondary hover:text-text-primary'
-                  )}
-                >
-                  {/* Sliding Left indicator bar */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeCafeCategoryMobileBar"
-                      className="absolute left-0 top-1/4 bottom-1/4 w-[4px] bg-rose-500 dark:bg-rose-400 rounded-r-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    />
-                  )}
+        {/* 7. Category-wise Product Sliders (vertically stacked) */}
+        {menuCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
+          const displayProducts = cat.products.slice(0, 5)
+          const hasMore = cat.products.length > 5
+          const sectionHref = `/cafe?section=${cat.tag}`
 
-                  {/* Icon Card Container */}
-                  <div
-                    className={cn(
-                      'w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_2px_6px_rgba(0,0,0,0.01)] relative z-10 overflow-hidden',
-                      isActive
-                        ? 'border-rose-400/80 dark:border-rose-500/50 scale-[1.05] shadow-[0_0_12px_rgba(244,63,94,0.25)]'
-                        : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
-                    )}
-                  >
-                    {/* Sliding active inner circle background */}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeCafeCategoryMobileCircle"
-                        className="absolute inset-0 rounded-full bg-rose-50/70 dark:bg-rose-950/20 -z-10"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                    {cat.image ? (
-                      <Image
-                        src={cat.image}
-                        alt={cat.title}
-                        fill
-                        sizes="46px"
-                        className="object-cover relative z-20"
-                      />
-                    ) : (
-                      <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{cat.emoji}</span>
-                    )}
-                  </div>
-
-                  {/* Category Name */}
-                  <span className="text-[9.5px] leading-tight font-extrabold px-1 tracking-tight select-none mt-0.5 relative z-20">
-                    {cat.title}
-                  </span>
-                </motion.button>
-              )
-            })}
-          </aside>
-
-          {/* Mobile Right Content Panel */}
-          <div className="flex-1 min-w-0 bg-background px-3 py-3 space-y-4">
-            {/* Cafe Banner inside Mobile Right Panel */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1d0e0a] via-[#120805] to-black text-white p-3.5 flex items-center justify-between min-h-[96px] shadow-[0_0_20px_rgba(244,63,94,0.12)] border border-rose-950/40 select-none mb-2">
-              <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-rose-500/15 blur-[25px] pointer-events-none animate-pulse-gentle" />
-              <div className="absolute -bottom-10 -left-10 w-24 h-24 rounded-full bg-amber-500/10 blur-[25px] pointer-events-none" />
-              <div className="relative z-10 max-w-[65%] text-left">
-                <span className="text-[8.5px] font-black tracking-widest text-rose-400 dark:text-rose-300 block mb-0.5 uppercase">
-                  ⚡ FASTKIRANA CAFÉ
-                </span>
-                <h2 className="text-xs font-black text-white tracking-tight leading-tight mb-1 select-none">
-                  {activeSectionTitle || 'Fresh Specials'}
-                </h2>
-                <p className="text-[9px] font-bold text-zinc-400 leading-none">
-                  Prepared Fresh & Delivered Fast
-                </p>
-              </div>
-              <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-2 filter drop-shadow-[0_0_10px_rgba(244,63,94,0.4)] leading-none">
-                {activeSectionEmoji}
-              </div>
-            </div>
-
-            {/* Mobile Filters & Search Bar */}
-            <div className="space-y-2.5 pb-1 select-none">
-
-              {/* Café Search Input */}
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  placeholder="Search Cafe Menu..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8.5 pl-8.5 pr-8 text-[11px] font-semibold bg-muted/30 border border-border/80 focus:border-rose-500/20 rounded-xl focus:outline-none transition-all"
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[11px] select-none">🔍</span>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 rounded-full flex items-center justify-center bg-muted-foreground/15 text-text-secondary text-[8px] font-black cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Render Category Sections Vertically */}
-            {filteredCategorySections.sections.map((section) => (
-              <section 
-                key={section.tag} 
-                id={`mobile-category-section-${section.tag}`} 
-                className="space-y-3 pt-1 scroll-mt-24"
-              >
-                <div className="flex items-center gap-1.5 px-0.5 pt-2 pb-1.5 border-b border-zinc-100 dark:border-zinc-900/60">
-                  <span className="text-base filter drop-shadow-sm select-none">{section.emoji}</span>
-                  <div className="flex items-baseline justify-between w-full">
-                    <h3 className="text-[11px] font-black text-text-primary uppercase tracking-wider">{section.title}</h3>
-                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{section.products.length} Items</span>
-                  </div>
-                </div>
-
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, margin: "-10% 0px" }}
-                  className="grid grid-cols-2 gap-2.5"
-                >
-                  {section.products.map((p: any) => (
-                    <motion.div key={p.id} variants={itemVariants} className="h-full">
-                      <ProductCard product={p} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            ))}
-
-            {/* Render More Specials section if it exists */}
-            {filteredCategorySections.moreItems.length > 0 && (
-              <section 
-                id="mobile-category-section-more" 
-                className="space-y-3 pt-1 scroll-mt-24 pb-20"
-              >
-                <div className="flex items-center gap-1.5 px-0.5 pt-2 pb-1.5 border-b border-zinc-100 dark:border-zinc-900/60">
-                  <span className="text-base filter drop-shadow-sm select-none">🍽️</span>
-                  <div className="flex items-baseline justify-between w-full">
-                    <h3 className="text-[11px] font-black text-text-primary uppercase tracking-wider">More Specials</h3>
-                    <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full">{filteredCategorySections.moreItems.length} Items</span>
-                  </div>
-                </div>
-
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, margin: "-10% 0px" }}
-                  className="grid grid-cols-2 gap-2.5"
-                >
-                  {filteredCategorySections.moreItems.map((p: any) => (
-                    <motion.div key={p.id} variants={itemVariants} className="h-full">
-                      <ProductCard product={p} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {filteredCategorySections.sections.length === 0 && filteredCategorySections.moreItems.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-muted/10 dark:bg-zinc-900/10 border border-dashed border-border rounded-3xl p-6">
-                <span className="text-4xl animate-bounce-gentle">🥗</span>
-                <h3 className="text-sm font-extrabold text-text-primary mt-3">No matching items found</h3>
-                <p className="text-xs text-text-secondary max-w-[240px] mt-1">Try clearing your search query to see all items.</p>
-                <button
-                  onClick={() => { setSearchQuery('') }}
-                  className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  Show All Items
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Menu Drawer Backdrop/Popup */}
-      <AnimatePresence>
-        {isFloatingMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs cursor-pointer"
-              onClick={() => setIsFloatingMenuOpen(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed bottom-0 left-0 right-0 z-50 max-h-[60vh] bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col mx-auto max-w-sm"
+          return (
+            <div 
+              key={cat.tag} 
+              id={`cafe-section-${cat.tag}`}
+              className="space-y-3 pt-6 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 scroll-mt-24"
             >
-              <div className="w-12 h-1.5 bg-muted/60 rounded-full mx-auto my-3 shrink-0" />
-              <div className="px-5 pb-3 border-b border-border/50 flex justify-between items-center shrink-0">
-                <span className="text-xs font-black uppercase text-text-muted tracking-wider">Jump to Section</span>
-                <button
-                  onClick={() => setIsFloatingMenuOpen(false)}
-                  className="p-1 rounded-full bg-muted/60 text-text-secondary hover:text-text-primary hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full overflow-hidden relative bg-zinc-150/50 dark:bg-zinc-800 border border-zinc-200/30 dark:border-zinc-700/30 shrink-0">
+                    {cat.image ? (
+                      <Image src={cat.image} alt={cat.title} fill sizes="24px" className="object-cover" />
+                    ) : (
+                      <span className="text-xs">{cat.emoji}</span>
+                    )}
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
+                    {cat.title} Specials
+                  </h4>
+                </div>
+                <Link href={sectionHref} className="text-[11px] font-black text-rose-600 dark:text-rose-455 hover:opacity-85 flex items-center gap-0.5 select-none">
+                  <span>See All ({cat.products.length})</span>
+                  <ChevronRight size={10} strokeWidth={3} />
+                </Link>
               </div>
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
-                {menuCategories.map((cat) => {
-                  const isActive = currentActiveTag === cat.tag
-                  return (
-                    <button
-                      key={cat.tag}
-                      onClick={() => {
-                        setActiveCategory(cat.tag)
-                        setIsFloatingMenuOpen(false)
-                        scrollToCategory(cat.tag)
-                      }}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-rose-500/10 text-rose-500 font-extrabold border border-rose-500/20'
-                          : 'hover:bg-muted/40 text-text-primary border border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 relative">
-                          {cat.image ? (
-                            <Image
-                              src={cat.image}
-                              alt={cat.title}
-                              fill
-                              sizes="24px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-xs select-none">
-                              {cat.emoji}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm font-bold">{cat.title}</span>
+              
+              <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
+                {displayProducts.map((p: any) => (
+                  <div key={p.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] shrink-0 snap-start">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+                
+                {hasMore && (
+                  <div className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] shrink-0 snap-start">
+                    <Link href={sectionHref} className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-card p-3 shadow-xs transition-all duration-300 hover:border-orange-500/40 hover:bg-orange-500/5 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] w-full">
+                      <div className="w-10 h-10 rounded-full bg-orange-500/10 dark:bg-orange-500/5 flex items-center justify-center text-orange-600 dark:text-orange-450 group-hover:scale-110 transition-transform duration-300">
+                        <ChevronRight size={20} strokeWidth={2.5} />
                       </div>
-                      <span className="text-xs text-text-muted font-bold bg-muted px-2 py-0.5 rounded-full">
-                        {cat.count}
+                      <span className="text-xs font-black text-text-primary mt-3 text-center">
+                        See More
                       </span>
-                    </button>
-                  )
-                })}
+                      <span className="text-[10px] font-bold text-text-secondary mt-1 text-center">
+                        +{cat.products.length - 5} items
+                      </span>
+                    </Link>
+                  </div>
+                )}
               </div>
-            </motion.div>
+            </div>
+          )
+        })}
           </>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }

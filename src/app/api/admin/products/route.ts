@@ -63,12 +63,24 @@ export async function GET(request: Request) {
           { tags: { has: 'cafe' } }
         ]
       })
+    } else if (type === 'restaurant') {
+      andClauses.push({
+        OR: [
+          { category: { slug: 'restaurant' } },
+          { tags: { has: 'restaurant' } }
+        ]
+      })
     } else if (type === 'grocery') {
       andClauses.push({
-        category: { slug: { not: 'cafe' } }
+        category: { slug: { notIn: ['cafe', 'restaurant'] } }
       })
       andClauses.push({
-        NOT: { tags: { has: 'cafe' } }
+        NOT: {
+          OR: [
+            { tags: { has: 'cafe' } },
+            { tags: { has: 'restaurant' } }
+          ]
+        }
       })
     }
 

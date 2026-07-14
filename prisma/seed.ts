@@ -108,6 +108,29 @@ async function main() {
     ],
   })
 
+  // Seed parent categories 'cafe' and 'restaurant'
+  await prisma.category.upsert({
+    where: { slug: 'cafe' },
+    update: {},
+    create: {
+      name: 'FastKirana Cafe',
+      slug: 'cafe',
+      imageUrl: '☕',
+      sortOrder: 99,
+    },
+  })
+
+  await prisma.category.upsert({
+    where: { slug: 'restaurant' },
+    update: {},
+    create: {
+      name: 'FastKirana Restaurant',
+      slug: 'restaurant',
+      imageUrl: '🍳',
+      sortOrder: 100,
+    },
+  })
+
   const productCount = await prisma.product.count()
   const categoryCount = await prisma.category.count()
 

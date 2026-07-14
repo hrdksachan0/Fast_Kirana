@@ -288,7 +288,7 @@ const CATEGORY_THEMES: Record<string, {
     activeBg: 'bg-zinc-100/50 dark:bg-zinc-800/20',
     glow: 'shadow-[0_0_12px_rgba(113,113,122,0.2)]',
     border: 'border-zinc-400/50 dark:border-zinc-700/50',
-    indicatorBg: 'bg-zinc-650'
+    indicatorBg: 'bg-zinc-600'
   },
   'personal-care': {
     primaryText: 'text-pink-600 dark:text-pink-400',

@@ -4,55 +4,53 @@ import { Truck, Sparkles, ShieldCheck, Store } from 'lucide-react'
 
 export function DeliveryBanner() {
   return (
-    <section className="py-3 md:py-6 mt-1 md:mt-2 mb-0 px-1">
-      {/* Value Props Card */}
-      <div className="glass rounded-2xl border border-primary/10 shadow-card overflow-hidden">
-        {/* Tagline */}
-        <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 px-6 py-2.5 border-b border-border/40">
-          <div className="flex items-center justify-center gap-1.5 md:gap-2 text-[10px] md:text-sm font-bold text-text-primary tracking-wide">
-            <Store className="h-4 w-4 text-primary animate-pulse-gentle shrink-0" />
-            <span>From Your Town&apos;s Dark Store — Packed &amp; Delivered by <span className="text-primary">FastKirana</span></span>
+    <section className="py-4 md:py-6 mt-1 md:mt-2 mb-0 px-1">
+      {/* Floating Tagline Pill */}
+      <div className="flex justify-center mb-5">
+        <span className="inline-flex items-center gap-2 px-4.5 py-1.5 rounded-full text-[10px] md:text-xs font-semibold bg-white/95 dark:bg-zinc-900/65 border border-zinc-200/60 dark:border-zinc-800/50 shadow-2xs backdrop-blur-md text-text-primary tracking-wide">
+          <Store className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span>From Your Town&apos;s Dark Store — Packed &amp; Delivered by <span className="text-primary font-bold">FastKirana</span></span>
+        </span>
+      </div>
+
+      {/* 3 Columns Grid of Premium Micro-Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        {/* Instant Delivery */}
+        <div className="group flex items-center md:items-start gap-4 p-4 rounded-2xl bg-white/60 dark:bg-zinc-950/45 border border-zinc-200/50 dark:border-zinc-800/40 shadow-2xs hover:border-primary/20 dark:hover:border-primary/20 hover:bg-white/80 dark:hover:bg-zinc-900/30 transition-all duration-300">
+          <div className="flex h-11 w-11 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/5 text-primary border border-primary/10 shadow-3xs">
+            <Truck className="h-5.5 w-5.5 text-primary" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Fast Instant Delivery</h3>
+            <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
+              Delivered fresh from local dark stores to your doorstep in minutes.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 p-4 md:p-6">
-          {/* Instant Delivery */}
-          <div className="group/item flex items-start gap-4 cursor-default">
-            <div className="flex h-10 w-10 md:h-14 md:w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary transition-transform duration-300 group-hover/item:scale-110 group-hover/item:-translate-y-0.5">
-              <Truck className="h-5 w-5 md:h-7 md:w-7 animate-float" />
-            </div>
-            <div>
-              <h3 className="text-xs md:text-base font-bold text-text-primary">Fast Instant Delivery</h3>
-              <p className="hidden md:block text-xs text-text-secondary mt-0.5 leading-relaxed">
-                Our network of local dark stores delivers your groceries fresh to your doorstep with our fast delivery service.
-              </p>
-            </div>
+        {/* Free Shipping */}
+        <div className="group flex items-center md:items-start gap-4 p-4 rounded-2xl bg-white/60 dark:bg-zinc-950/45 border border-zinc-200/50 dark:border-zinc-800/40 shadow-2xs hover:border-accent/20 dark:hover:border-accent/20 hover:bg-white/80 dark:hover:bg-zinc-900/30 transition-all duration-300">
+          <div className="flex h-11 w-11 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/10 to-accent/5 text-accent border border-accent/10 shadow-3xs">
+            <Sparkles className="h-5.5 w-5.5 text-accent" />
           </div>
-
-          {/* Free Shipping */}
-          <div className="group/item flex items-start gap-4 border-t border-border/60 pt-4 md:border-t-0 md:pt-0 md:border-x md:px-4 border-border/60 cursor-default">
-            <div className="flex h-10 w-10 md:h-14 md:w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent/15 to-accent/5 text-accent transition-transform duration-300 group-hover/item:scale-110 group-hover/item:-translate-y-0.5">
-              <Sparkles className="h-5 w-5 md:h-7 md:w-7 animate-float" style={{ animationDelay: '0.5s' }} />
-            </div>
-            <div>
-              <h3 className="text-xs md:text-base font-bold text-text-primary">Free Shipping</h3>
-              <p className="hidden md:block text-xs text-text-secondary mt-0.5 leading-relaxed">
-                Order your daily essentials and get free contactless delivery for cart values above ₹199.
-              </p>
-            </div>
+          <div className="text-left">
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Free Shipping</h3>
+            <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
+              Contactless free shipping on all orders above ₹199.
+            </p>
           </div>
+        </div>
 
-          {/* Freshness */}
-          <div className="group/item flex items-start gap-4 border-t border-border/60 pt-4 md:border-t-0 md:pt-0 cursor-default">
-            <div className="flex h-10 w-10 md:h-14 md:w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-discount/15 to-discount/5 text-discount transition-transform duration-300 group-hover/item:scale-110 group-hover/item:-translate-y-0.5">
-              <ShieldCheck className="h-5 w-5 md:h-7 md:w-7 animate-float" style={{ animationDelay: '1s' }} />
-            </div>
-            <div>
-              <h3 className="text-xs md:text-base font-bold text-text-primary">Super Fresh Guarantee</h3>
-              <p className="hidden md:block text-xs text-text-secondary mt-0.5 leading-relaxed">
-                Handpicked vegetables and fruits sourced daily. If you are not satisfied, return at the door.
-              </p>
-            </div>
+        {/* Freshness */}
+        <div className="group flex items-center md:items-start gap-4 p-4 rounded-2xl bg-white/60 dark:bg-zinc-950/45 border border-zinc-200/50 dark:border-zinc-800/40 shadow-2xs hover:border-discount/20 dark:hover:border-discount/20 hover:bg-white/80 dark:hover:bg-zinc-900/30 transition-all duration-300">
+          <div className="flex h-11 w-11 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-discount/10 to-discount/5 text-discount border border-discount/10 shadow-3xs">
+            <ShieldCheck className="h-5.5 w-5.5 text-discount" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Super Fresh Guarantee</h3>
+            <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
+              Handpicked farm-fresh products. Satisfied or return at your door.
+            </p>
           </div>
         </div>
       </div>

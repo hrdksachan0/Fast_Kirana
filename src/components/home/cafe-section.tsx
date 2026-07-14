@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Coffee, ChefHat } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
+import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { motion } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
+import { ProductCard } from '@/components/product/product-card'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -29,6 +30,8 @@ const getCafeSectionImage = (tag: string) => {
     'burgers': '/cafe_burgers_category.png',
     'garlic-bread': '/cafe_garlic_bread_category.png',
     'desserts': '/cafe_desserts_category.png',
+    'north-indian': '/cafe_south_indian_category.png',
+    'biryani-rice': '/cafe_rice_category.png',
   }
   return mapping[tag] || null
 }
@@ -36,33 +39,54 @@ const getCafeSectionImage = (tag: string) => {
 const getShortTitle = (tag: string, fullTitle: string) => {
   const customMapping: Record<string, string> = {
     'hot-beverage': 'Brews',
-    'hot-bite': 'Snacks',
+    'hot-bite': 'Quick Bites & Snacks',
     'sandwiches': 'Sandwiches',
-    'frankie-rolls': 'Rolls',
-    'chinese': 'Chinese',
-    'italian-pasta': 'Pasta',
+    'frankie-rolls': 'Frankie & Rolls',
+    'chinese': 'Chinese Cuisine',
+    'italian-pasta': 'Pasta & Italian',
     'bombay-bites': 'Bombay',
     'rice-dishes': 'Rice',
     'shakes': 'Shakes',
     'mocktails': 'Mocktails',
     'cold-coffee': 'Coffee',
-    'south-indian': 'South Indian',
+    'south-indian': 'South Indian Fastfood',
     'bakery': 'Bakery',
     'chilled': 'Cold Drinks',
-    'pizza': 'Pizza',
-    'burgers': 'Burgers',
+    'pizza': 'Pizzas & Sides',
+    'burgers': 'Gourmet Burgers',
     'garlic-bread': 'Garlic Bread',
-    'desserts': 'Desserts',
+    'desserts': 'Desserts & Sweets',
+    'north-indian': 'North Indian',
+    'biryani-rice': 'Biryani & Rice',
   }
   return customMapping[tag] || fullTitle
 }
 
-export function CafeSection() {
+interface CafeSectionProps {
+  showProducts?: boolean
+}
+
+export function CafeSection({ showProducts = false }: CafeSectionProps) {
   const settings = useUIStore((s) => s.settings) || {}
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const isCafeActive = cafeOpen && (categoryStatus['cafe'] !== false)
 
+  const [activeCategoryTag, setActiveCategoryTag] = useState<string>('all')
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+
+  const toggleCategoryExpand = (tag: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(tag)) {
+        next.delete(tag)
+      } else {
+        next.add(tag)
+      }
+      return next
+    })
+  }
+  const [experienceMode, setExperienceMode] = useState<'cafe' | 'restaurant'>('cafe')
   const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
     { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
@@ -74,15 +98,29 @@ export function CafeSection() {
     { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.png' },
     { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.png' },
   ])
+
+  const filteredCategories = useMemo(() => {
+    return categories.filter(cat => {
+      if (cat.tag === 'all') return true
+      if ((experienceMode as string) === 'cafe') return true
+      if ((experienceMode as string) === 'restaurant') return false
+      return true
+    })
+  }, [categories, experienceMode])
+  const [cafeProducts, setCafeProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     setIsLoading(true)
-    fetch('/api/products?category=cafe&limit=250')
+    const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe'
+    fetch(`/api/products?category=${categoryQuery}&limit=250`)
       .then(res => res.json())
       .then(productsRes => {
         const dbProducts = productsRes?.products || productsRes || []
-        const customSectionsStr = settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS
+        setCafeProducts(dbProducts)
+        const customSectionsStr = (experienceMode as string) === 'restaurant'
+          ? (settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS)
+          : (settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS)
         
         let parsedSections = null
         if (customSectionsStr) {
@@ -94,7 +132,7 @@ export function CafeSection() {
           } catch (e) {}
         }
 
-        const PREDEFINED_CATEGORIES = parsedSections || DEFAULT_CAFE_MENU_SECTIONS
+        const PREDEFINED_CATEGORIES = parsedSections || ((experienceMode as string) === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS)
 
         const sectionsMap = new Map<string, any>()
         PREDEFINED_CATEGORIES.forEach(cat => {
@@ -173,21 +211,25 @@ export function CafeSection() {
         PREDEFINED_CATEGORIES.forEach(cat => {
           const sec = sectionsMap.get(cat.tag)
           if (sec && sec.productsCount > 0) {
+            const matchedProducts = dbProducts.filter((p: any) => sec.matchedIds.has(p.id))
             finalCategories.push({
               tag: sec.tag,
               title: sec.title,
               emoji: sec.emoji,
-              image: sec.image
+              image: sec.image,
+              products: matchedProducts
             })
           }
         })
 
         dynamicSections.forEach(sec => {
+          const matchedProducts = dbProducts.filter((p: any) => p.tags?.map((t: string) => t.toLowerCase()).includes(sec.tag))
           finalCategories.push({
             tag: sec.tag,
             title: sec.title,
             emoji: sec.emoji,
-            image: sec.image
+            image: sec.image,
+            products: matchedProducts
           })
         })
 
@@ -198,19 +240,20 @@ export function CafeSection() {
             sec.matchedIds.forEach((id: string) => allGroupedIds.add(id))
           }
         })
-        const moreCount = dbProducts.filter((p: any) => !allGroupedIds.has(p.id)).length
-        if (moreCount > 0) {
+        const moreProducts = dbProducts.filter((p: any) => !allGroupedIds.has(p.id))
+        if (moreProducts.length > 0) {
           finalCategories.push({
             tag: 'more',
             title: 'More Specials',
             emoji: '🍽️',
-            image: '/cafe_all_menu_category.png'
+            image: '/cafe_all_menu_category.png',
+            products: moreProducts
           })
         }
 
         // Only show categories that have products in the database
         setCategories([
-          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
+          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png', products: dbProducts },
           ...finalCategories
         ])
       })
@@ -221,132 +264,277 @@ export function CafeSection() {
   }, [settings])
 
   return (
-    <section className="space-y-4">
-      {/* Café Banner Card */}
-      <Link href="/cafe" className="block group">
-        <div className="relative overflow-hidden rounded-3xl h-[120px] sm:h-[140px] md:h-[160px] border border-amber-500/20 shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-500 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)] hover:-translate-y-0.5">
-          {/* Cafe Banner Image */}
-          <Image
-            src="/cafe_banner.png"
-            alt="Cafe Banner"
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-103"
-          />
-
-          {/* Premium dark gradient overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent z-10" />
-
-          {/* Subtle light sweep reflection */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10" />
-
-          {/* Banner content */}
-          <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8 z-20">
-            <div className="text-left space-y-1 sm:space-y-1.5 max-w-[62%] sm:max-w-[70%]">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {Object.keys(settings).length === 0 ? (
-                  <span className="inline-flex items-center gap-1 bg-zinc-700/50 text-zinc-300 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold uppercase tracking-wider animate-pulse">
-                    ● Checking status...
-                  </span>
-                ) : isCafeActive ? (
-                  <span className="inline-flex items-center gap-1 bg-[#00b140] text-white px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm">
-                    ● Live Kitchen
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 bg-zinc-600 text-zinc-350 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm">
-                    ● Kitchen Closed
-                  </span>
-                )}
-                <span className="text-[10px] sm:text-xs animate-pulse-gentle">🔥</span>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <h3 className="text-white font-black text-sm min-[375px]:text-base sm:text-2xl md:text-3xl tracking-tight leading-tight">
-                  FastKirana Café
-                </h3>
-                <span className="text-xs sm:text-base animate-float">☕</span>
-              </div>
-              <p className="text-zinc-200 text-[8.5px] min-[375px]:text-[9.5px] sm:text-xs font-semibold leading-normal min-[375px]:leading-relaxed line-clamp-2">
-                Freshly prepared sandwiches, rolls, Chinese, Italian pasta & beverages — delivered hot!
-              </p>
-            </div>
-
-            <div className="shrink-0 pl-2 self-end mb-2.5 sm:mb-3.5">
-              <span className="inline-flex items-center gap-1 bg-[#e20a22] hover:bg-[#c8081c] text-white font-extrabold px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[8.5px] sm:text-xs shadow-md transition-all duration-300 group-hover:scale-105 active:scale-95 cursor-pointer uppercase tracking-wider">
-                <span>Open Menu</span>
-                <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
-
-      {/* Café Category Section Header */}
-      <div className="flex items-center justify-between px-1">
-        <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">
-          Cafe Categories
-        </h4>
-        <Link href="/cafe" className="text-[11px] font-black text-rose-600 dark:text-rose-400 hover:opacity-85 flex items-center gap-0.5 select-none">
-          <span>See Menu</span>
-          <ChevronRight size={10} strokeWidth={3} />
-        </Link>
+    <section className="space-y-0">
+      {/* ✨ Gen-Z Food Banner */}
+      <div 
+        onClick={() => {
+          const target = document.getElementById('cafe-menu-categories-anchor')
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-md hover:shadow-lg"
+      >
+        <Image
+          src="/food_genz_banner.png"
+          alt="Delicious Food in minutes - FastKirana"
+          fill
+          sizes="100vw"
+          className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.01]"
+          priority
+        />
       </div>
 
-      {/* Café Menu Categories Horizontal Scrollbar */}
-      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none px-2 snap-x snap-mandatory scroll-smooth select-none">
-        {isLoading ? (
-          Array.from({ length: 8 }).map((_, idx) => (
-            <div
-              key={`skeleton-${idx}`}
-              className="flex flex-col items-center text-center w-[70px] shrink-0 snap-start animate-pulse"
+
+      {/* Experience Switcher */}
+      <div className="relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border border-zinc-200/50 dark:border-zinc-800/60 overflow-hidden mt-4 mb-3.5 select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
+        <button
+          onClick={() => setExperienceMode('cafe')}
+          className={cn(
+            "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+            experienceMode === 'cafe'
+              ? "text-orange-500 dark:text-orange-400 font-black scale-102"
+              : "text-zinc-650 dark:text-zinc-450 hover:text-zinc-800 dark:hover:text-zinc-200 font-extrabold"
+          )}
+        >
+          <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+          <div className="flex flex-col text-left">
+            <span className="text-[12px] sm:text-[14px] font-black leading-none">Cafe</span>
+            <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
+          </div>
+        </button>
+        
+        <button
+          onClick={() => setExperienceMode('restaurant')}
+          className={cn(
+            "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+            (experienceMode as string) === 'restaurant'
+              ? "text-orange-500 dark:text-orange-400 font-black scale-102"
+              : "text-zinc-650 dark:text-zinc-450 hover:text-zinc-800 dark:hover:text-zinc-200 font-extrabold"
+          )}
+        >
+          <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+          <div className="flex flex-col text-left">
+            <span className="text-[12px] sm:text-[14px] font-black leading-none">Restaurant</span>
+            <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
+          </div>
+        </button>
+
+        {/* Sliding Liquid Pill Indicator */}
+        <motion.div
+          animate={{
+            x: experienceMode === 'cafe' ? 0 : '100%',
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 380,
+            damping: 22,
+            mass: 0.65
+          }}
+          className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-white dark:bg-zinc-955 shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] z-10"
+          style={{
+            left: '4px',
+          }}
+        />
+      </div>
+
+      {((experienceMode as string) === 'restaurant') ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-zinc-50/50 dark:bg-zinc-900/10 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 mt-4 animate-fade-in shadow-2xs">
+          <span className="text-5xl">🛎️</span>
+          <h3 className="text-base font-extrabold text-text-primary mt-4">Restaurant Delivery Coming Soon!</h3>
+          <p className="text-[11.5px] text-text-secondary max-w-[340px] mt-2 leading-relaxed font-medium">
+            We are partnering with your favorite local premium restaurants to bring delicious full-course meals and combos to your doorstep shortly. Stay tuned!
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Café Category Section Header */}
+          <div id="cafe-menu-categories-anchor" className="flex items-center justify-between px-1 scroll-mt-24">
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">
+              {((experienceMode as string) === 'restaurant') ? 'Restaurant Categories' : 'Cafe Categories'}
+            </h4>
+            <button
+              onClick={() => {
+                const target = document.getElementById('cafe-menu-categories-anchor')
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="text-[11px] font-bold text-rose-600 dark:text-rose-455 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
             >
-              {/* Circular skeleton */}
-              <div className="w-[64px] h-[64px] mx-auto rounded-full bg-zinc-200 dark:bg-zinc-800/40 relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 dark:before:via-white/5 before:to-transparent" />
-              {/* Text skeleton */}
-              <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800/40 rounded-md mt-2.5 relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 dark:before:via-white/5 before:to-transparent" />
-            </div>
-          ))
-        ) : (
-          categories.map((cat) => {
-            const href = cat.tag === 'all' ? '/cafe' : `/cafe?section=${cat.tag}`
-            return (
-              <motion.div
-                key={cat.tag}
-                whileHover={{ y: -4, scale: 1.03, transition: { type: 'spring', stiffness: 300, damping: 15 } }}
-                whileTap={{ scale: 0.95 }}
-                className="w-[70px] shrink-0 snap-start"
-              >
-                <Link
-                  href={href}
-                  className="group flex flex-col items-center text-center cursor-pointer"
-                >
-                  {/* Circular image container */}
-                  <div
-                    className={cn(
-                      "w-[64px] h-[64px] mx-auto rounded-full overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] border border-transparent dark:border-white/[0.02] relative group-hover:scale-105 transition-all duration-300 bg-zinc-50 dark:bg-zinc-900/40"
-                    )}
+              <span>See Menu</span>
+              <ChevronRight size={10} strokeWidth={3} />
+            </button>
+          </div>
+
+          {/* Café Menu Categories Horizontal Scrollbar: Circular Item Style */}
+          <div className="flex gap-5 sm:gap-7 overflow-x-auto pb-4 pt-2.5 scrollbar-none px-1 snap-x snap-mandatory scroll-smooth select-none w-full justify-start">
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, idx) => (
+                <div key={`skeleton-${idx}`} className="flex flex-col items-center gap-2 shrink-0 snap-start">
+                  <div className="h-18 w-18 sm:h-20 sm:w-20 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
+                  <div className="h-3 w-12 rounded bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
+                </div>
+              ))
+            ) : (
+              filteredCategories.map((cat) => {
+                const href = cat.tag === 'all' ? '/?mode=cafe' : `/?mode=cafe&section=${cat.tag}`
+                const isActive = showProducts && activeCategoryTag === cat.tag
+                return (
+                  <Link
+                    key={cat.tag}
+                    href={href}
+                    onClick={(e) => {
+                      if (showProducts) {
+                        e.preventDefault()
+                        setActiveCategoryTag(cat.tag)
+                        const targetId = cat.tag === 'all' ? 'cafe-menu-categories-anchor' : `cafe-home-section-${cat.tag}`
+                        const target = document.getElementById(targetId)
+                        if (target) {
+                          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                          navigator.vibrate(8)
+                        }
+                      }
+                    }}
+                    className="flex flex-col items-center gap-2 shrink-0 snap-start select-none cursor-pointer group outline-none"
                   >
-                    {cat.image ? (
-                      <Image
-                        src={cat.image}
-                        alt={cat.title}
-                        fill
-                        sizes="80px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-amber-500/10 dark:bg-amber-500/5 backdrop-blur-md rounded-full shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-amber-500/15">
-                        <span className="text-3xl select-none leading-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">{cat.emoji}</span>
+                    {/* Circle Image Wrapper */}
+                    <div 
+                      className={cn(
+                        "relative w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden flex items-center justify-center p-1 transition-all duration-300 shadow-xs border-2 bg-white dark:bg-zinc-950",
+                        isActive 
+                          ? "border-orange-500 scale-105 shadow-[0_4px_14px_rgba(249,115,22,0.22)]" 
+                          : "border-zinc-200/70 dark:border-zinc-800/60 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 group-hover:scale-102"
+                      )}
+                    >
+                      <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center">
+                        {cat.image ? (
+                          <Image
+                            src={cat.image}
+                            alt={cat.title}
+                            fill
+                            sizes="(max-width: 640px) 72px, 80px"
+                            className="object-cover transition-transform duration-500 group-hover:scale-108"
+                          />
+                        ) : (
+                          <span className="text-2xl select-none">{cat.emoji}</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Centered label below */}
+                    <span 
+                      className={cn(
+                        "text-[11px] sm:text-xs font-black text-center tracking-tight transition-colors duration-300",
+                        isActive 
+                          ? "text-orange-500" 
+                          : "text-zinc-850 dark:text-zinc-250 group-hover:text-zinc-900 dark:group-hover:text-white"
+                      )}
+                    >
+                      {cat.title}
+                    </span>
+                  </Link>
+                )
+              })
+            )}
+          </div>
+
+          {/* Category-wise Cafe Products Slider List (stacked vertically) */}
+          {showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
+            const displayProducts = cat.products.slice(0, 5)
+            const hasMore = cat.products.length > 5
+            const isExpanded = expandedCategories.has(cat.tag)
+
+            return (
+              <div 
+                key={cat.tag} 
+                id={`cafe-home-section-${cat.tag}`}
+                className="space-y-3 pt-6 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 scroll-mt-24"
+              >
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-full overflow-hidden relative bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 shrink-0">
+                      {cat.image ? (
+                        <Image
+                          src={cat.image}
+                          alt={cat.title}
+                          fill
+                          sizes="24px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs">{cat.emoji}</span>
+                      )}
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-text-primary">
+                      {cat.title} Specials
+                    </h4>
+                  </div>
+                  <button
+                    onClick={() => {
+                      toggleCategoryExpand(cat.tag)
+                      if (!isExpanded) {
+                        const target = document.getElementById(`cafe-home-section-${cat.tag}`)
+                        if (target) {
+                          setTimeout(() => {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }, 100)
+                        }
+                      }
+                    }}
+                    className="text-[11px] font-bold text-rose-600 dark:text-rose-455 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
+                  >
+                    <span>{isExpanded ? 'See Less' : `See All (${cat.products.length})`}</span>
+                    <ChevronRight size={10} strokeWidth={3} className={cn("transition-transform duration-300", isExpanded && "rotate-90")} />
+                  </button>
+                </div>
+                
+                {isExpanded ? (
+                  <div className="grid grid-cols-2 min-[375px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 pt-1.5 px-1">
+                    {cat.products.map((p: any) => (
+                      <div key={p.id} className="w-full">
+                        <ProductCard product={p} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
+                    {displayProducts.map((p: any) => (
+                      <div key={p.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] shrink-0 snap-start">
+                        <ProductCard product={p} />
+                      </div>
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] shrink-0 snap-start">
+                        <button
+                          onClick={() => {
+                            toggleCategoryExpand(cat.tag)
+                            const target = document.getElementById(`cafe-home-section-${cat.tag}`)
+                            if (target) {
+                              setTimeout(() => {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                              }, 100)
+                            }
+                          }}
+                          className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-card p-3 shadow-xs transition-all duration-300 hover:border-rose-500/40 hover:bg-rose-500/5 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] w-full"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-rose-500/10 dark:bg-rose-500/5 flex items-center justify-center text-rose-600 dark:text-rose-455 group-hover:scale-110 transition-transform duration-300">
+                            <ChevronRight size={20} strokeWidth={2.5} />
+                          </div>
+                          <span className="text-xs font-bold text-text-primary mt-3 text-center">
+                            See More
+                          </span>
+                          <span className="text-[10px] font-medium text-text-secondary mt-1 text-center">
+                            +{cat.products.length - 5} items
+                          </span>
+                        </button>
                       </div>
                     )}
                   </div>
-                  <span className="text-[10px] font-black text-text-primary mt-2 truncate w-full group-hover:text-primary transition-colors">
-                    {cat.title}
-                  </span>
-                </Link>
-              </motion.div>
+                )}
+              </div>
             )
-          })
-        )}
-      </div>
+          })}
+        </>
+      )}
     </section>
   )
 }

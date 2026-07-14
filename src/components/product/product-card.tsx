@@ -198,10 +198,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const isLowStock = product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10)
 
   return (
-    <motion.div
-      whileHover={{ y: -6, scale: 1.015, transition: { type: 'spring', stiffness: 350, damping: 18 } }}
-      whileTap={{ scale: 0.97 }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-150 dark:border-zinc-800/80 bg-card p-2 min-[375px]:p-2.5 sm:p-3 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all duration-300 md:hover:shadow-[0_12px_30px_-6px_rgba(226,10,34,0.14)] md:hover:border-primary/30 cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
+    <div
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs p-2.5 shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800 transition-all duration-300 ease-out cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
@@ -211,7 +209,7 @@ export function ProductCard({ product }: ProductCardProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/10 rounded-2xl pointer-events-none"
+            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/10 rounded-3xl pointer-events-none"
           >
             <motion.div
               initial={{ scale: 0.6, opacity: 0 }}
@@ -230,7 +228,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
-          <div className="absolute left-0 top-0 z-10 rounded-tl-2xl rounded-br-lg bg-gradient-to-r from-rose-500 to-red-600 px-2.5 py-0.5 text-[9px] min-[375px]:text-[10px] font-black text-white shadow-md tracking-wider whitespace-nowrap pointer-events-none select-none">
+          <div className="absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-2 py-0.5 text-[8.5px] min-[375px]:text-[9.5px] font-black text-white shadow-[0_2px_8px_rgba(244,63,94,0.3)] tracking-wider whitespace-nowrap pointer-events-none select-none">
             {resolvedDiscount}% OFF
           </div>
         )}
@@ -248,14 +246,14 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Bestseller Tag */}
           {product.tags?.includes('popular') && (
-            <div className="absolute bottom-1 left-1 z-10 flex items-center gap-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
+            <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full bg-amber-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(245,158,11,0.2)]">
               ⭐ Bestseller
             </div>
           )}
 
           {/* Cafe Fresh Tag */}
           {isCafe && (
-            <div className="absolute bottom-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-gradient-to-r from-amber-700 to-amber-900 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(180,83,9,0.3)]">
+            <div className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-orange-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(249,115,22,0.2)]">
               ☕ Cafe Fresh
             </div>
           )}
@@ -267,7 +265,7 @@ export function ProductCard({ product }: ProductCardProps) {
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
+              className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
             >
               Only {resolvedStock} left
             </motion.div>
@@ -277,17 +275,17 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Product Info — flex-1 takes remaining space between image and bottom row */}
         <div className="flex flex-col flex-1 min-h-0 justify-center mt-1">
           {/* Name — fixed min-height for 2 lines */}
-          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-extrabold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]">
+          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-bold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]">
             {product.name}
           </h3>
           {/* Unit / Customisable — fixed height container */}
           <div className="h-4 min-[375px]:h-[18px] sm:h-5 flex items-center">
             {hasVariants ? (
-              <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] font-black text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 leading-none">
+              <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] font-bold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 leading-none">
                 {variantsList.length} Options ▾
               </span>
             ) : (
-              <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-bold text-text-muted leading-none">
+              <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-semibold text-text-muted leading-none">
                 {product.unit}
               </span>
             )}
@@ -305,12 +303,12 @@ export function ProductCard({ product }: ProductCardProps) {
               initial={{ scale: 0.85, y: -2 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 12 }}
-              className="text-[10px] min-[375px]:text-xs sm:text-base font-black text-text-primary block"
+              className="text-[10px] min-[375px]:text-xs sm:text-base font-bold text-text-primary block"
             >
               ₹{resolvedPrice}
             </motion.span>
             {resolvedMrp > resolvedPrice && (
-              <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-bold">
+              <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-semibold">
                 ₹{resolvedMrp}
               </span>
             )}
@@ -318,7 +316,7 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Savings — always reserves height for stable layout */}
           <span 
             className={cn(
-              "text-[7.5px] min-[375px]:text-[8px] font-black mt-0.5 block truncate tracking-tight leading-none h-[10px] min-[375px]:h-[11px]",
+              "text-[7.5px] min-[375px]:text-[8px] font-bold mt-0.5 block truncate tracking-tight leading-none h-[10px] min-[375px]:h-[11px]",
               savings > 0 ? "text-[#2e7d32] dark:text-emerald-400" : "text-transparent select-none pointer-events-none"
             )}
             title={savings > 0 ? `Save ₹${savings}` : undefined}
@@ -351,12 +349,12 @@ export function ProductCard({ product }: ProductCardProps) {
                   disabled={isStoreClosed && resolvedStock > 0}
                   variant="outline"
                   className={cn(
-                    "w-full h-full border text-[10px] sm:text-xs font-black rounded-md md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
+                    "w-full h-full border text-[10px] sm:text-xs font-bold rounded-full md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
                     isStoreClosed && resolvedStock > 0
                       ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                       : resolvedStock <= 0 || !resolvedIsAvailable
                       ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                      : "border-[#2e7d32] bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-[#2e7d32] dark:text-emerald-400 md:hover:bg-[#2e7d32] md:hover:text-white"
+                      : "border-green-600 bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-green-600 dark:text-emerald-400 md:hover:bg-green-600 md:hover:text-white"
                   )}
                 >
                   {resolvedStock <= 0 || !resolvedIsAvailable ? (
@@ -366,7 +364,7 @@ export function ProductCard({ product }: ProductCardProps) {
                         Alerted
                       </span>
                     ) : (
-                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-500 font-extrabold">
+                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-500 font-bold">
                         🔔 Notify
                       </span>
                     )
@@ -387,7 +385,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.92 }}
                 transition={{ duration: 0.15 }}
-                className="flex h-full w-full items-center justify-between rounded-md bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold shadow-sm overflow-hidden transition-all duration-300"
+                className="flex h-full w-full items-center justify-between rounded-full bg-gradient-to-r from-green-600 to-emerald-700 text-white font-bold shadow-sm overflow-hidden transition-all duration-300"
               >
                 <motion.button
                   whileTap={{ scale: 0.82 }}
@@ -397,7 +395,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 >
                   <Minus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
                 </motion.button>
-                <span className="w-4 min-[375px]:w-5 sm:w-7 shrink-0 flex items-center justify-center text-[9px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
+                <span className="w-4 min-[375px]:w-5 sm:w-7 shrink-0 flex items-center justify-center text-[9px] sm:text-xs font-bold select-none h-full bg-green-600 border-x border-white/10">
                   {quantity}
                 </span>
                 <motion.button
@@ -414,6 +412,6 @@ export function ProductCard({ product }: ProductCardProps) {
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

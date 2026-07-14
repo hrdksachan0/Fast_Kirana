@@ -1,19 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { HeroArea } from '@/components/home/hero-area'
-import { CategoryGrid } from '@/components/home/category-grid'
-import { DeliveryBanner } from '@/components/home/delivery-banner'
-import { ProductCard } from '@/components/product/product-card'
-import { CountdownTimer } from '@/components/shared/countdown-timer'
-import { LastOrderBanner } from '@/components/home/last-order-banner'
-import { TimeSuggestions } from '@/components/home/time-suggestions'
-import { SpeedStrip } from '@/components/home/speed-strip'
-import { CafeSection } from '@/components/home/cafe-section'
-import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { Category, Product } from '@/types'
-import Link from 'next/link'
 import { sortProductsByStock } from '@/lib/utils'
 import { unstable_cache } from 'next/cache'
 import { Metadata } from 'next'
+import { StorefrontClient } from '@/components/home/storefront-client'
 
 export const metadata: Metadata = {
   title: 'Fast Kirana - Online Grocery & Cafe Delivery in Ghatampur, Kanpur',
@@ -446,54 +436,19 @@ export default async function Home() {
   })
 
   return (
-    <div className="container mx-auto px-4 pt-3 pb-0 flex flex-col gap-1.5 md:gap-8 max-w-7xl">
-      {/* 1. Trending Categories (order-1) */}
-      <div className="order-1 md:order-1">
-        <CategoryGrid categories={categories} />
-      </div>
-
-      {/* 2. Cafe Section (order-2) */}
-      <div className="order-2 md:order-2">
-        <CafeSection />
-      </div>
-
-      {/* 3. Greeting Card & Hero Banners (order-3) */}
-      <div className="order-3 md:order-3">
-        <HeroArea initialBanners={promoBanners} />
-      </div>
-
-      {/* 4. Branding Speed Ticker Strip (order-4) */}
-      <div className="order-4 md:order-4">
-        <SpeedStrip
-          avgDelivery={settingsMap.avg_delivery_time}
-          deliveredCount={settingsMap.delivered_today}
-          freshStock={settingsMap.fresh_stock_loaded}
-          happyFamilies={settingsMap.happy_families}
-        />
-      </div>
-
-      {/* 5. Menu / Deals & Curations Hub (order-5) */}
-      <div className="order-5 md:order-5">
-        <DealsCurationHub
-          flashDeals={flashDeals}
-          bestSellers={bestSellers}
-          topPicks={topPicks}
-          breakfastProducts={breakfastProducts}
-          lunchProducts={lunchProducts}
-          teaProducts={teaProducts}
-          nightProducts={nightProducts}
-        />
-      </div>
-
-      {/* 6. Branding Value Proposition Banner (order-6) */}
-      <div className="order-6 md:order-6">
-        <DeliveryBanner />
-      </div>
-
-      {/* 7. Your Last Order (order-7) */}
-      <div className="order-7 md:order-7">
-        <LastOrderBanner />
-      </div>
+    <>
+      <StorefrontClient
+        categories={categories}
+        promoBanners={promoBanners}
+        flashDeals={flashDeals}
+        bestSellers={bestSellers}
+        topPicks={topPicks}
+        breakfastProducts={breakfastProducts}
+        lunchProducts={lunchProducts}
+        teaProducts={teaProducts}
+        nightProducts={nightProducts}
+        settingsMap={settingsMap}
+      />
 
       {/* LocalBusiness JSON-LD Schema Markup */}
       <script
@@ -538,6 +493,6 @@ export default async function Home() {
           })
         }}
       />
-    </div>
+    </>
   )
 }

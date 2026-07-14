@@ -128,7 +128,6 @@ export function LastOrderBanner() {
           {/* Active order pulse indicator */}
           <div className="absolute top-3.5 right-3.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
             </span>
           </div>
@@ -160,7 +159,7 @@ export function LastOrderBanner() {
 
             {/* Arrow */}
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
-              <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" />
+              <RefreshCw className="h-3.5 w-3.5" />
             </div>
           </div>
 
@@ -171,15 +170,12 @@ export function LastOrderBanner() {
                 const stepOrder = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED']
                 const currentIdx = stepOrder.indexOf(lastOrder.status)
                 const isCompleted = idx <= currentIdx
-                const isCurrent = idx === currentIdx
                 return (
                   <div
                     key={step}
                     className={`flex-1 h-1.5 rounded-full transition-all ${
                       isCompleted 
-                        ? isCurrent 
-                          ? 'bg-accent animate-pulse' 
-                          : 'bg-accent' 
+                        ? 'bg-accent' 
                         : 'bg-border/30 dark:bg-zinc-800/60'
                     }`}
                   />

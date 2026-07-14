@@ -227,12 +227,12 @@ export function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4">
           {/* Mobile Header (2 Rows) */}
-          <div className="flex flex-col gap-1.5 md:hidden animate-fade-in">
+          <div className="flex flex-col gap-2 md:hidden animate-fade-in">
             <div className="flex items-center justify-between w-full gap-3">
               {/* Left Logo and Location Info combined */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Link href="/" className="flex items-center shrink-0">
-                  <Logo simple={true} showText={false} className="h-8 w-8" />
+                  <Logo simple={true} showText={false} className="h-8.5 w-8.5" />
                 </Link>
                 <button
                   onClick={() => setLocationPickerOpen(true)}
@@ -243,7 +243,7 @@ export function Navbar() {
                     Fast Delivery
                   </span>
                   <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-0.5 w-full">
-                    <span className="truncate max-w-[180px]">
+                    <span className="truncate max-w-[185px]">
                       {selectedLocation || "Select Location"}
                     </span>
                     <ChevronDown size={10} className="text-zinc-400 shrink-0" />
@@ -251,41 +251,44 @@ export function Navbar() {
                 </button>
               </div>
 
-              {/* Theme Toggle Button on mobile */}
-              <button
-                onClick={() => {
-                  toggleTheme()
-                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                    navigator.vibrate(12)
-                  }
-                }}
-                className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-zinc-800/40 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors shrink-0"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun size={15} className="text-amber-500 animate-pulse-gentle" />
-                ) : (
-                  <Moon size={15} className="text-indigo-600" />
-                )}
-              </button>
+              {/* Top Right Actions: Theme Toggle & Zepto-style Avatar */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    toggleTheme()
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                      navigator.vibrate(12)
+                    }
+                  }}
+                  className="h-8.5 w-8.5 rounded-full bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-zinc-800/40 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors shrink-0"
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'dark' ? (
+                    <Sun size={15} className="text-amber-500" />
+                  ) : (
+                    <Moon size={15} className="text-indigo-600" />
+                  )}
+                </button>
+
+              </div>
             </div>
 
             {/* Bottom Row: Full-width Search Trigger */}
             {!isCategoryPage && (
               <div
                 onClick={() => setSearchOpen(true)}
-                className="w-full relative cursor-pointer group"
+                className="w-full relative cursor-pointer group mt-0.5"
               >
-                <Search size={isScrolled ? 13 : 15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-all duration-300" />
+                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-all duration-300" />
                 <input
                   type="text"
                   placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                   readOnly
                   className={cn(
-                    "w-full cursor-pointer rounded-full border transition-all duration-300 shadow-sm focus:outline-none placeholder:text-zinc-400/80",
+                    "w-full cursor-pointer rounded-full border transition-all duration-300 shadow-xs focus:outline-none placeholder:text-zinc-400/85 text-xs font-bold",
                     isScrolled
-                      ? "border-zinc-200/60 dark:border-white/[0.08] bg-white/50 dark:bg-black/40 py-1.25 pl-9 pr-4 text-[10px] font-black"
-                      : "border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/70 dark:bg-white/[0.03] py-1.5 pl-10 pr-4 text-[11px] font-black"
+                      ? "border-zinc-200/50 dark:border-white/[0.08] bg-white/95 dark:bg-black/60 py-2 pl-10 pr-4"
+                      : "border-zinc-150/70 dark:border-white/[0.06] bg-white dark:bg-zinc-900/90 py-2.5 pl-10 pr-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
                   )}
                 />
               </div>
@@ -320,16 +323,19 @@ export function Navbar() {
             {/* Center: Search bar Trigger */}
             <div
               onClick={() => setSearchOpen(true)}
-              className="flex-1 max-w-xl cursor-pointer group"
+              className="flex-1 max-w-xl cursor-pointer group relative"
             >
-              <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-primary transition-colors" />
+              <div className="relative flex items-center">
+                <Search size={17} className="absolute left-4.5 text-zinc-400 group-hover:text-rose-500 transition-colors duration-300" />
                 <input
                   type="text"
                   placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                   readOnly
-                  className="w-full cursor-pointer rounded-full border border-zinc-200/80 dark:border-white/[0.06] bg-zinc-50/90 dark:bg-white/[0.04] py-2.5 pl-11 pr-4 text-sm font-semibold placeholder:text-zinc-400/85 focus:outline-none transition-all duration-300 group-hover:border-zinc-300 dark:group-hover:border-white/[0.12] group-hover:bg-zinc-100/50 dark:group-hover:bg-white/[0.08] shadow-sm"
+                  className="w-full cursor-pointer rounded-full border border-zinc-200/60 dark:border-zinc-800/40 bg-zinc-50/40 dark:bg-zinc-900/20 py-2.5 pl-11.5 pr-14 text-xs font-bold placeholder:text-zinc-400/80 focus:outline-none transition-all duration-300 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 group-hover:bg-zinc-100/40 dark:group-hover:bg-zinc-900/45 shadow-[0_2px_8px_rgba(0,0,0,0.01)] group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
                 />
+                <span className="absolute right-4.5 px-2 py-1 rounded-md bg-zinc-200/50 dark:bg-zinc-800/60 text-[9px] font-black text-zinc-500 dark:text-zinc-400 border border-zinc-300/30 dark:border-zinc-700/30 select-none pointer-events-none transition-transform duration-300 group-hover:scale-95">
+                  ⌘K
+                </span>
               </div>
             </div>
 
@@ -341,41 +347,42 @@ export function Navbar() {
                     navigator.vibrate(12)
                   }
                 }}
-                className="p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400 hover:text-primary dark:hover:text-primary transition-all duration-300 shadow-sm"
+                className="p-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-650 dark:text-zinc-450 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? (
-                  <Sun size={18} className="text-amber-500 animate-pulse-gentle" />
+                  <Sun size={17} className="text-amber-500 animate-pulse-gentle" />
                 ) : (
-                  <Moon size={18} className="text-indigo-600" />
+                  <Moon size={17} className="text-indigo-600" />
                 )}
               </button>
+              
               <Link
                 href="/account"
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-primary transition-colors cursor-pointer group"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
               >
-                <User size={18} className="group-hover:scale-105 transition-transform stroke-[2]" />
-                <span className="text-sm font-bold">{session ? 'Account' : 'Login'}</span>
+                <User size={16} className="group-hover:scale-105 transition-transform stroke-[2.2]" />
+                <span className="text-xs font-black tracking-tight">{session ? 'Account' : 'Login'}</span>
               </Link>
 
               {!mounted || totalItems === 0 ? (
                 <button
                   onClick={toggleCart}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-primary/30 hover:bg-primary/5 text-zinc-700 dark:text-zinc-300 hover:text-primary transition-all duration-300 font-bold text-sm cursor-pointer group shadow-sm"
+                  className="flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 font-black text-xs cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
                 >
-                  <ShoppingBag size={18} className="group-hover:scale-105 transition-transform" />
+                  <ShoppingBag size={16} className="group-hover:scale-105 transition-transform stroke-[2.2]" />
                   <span>Cart</span>
                 </button>
               ) : (
                 <button
                   onClick={toggleCart}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00b140] hover:bg-[#009b35] text-white font-extrabold text-sm transition-all duration-300 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 cursor-pointer relative",
+                    "flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-[#00b140] hover:bg-[#009b35] text-white font-extrabold text-xs transition-all duration-300 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 cursor-pointer relative",
                     isCartBouncing && "scale-105"
                   )}
                   id="navbar-cart-icon"
                 >
-                  <ShoppingBag size={18} className="stroke-[2.5]" />
+                  <ShoppingBag size={16} className="stroke-[2.5]" />
                   <span>Cart</span>
                   <span className="bg-white text-[#00b140] text-[10px] font-black h-5 px-1.5 rounded-full flex items-center justify-center min-w-[20px] ml-1">
                     {totalItems}

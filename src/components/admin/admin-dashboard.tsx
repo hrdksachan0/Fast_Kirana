@@ -551,8 +551,8 @@ export function AdminDashboard({
     isBestSeller: false,
   })
   // Product type toggles: 'grocery' | 'cafe'
-  const [newProductType, setNewProductType] = useState<'grocery' | 'cafe'>('grocery')
-  const [editProductType, setEditProductType] = useState<'grocery' | 'cafe'>('grocery')
+  const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
+  const [editProductType, setEditProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
   const [newCustomTag, setNewCustomTag] = useState('')
   const [editCustomTag, setEditCustomTag] = useState('')
   const [newProductVariants, setNewProductVariants] = useState<any[]>([])
@@ -562,10 +562,13 @@ export function AdminDashboard({
 
   const isNewProductCafe = newProductType === 'cafe'
   const isEditProductCafe = editProductType === 'cafe'
+  const isNewProductRestaurant = newProductType === 'restaurant'
+  const isEditProductRestaurant = editProductType === 'restaurant'
 
-  const handleNewProductTypeChange = (type: 'grocery' | 'cafe') => {
+  const handleNewProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setNewProductType(type)
-    const cafeCategory = categories.find(c => c.slug === 'cafe' || c.name.toLowerCase().includes('cafe'))
+    const cafeCategory = categories.find(c => c.slug === 'cafe')
+    const restaurantCategory = categories.find(c => c.slug === 'restaurant')
     
     if (type === 'cafe') {
       const cafeId = cafeCategory?.id || ''
@@ -573,17 +576,31 @@ export function AdminDashboard({
       if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
         currentTags.push('cafe')
       }
+      currentTags = currentTags.filter(t => t.toLowerCase() !== 'restaurant')
       setNewProduct(prev => ({
         ...prev,
         categoryId: cafeId,
         expiryDate: '',
         tags: currentTags.join(', ')
       }))
+    } else if (type === 'restaurant') {
+      const restaurantId = restaurantCategory?.id || ''
+      let currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
+      if (!currentTags.map(t => t.toLowerCase()).includes('restaurant')) {
+        currentTags.push('restaurant')
+      }
+      currentTags = currentTags.filter(t => t.toLowerCase() !== 'cafe')
+      setNewProduct(prev => ({
+        ...prev,
+        categoryId: restaurantId,
+        expiryDate: '',
+        tags: currentTags.join(', ')
+      }))
     } else {
-      const firstGroceryId = categories.find(c => c.slug !== 'cafe')?.id || ''
-      const cafeSpecificTags = ['cafe', 'sandwiches', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'frankie-rolls']
+      const firstGroceryId = categories.find(c => c.slug !== 'cafe' && c.slug !== 'restaurant')?.id || ''
+      const nonGroceryTags = ['cafe', 'restaurant']
       const currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
-      const filteredTags = currentTags.filter(t => !cafeSpecificTags.includes(t.toLowerCase()))
+      const filteredTags = currentTags.filter(t => !nonGroceryTags.includes(t.toLowerCase()))
       setNewProduct(prev => ({
         ...prev,
         categoryId: firstGroceryId,
@@ -592,9 +609,10 @@ export function AdminDashboard({
     }
   }
 
-  const handleEditProductTypeChange = (type: 'grocery' | 'cafe') => {
+  const handleEditProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setEditProductType(type)
-    const cafeCategory = categories.find(c => c.slug === 'cafe' || c.name.toLowerCase().includes('cafe'))
+    const cafeCategory = categories.find(c => c.slug === 'cafe')
+    const restaurantCategory = categories.find(c => c.slug === 'restaurant')
     
     if (type === 'cafe') {
       const cafeId = cafeCategory?.id || ''
@@ -602,17 +620,31 @@ export function AdminDashboard({
       if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
         currentTags.push('cafe')
       }
+      currentTags = currentTags.filter(t => t.toLowerCase() !== 'restaurant')
       setProductEditForm(prev => ({
         ...prev,
         categoryId: cafeId,
         expiryDate: '',
         tags: currentTags.join(', ')
       }))
+    } else if (type === 'restaurant') {
+      const restaurantId = restaurantCategory?.id || ''
+      let currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+      if (!currentTags.map(t => t.toLowerCase()).includes('restaurant')) {
+        currentTags.push('restaurant')
+      }
+      currentTags = currentTags.filter(t => t.toLowerCase() !== 'cafe')
+      setProductEditForm(prev => ({
+        ...prev,
+        categoryId: restaurantId,
+        expiryDate: '',
+        tags: currentTags.join(', ')
+      }))
     } else {
-      const firstGroceryId = categories.find(c => c.slug !== 'cafe')?.id || ''
-      const cafeSpecificTags = ['cafe', 'sandwiches', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'frankie-rolls']
+      const firstGroceryId = categories.find(c => c.slug !== 'cafe' && c.slug !== 'restaurant')?.id || ''
+      const nonGroceryTags = ['cafe', 'restaurant']
       const currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-      const filteredTags = currentTags.filter(t => !cafeSpecificTags.includes(t.toLowerCase()))
+      const filteredTags = currentTags.filter(t => !nonGroceryTags.includes(t.toLowerCase()))
       setProductEditForm(prev => ({
         ...prev,
         categoryId: firstGroceryId,
@@ -621,17 +653,18 @@ export function AdminDashboard({
     }
   }
 
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'grocery' | 'cafe'>('all')
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'grocery' | 'cafe' | 'restaurant'>('all')
 
   // States for Categories
   const [categories, setCategories] = useState(initialCategories || [])
-  const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe'>('grocery')
+  const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [newCategory, setNewCategory] = useState({
     name: '',
     imageUrl: '',
     sortOrder: '0',
+    parentId: '',
   })
 
   // Apply template pre-fill values to add product form
@@ -670,6 +703,7 @@ export function AdminDashboard({
     name: '',
     imageUrl: '',
     sortOrder: '0',
+    parentId: '',
   })
 
   // States for Users
@@ -1393,7 +1427,9 @@ export function AdminDashboard({
     setEditingProduct(p)
     const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
                    categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
-    setEditProductType(isCafe ? 'cafe' : 'grocery')
+    const isRestaurant = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('restaurant') ||
+                          categories.find(c => c.id === p.categoryId)?.slug === 'restaurant';
+    setEditProductType(isRestaurant ? 'restaurant' : isCafe ? 'cafe' : 'grocery')
     
     const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
     setHasVariantsEdit(hasVariants)
@@ -1634,7 +1670,12 @@ export function AdminDashboard({
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCategory),
+        body: JSON.stringify({
+          name: newCategory.name,
+          imageUrl: newCategory.imageUrl,
+          sortOrder: newCategory.sortOrder,
+          parentId: newCategory.parentId || null,
+        }),
       })
 
       if (res.ok) {
@@ -1647,7 +1688,7 @@ export function AdminDashboard({
         setCategories([...categories, formattedCreated])
         toast.success(`Category "${created.name}" created successfully!`)
         setShowAddCategory(false)
-        setNewCategory({ name: '', imageUrl: '', sortOrder: '0' })
+        setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: '' })
       } else {
         toast.error('Failed to create category')
       }
@@ -1664,6 +1705,7 @@ export function AdminDashboard({
       name: c.name || '',
       imageUrl: c.imageUrl || '',
       sortOrder: String(c.sortOrder || '0'),
+      parentId: c.parentId || '',
     })
   }
 
@@ -1680,6 +1722,7 @@ export function AdminDashboard({
           name: categoryEditForm.name,
           imageUrl: categoryEditForm.imageUrl,
           sortOrder: parseInt(categoryEditForm.sortOrder) || 0,
+          parentId: categoryEditForm.parentId || null,
         }),
       })
 
@@ -2586,6 +2629,17 @@ export function AdminDashboard({
                   >
                     <span>☕</span> Café Item
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNewProductTypeChange('restaurant')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      newProductType === 'restaurant'
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-text-secondary hover:text-amber-500'
+                    }`}
+                  >
+                    <span>🍳</span> Restaurant Item
+                  </button>
                 </div>
               </div>
 
@@ -3432,6 +3486,16 @@ export function AdminDashboard({
             >
               ☕ Café Menu Sections
             </button>
+            <button
+              onClick={() => setCategorySubView('restaurant')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                categorySubView === 'restaurant'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-card border-border hover:bg-muted text-text-secondary'
+              }`}
+            >
+              🍳 Restaurant Menu Sections
+            </button>
           </div>
 
           {categorySubView === 'grocery' ? (
@@ -3530,6 +3594,24 @@ export function AdminDashboard({
                           </div>
                         </div>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (optional)</label>
+                      <select
+                        value={newCategory.parentId}
+                        onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                      >
+                        <option value="">None (Root Category)</option>
+                        {categories
+                          .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && !c.parentId)
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                      </select>
                     </div>
 
                     <div>
@@ -3634,8 +3716,10 @@ export function AdminDashboard({
                 </div>
               </div>
             </div>
+          ) : categorySubView === 'cafe' ? (
+            <AdminCafeSections onSectionsSaved={fetchSettings} type="cafe" />
           ) : (
-            <AdminCafeSections onSectionsSaved={fetchSettings} />
+            <AdminCafeSections onSectionsSaved={fetchSettings} type="restaurant" />
           )}
 
         </div>
@@ -4669,6 +4753,17 @@ export function AdminDashboard({
               >
                 <span>☕</span> Café Item
               </button>
+              <button
+                type="button"
+                onClick={() => handleEditProductTypeChange('restaurant')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  editProductType === 'restaurant'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-text-secondary hover:text-amber-500'
+                }`}
+              >
+                <span>🍳</span> Restaurant Item
+              </button>
             </div>
             <form onSubmit={saveProductChanges} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -5392,6 +5487,24 @@ export function AdminDashboard({
                     </div>
                   </div>
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (optional)</label>
+                  <select
+                    value={categoryEditForm.parentId}
+                    onChange={(e) => setCategoryEditForm({ ...categoryEditForm, parentId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  >
+                    <option value="">None (Root Category)</option>
+                    {categories
+                      .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && c.id !== editingCategory.id && !c.parentId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
                   <input

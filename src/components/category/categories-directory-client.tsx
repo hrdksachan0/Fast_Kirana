@@ -366,7 +366,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
             const config = categoryConfigs[c.slug] || {
               title: c.name,
               emoji: '🛒',
-              image: c.imageUrl || '/fruits_vegetables_category.png',
+              image: (c.imageUrl && (c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http'))) ? c.imageUrl : '/fruits_vegetables_category.png',
               gradient: 'from-zinc-500/10 to-zinc-500/5',
               borderColor: 'border-zinc-200/60 dark:border-zinc-900/20',
               labelColor: 'text-zinc-700 dark:text-zinc-355 font-extrabold',
@@ -385,7 +385,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
             }
             const itemCount = c._count?.products ?? 0
             const isCafe = c.slug === 'cafe'
-            const destinationHref = isCafe ? '/cafe' : `/category/${c.slug}`
+            const destinationHref = isCafe ? '/?mode=cafe' : `/category/${c.slug}`
 
             return (
               <motion.div
@@ -427,7 +427,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                       )}
                     </div>
 
-                    {config.image ? (
+                    {config.image && (config.image.startsWith('/') || config.image.startsWith('http')) ? (
                       <Image
                         src={config.image}
                         alt={c.name}

@@ -1,4 +1,5 @@
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface LogoProps {
   className?: string
@@ -22,7 +23,7 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
         <rect x="8" y="72" width="22" height="6.5" rx="3.25" fill="#e20a22" />
         <circle cx="2" cy="61.25" r="3" fill="#e20a22" />
 
-        {/* Main red container square */}
+        {/* Main solid red container square */}
         <rect x="25" y="10" width="100" height="100" rx="28" fill="#e20a22" />
 
         {/* Clean bold italic sans-serif block F in white */}
@@ -34,8 +35,8 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
     )
   }
   return (
-    <div className={`flex items-center gap-2 select-none ${className}`}>
-      {/* Red Badge Icon with Speed Lines and Custom Bold F */}
+    <div className={cn("flex items-center gap-2 select-none", className)}>
+      {/* Solid Red Badge Icon with Speed Lines and Custom Bold F */}
       <svg
         viewBox="0 0 140 120"
         className="h-9 w-auto shrink-0"
@@ -48,7 +49,7 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
         <rect x="8" y="72" width="22" height="6.5" rx="3.25" fill="#e20a22" />
         <circle cx="2" cy="61.25" r="3" fill="#e20a22" />
 
-        {/* Main red container square */}
+        {/* Main solid red container square */}
         <rect x="25" y="10" width="100" height="100" rx="28" fill="#e20a22" />
 
         {/* Clean bold italic sans-serif block F in white */}
@@ -63,7 +64,7 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
         <div className="flex flex-col text-left leading-none">
           <span className="text-xl font-black tracking-tight select-none">
             <span className="text-[#e20a22]">Fast</span>
-            <span className={`dark:text-zinc-200 ${lightMode ? 'text-white' : 'text-[#7c0617]'}`}>Kirana</span>
+            <span className={cn("dark:text-zinc-200", lightMode ? 'text-white/95' : 'text-[#7c0617]')}>Kirana</span>
           </span>
           <div className="flex items-center mt-0.5">
             {/* Clean green delivery bag with speed lines */}
@@ -92,7 +93,7 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
                 fill="#00b140"
               />
             </svg>
-            <span className={`text-[9px] font-black tracking-widest uppercase ${lightMode ? 'text-gray-300' : 'text-[#00b140] dark:text-emerald-400'}`}>
+            <span className={cn("text-[9px] font-black tracking-widest uppercase", lightMode ? 'text-gray-300' : 'text-[#00b140] dark:text-emerald-400')}>
               Delivery App
             </span>
           </div>
@@ -101,4 +102,3 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
     </div>
   )
 }
-

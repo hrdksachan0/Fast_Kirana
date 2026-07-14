@@ -146,3 +146,42 @@ export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
     description: 'Carbonated soft drinks and cold energy boosts',
   }
 ]
+
+export const DEFAULT_RESTAURANT_MENU_SECTIONS: CafeMenuSection[] = [
+  {
+    tag: 'north-indian',
+    matchTags: ['north-indian', 'curry', 'roti', 'dal-makhani', 'paneer-butter-masala', 'paneer', 'naan'],
+    title: 'North Indian Curries & Breads',
+    emoji: '🥘',
+    description: 'Rich paneer butter masala, creamy dal makhani, and warm butter naans',
+  },
+  {
+    tag: 'south-indian',
+    matchTags: ['south-indian', 'dosa', 'idli', 'sambar', 'vada', 'uttapam'],
+    title: 'South Indian Specials',
+    emoji: '🍛',
+    description: 'Crispy butter masalas, steamed soft idlis, and hot sambar vadas',
+  },
+  {
+    tag: 'biryani-rice',
+    matchTags: ['biryani-rice', 'biryani', 'pulav', 'fried-rice', 'jeera-rice'],
+    title: 'Biryani & Rice Feasts',
+    emoji: '🍚',
+    description: 'Aromatic basmati veg biryanis, paneer pulavs & loaded fried rice bowls',
+  },
+  {
+    tag: 'chinese',
+    matchTags: ['chinese', 'noodles', 'manchurian', 'chilli-paneer', 'spring-rolls'],
+    title: 'Chinese Kitchen Wok',
+    emoji: '🥡',
+    description: 'Stir-fried noodles, saucy veg manchurian, and crispy spring rolls',
+  },
+  {
+    tag: 'desserts',
+    matchTags: ['desserts', 'gulab-jamun', 'ice-cream', 'kheer', 'dessert'],
+    title: 'Desserts & Sweet Sips',
+    emoji: '🍨',
+    description: 'Hot gulab jamuns, premium ice creams, and traditional sweets',
+  }
+]
+
