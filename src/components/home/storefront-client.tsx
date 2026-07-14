@@ -120,7 +120,7 @@ export function StorefrontClient({
               className={cn(
                 "relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer rounded-full",
                 activeTab === 'grocery'
-                  ? "text-[#e20a22] font-black scale-102"
+                  ? "text-white font-black scale-102"
                   : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/40 dark:hover:bg-zinc-800/20"
               )}
             >
@@ -133,7 +133,7 @@ export function StorefrontClient({
               className={cn(
                 "relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer rounded-full",
                 activeTab === 'cafe'
-                  ? "text-orange-600 font-black scale-102"
+                  ? "text-white font-black scale-102"
                   : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/40 dark:hover:bg-zinc-800/20"
               )}
             >
@@ -141,9 +141,14 @@ export function StorefrontClient({
               <span>FOOD</span>
             </motion.button>
             
-            {/* Sliding Pill Indicator with Framer Motion spanning exactly half width - White pill */}
+            {/* Sliding Pill Indicator with Framer Motion - Color filled */}
             <motion.div
-              className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-zinc-800 shadow-[0_3px_10px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] z-0"
+              className={cn(
+                "absolute top-1 bottom-1 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.08)] z-0 transition-colors duration-300",
+                activeTab === 'grocery' 
+                  ? "bg-[#e20a22]" 
+                  : "bg-orange-500"
+              )}
               layoutId="activeTabIndicator"
               transition={{ type: 'spring', stiffness: 380, damping: 28 }}
               style={{

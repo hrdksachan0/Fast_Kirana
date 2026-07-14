@@ -249,7 +249,18 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           priority
         />
         {/* Soft left gradient fade for premium readability on light and dark mode */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#fdf8f4]/90 via-[#fdf8f4]/50 to-transparent dark:from-[#181614]/90 dark:via-[#181614]/50 flex items-center px-6 sm:px-12 md:px-16" />
+        <div 
+          className="absolute inset-0 block dark:hidden" 
+          style={{
+            background: 'linear-gradient(to right, #fdf8f4 0%, #fdf8f4 38%, rgba(253,248,244,0.7) 55%, transparent 85%)'
+          }}
+        />
+        <div 
+          className="absolute inset-0 hidden dark:block" 
+          style={{
+            background: 'linear-gradient(to right, #181614 0%, #181614 38%, rgba(24,22,20,0.7) 55%, transparent 85%)'
+          }}
+        />
         
         {/* Banner Content Overlays */}
         <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%]">
@@ -284,7 +295,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
               }}
               className="group/btn flex items-center gap-1 px-2.5 py-1 rounded-full border border-red-500/20 bg-[#e20a22]/10 hover:bg-[#e20a22]/20 dark:bg-red-500/10 dark:hover:bg-red-500/20 active:scale-95 shadow-[0_2px_8px_rgba(226,10,34,0.04)] cursor-pointer transition-all shrink-0"
             >
-              <span className="text-[7.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-400 uppercase tracking-wider">
+              <span className="text-[7.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-450 uppercase tracking-wider">
                 CODE: <span className="underline decoration-solid font-black">FIRST5</span>
               </span>
               <span className="text-zinc-400 dark:text-zinc-650 text-[7px] sm:text-[9px] select-none">•</span>
@@ -296,9 +307,13 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         </div>
 
         {/* Banner Footnotes */}
-        <div className="absolute bottom-1.5 left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-bold text-black dark:text-zinc-150 select-none z-10">
-          <span>*Only for first user</span>
-          <span>*T&amp;C Apply</span>
+        <div className="absolute bottom-1.5 left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-black select-none z-10 gap-2">
+          <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 text-black dark:text-zinc-150 px-2 py-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+            *Only for first user
+          </span>
+          <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 text-black dark:text-zinc-150 px-2 py-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+            *T&amp;C Apply
+          </span>
         </div>
       </div>
 
@@ -315,7 +330,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             experienceMode === 'cafe'
-              ? "text-orange-500 dark:text-orange-400 font-black scale-102"
+              ? "text-white font-black scale-102"
               : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
           )}
         >
@@ -331,7 +346,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             (experienceMode as string) === 'restaurant'
-              ? "text-[#e20a22] dark:text-red-400 font-black scale-102"
+              ? "text-white font-black scale-102"
               : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
           )}
         >
@@ -342,7 +357,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           </div>
         </button>
 
-        {/* Sliding Liquid Pill Indicator */}
+        {/* Sliding Liquid Pill Indicator - Color filled */}
         <motion.div
           animate={{
             x: experienceMode === 'cafe' ? 0 : '100%',
@@ -353,7 +368,12 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             damping: 22,
             mass: 0.65
           }}
-          className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-white dark:bg-zinc-955 shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] z-10"
+          className={cn(
+            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.06)] z-10 transition-colors duration-300",
+            experienceMode === 'cafe'
+              ? "bg-orange-500"
+              : "bg-[#e20a22]"
+          )}
           style={{
             left: '4px',
           }}
