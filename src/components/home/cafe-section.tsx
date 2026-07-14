@@ -238,7 +238,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           const target = document.getElementById('cafe-menu-categories-anchor')
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
-        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full aspect-[3.1/1] shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
+        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
       >
         <Image
           src="/food_banner_bg.png"
@@ -383,7 +383,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         <>
           {/* Wedson Restaurant Compact Promo Banner */}
           {((experienceMode as string) === 'restaurant') && (
-            <div className="relative w-full aspect-[3.1/1] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm mb-4 mt-1 select-none">
+            <div className="relative w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm mb-4 mt-1 select-none">
               <Image
                 src="/wedson_restaurant_bg.png"
                 alt="Wedson Restaurant"
