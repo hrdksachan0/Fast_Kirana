@@ -9,6 +9,7 @@ import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/
 import { motion } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
 import { ProductCard } from '@/components/product/product-card'
+import { toast } from 'sonner'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -237,28 +238,85 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           const target = document.getElementById('cafe-menu-categories-anchor')
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
-        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-md hover:shadow-lg"
+        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full aspect-[3.1/1] shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
       >
         <Image
-          src="/food_genz_banner.png"
-          alt="Delicious Food in minutes - FastKirana"
+          src="/food_banner_bg.png"
+          alt="Good Food, Great Mood"
           fill
           sizes="100vw"
-          className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.01]"
+          className="object-cover object-right transition-transform duration-700 group-hover:scale-[1.01]"
           priority
         />
+        {/* Soft left gradient fade for premium readability on light and dark mode */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#fdf8f4]/90 via-[#fdf8f4]/50 to-transparent dark:from-[#181614]/90 dark:via-[#181614]/50 flex items-center px-6 sm:px-12 md:px-16" />
+        
+        {/* Banner Content Overlays */}
+        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%]">
+          {/* Dynamic Kitchen Status Badge */}
+          {cafeOpen ? (
+            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-[#00b140] dark:text-emerald-400 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
+            </span>
+          ) : (
+            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-zinc-800 dark:text-zinc-300 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-zinc-200" /> KITCHEN CLOSED
+            </span>
+          )}
+          
+          <h2 className="text-[12px] sm:text-2xl md:text-3.5xl tracking-tight leading-[1.05] text-zinc-950 dark:text-white select-none">
+            <span className="font-extrabold tracking-[0.1em] uppercase text-[8px] sm:text-[12px] text-zinc-800 dark:text-zinc-300">FastKirana Presents</span>
+            <br />
+            <span className="text-[#e20a22] dark:text-red-500 font-black tracking-tighter uppercase text-[13px] sm:text-[25px] md:text-[36px] block mt-0.5 sm:mt-1">
+              Cafe &amp; Restaurant
+            </span>
+          </h2>
+          
+          {/* Clickable & Copiable Coupon Code Badge - Optimized for Single Line */}
+          <div className="mt-3 sm:mt-4 flex select-none">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                if (typeof window !== 'undefined') {
+                  navigator.clipboard.writeText('FIRST5')
+                  toast.success('Coupon code "FIRST5" copied! 📋')
+                }
+              }}
+              className="group/btn flex items-center gap-1 px-2.5 py-1 rounded-full border border-red-500/20 bg-[#e20a22]/10 hover:bg-[#e20a22]/20 dark:bg-red-500/10 dark:hover:bg-red-500/20 active:scale-95 shadow-[0_2px_8px_rgba(226,10,34,0.04)] cursor-pointer transition-all shrink-0"
+            >
+              <span className="text-[7.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-400 uppercase tracking-wider">
+                CODE: <span className="underline decoration-solid font-black">FIRST5</span>
+              </span>
+              <span className="text-zinc-400 dark:text-zinc-650 text-[7px] sm:text-[9px] select-none">•</span>
+              <span className="text-[7px] sm:text-[8px] font-bold text-zinc-655 dark:text-zinc-300 uppercase tracking-wide">
+                5% OFF (TAP)
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Banner Footnotes */}
+        <div className="absolute bottom-1.5 left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-bold text-black dark:text-zinc-150 select-none z-10">
+          <span>*Only for first user</span>
+          <span>*T&amp;C Apply</span>
+        </div>
       </div>
 
 
       {/* Experience Switcher */}
-      <div className="relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border border-zinc-200/50 dark:border-zinc-800/60 overflow-hidden mt-4 mb-3.5 select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
+      <div className={cn(
+        "relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border transition-all duration-300 overflow-hidden mt-4 mb-3.5 select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]",
+        experienceMode === 'cafe'
+          ? "border-orange-500/50 dark:border-orange-500/40"
+          : "border-[#e20a22]/50 dark:border-[#e20a22]/40"
+      )}>
         <button
           onClick={() => setExperienceMode('cafe')}
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             experienceMode === 'cafe'
               ? "text-orange-500 dark:text-orange-400 font-black scale-102"
-              : "text-zinc-650 dark:text-zinc-450 hover:text-zinc-800 dark:hover:text-zinc-200 font-extrabold"
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
           )}
         >
           <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
@@ -273,8 +331,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             (experienceMode as string) === 'restaurant'
-              ? "text-orange-500 dark:text-orange-400 font-black scale-102"
-              : "text-zinc-650 dark:text-zinc-450 hover:text-zinc-800 dark:hover:text-zinc-200 font-extrabold"
+              ? "text-[#e20a22] dark:text-red-400 font-black scale-102"
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
           )}
         >
           <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
@@ -303,6 +361,37 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       </div>
 
         <>
+          {/* Wedson Restaurant Compact Promo Banner */}
+          {((experienceMode as string) === 'restaurant') && (
+            <div className="relative w-full aspect-[3.1/1] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm mb-4 mt-1 select-none">
+              <Image
+                src="/wedson_restaurant_bg.png"
+                alt="Wedson Restaurant"
+                fill
+                sizes="100vw"
+                className="object-cover object-center brightness-[0.70] dark:brightness-[0.60] transition-transform duration-700 hover:scale-[1.01]"
+                priority
+              />
+              {/* Premium overlay for readability */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/35 to-transparent flex flex-col justify-center px-5 sm:px-8 text-white">
+                <span className="text-[8px] sm:text-[9.5px] font-black tracking-widest text-[#ffbc64] uppercase leading-none mb-1">
+                  Now Live on FastKirana
+                </span>
+                <h3 className="text-[17px] sm:text-2xl md:text-3xl font-black tracking-tight leading-none drop-shadow-md">
+                  Wedson Restaurant
+                </h3>
+                <p className="text-[9.5px] sm:text-[11.5px] font-bold text-zinc-150 mt-1 leading-tight drop-shadow-sm">
+                  Delicious North Indian Curries &amp; Meals
+                </p>
+                <div className="mt-2.5 flex">
+                  <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-[#e20a22] text-white px-3 py-1 rounded-lg shadow-[0_4px_12px_rgba(226,10,34,0.3)] transition-all">
+                    ORDER NOW
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Café Category Section Header */}
           <div id="cafe-menu-categories-anchor" className="flex items-center justify-between px-1 scroll-mt-24">
             <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">

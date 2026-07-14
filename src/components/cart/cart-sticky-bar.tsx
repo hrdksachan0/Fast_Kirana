@@ -3,8 +3,8 @@
 import { useCartStore } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { cn, formatPrice } from '@/lib/utils'
-import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
-import { ShoppingBag, ArrowRight, Zap, Check } from 'lucide-react'
+import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
+import { ShoppingBag, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -19,12 +19,10 @@ function getDeliveryETA(): string {
 export function CartStickyBar() {
   const items = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
-  const getSavings = useCartStore((s) => s.getSavings)
   const totalItems = useCartStore((s) => s.getTotalItems())
 
   const toggleCart = useUIStore((s) => s.toggleCart)
   const isCartOpen = useUIStore((s) => s.isCartOpen)
-  const [eta, setEta] = useState(getDeliveryETA)
   const [isBouncing, setIsBouncing] = useState(false)
 
   const router = useRouter()
@@ -45,16 +43,6 @@ export function CartStickyBar() {
     return () => window.removeEventListener('cart-bounce', handleBounce)
   }, [])
 
-  // Update ETA every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEta(getDeliveryETA())
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [])
-
-
-
   // Suppress sticky cart bar on checkout, cart, tracking, login, and worker consoles to prevent overlay clutter
   const isIgnoredPage = !pathname ||
     pathname === '/cart' ||
@@ -71,12 +59,10 @@ export function CartStickyBar() {
   if (items.length === 0 || isCartOpen || isIgnoredPage) return null
 
   const subtotal = getSubtotal()
-  const savings = getSavings()
-  
-  const total = subtotal
   const needsForFreeDelivery = FREE_DELIVERY_THRESHOLD - subtotal
   const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
+
   return (
     <motion.div
       onClick={() => {
@@ -85,40 +71,56 @@ export function CartStickyBar() {
       }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "gpu-accelerated fixed bottom-[68px] left-4 right-4 z-40 bg-gradient-to-r from-emerald-800/95 to-green-700/95 backdrop-blur-lg text-white rounded-2xl shadow-[0_8px_30px_rgba(16,185,129,0.3)] border border-white/15 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
+        "gpu-accelerated fixed bottom-[90px] left-4 right-4 z-40 bg-[#097925] text-white rounded-3xl shadow-[0_8px_30px_rgba(9,121,37,0.22)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >
-      {/* Top Edge Progress Bar */}
+      {/* Top Edge Progress Bar matching the mockup indicator */}
       <div className="w-full h-1 bg-white/10 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500"
+          className="h-full bg-[#facc15] transition-all duration-500"
           style={{ width: `${deliveryProgress}%` }}
         />
       </div>
 
-      {/* Slim Content Row */}
-      <div className="px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-black text-white tracking-wide uppercase">
-            {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(total)}
-          </span>
-          <span className="text-base text-amber-455 animate-pulse-gentle">⚡</span>
+      {/* Spacious Mockup Row */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Shopping Bag Circle Container */}
+          <div className="relative w-9 h-9 rounded-full bg-green-950/40 flex items-center justify-center border border-white/10">
+            <ShoppingBag className="h-4.5 w-4.5 text-white stroke-[2.2]" />
+            {/* Red Notification Badge */}
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9.5px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-sm">
+              {totalItems}
+            </span>
+          </div>
+          
+          {/* Title & Subtitle Stack */}
+          <div className="flex flex-col text-left">
+            <span className="text-[13.5px] font-extrabold text-white leading-tight">
+              {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
+            </span>
+            <span className="text-[10px] font-bold text-white/80 leading-normal mt-0.5">
+              {hasFreeDelivery 
+                ? "Free delivery active!" 
+                : `Add ${formatPrice(needsForFreeDelivery)} more for free delivery`}
+            </span>
+          </div>
         </div>
 
-        {/* Premium View Cart Button */}
+        {/* View Cart Button Pill */}
         <motion.button
           onClick={(e) => {
             e.stopPropagation()
             triggerHaptic('light')
             toggleCart()
           }}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="bg-white text-emerald-800 font-extrabold text-[10px] px-4.5 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-all cursor-pointer tracking-wider uppercase"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-white text-[#097925] font-black text-xs px-5 py-2.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer active:scale-95"
         >
-          <span>View Cart</span>
-          <ArrowRight className="h-3 w-3 stroke-[3]" />
+          <span>VIEW CART</span>
+          <ChevronRight className="h-3.5 w-3.5 stroke-[2.8]" />
         </motion.button>
       </div>
     </motion.div>

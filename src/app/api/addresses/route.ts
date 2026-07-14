@@ -130,6 +130,64 @@ export async function DELETE(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id, label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = await request.json()
+
+    if (!id || !label || !houseNo || !street || !area || !city || !pincode || !phone) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const existing = await prisma.address.findUnique({ where: { id } })
+    if (!existing || existing.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
+    }
+
+    let cleanPhone = phone.toString().trim().replace(/\D/g, '')
+    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.slice(-10)
+    }
+
+    if (cleanPhone.length !== 10) {
+      return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
+    }
+
+    // If setting default, reset existing defaults
+    if (isDefault) {
+      await prisma.address.updateMany({
+        where: { userId: session.user.id },
+        data: { isDefault: false },
+      })
+    }
+
+    const updatedAddress = await prisma.address.update({
+      where: { id },
+      data: {
+        label,
+        houseNo,
+        street,
+        area,
+        city,
+        pincode,
+        phone: cleanPhone,
+        isDefault: !!isDefault,
+        lat: lat ? parseFloat(lat.toString()) : null,
+        lng: lng ? parseFloat(lng.toString()) : null,
+      },
+    })
+
+    return NextResponse.json(updatedAddress)
+  } catch (error) {
+    console.error('Error in PUT /api/addresses:', error)
+    return NextResponse.json({ error: 'Failed to update address' }, { status: 500 })
+  }
+}
+
 export async function PATCH(request: Request) {
   const session = await auth()
   if (!session?.user?.id) {

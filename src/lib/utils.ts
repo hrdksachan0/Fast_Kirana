@@ -29,7 +29,10 @@ export function formatPhone(phone: string | null | undefined): string {
   const trimmed = phone.trim()
   if (trimmed.startsWith('wa-') && trimmed.includes('@')) {
     const phoneDigits = trimmed.split('@')[0].replace('wa-', '')
-    return `+91 ${phoneDigits}`
+    const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+      ? phoneDigits.slice(2)
+      : phoneDigits
+    return `+91 ${cleanPhone}`
   }
   return trimmed
 }

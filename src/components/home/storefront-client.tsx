@@ -13,6 +13,7 @@ import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { LastOrderBanner } from '@/components/home/last-order-banner'
 import { ShoppingBag, Utensils } from 'lucide-react'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -62,10 +63,8 @@ export function StorefrontClient({
     params.set('mode', tab)
     router.replace(`/?${params.toString()}`, { scroll: false })
     
-    // Add tiny touch vibration if available
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(10)
-    }
+    // Trigger tactile haptic feedback for phone users
+    triggerHaptic('medium')
   }
 
   return (
@@ -108,42 +107,45 @@ export function StorefrontClient({
           />
 
           {/* Full-width premium Segment Controller */}
-          <div className="relative flex w-full h-12 p-1 bg-zinc-100/80 dark:bg-zinc-900/50 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-zinc-200/50 dark:border-zinc-800/60 overflow-hidden items-center">
-            <button
+          {/* Full-width premium Segment Controller */}
+          <div className={cn(
+            "relative flex w-full h-12 p-1 bg-zinc-100/90 dark:bg-zinc-900/60 backdrop-blur-xl rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.03)] border transition-all duration-300 overflow-hidden items-center",
+            activeTab === 'grocery'
+              ? "border-[#e20a22]/50 dark:border-[#e20a22]/40"
+              : "border-orange-500/50 dark:border-orange-500/40"
+          )}>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => handleTabChange('grocery')}
               className={cn(
-                "relative flex-1 h-full text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer active:scale-95",
+                "relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer rounded-full",
                 activeTab === 'grocery'
-                  ? "text-white scale-102 font-extrabold"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  ? "text-[#e20a22] font-black scale-102"
+                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/40 dark:hover:bg-zinc-800/20"
               )}
             >
-              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
-              <span>Grocery</span>
-            </button>
-            <button
+              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+              <span>GROCERY</span>
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => handleTabChange('cafe')}
               className={cn(
-                "relative flex-1 h-full text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer active:scale-95",
+                "relative flex-1 h-full text-xs sm:text-sm font-black tracking-wider uppercase transition-all duration-300 z-10 flex items-center justify-center gap-2 cursor-pointer rounded-full",
                 activeTab === 'cafe'
-                  ? "text-white scale-102 font-extrabold"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  ? "text-orange-600 font-black scale-102"
+                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/40 dark:hover:bg-zinc-800/20"
               )}
             >
-              <Utensils className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
-              <span>Food</span>
-            </button>
+              <Utensils className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+              <span>FOOD</span>
+            </motion.button>
             
-            {/* Sliding Pill Indicator with Framer Motion spanning exactly half width */}
+            {/* Sliding Pill Indicator with Framer Motion spanning exactly half width - White pill */}
             <motion.div
-              className={cn(
-                "absolute top-1 bottom-1 rounded-xl -z-0",
-                activeTab === 'grocery'
-                  ? "bg-[#e20a22] shadow-[0_4px_16px_rgba(226,10,34,0.25)]"
-                  : "bg-gradient-to-r from-orange-600 to-amber-500 shadow-[0_4px_16px_rgba(249,115,22,0.25)]"
-              )}
+              className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-zinc-800 shadow-[0_3px_10px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] z-0"
               layoutId="activeTabIndicator"
-              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
               style={{
                 width: 'calc(50% - 4px)',
                 left: activeTab === 'grocery' ? '4px' : 'calc(50% + 2px)',

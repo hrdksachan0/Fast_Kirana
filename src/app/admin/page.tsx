@@ -330,15 +330,15 @@ export default async function AdminPage() {
         {statsList.map((card) => {
           const CardIcon = card.icon
           return (
-            <div key={card.label} className="bg-card border border-border p-5 rounded-2xl shadow-sm flex items-center gap-4">
-              <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${card.color}`}>
-                <CardIcon className="h-5 w-5" />
+            <div key={card.label} className="bg-card border border-border p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 overflow-hidden">
+              <div className={`flex h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0 items-center justify-center rounded-xl ${card.color}`}>
+                <CardIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
               </div>
-              <div>
-                <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider block">
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] sm:text-[10px] font-black text-text-secondary uppercase tracking-wider block truncate">
                   {card.label}
                 </span>
-                <span className="text-lg md:text-xl font-black text-text-primary mt-1 block">
+                <span className="text-base sm:text-lg md:text-xl font-black text-text-primary mt-0.5 sm:mt-1 block truncate">
                   {card.value}
                 </span>
               </div>

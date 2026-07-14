@@ -77,7 +77,7 @@ export function MobileBottomNav() {
                     "h-5 w-5 transition-all duration-300",
                     isActive ? "stroke-[2.5]" : "stroke-[1.8]"
                   )}
-                  fill={isActive && item.label === 'Home' ? "currentColor" : "none"}
+                  fill="none"
                 />
               </div>
               

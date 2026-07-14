@@ -98,7 +98,7 @@ export function PWARegistration() {
   return (
     <div className={cn(
       "fixed left-4 right-4 z-[999] md:hidden animate-slide-in-bottom",
-      hasCartItems ? "bottom-[114px]" : "bottom-[72px]"
+      hasCartItems ? "bottom-[162px]" : "bottom-[90px]"
     )}>
       <div className="bg-card border border-border/80 p-3.5 rounded-2xl shadow-elevated glass flex flex-col gap-2 relative">
         

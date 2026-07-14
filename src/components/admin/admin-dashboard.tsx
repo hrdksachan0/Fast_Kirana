@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
-import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS } from '@/lib/constants'
+import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { toast } from 'sonner'
 import { 
   Loader2, 
@@ -236,6 +236,22 @@ export function AdminDashboard({
       }
     }
     return DEFAULT_CAFE_MENU_SECTIONS
+  }, [settingsMap])
+
+  // Parse restaurant menu sections dynamically from database settings
+  const RESTAURANT_MENU_SECTIONS = useMemo(() => {
+    const customSectionsStr = settingsMap['restaurant_menu_sections'] || settingsMap['RESTAURANT_MENU_SECTIONS']
+    if (customSectionsStr) {
+      try {
+        const parsed = JSON.parse(customSectionsStr)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      } catch (e) {
+        console.error('Error parsing RESTAURANT_MENU_SECTIONS from settings:', e)
+      }
+    }
+    return DEFAULT_RESTAURANT_MENU_SECTIONS
   }, [settingsMap])
 
   // Fetch settings function
@@ -2731,6 +2747,40 @@ export function AdminDashboard({
                   </div>
                 )}
 
+                {newProductType === 'restaurant' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
+                    <select
+                      required
+                      value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const sectionValues = RESTAURANT_MENU_SECTIONS.map(s => s.tag);
+                        let cleanTags = newProduct.tags
+                          .split(',')
+                          .map(t => t.trim())
+                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
+                        
+                        if (val) {
+                          cleanTags.push(val);
+                        }
+                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
+                          cleanTags.push('restaurant');
+                        }
+                        setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
+                    >
+                      <option value="" className="text-text-primary font-normal">-- Select Restaurant Section --</option>
+                      {RESTAURANT_MENU_SECTIONS.map((sec) => (
+                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
+                          {sec.emoji} {sec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
                   <input
@@ -2993,7 +3043,7 @@ export function AdminDashboard({
                   </div>
 
 
-                {!isNewProductCafe && (
+                {!isNewProductCafe && !isNewProductRestaurant && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Expiry Date</label>
                     <input
@@ -4831,6 +4881,40 @@ export function AdminDashboard({
                     </select>
                   </div>
                 )}
+
+                {editProductType === 'restaurant' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
+                    <select
+                      required
+                      value={RESTAURANT_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const sectionValues = RESTAURANT_MENU_SECTIONS.map(s => s.tag);
+                        let cleanTags = productEditForm.tags
+                          .split(',')
+                          .map(t => t.trim())
+                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
+                        
+                        if (val) {
+                          cleanTags.push(val);
+                        }
+                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
+                          cleanTags.push('restaurant');
+                        }
+                        setProductEditForm({ ...productEditForm, tags: cleanTags.join(', ') });
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
+                    >
+                      <option value="" className="text-text-primary font-normal">-- Select Restaurant Section --</option>
+                      {RESTAURANT_MENU_SECTIONS.map((sec) => (
+                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
+                          {sec.emoji} {sec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
                   <input
@@ -5069,7 +5153,7 @@ export function AdminDashboard({
                 </div>
 
 
-                {!isEditProductCafe && (
+                {!isEditProductCafe && !isEditProductRestaurant && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Expiry Date</label>
                     <input

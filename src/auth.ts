@@ -209,7 +209,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           let userPhone = phone || null
           if (email.startsWith('wa-') && !userPhone) {
             const phoneDigits = email.split('@')[0].replace('wa-', '')
-            userPhone = `+91${phoneDigits}`
+            const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+              ? phoneDigits.slice(2)
+              : phoneDigits
+            userPhone = `+91${cleanPhone}`
           }
 
           user = await prisma.user.create({

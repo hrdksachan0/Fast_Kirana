@@ -257,9 +257,19 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   }
 
   const formatEmailForDisplay = (email: string) => {
-    if (email.startsWith('wa-') && email.includes('@')) {
-      const phoneDigits = email.split('@')[0].replace('wa-', '')
-      return `+91 ${phoneDigits}`
+    if (!email) return ''
+    const lowerEmail = email.toLowerCase().trim()
+    if (lowerEmail.endsWith('@fastkirana.com')) {
+      const prefix = lowerEmail.split('@')[0]
+      const phoneDigits = prefix.replace('wa-', '')
+      const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+        ? phoneDigits.slice(2)
+        : phoneDigits
+      if (/^\d{10}$/.test(cleanPhone)) {
+        return `+91 ${cleanPhone}`
+      }
+      if (prefix === 'help') return email
+      return prefix
     }
     return email
   }

@@ -91,7 +91,10 @@ function LoginForm() {
   const formatIdentifierDisplay = (val: string): string => {
     if (val.startsWith('wa-') && val.includes('@')) {
       const phoneDigits = val.split('@')[0].replace('wa-', '')
-      return `Mobile (+91 ${phoneDigits})`
+      const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+        ? phoneDigits.slice(2)
+        : phoneDigits
+      return `Mobile (+91 ${cleanPhone})`
     }
     return val
   }
@@ -347,7 +350,10 @@ function LoginForm() {
     // If it's a WhatsApp placeholder email, convert it back to the 10-digit phone number
     if (email.startsWith('wa-') && email.includes('@')) {
       const phoneDigits = email.split('@')[0].replace('wa-', '')
-      setEmail(phoneDigits)
+      const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+        ? phoneDigits.slice(2)
+        : phoneDigits
+      setEmail(cleanPhone)
       setLoginType('WHATSAPP')
     }
   }
