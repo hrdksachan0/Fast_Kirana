@@ -139,7 +139,7 @@ export function StorefrontClient({
               className={cn(
                 "absolute top-1 bottom-1 rounded-xl -z-0",
                 activeTab === 'grocery'
-                  ? "bg-gradient-to-r from-red-600 to-rose-500 shadow-[0_4px_16px_rgba(239,68,68,0.25)]"
+                  ? "bg-[#e20a22] shadow-[0_4px_16px_rgba(226,10,34,0.25)]"
                   : "bg-gradient-to-r from-orange-600 to-amber-500 shadow-[0_4px_16px_rgba(249,115,22,0.25)]"
               )}
               layoutId="activeTabIndicator"

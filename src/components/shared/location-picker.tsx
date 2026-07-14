@@ -177,6 +177,19 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       const map = new google.maps.Map(mapContainerRef.current, mapOptions)
       mapRef.current = map
 
+      // Draw red circle representing the delivery radius zone
+      new google.maps.Circle({
+        strokeColor: '#EA4335',
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: '#EA4335',
+        fillOpacity: 0.15,
+        map: map,
+        center: { lat: storeLat, lng: storeLng },
+        radius: deliveryRadius * 1000, // in meters
+        clickable: false
+      })
+
       map.addListener('dragstart', () => setIsDragging(true))
       map.addListener('drag', () => {
         const center = map.getCenter()
@@ -454,6 +467,12 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                     </div>
                   </div>
                 )}
+
+                {/* Pulsing Red Circle Target Ring */}
+                <div className="absolute left-1/2 top-1/2 pointer-events-none -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full border-2 border-red-500 bg-red-500/10 animate-ping absolute opacity-70" />
+                  <div className="w-4 h-4 rounded-full border border-white bg-red-500/30 absolute shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                </div>
 
                 {/* Fixed Center Marker Pin */}
                 <div className="absolute left-1/2 top-1/2 pointer-events-none -translate-x-1/2 -translate-y-full flex flex-col items-center select-none z-20">

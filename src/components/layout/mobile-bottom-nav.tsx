@@ -68,7 +68,7 @@ export function MobileBottomNav() {
                 className={cn(
                   "flex items-center justify-center h-9 w-13 rounded-2xl transition-all duration-300 active:scale-95",
                   isActive 
-                    ? "bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-md shadow-red-500/15" 
+                    ? "bg-[#e20a22] text-white shadow-md shadow-red-900/15" 
                     : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-650"
                 )}
               >
@@ -77,7 +77,7 @@ export function MobileBottomNav() {
                     "h-5 w-5 transition-all duration-300",
                     isActive ? "stroke-[2.5]" : "stroke-[1.8]"
                   )}
-                  fill={isActive ? "currentColor" : "none"}
+                  fill={isActive && item.label === 'Home' ? "currentColor" : "none"}
                 />
               </div>
               
@@ -85,7 +85,7 @@ export function MobileBottomNav() {
               <span
                 className={cn(
                   "text-[10px] mt-1 font-bold transition-all duration-300",
-                  isActive ? "text-red-500 font-extrabold" : "text-zinc-500 dark:text-zinc-400"
+                  isActive ? "text-[#e20a22] font-extrabold" : "text-zinc-500 dark:text-zinc-400"
                 )}
               >
                 {item.label}
@@ -95,7 +95,7 @@ export function MobileBottomNav() {
               {isActive && (
                 <motion.span
                   layoutId="activeBottomTabLine"
-                  className="absolute bottom-[-1px] w-4.5 h-[2.5px] rounded-full bg-red-500"
+                  className="absolute bottom-[-1px] w-4.5 h-[2.5px] rounded-full bg-[#e20a22]"
                   transition={{
                     type: "spring",
                     stiffness: 380,

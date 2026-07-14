@@ -222,36 +222,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           }
         })
 
-        dynamicSections.forEach(sec => {
-          const matchedProducts = dbProducts.filter((p: any) => p.tags?.map((t: string) => t.toLowerCase()).includes(sec.tag))
-          finalCategories.push({
-            tag: sec.tag,
-            title: sec.title,
-            emoji: sec.emoji,
-            image: sec.image,
-            products: matchedProducts
-          })
-        })
-
-        const allGroupedIds = new Set<string>()
-        PREDEFINED_CATEGORIES.forEach(cat => {
-          const sec = sectionsMap.get(cat.tag)
-          if (sec) {
-            sec.matchedIds.forEach((id: string) => allGroupedIds.add(id))
-          }
-        })
-        const moreProducts = dbProducts.filter((p: any) => !allGroupedIds.has(p.id))
-        if (moreProducts.length > 0) {
-          finalCategories.push({
-            tag: 'more',
-            title: 'More Specials',
-            emoji: '🍽️',
-            image: '/cafe_all_menu_category.png',
-            products: moreProducts
-          })
-        }
-
-        // Only show categories that have products in the database
+        // Only show configured/predefined categories that have products in the database
         setCategories([
           { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png', products: dbProducts },
           ...finalCategories
