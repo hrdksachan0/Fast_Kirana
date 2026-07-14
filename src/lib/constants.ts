@@ -44,6 +44,8 @@ export interface CafeMenuSection {
   title: string
   emoji: string
   description: string
+  imageUrl?: string
+  image?: string
 }
 
 export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [

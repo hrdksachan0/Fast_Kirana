@@ -176,11 +176,12 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Define helper to check if a product is a Cafe product
+    // Define helper to check if a product is a Cafe/Restaurant product
     const isCafeProduct = (p: any) => {
       if (!p) return false
-      if (p.category?.slug === 'cafe') return true
-      if (p.tags?.includes('cafe')) return true
+      const slug = p.category?.slug
+      if (slug === 'cafe' || slug === 'restaurant') return true
+      if (p.tags?.includes('cafe') || p.tags?.includes('restaurant')) return true
       return false
     }
 

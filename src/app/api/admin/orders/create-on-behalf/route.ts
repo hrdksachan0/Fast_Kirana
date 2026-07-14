@@ -165,8 +165,9 @@ export async function POST(request: Request) {
 
     const isCafeProduct = (p: any) => {
       if (!p) return false
-      if (p.category?.slug === 'cafe') return true
-      if (p.tags?.includes('cafe')) return true
+      const slug = p.category?.slug
+      if (slug === 'cafe' || slug === 'restaurant') return true
+      if (p.tags?.includes('cafe') || p.tags?.includes('restaurant')) return true
       return false
     }
 

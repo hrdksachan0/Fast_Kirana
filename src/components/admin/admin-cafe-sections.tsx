@@ -48,9 +48,12 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
   const [secEmoji, setSecEmoji] = useState('')
   const [secDescription, setSecDescription] = useState('')
   const [secMatchTags, setSecMatchTags] = useState('')
+  const [secImageUrl, setSecImageUrl] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [savingSections, setSavingSections] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
 
   // Fetch settings on mount
   useEffect(() => {
@@ -60,6 +63,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
         const res = await fetch('/api/settings', { cache: 'no-store' })
         if (!res.ok) throw new Error('Failed to load settings')
         const data = await res.json()
+        setSettingsMap(data)
         
         const settingKey = isRestaurant ? 'restaurant_menu_sections' : 'cafe_menu_sections'
         if (data[settingKey]) {
@@ -93,6 +97,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecEmoji(sec.emoji)
     setSecDescription(sec.description || '')
     setSecMatchTags(sec.matchTags ? sec.matchTags.join(', ') : sec.tag)
+    setSecImageUrl(sec.imageUrl || sec.image || '')
   }
 
   const handleAddNewSectionClick = () => {
@@ -103,6 +108,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecEmoji('')
     setSecDescription('')
     setSecMatchTags('')
+    setSecImageUrl('')
   }
 
   const handleCancelSectionEdit = () => {
@@ -113,6 +119,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecEmoji('')
     setSecDescription('')
     setSecMatchTags('')
+    setSecImageUrl('')
   }
 
   const handleSaveSection = (e: React.FormEvent) => {
@@ -132,7 +139,9 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
       title: secTitle.trim(),
       emoji: secEmoji.trim(),
       description: secDescription.trim(),
-      matchTags: cleanMatchTags
+      matchTags: cleanMatchTags,
+      imageUrl: secImageUrl.trim() || undefined,
+      image: secImageUrl.trim() || undefined
     }
 
     if (isAddingNewSec) {
@@ -303,6 +312,67 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
                 onChange={(e) => setSecMatchTags(e.target.value)}
                 className="w-full bg-background border border-border px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-primary font-bold"
               />
+            </div>
+
+            {/* Section Image / Icon */}
+            <div className="md:col-span-3 space-y-1">
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary block">Section Image (Cloudinary / absolute link)</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  placeholder="e.g. /cafe_brews_category.png or upload an image"
+                  value={secImageUrl}
+                  onChange={(e) => setSecImageUrl(e.target.value)}
+                  className="flex-1 bg-background border border-border px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-primary font-semibold"
+                />
+                <label
+                  htmlFor="section-image-file-upload"
+                  className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all flex items-center gap-1.5 shrink-0 select-none"
+                >
+                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin animate-spin-fast" /> : 'Upload Photo'}
+                </label>
+                <input
+                  id="section-image-file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const cloudName = settingsMap['cloudinary_cloud_name']
+                      const uploadPreset = settingsMap['cloudinary_upload_preset']
+                      if (!cloudName || !uploadPreset) {
+                        toast.error('Cloudinary credentials missing. Please set them in settings.')
+                        return
+                      }
+                      setIsUploading(true)
+                      const formData = new FormData()
+                      formData.append('file', file)
+                      formData.append('upload_preset', uploadPreset)
+                      try {
+                        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                          method: 'POST',
+                          body: formData,
+                        })
+                        const resData = await res.json()
+                        if (res.ok && resData.secure_url) {
+                          setSecImageUrl(resData.secure_url)
+                          toast.success('Uploaded to Cloudinary successfully!')
+                        } else {
+                          toast.error(`Upload failed: ${resData.error?.message || 'Check credentials'}`)
+                        }
+                      } catch (err) {
+                        console.error(err)
+                        toast.error('Cloudinary upload error')
+                      } finally {
+                        setIsUploading(false)
+                      }
+                    }
+                    e.target.value = ''
+                  }}
+                  className="sr-only"
+                  disabled={isUploading}
+                />
+              </div>
             </div>
           </div>
 
