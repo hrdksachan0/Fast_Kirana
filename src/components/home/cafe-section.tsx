@@ -100,13 +100,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
   ])
 
   const filteredCategories = useMemo(() => {
-    return categories.filter(cat => {
-      if (cat.tag === 'all') return true
-      if ((experienceMode as string) === 'cafe') return true
-      if ((experienceMode as string) === 'restaurant') return false
-      return true
-    })
-  }, [categories, experienceMode])
+    return categories
+  }, [categories])
   const [cafeProducts, setCafeProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -232,7 +227,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       .finally(() => {
         setIsLoading(false)
       })
-  }, [settings])
+  }, [settings, experienceMode])
 
   return (
     <section className="space-y-0">
@@ -307,15 +302,6 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         />
       </div>
 
-      {((experienceMode as string) === 'restaurant') ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center select-none bg-zinc-50/50 dark:bg-zinc-900/10 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 mt-4 animate-fade-in shadow-2xs">
-          <span className="text-5xl">🛎️</span>
-          <h3 className="text-base font-extrabold text-text-primary mt-4">Restaurant Delivery Coming Soon!</h3>
-          <p className="text-[11.5px] text-text-secondary max-w-[340px] mt-2 leading-relaxed font-medium">
-            We are partnering with your favorite local premium restaurants to bring delicious full-course meals and combos to your doorstep shortly. Stay tuned!
-          </p>
-        </div>
-      ) : (
         <>
           {/* Café Category Section Header */}
           <div id="cafe-menu-categories-anchor" className="flex items-center justify-between px-1 scroll-mt-24">
@@ -505,7 +491,6 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             )
           })}
         </>
-      )}
     </section>
   )
 }
