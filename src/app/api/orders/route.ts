@@ -388,10 +388,24 @@ export async function POST(request: NextRequest) {
       return sum + itemPrice * item.quantity
     }, 0)
 
+    const restaurantSubtotal = restaurantItems.reduce((sum, item) => {
+      const isVariant = item.product.id.includes('_')
+      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      let itemPrice = item.dbProduct.price
+      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+        if (variant) {
+          itemPrice = variant.price
+        }
+      }
+      return sum + itemPrice * item.quantity
+    }, 0)
+
     const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
 
     let groceryDeliveryFee = 0
     let cafeDeliveryFee = 0
+    let restaurantDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (deliveryRules && !deliveryRules.isServiceable) {
@@ -409,6 +423,8 @@ export async function POST(request: NextRequest) {
           groceryDeliveryFee = feeToCharge
         } else if (cafeItems.length > 0) {
           cafeDeliveryFee = feeToCharge
+        } else if (restaurantItems.length > 0) {
+          restaurantDeliveryFee = feeToCharge
         }
       }
     }
@@ -446,6 +462,26 @@ export async function POST(request: NextRequest) {
         miscFee: appliedMiscFee,
         total: cafeTotal,
         items: cafeItems,
+      })
+    }
+
+    if (restaurantItems.length > 0) {
+      const restaurantDiscount = combinedSubtotal > 0 ? (restaurantSubtotal / combinedSubtotal) * combinedDiscount : 0
+      const restaurantTaxes = (restaurantSubtotal - restaurantDiscount) * serverTaxRate
+      const groceryChargedMisc = groceryItems.length > 0
+      const cafeChargedMisc = cafeItems.length > 0
+      const appliedMiscFee = (groceryChargedMisc || cafeChargedMisc) ? 0 : serverMiscFee
+      const restaurantTotal = restaurantSubtotal - restaurantDiscount + restaurantDeliveryFee + restaurantTaxes + appliedMiscFee
+
+      ordersToCreate.push({
+        type: 'RESTAURANT',
+        subtotal: restaurantSubtotal,
+        discount: restaurantDiscount,
+        deliveryFee: restaurantDeliveryFee,
+        taxes: restaurantTaxes,
+        miscFee: appliedMiscFee,
+        total: restaurantTotal,
+        items: restaurantItems,
       })
     }
 
@@ -492,8 +528,8 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Calculate estimated delivery time for this order (30 mins for Cafe, 10 mins for Grocery)
-        let estimatedDelivery = new Date(Date.now() + (orderInfo.type === 'CAFE' ? 30 : 10) * 60 * 1000)
+        // Calculate estimated delivery time for this order (30 mins for Cafe/Restaurant, 10 mins for Grocery)
+        let estimatedDelivery = new Date(Date.now() + (orderInfo.type === 'CAFE' || orderInfo.type === 'RESTAURANT' ? 30 : 10) * 60 * 1000)
 
         if (scheduledSlot && scheduledSlot !== 'INSTANT') {
           let startHour = 0
@@ -514,11 +550,72 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        let orderAddressId = finalAddressId
+
+        if (deliveryMethod === 'PICKUP') {
+          let label = 'STORE_PICKUP'
+          let defaultPickupAddress = 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+          let phone = defaultSupportPhone
+
+          if (orderInfo.type === 'RESTAURANT') {
+            label = 'STORE_PICKUP_RESTAURANT'
+            defaultPickupAddress = settingsMap['restaurant_pickup_address'] || 'A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+            phone = settingsMap['contact_phone'] || '+91 81128 49854'
+          } else if (orderInfo.type === 'CAFE') {
+            label = 'STORE_PICKUP_CAFE'
+            defaultPickupAddress = settingsMap['cafe_pickup_address'] || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+            phone = settingsMap['contact_phone'] || '+91 70544 70303'
+          } else {
+            label = 'STORE_PICKUP'
+            defaultPickupAddress = settingsMap['grocery_pickup_address'] || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+            phone = defaultSupportPhone
+          }
+
+          const addrParts = defaultPickupAddress.split(',').map(p => p.trim())
+          const houseNo = addrParts[0] || 'Store Pickup'
+          const street = addrParts[1] || 'Ghatampur'
+          const area = addrParts[2] || 'Kanpur Nagar'
+          const city = addrParts[3] || 'Kanpur'
+          const pincode = addrParts[4] || '209206'
+
+          let pickupAddress = await tx.address.findFirst({
+            where: { userId, label }
+          })
+
+          if (!pickupAddress) {
+            pickupAddress = await tx.address.create({
+              data: {
+                userId,
+                label,
+                houseNo,
+                street,
+                area,
+                city,
+                pincode,
+                phone,
+              }
+            })
+          } else {
+            pickupAddress = await tx.address.update({
+              where: { id: pickupAddress.id },
+              data: {
+                houseNo,
+                street,
+                area,
+                city,
+                pincode,
+                phone,
+              }
+            })
+          }
+          orderAddressId = pickupAddress.id
+        }
+
         // Create order
         const newOrder = await tx.order.create({
           data: {
             userId: userId,
-            addressId: finalAddressId,
+            addressId: orderAddressId,
             combinedId: combinedId,
             status: OrderStatus.PENDING,
 
@@ -535,8 +632,16 @@ export async function POST(request: NextRequest) {
             isB2B,
             storeId,
             couponCode: couponCode ? couponCode.toUpperCase() : null,
-            shopName: orderInfo.type === 'CAFE' ? 'FastKirana Cafe Kitchen' : shopName,
-            shopPhone: orderInfo.type === 'CAFE' ? (settingsMap['contact_phone'] || '+91 70544 70303') : shopPhone,
+            shopName: orderInfo.type === 'CAFE' 
+              ? 'FastKirana Cafe Kitchen' 
+              : orderInfo.type === 'RESTAURANT'
+              ? 'FastKirana Restaurant Kitchen'
+              : shopName,
+            shopPhone: orderInfo.type === 'CAFE' 
+              ? (settingsMap['contact_phone'] || '+91 70544 70303') 
+              : orderInfo.type === 'RESTAURANT'
+              ? (settingsMap['contact_phone'] || '+91 81128 49854')
+              : shopPhone,
             deliveryLat: address.lat,
             deliveryLng: address.lng,
             items: {

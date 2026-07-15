@@ -12,7 +12,7 @@ export async function GET() {
     const addresses = await prisma.address.findMany({
       where: { 
         userId: session.user.id,
-        label: { not: 'STORE_PICKUP' }
+        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
       },
       orderBy: { isDefault: 'desc' },
     })
@@ -101,7 +101,7 @@ export async function DELETE(request: Request) {
     const userAddressCount = await prisma.address.count({
       where: {
         userId: session.user.id,
-        label: { not: 'STORE_PICKUP' },
+        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] },
       },
     })
     if (userAddressCount <= 1) {

@@ -9,12 +9,18 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const type = searchParams.get('type') // 'cafe' or 'grocery'
+  const type = searchParams.get('type') // 'cafe', 'restaurant' or 'grocery'
 
-  if (session.user.role === 'CHEF' && type !== 'cafe') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user.role === 'CHEF') {
+    const isRestaurantChef = session.user.email?.toLowerCase().startsWith('restaurant')
+    if (isRestaurantChef && type !== 'restaurant') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isRestaurantChef && type !== 'cafe') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
-  if (session.user.role === 'PICKER' && type === 'cafe') {
+  if (session.user.role === 'PICKER' && (type === 'cafe' || type === 'restaurant')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -37,6 +43,21 @@ export async function GET(request: Request) {
           AND o."shopName" = 'FastKirana Cafe Kitchen'
         ORDER BY o."createdAt" ASC
       `
+    } else if (type === 'restaurant') {
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
+        FROM orders o
+        WHERE o.status IN ('PENDING', 'CONFIRMED')
+          AND o."shopName" = 'FastKirana Restaurant Kitchen'
+        ORDER BY o."createdAt" ASC
+      `
     } else {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
@@ -49,7 +70,7 @@ export async function GET(request: Request) {
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
-          AND (o."shopName" IS NULL OR o."shopName" != 'FastKirana Cafe Kitchen')
+          AND (o."shopName" IS NULL OR (o."shopName" != 'FastKirana Cafe Kitchen' AND o."shopName" != 'FastKirana Restaurant Kitchen'))
         ORDER BY o."createdAt" ASC
       `
     }

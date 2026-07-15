@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Utensils, LogOut, Clock, ShieldCheck, Home } from 'lucide-react'
+import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings } from 'lucide-react'
 import { AdminRestaurantConsole } from '@/components/admin/admin-restaurant-console'
+import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
+import { RestaurantSalesConsole } from '@/components/admin/restaurant-sales-console'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function RestaurantKitchenPage() {
@@ -12,6 +14,7 @@ export default function RestaurantKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { restaurantOpen } = useUIStore()
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog'>('orders')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -20,11 +23,11 @@ export default function RestaurantKitchenPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/login?callbackUrl=/restaurant-kitchen')
+      router.push('/restaurant-login?callbackUrl=/restaurant-kitchen')
     } else if (status === 'authenticated') {
       const role = session?.user?.role
       const email = session?.user?.email || ''
-      const isAllowed = role === 'ADMIN' || (role === 'CHEF' && email.startsWith('restaurant'))
+      const isAllowed = role === 'ADMIN' || (role === 'CHEF' && email.toLowerCase().startsWith('restaurant'))
       if (!isAllowed) {
         router.push('/')
       }
@@ -35,7 +38,7 @@ export default function RestaurantKitchenPage() {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center space-y-3">
-          <Utensils className="h-8 w-8 text-primary animate-spin mx-auto" />
+          <Utensils className="h-8 w-8 text-red-600 animate-spin mx-auto" />
           <p className="text-xs text-text-secondary font-bold">Verifying kitchen credentials...</p>
         </div>
       </div>
@@ -49,12 +52,12 @@ export default function RestaurantKitchenPage() {
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card border border-border rounded-3xl p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
+            <div className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner border border-red-500/20">
               <Utensils className="h-6 w-6 animate-pulse-gentle" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-text-primary">Wedson Restaurant Console</h1>
+                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight">Wedson Restaurant Console</h1>
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                   restaurantOpen
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
@@ -72,7 +75,6 @@ export default function RestaurantKitchenPage() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* Real-time Clock */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 rounded-xl border border-border/40 text-[11px] font-mono font-bold text-text-secondary select-none shadow-inner">
               <Clock className="h-3.5 w-3.5 text-text-muted" />
               <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -87,8 +89,8 @@ export default function RestaurantKitchenPage() {
             </button>
 
             <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 bg-rose-500 text-white hover:bg-rose-600 text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shadow-rose-500/15"
+              onClick={() => signOut({ callbackUrl: '/restaurant-login' })}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 bg-red-650 text-white hover:bg-red-750 text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shadow-red-500/15"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -96,9 +98,48 @@ export default function RestaurantKitchenPage() {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeTab === 'orders' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <ChefHat className="h-4 w-4" />
+            Live Orders
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeTab === 'analytics' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Sales Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('catalog')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeTab === 'catalog' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            Menu Catalog
+          </button>
+        </div>
+
         {/* Console Container */}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-          <AdminRestaurantConsole />
+          {activeTab === 'orders' && <RestaurantOrdersConsole />}
+          {activeTab === 'analytics' && <RestaurantSalesConsole />}
+          {activeTab === 'catalog' && <AdminRestaurantConsole />}
         </div>
 
       </div>

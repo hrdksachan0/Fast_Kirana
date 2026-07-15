@@ -119,7 +119,7 @@ export async function GET(
 
       const subOrders = combinedOrders.map(o => ({
         id: o.id,
-        type: o.shopName === 'FastKirana Cafe Kitchen' ? 'CAFE' : 'GROCERY',
+        type: o.shopName === 'FastKirana Cafe Kitchen' ? 'CAFE' : o.shopName === 'FastKirana Restaurant Kitchen' ? 'RESTAURANT' : 'GROCERY',
         status: o.status,
         total: o.total,
         itemsCount: allItems.filter(item => item.orderId === o.id).length
@@ -221,7 +221,7 @@ export async function PATCH(
 
     // Claim checks / locking mechanisms
     if (status === 'CONFIRMED') {
-      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen') {
+      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen' || existingOrder.shopName === 'FastKirana Restaurant Kitchen') {
         if (existingOrder.assignedChefId && existingOrder.assignedChefId !== session.user.id) {
           return NextResponse.json({ error: 'Order is already claimed by another chef' }, { status: 409 })
         }
@@ -355,7 +355,7 @@ export async function PATCH(
         WHERE id = ${id}
       `
     } else if (status === 'CONFIRMED') {
-      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen') {
+      if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen' || existingOrder.shopName === 'FastKirana Restaurant Kitchen') {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 

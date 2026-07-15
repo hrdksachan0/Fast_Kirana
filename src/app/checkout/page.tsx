@@ -557,7 +557,7 @@ export default function CheckoutPage() {
         const res = await fetch('/api/addresses')
         if (res.ok) {
           const data = await res.json()
-          const deliveryAddrs = data.filter((a: any) => a.label !== 'STORE_PICKUP')
+          const deliveryAddrs = data.filter((a: any) => !['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'].includes(a.label))
           setAddresses(deliveryAddrs)
           if (deliveryAddrs.length > 0) {
             const def = deliveryAddrs.find((a: any) => a.isDefault)

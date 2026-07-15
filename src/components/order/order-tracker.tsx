@@ -232,7 +232,10 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
     const destLat = order.address?.lat || storeLat + 0.004
     const destLng = order.address?.lng || storeLng + 0.005
 
-    const map = L.map(mapContainerRef.current).setView([storeLat, storeLng], 14)
+    const pickupLat = order.deliveryMethod === 'PICKUP' ? (order.address?.lat || storeLat) : storeLat
+    const pickupLng = order.deliveryMethod === 'PICKUP' ? (order.address?.lng || storeLng) : storeLng
+
+    const map = L.map(mapContainerRef.current).setView([pickupLat, pickupLng], 14)
     mapRef.current = map
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -260,7 +263,7 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
       iconAnchor: [14, 14],
     })
 
-    L.marker([storeLat, storeLng], { icon: storeIcon })
+    L.marker([pickupLat, pickupLng], { icon: storeIcon })
       .addTo(map)
       .bindPopup(`<b>Fulfilling Shop: ${order.shopName || 'FastKirana Store'}</b>`)
 
@@ -268,7 +271,7 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
       .addTo(map)
       .bindPopup('<b>Your Location</b>')
 
-    const routeLine = L.polyline([[storeLat, storeLng], [destLat, destLng]], {
+    const routeLine = L.polyline([[pickupLat, pickupLng], [destLat, destLng]], {
       color: '#e20a22',
       weight: 3,
       dashArray: '5, 8',
@@ -487,7 +490,7 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
           </a>
           {order.deliveryMethod === 'PICKUP' && (
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${storeLat},${storeLng}`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${order.address?.lat || storeLat},${order.address?.lng || storeLng}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-accent/20 bg-accent/5 hover:bg-accent/10 text-accent font-black text-xs rounded-xl transition-all"
@@ -742,19 +745,19 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
             {formatAddress(order.address)}
             {order.deliveryMethod === 'PICKUP' && (
               <span className="block text-[10px] text-text-muted mt-1 font-bold">
-                📍 Coordinates: {storeLat}, {storeLng}
+                📍 Coordinates: {order.address?.lat || storeLat}, {order.address?.lng || storeLng}
               </span>
             )}
           </p>
           {order.deliveryMethod === 'PICKUP' ? (
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${storeLat},${storeLng}`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${order.address?.lat || storeLat},${order.address?.lng || storeLng}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-black rounded-xl transition-all shadow-sm w-fit"
             >
               <Navigation className="h-3.5 w-3.5" />
-              Get Store Directions (Lat: {storeLat}, Lng: {storeLng})
+              Get Store Directions (Lat: {order.address?.lat || storeLat}, Lng: {order.address?.lng || storeLng})
             </a>
           ) : (
             <a

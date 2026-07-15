@@ -45,6 +45,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const [groceryPickupAddress, setGroceryPickupAddress] = useState('Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206')
+  const [cafePickupAddress, setCafePickupAddress] = useState('Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206')
+  const [restaurantPickupAddress, setRestaurantPickupAddress] = useState('A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206')
   const [notifyPhone1, setNotifyPhone1] = useState(true)
   const [notifyPhone2, setNotifyPhone2] = useState(true)
   const [groceryFreeDeliveryThreshold, setGroceryFreeDeliveryThreshold] = useState('199')
@@ -129,6 +132,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.contact_email) setContactEmail(data.contact_email)
         if (data.contact_timings) setContactTimings(data.contact_timings)
         if (data.contact_address) setContactAddress(data.contact_address)
+        if (data.grocery_pickup_address) setGroceryPickupAddress(data.grocery_pickup_address)
+        if (data.cafe_pickup_address) setCafePickupAddress(data.cafe_pickup_address)
+        if (data.restaurant_pickup_address) setRestaurantPickupAddress(data.restaurant_pickup_address)
         if (data.whatsapp_notify_7054470303 !== undefined) setNotifyPhone1(data.whatsapp_notify_7054470303 !== 'false')
         if (data.whatsapp_notify_8112849854 !== undefined) setNotifyPhone2(data.whatsapp_notify_8112849854 !== 'false')
         if (data.grocery_free_delivery_threshold) setGroceryFreeDeliveryThreshold(data.grocery_free_delivery_threshold)
@@ -177,6 +183,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     e.preventDefault()
     
     if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
+        !groceryPickupAddress.trim() || !cafePickupAddress.trim() || !restaurantPickupAddress.trim() ||
         !groceryFreeDeliveryThreshold.trim() || !cafeFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
         !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
         !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
@@ -234,6 +241,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
           contact_address: contactAddress.trim(),
+          grocery_pickup_address: groceryPickupAddress.trim(),
+          cafe_pickup_address: cafePickupAddress.trim(),
+          restaurant_pickup_address: restaurantPickupAddress.trim(),
           whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
           whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
           hero_greeting_closed: heroGreetingClosed.trim(),
@@ -695,6 +705,45 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       placeholder="e.g. NH34, Ghatampur, Kanpur Nagar"
                       value={contactAddress}
                       onChange={(e) => setContactAddress(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+
+                  {/* Grocery Pickup Address */}
+                  <div className="md:col-span-3 space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Self-Pickup Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206"
+                      value={groceryPickupAddress}
+                      onChange={(e) => setGroceryPickupAddress(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+
+                  {/* Cafe Pickup Address */}
+                  <div className="md:col-span-3 space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Self-Pickup Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206"
+                      value={cafePickupAddress}
+                      onChange={(e) => setCafePickupAddress(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+
+                  {/* Restaurant Pickup Address */}
+                  <div className="md:col-span-3 space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Self-Pickup Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206"
+                      value={restaurantPickupAddress}
+                      onChange={(e) => setRestaurantPickupAddress(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                     />
                   </div>

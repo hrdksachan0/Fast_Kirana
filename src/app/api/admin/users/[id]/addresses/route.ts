@@ -16,7 +16,7 @@ export async function GET(
     const addresses = await prisma.address.findMany({
       where: { 
         userId: id,
-        label: { not: 'STORE_PICKUP' }
+        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
       },
       orderBy: { isDefault: 'desc' }
     })
