@@ -130,10 +130,12 @@ export async function POST(request: NextRequest) {
       return acc
     }, {} as Record<string, string>)
 
-    function getStoreStatus(prefix: 'grocery' | 'cafe'): boolean {
+    function getStoreStatus(prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
       const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
       if (!autoTiming) {
-        return settingsMap[prefix === 'grocery' ? 'grocery_mart_open' : 'cafe_open'] !== 'false'
+        if (prefix === 'grocery') return settingsMap['grocery_mart_open'] !== 'false'
+        if (prefix === 'cafe') return settingsMap['cafe_open'] !== 'false'
+        return settingsMap['restaurant_open'] !== 'false'
       }
 
       const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
@@ -159,6 +161,7 @@ export async function POST(request: NextRequest) {
 
     const groceryMartOpen = getStoreStatus('grocery')
     const cafeOpen = getStoreStatus('cafe')
+    const restaurantOpen = getStoreStatus('restaurant')
 
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
@@ -186,6 +189,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cafeItems: any[] = []
+    const restaurantItems: any[] = []
     const groceryItems: any[] = []
 
     for (const item of items) {
@@ -223,8 +227,13 @@ export async function POST(request: NextRequest) {
         dbProduct
       }
 
-      if (isCafeProduct(dbProduct)) {
+      const isCafe = dbProduct.category?.slug === 'cafe' || dbProduct.tags?.includes('cafe')
+      const isRestaurant = dbProduct.category?.slug === 'restaurant' || dbProduct.tags?.includes('restaurant')
+
+      if (isCafe) {
         cafeItems.push(itemWithDb)
+      } else if (isRestaurant) {
+        restaurantItems.push(itemWithDb)
       } else {
         groceryItems.push(itemWithDb)
       }
@@ -235,6 +244,9 @@ export async function POST(request: NextRequest) {
     }
     if (cafeItems.length > 0 && !cafeOpen) {
       return NextResponse.json({ error: 'FastKirana Cafe is temporarily closed.' }, { status: 400 })
+    }
+    if (restaurantItems.length > 0 && !restaurantOpen) {
+      return NextResponse.json({ error: 'Wedson Restaurant is temporarily closed.' }, { status: 400 })
     }
 
     const combinedSubtotal = items.reduce((sum: number, item: any) => {

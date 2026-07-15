@@ -67,9 +67,11 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [restaurantOpen, setRestaurantOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
   const prevGroceryOpenRef = useRef<boolean | null>(null)
   const prevCafeOpenRef = useRef<boolean | null>(null)
+  const prevRestaurantOpenRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -88,6 +90,7 @@ export function Navbar() {
         .then(data => {
           const gOpen = data.grocery_mart_open !== 'false'
           const cOpen = data.cafe_open !== 'false'
+          const rOpen = data.restaurant_open !== 'false'
           const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
           const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
           const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
@@ -120,6 +123,15 @@ export function Navbar() {
             playCartPop()
           }
 
+          if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === false && rOpen === true) {
+            triggerHaptic('success')
+            toast.success('🍳 Wedson Restaurant is now OPEN! Order hot meals & combos now.', {
+              duration: 6000,
+              id: 'restaurant-opened-alert',
+            })
+            playCartPop()
+          }
+
           // Trigger alerts on closing transition
           if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === true && gOpen === false) {
             triggerHaptic('warning')
@@ -137,12 +149,22 @@ export function Navbar() {
             })
           }
 
+          if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === true && rOpen === false) {
+            triggerHaptic('warning')
+            toast.error('🍳 Wedson Restaurant has been temporarily closed by admin.', {
+              duration: 6000,
+              id: 'restaurant-closed-alert',
+            })
+          }
+
           prevGroceryOpenRef.current = gOpen
           prevCafeOpenRef.current = cOpen
+          prevRestaurantOpenRef.current = rOpen
           
           setGroceryMartOpen(gOpen)
           setCafeOpen(cOpen)
-          setStoreStatus(gOpen, cOpen, radius, categoryStatus)
+          setRestaurantOpen(rOpen)
+          setStoreStatus(gOpen, cOpen, rOpen, radius, categoryStatus)
           setSettings(data)
 
           // Automatically set default location if not set, without intrusive geolocation prompts

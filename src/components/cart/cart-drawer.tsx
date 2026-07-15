@@ -30,6 +30,7 @@ export function CartDrawer() {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   
   const {
@@ -188,10 +189,13 @@ export function CartDrawer() {
     return item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > limit
   })
   const isItemClosed = (product: any) => {
-    const isCafe = isCafeProduct(product)
+    const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
+    const isRestaurant = product.category?.slug === 'restaurant' || product.tags?.includes('restaurant')
     const categorySlug = product.category?.slug || ''
     const isCatOpen = categoryStatus[categorySlug] !== false
-    return isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
+    if (isCafe) return !cafeOpen || !isCatOpen
+    if (isRestaurant) return !restaurantOpen || !isCatOpen
+    return !groceryMartOpen || !isCatOpen
   }
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))

@@ -18,12 +18,16 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [restaurantOpen, setRestaurantOpen] = useState(true)
   const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
   const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
   const [cafeAutoTiming, setCafeAutoTiming] = useState(false)
   const [cafeOpenTime, setCafeOpenTime] = useState('06:00')
   const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
+  const [restaurantAutoTiming, setRestaurantAutoTiming] = useState(false)
+  const [restaurantOpenTime, setRestaurantOpenTime] = useState('06:00')
+  const [restaurantCloseTime, setRestaurantCloseTime] = useState('23:59')
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
@@ -98,12 +102,16 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.trusted_text) setTrustedText(data.trusted_text)
         if (data.grocery_mart_open !== undefined) setGroceryMartOpen(data.grocery_mart_open === 'true')
         if (data.cafe_open !== undefined) setCafeOpen(data.cafe_open === 'true')
+        if (data.restaurant_open !== undefined) setRestaurantOpen(data.restaurant_open === 'true')
         if (data.grocery_auto_timing !== undefined) setGroceryAutoTiming(data.grocery_auto_timing === 'true')
         if (data.grocery_open_time) setGroceryOpenTime(data.grocery_open_time)
         if (data.grocery_close_time) setGroceryCloseTime(data.grocery_close_time)
         if (data.cafe_auto_timing !== undefined) setCafeAutoTiming(data.cafe_auto_timing === 'true')
         if (data.cafe_open_time) setCafeOpenTime(data.cafe_open_time)
         if (data.cafe_close_time) setCafeCloseTime(data.cafe_close_time)
+        if (data.restaurant_auto_timing !== undefined) setRestaurantAutoTiming(data.restaurant_auto_timing === 'true')
+        if (data.restaurant_open_time) setRestaurantOpenTime(data.restaurant_open_time)
+        if (data.restaurant_close_time) setRestaurantCloseTime(data.restaurant_close_time)
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.cloudinary_cloud_name) setCloudinaryCloudName(data.cloudinary_cloud_name)
@@ -195,12 +203,16 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           trusted_text: trustedText.trim(),
           grocery_mart_open: groceryMartOpen ? 'true' : 'false',
           cafe_open: cafeOpen ? 'true' : 'false',
+          restaurant_open: restaurantOpen ? 'true' : 'false',
           grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
           grocery_open_time: groceryOpenTime,
           grocery_close_time: groceryCloseTime,
           cafe_auto_timing: cafeAutoTiming ? 'true' : 'false',
           cafe_open_time: cafeOpenTime,
           cafe_close_time: cafeCloseTime,
+          restaurant_auto_timing: restaurantAutoTiming ? 'true' : 'false',
+          restaurant_open_time: restaurantOpenTime,
+          restaurant_close_time: restaurantCloseTime,
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           cloudinary_cloud_name: cloudinaryCloudName.trim(),
@@ -523,6 +535,56 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                             type="time"
                             value={cafeCloseTime}
                             onChange={(e) => setCafeCloseTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Restaurant Control */}
+                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Control Mode</label>
+                      <select
+                        value={restaurantAutoTiming ? 'auto' : 'manual'}
+                        onChange={(e) => setRestaurantAutoTiming(e.target.value === 'auto')}
+                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                      >
+                        <option value="manual">⚙️ Manual Control</option>
+                        <option value="auto">⏰ Auto-Schedule by Timing</option>
+                      </select>
+                    </div>
+
+                    {!restaurantAutoTiming ? (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Manual Status Override</label>
+                        <select
+                          value={restaurantOpen ? 'true' : 'false'}
+                          onChange={(e) => setRestaurantOpen(e.target.value === 'true')}
+                          className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                        >
+                          <option value="true">🟢 Open (Active)</option>
+                          <option value="false">🔴 Closed (Temporarily)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Open Time</label>
+                          <input
+                            type="time"
+                            value={restaurantOpenTime}
+                            onChange={(e) => setRestaurantOpenTime(e.target.value)}
+                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Close Time</label>
+                          <input
+                            type="time"
+                            value={restaurantCloseTime}
+                            onChange={(e) => setRestaurantCloseTime(e.target.value)}
                             className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                           />
                         </div>

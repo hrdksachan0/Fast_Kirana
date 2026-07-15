@@ -137,6 +137,7 @@ export default function CheckoutPage() {
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
+  const [restaurantOpen, setRestaurantOpen] = useState(true)
   const [isSettingsLoading, setIsSettingsLoading] = useState(true)
   const [groceryThreshold, setGroceryThreshold] = useState(GROCERY_FREE_DELIVERY_THRESHOLD)
   const [cafeThreshold, setCafeThreshold] = useState(CAFE_FREE_DELIVERY_THRESHOLD)
@@ -155,6 +156,9 @@ export default function CheckoutPage() {
         }
         if (data.cafe_open !== undefined) {
           setCafeOpen(data.cafe_open === 'true')
+        }
+        if (data.restaurant_open !== undefined) {
+          setRestaurantOpen(data.restaurant_open === 'true')
         }
         if (data.delivery_radius) {
           setDeliveryRadius(parseFloat(data.delivery_radius))
@@ -762,8 +766,13 @@ export default function CheckoutPage() {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings = await settingsRes.json()
       
-      const hasGrocery = items.some((item) => !isCafeProduct(item.product))
-      const hasCafe = items.some((item) => isCafeProduct(item.product))
+      const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
+      const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
+      const hasGrocery = items.some((item) => {
+        const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
+        const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
+        return !isC && !isR
+      })
       
       if (hasGrocery && settings.grocery_mart_open === 'false') {
         triggerHaptic('warning')
@@ -775,6 +784,13 @@ export default function CheckoutPage() {
       if (hasCafe && settings.cafe_open === 'false') {
         triggerHaptic('warning')
         toast.error('FastKirana Cafe is temporarily closed. Please remove cafe items to checkout.')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      if (hasRestaurant && settings.restaurant_open === 'false') {
+        triggerHaptic('warning')
+        toast.error('Wedson Restaurant is temporarily closed. Please remove restaurant items to checkout.')
         setIsPlacingOrder(false)
         return
       }
@@ -872,8 +888,13 @@ export default function CheckoutPage() {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings = await settingsRes.json()
       
-      const hasGrocery = items.some((item) => !isCafeProduct(item.product))
-      const hasCafe = items.some((item) => isCafeProduct(item.product))
+      const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
+      const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
+      const hasGrocery = items.some((item) => {
+        const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
+        const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
+        return !isC && !isR
+      })
       
       if (hasGrocery && settings.grocery_mart_open === 'false') {
         triggerHaptic('warning')
@@ -885,6 +906,13 @@ export default function CheckoutPage() {
       if (hasCafe && settings.cafe_open === 'false') {
         triggerHaptic('warning')
         toast.error('FastKirana Cafe is temporarily closed. Cannot complete checkout.')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      if (hasRestaurant && settings.restaurant_open === 'false') {
+        triggerHaptic('warning')
+        toast.error('Wedson Restaurant is temporarily closed. Cannot complete checkout.')
         setIsPlacingOrder(false)
         return
       }
@@ -1072,9 +1100,14 @@ export default function CheckoutPage() {
     )
   }
 
-  const hasGrocery = items.some((item) => !isCafeProduct(item.product))
-  const hasCafe = items.some((item) => isCafeProduct(item.product))
-  const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen)
+  const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
+  const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
+  const hasGrocery = items.some((item) => {
+    const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
+    const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
+    return !isC && !isR
+  })
+  const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen) || (hasRestaurant && !restaurantOpen)
 
   if (isStoreClosed && !isSettingsLoading) {
     return (
@@ -1084,12 +1117,14 @@ export default function CheckoutPage() {
         </div>
         <h1 className="text-2xl font-black text-text-primary">Store Closed Temporarily</h1>
         <p className="text-sm text-text-secondary leading-relaxed">
-          {hasGrocery && !groceryMartOpen && hasCafe && !cafeOpen ? (
-            "Both our Grocery Mart and Cafe are temporarily closed and not accepting orders right now. Please check back later!"
+          {hasGrocery && !groceryMartOpen && hasCafe && !cafeOpen && hasRestaurant && !restaurantOpen ? (
+            "Our Grocery Mart, Cafe, and Wedson Restaurant are temporarily closed. Please check back later!"
           ) : hasGrocery && !groceryMartOpen ? (
-            "Our Grocery Mart is temporarily closed. You can proceed with Cafe items by removing grocery items from your cart."
+            "Our Grocery Mart is temporarily closed. You can proceed with other items by removing grocery items from your cart."
+          ) : hasCafe && !cafeOpen ? (
+            "Our Cafe is temporarily closed. You can proceed by removing cafe items from your cart."
           ) : (
-            "Our Cafe is temporarily closed. You can proceed with Grocery items by removing cafe items from your cart."
+            "Wedson Restaurant is temporarily closed. You can proceed by removing restaurant items from your cart."
           )}
         </p>
         <div className="pt-4 flex flex-col gap-3">

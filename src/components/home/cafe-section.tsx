@@ -70,6 +70,7 @@ interface CafeSectionProps {
 export function CafeSection({ showProducts = false }: CafeSectionProps) {
   const settings = useUIStore((s) => s.settings) || {}
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const isCafeActive = cafeOpen && (categoryStatus['cafe'] !== false)
 
@@ -265,7 +266,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         {/* Banner Content Overlays */}
         <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%]">
           {/* Dynamic Kitchen Status Badge */}
-          {cafeOpen ? (
+          {(experienceMode === 'cafe' ? cafeOpen : restaurantOpen) ? (
             <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-[#00b140] dark:text-emerald-400 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
             </span>

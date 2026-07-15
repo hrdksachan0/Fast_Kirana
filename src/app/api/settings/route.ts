@@ -11,12 +11,16 @@ const DEFAULT_SETTINGS = {
   trusted_text: '✨ Trusted by 5,000+ families in your town',
   grocery_mart_open: 'true',
   cafe_open: 'true',
+  restaurant_open: 'true',
   grocery_auto_timing: 'false',
   grocery_open_time: '06:00',
   grocery_close_time: '23:59',
   cafe_auto_timing: 'false',
   cafe_open_time: '06:00',
   cafe_close_time: '23:59',
+  restaurant_auto_timing: 'false',
+  restaurant_open_time: '06:00',
+  restaurant_close_time: '23:59',
   delivery_radius: '5',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
@@ -55,10 +59,12 @@ const DEFAULT_SETTINGS = {
   hero_subtitle_night_both_open: "Indulge in ice creams, chocolates, late night munchies, and cafe specialties.",
 }
 
-export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe'): boolean {
+export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
   const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
   if (!autoTiming) {
-    return settingsMap[prefix === 'grocery' ? 'grocery_mart_open' : 'cafe_open'] !== 'false'
+    if (prefix === 'grocery') return settingsMap['grocery_mart_open'] !== 'false'
+    if (prefix === 'cafe') return settingsMap['cafe_open'] !== 'false'
+    return settingsMap['restaurant_open'] !== 'false'
   }
 
   const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
@@ -107,6 +113,7 @@ export async function GET() {
     // Dynamically override based on live IST scheduler timings
     settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
     settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+    settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
 
     return NextResponse.json(settingsMap, {
       headers: {
@@ -121,6 +128,7 @@ export async function GET() {
     const settingsMap = { ...DEFAULT_SETTINGS }
     settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
     settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+    settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
 
     return NextResponse.json(settingsMap, {
       headers: {

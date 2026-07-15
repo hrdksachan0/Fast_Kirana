@@ -146,6 +146,10 @@ export async function POST(request: Request) {
 
     const groceryMartOpen = settingsMap['grocery_mart_open'] !== 'false'
     const cafeOpen = settingsMap['cafe_open'] !== 'false'
+    const restaurantOpen = settingsMap['restaurant_open'] !== 'false'
+    const cafeItems: any[] = []
+    const restaurantItems: any[] = []
+    const groceryItems: any[] = []
 
     // Fetch products and calculate server-side subtotal
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
@@ -171,8 +175,7 @@ export async function POST(request: Request) {
       return false
     }
 
-    const cafeItems: any[] = []
-    const groceryItems: any[] = []
+
 
     for (const item of items) {
       const isVariant = item.product.id.includes('_')
@@ -208,8 +211,13 @@ export async function POST(request: Request) {
         dbProduct
       }
 
-      if (isCafeProduct(dbProduct)) {
+      const isCafe = dbProduct.category?.slug === 'cafe' || dbProduct.tags?.includes('cafe')
+      const isRestaurant = dbProduct.category?.slug === 'restaurant' || dbProduct.tags?.includes('restaurant')
+
+      if (isCafe) {
         cafeItems.push(itemWithDb)
+      } else if (isRestaurant) {
+        restaurantItems.push(itemWithDb)
       } else {
         groceryItems.push(itemWithDb)
       }
@@ -221,6 +229,9 @@ export async function POST(request: Request) {
     }
     if (cafeItems.length > 0 && !cafeOpen) {
       return NextResponse.json({ error: 'FastKirana Cafe is temporarily closed.' }, { status: 400 })
+    }
+    if (restaurantItems.length > 0 && !restaurantOpen) {
+      return NextResponse.json({ error: 'Wedson Restaurant is temporarily closed.' }, { status: 400 })
     }
 
     const combinedSubtotal = items.reduce((sum: number, item: any) => {

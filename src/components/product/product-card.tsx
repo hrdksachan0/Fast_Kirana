@@ -23,6 +23,7 @@ import { useLiveStock } from '@/components/providers/live-stock-provider'
 export function ProductCard({ product }: ProductCardProps) {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
   
@@ -102,12 +103,15 @@ export function ProductCard({ product }: ProductCardProps) {
     })
   }, [isNotifySubscribed, product.id, product.name, subscribe])
 
-  const isCafe = isCafeProduct(product)
+  const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
+  const isRestaurant = product.category?.slug === 'restaurant' || product.tags?.includes('restaurant')
   const categorySlug = product.category?.slug || ''
   const isCategoryOpen = categoryStatus[categorySlug] !== false
   const isStoreClosed = isCafe 
     ? (!cafeOpen || !isCategoryOpen) 
-    : (!groceryMartOpen || !isCategoryOpen)
+    : isRestaurant
+      ? (!restaurantOpen || !isCategoryOpen)
+      : (!groceryMartOpen || !isCategoryOpen)
 
   // Map of category slug to emoji representation
   const emojiMap: Record<string, string> = {
