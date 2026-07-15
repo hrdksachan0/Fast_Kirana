@@ -269,8 +269,8 @@ export async function POST(request: NextRequest) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    if (combinedSubtotal < 199) {
-      return NextResponse.json({ error: 'Minimum order value of ₹199 is required to place an order.' }, { status: 400 })
+    if (combinedSubtotal < 20) {
+      return NextResponse.json({ error: 'Minimum order value of ₹20 is required to place an order.' }, { status: 400 })
     }
 
     // 3. Resolve Coupon Discount

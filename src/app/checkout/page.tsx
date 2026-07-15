@@ -516,8 +516,8 @@ export default function CheckoutPage() {
   // 1. Calculate distance-based delivery rules if address has coords
   let distanceKm: number | null = null
   let deliveryRules: any = null
-  let isBelowMinOrder = subtotal < 199
-  let minOrderRequired = 199
+  let isBelowMinOrder = subtotal < 20
+  let minOrderRequired = 20
 
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
@@ -1117,7 +1117,7 @@ export default function CheckoutPage() {
         </div>
         <h1 className="text-2xl font-black text-text-primary">Minimum Order Required</h1>
         <p className="text-sm text-text-secondary leading-relaxed">
-          Minimum order value is ₹199 to place an order. Your current cart subtotal is only {formatPrice(subtotal)}. Please add more items to checkout!
+          Minimum order value is ₹20 to place an order. Your current cart subtotal is only {formatPrice(subtotal)}. Please add more items to checkout!
         </p>
         <div className="pt-4 flex flex-col gap-3">
           <Link

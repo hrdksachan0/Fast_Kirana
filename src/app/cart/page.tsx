@@ -221,7 +221,7 @@ export default function CartPage() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = subtotal < 199
+  const isBelowMinOrder = subtotal < 20
   const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
 
   const handleAutoAdjust = () => {
@@ -553,7 +553,7 @@ export default function CartPage() {
                     Minimum Order Required
                   </h5>
                   <p className="text-[10px] font-bold text-rose-700/90 dark:text-rose-450/90 leading-normal">
-                    Minimum order value is ₹199 to place an order. Add items worth ₹{199 - subtotal} more to proceed.
+                    Minimum order value is ₹20 to place an order. Add items worth ₹{20 - subtotal} more to proceed.
                   </p>
                 </div>
               </div>
@@ -602,7 +602,7 @@ export default function CartPage() {
               ) : hasInventoryIssues ? (
                 'Fix Stock Issues to Checkout'
               ) : isBelowMinOrder ? (
-                'Min. Order ₹199 Required'
+                'Min. Order ₹20 Required'
               ) : (
                 <>
                   <span className="relative z-10">Confirm and Checkout</span>
