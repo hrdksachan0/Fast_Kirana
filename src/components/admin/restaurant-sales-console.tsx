@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, DollarSign, TrendingUp, ShoppingBag, Percent, RefreshCw } from 'lucide-react'
+import { Calendar, IndianRupee, TrendingUp, ShoppingBag, Percent, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 
@@ -198,7 +198,7 @@ export function RestaurantSalesConsole() {
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Gross Revenue</span>
                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
-                  <DollarSign className="h-4 w-4" />
+                  <IndianRupee className="h-4 w-4" />
                 </div>
               </div>
               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.totalSales)}</h3>
