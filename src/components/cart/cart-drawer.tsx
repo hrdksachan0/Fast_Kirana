@@ -200,7 +200,8 @@ export function CartDrawer() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+  const isBelowMinOrder = subtotal < 199
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -609,6 +610,14 @@ export function CartDrawer() {
                 </div>
               )}
 
+              {isBelowMinOrder && (
+                <div className="flex items-center justify-between rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100/50 dark:border-rose-900/30 px-3.5 py-2 mb-3.5">
+                  <span className="text-[10px] font-black text-rose-600 flex items-center gap-1.5 leading-none">
+                    🛍️ Add ₹{199 - subtotal} more to place order (Min. ₹199)
+                  </span>
+                </div>
+              )}
+
               {/* Main row: price summary + CTA button */}
               <div className="flex items-center justify-between gap-4">
                 {/* Collapsible Price Summary */}
@@ -631,12 +640,14 @@ export function CartDrawer() {
                   {isCheckoutBlocked ? (
                     <button
                       disabled
-                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm sm:text-base font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1.5"
+                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1"
                     >
                       {hasClosedGroceryItems || hasClosedCafeItems ? (
-                        <>Closed Items <ArrowRight size={16} /></>
+                        <>Closed Items <ArrowRight size={14} /></>
+                      ) : hasInventoryIssues ? (
+                        <>Fix Stock <ArrowRight size={14} /></>
                       ) : (
-                        <>Fix Stock <ArrowRight size={16} /></>
+                        <>Min. Order ₹199 <ArrowRight size={14} /></>
                       )}
                     </button>
                   ) : (

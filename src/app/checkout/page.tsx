@@ -10,7 +10,7 @@ import { useCartStore } from '@/stores/cart-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn, isCafeProduct, formatPhone, formatAddress } from '@/lib/utils'
+import { cn, isCafeProduct, formatPhone, formatAddress, formatPrice } from '@/lib/utils'
 import {
   MapPin,
   ShoppingBag,
@@ -516,8 +516,8 @@ export default function CheckoutPage() {
   // 1. Calculate distance-based delivery rules if address has coords
   let distanceKm: number | null = null
   let deliveryRules: any = null
-  let isBelowMinOrder = false
-  let minOrderRequired = 0
+  let isBelowMinOrder = subtotal < 199
+  let minOrderRequired = 199
 
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
@@ -1108,6 +1108,28 @@ export default function CheckoutPage() {
     return !isC && !isR
   })
   const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen) || (hasRestaurant && !restaurantOpen)
+
+  if (isBelowMinOrder && !isSettingsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 max-w-md text-center space-y-6 animate-fade-in">
+        <div className="h-20 w-20 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-rose-200/60 dark:border-rose-900/40">
+          🛍️
+        </div>
+        <h1 className="text-2xl font-black text-text-primary">Minimum Order Required</h1>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          Minimum order value is ₹199 to place an order. Your current cart subtotal is only {formatPrice(subtotal)}. Please add more items to checkout!
+        </p>
+        <div className="pt-4 flex flex-col gap-3">
+          <Link
+            href="/cart"
+            className="px-6 py-3 bg-primary text-white font-black text-xs rounded-full hover:bg-primary/95 transition-all shadow-md text-center"
+          >
+            Go Back to Cart
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (isStoreClosed && !isSettingsLoading) {
     return (

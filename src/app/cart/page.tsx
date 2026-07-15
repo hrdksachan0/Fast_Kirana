@@ -221,7 +221,8 @@ export default function CartPage() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+  const isBelowMinOrder = subtotal < 199
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -523,17 +524,36 @@ export default function CartPage() {
               </div>
             </div>
 
-            {hasInventoryIssues && !hasClosedGroceryItems && !hasClosedCafeItems && (
-              <div className="rounded-2xl border border-red-200/40 bg-red-50/30 dark:bg-red-950/20 dark:border-red-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden animate-slide-down">
-                <span className="text-2xl mt-0.5 select-none shrink-0" role="img" aria-label="Stock Issues">
+            {hasInventoryIssues && (
+              <div className="rounded-2xl border border-red-200/40 bg-red-50/30 dark:bg-red-950/20 dark:border-red-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden">
+                <span className="text-2xl mt-0.5 select-none shrink-0" role="img" aria-label="Warning">
                   ⚠️
                 </span>
                 <div className="space-y-1 min-w-0">
-                  <h5 className="text-xs font-black text-red-850 dark:text-red-300">
-                    Stock Verification Issues
+                  <h5 className="text-xs font-black text-red-800 dark:text-red-300">
+                    Stock Limit Exceeded
                   </h5>
                   <p className="text-[10px] font-bold text-red-700/90 dark:text-red-450/90 leading-normal">
                     Some items in your cart exceed available stock. Please adjust quantities or use the auto-adjust helper to proceed.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isBelowMinOrder && (
+              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/30 dark:bg-rose-950/20 dark:border-rose-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-1 pointer-events-none opacity-20 text-4xl animate-float">
+                  🛍️
+                </div>
+                <span className="text-2xl mt-0.5 select-none shrink-0" role="img" aria-label="Below Minimum Order">
+                  🛍️
+                </span>
+                <div className="space-y-1 min-w-0">
+                  <h5 className="text-xs font-black text-rose-800 dark:text-rose-300">
+                    Minimum Order Required
+                  </h5>
+                  <p className="text-[10px] font-bold text-rose-700/90 dark:text-rose-450/90 leading-normal">
+                    Minimum order value is ₹199 to place an order. Add items worth ₹{199 - subtotal} more to proceed.
                   </p>
                 </div>
               </div>
@@ -581,6 +601,8 @@ export default function CartPage() {
                 'Checkout Blocked (Store Closed)'
               ) : hasInventoryIssues ? (
                 'Fix Stock Issues to Checkout'
+              ) : isBelowMinOrder ? (
+                'Min. Order ₹199 Required'
               ) : (
                 <>
                   <span className="relative z-10">Confirm and Checkout</span>
