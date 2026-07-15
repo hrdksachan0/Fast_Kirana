@@ -23,7 +23,7 @@ export function DeliveryBanner() {
           <div className="text-left">
             <h3 className="text-xs md:text-sm font-bold text-text-primary">Fast Instant Delivery</h3>
             <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
-              Delivered fresh from local dark stores to your doorstep in minutes.
+              Delivered fresh from local dark stores to your doorstep within 3 km.
             </p>
           </div>
         </div>
@@ -36,7 +36,7 @@ export function DeliveryBanner() {
           <div className="text-left">
             <h3 className="text-xs md:text-sm font-bold text-text-primary">Free Shipping On ₹249+</h3>
             <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
-              Free delivery on orders above ₹249. Min. order limit is ₹199.
+              Free delivery on orders above ₹249. Min. order limit is ₹199 (Max 3 km range).
             </p>
           </div>
         </div>
