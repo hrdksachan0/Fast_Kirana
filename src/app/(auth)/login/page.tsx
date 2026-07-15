@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, ShoppingBag, ArrowLeft, Mail, KeyRound, User, Phone } from 'lucide-react'
 
-const getRoleRedirect = (role: string, callbackUrl: string) => {
+const getRoleRedirect = (role: string, email: string, callbackUrl: string) => {
   switch (role) {
     case 'ADMIN': return '/admin'
-    case 'CHEF': return '/cafe-kitchen'
+    case 'CHEF':
+      if (email.toLowerCase().startsWith('restaurant')) return '/restaurant-kitchen'
+      return '/cafe-kitchen'
     case 'PICKER': return '/picker'
     case 'DELIVERY': return '/delivery'
     default: return callbackUrl || '/'
@@ -224,7 +226,7 @@ function LoginForm() {
         toast.error('Invalid password. Please try again.')
       } else {
         toast.success('Successfully logged in!')
-        const redirect = getRoleRedirect(userRole, callbackUrl)
+        const redirect = getRoleRedirect(userRole, email, callbackUrl)
         router.push(redirect)
         router.refresh()
       }
@@ -348,7 +350,7 @@ function LoginForm() {
           toast.error(res?.error || 'Failed to sign in')
         } else {
           toast.success('Logged in successfully as Admin!')
-          router.replace(getRoleRedirect('ADMIN', callbackUrl))
+          router.replace(getRoleRedirect('ADMIN', identifier, callbackUrl))
         }
       } else {
         // Customer Quick OTP login
@@ -577,20 +579,27 @@ function LoginForm() {
             {/* Quick Demo Logins */}
             <div className="pt-4 border-t border-border/60 mt-4 space-y-2">
               <p className="text-[9px] font-black text-text-muted text-center uppercase tracking-widest">⚡ Developer Quick Logins</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('9999999999')}
-                  className="py-2.5 bg-card border border-border hover:bg-muted/40 rounded-xl text-[10px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
                 >
-                  👤 Customer (OTP Bypass)
+                  👤 Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('restaurant@fastkirana.com', 'YuvrajHardik@2613')}
+                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  🍳 Restaurant
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('admin@fastkirana.com', 'YuvrajHardik@2613')}
-                  className="py-2.5 bg-card border border-border hover:bg-muted/40 rounded-xl text-[10px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
                 >
-                  🛠️ Admin Dashboard
+                  🛠️ Admin
                 </button>
               </div>
             </div>

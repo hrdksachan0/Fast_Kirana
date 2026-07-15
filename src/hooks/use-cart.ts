@@ -97,11 +97,8 @@ export function useCart() {
     })
 
     if (incompatibleItem) {
-      const confirmClear = window.confirm(
-        `Your cart contains items from another store segment. Adding this item will clear your current cart. Do you want to proceed?`
-      )
-      if (!confirmClear) return
-      storeState.clearCart()
+      useUIStore.setState({ pendingConflictProduct: product })
+      return
     }
 
     const limit = isCafe ? 10 : 5

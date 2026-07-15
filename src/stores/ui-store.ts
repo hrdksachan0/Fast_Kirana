@@ -12,6 +12,7 @@ interface UIState {
   isSearchOpen: boolean
   isLocationPickerOpen: boolean
   activeVariantProduct: Product | null
+  pendingConflictProduct: any | null
   selectedLocation: string
   userCoords: UserCoords | null
   shopName: string
@@ -28,6 +29,7 @@ interface UIState {
   setSearchOpen: (open: boolean) => void
   setLocationPickerOpen: (open: boolean) => void
   setActiveVariantProduct: (product: Product | null) => void
+  setPendingConflictProduct: (product: any | null) => void
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
   setShopDetails: (name: string, phone: string) => void
@@ -42,6 +44,7 @@ export const useUIStore = create<UIState>((set) => ({
   isSearchOpen: false,
   isLocationPickerOpen: false,
   activeVariantProduct: null,
+  pendingConflictProduct: null,
   selectedLocation: 'Select Location',
   userCoords: null,
   shopName: '',
@@ -59,6 +62,7 @@ export const useUIStore = create<UIState>((set) => ({
   setSearchOpen: (open) => set({ isSearchOpen: open }),
   setLocationPickerOpen: (open) => set({ isLocationPickerOpen: open }),
   setActiveVariantProduct: (product) => set({ activeVariantProduct: product }),
+  setPendingConflictProduct: (product) => set({ pendingConflictProduct: product }),
   setSelectedLocation: (location) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('fk-location', location)

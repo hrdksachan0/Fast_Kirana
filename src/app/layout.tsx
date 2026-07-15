@@ -18,6 +18,7 @@ import { LiveStockProvider } from '@/components/providers/live-stock-provider'
 import { CartSyncProvider } from '@/components/providers/cart-sync-provider'
 import { PushNotificationProvider } from '@/providers/push-notification-provider'
 import { SoftPromptDialog } from '@/components/shared/soft-prompt-dialog'
+import { CartConflictDialog } from '@/components/cart/cart-conflict-dialog'
 import Script from 'next/script'
 import { Suspense } from 'react'
 import { TopProgressBar } from '@/components/shared/top-progress-bar'
@@ -130,6 +131,7 @@ export default function RootLayout({
                   <PWARegistration />
                   <PushNotificationConsent />
                   <SoftPromptDialog />
+                  <CartConflictDialog />
                   <SwipeToBack />
 
                 </PushNotificationProvider>
