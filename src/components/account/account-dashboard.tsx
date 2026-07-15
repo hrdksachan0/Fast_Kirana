@@ -12,6 +12,10 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { BuyAgainSection } from '@/components/home/buy-again-section'
 import { useSearchParams } from 'next/navigation'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface AccountDashboardProps {
   user: {
@@ -29,6 +33,15 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [orders, setOrders] = useState(initialOrders)
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('orders')
+  const [editingAddress, setEditingAddress] = useState<any | null>(null)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [addressForm, setAddressForm] = useState({
+    label: 'Home',
+    street: '',
+    phone: '',
+    pincode: '209206',
+    isDefault: false
+  })
 
   // Resend countdown timers
   const [emailCountdown, setEmailCountdown] = useState(0)
@@ -256,6 +269,68 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
   }
 
+  const handleEditClick = (addr: any) => {
+    triggerHaptic('light')
+    setEditingAddress(addr)
+    setAddressForm({
+      label: addr.label || 'Home',
+      street: addr.street || '',
+      phone: addr.phone || '',
+      pincode: addr.pincode || '209206',
+      isDefault: addr.isDefault || false
+    })
+  }
+
+  const handleUpdateAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addressForm.street || !addressForm.pincode || !addressForm.phone) {
+      toast.error('Please fill in all address details')
+      return
+    }
+
+    if (addressForm.pincode !== '209206') {
+      toast.error('FastKirana only delivers to Ghatampur area (Pincode: 209206)')
+      return
+    }
+
+    setIsSavingAddress(true)
+    try {
+      const payload = {
+        id: editingAddress.id,
+        label: addressForm.label,
+        houseNo: '.',
+        street: addressForm.street.trim(),
+        area: '.',
+        city: 'Ghatampur',
+        pincode: addressForm.pincode.trim(),
+        phone: addressForm.phone.trim(),
+        isDefault: addressForm.isDefault,
+        lat: editingAddress.lat || null,
+        lng: editingAddress.lng || null
+      }
+
+      const res = await fetch('/api/addresses', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (res.ok) {
+        const updated = await res.json()
+        setAddresses(addresses.map(a => a.id === editingAddress.id ? updated : a))
+        toast.success('Address updated successfully!')
+        setEditingAddress(null)
+      } else {
+        const errData = await res.json()
+        toast.error(errData.error || 'Failed to update address')
+      }
+    } catch {
+      toast.error('Failed to update address')
+    } finally {
+      setIsSavingAddress(false)
+    }
+  }
+
   const formatEmailForDisplay = (email: string) => {
     if (!email) return ''
     const lowerEmail = email.toLowerCase().trim()
@@ -434,25 +509,107 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       </p>
                     )}
                   </div>
-                  {addresses.length <= 1 ? (
-                    <span
-                      className="text-text-muted self-start text-[10px] font-semibold h-7 px-2.5 flex items-center gap-1 italic"
-                      title="You must keep at least one delivery address"
-                    >
-                      🔒 Primary address
-                    </span>
-                  ) : (
+                  <div className="flex gap-2 items-center">
+                    {addresses.length <= 1 ? (
+                      <span
+                        className="text-text-muted text-[10px] font-semibold h-7 px-2.5 flex items-center gap-1 italic"
+                        title="You must keep at least one delivery address"
+                      >
+                        🔒 Primary
+                      </span>
+                    ) : (
+                      <Button
+                        onClick={() => handleDeleteAddress(addr.id)}
+                        variant="ghost"
+                        className="text-danger hover:bg-danger/10 hover:text-danger text-[10px] font-bold h-7 px-2.5 rounded-lg"
+                      >
+                        Delete
+                      </Button>
+                    )}
                     <Button
-                      onClick={() => handleDeleteAddress(addr.id)}
+                      onClick={() => handleEditClick(addr)}
                       variant="ghost"
-                      className="text-danger hover:bg-danger/10 hover:text-danger self-start text-[10px] font-bold h-7 px-2.5"
+                      className="text-primary hover:bg-primary/10 text-[10px] font-bold h-7 px-2.5 rounded-lg"
                     >
-                      Delete Address
+                      Edit
                     </Button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+
+          {editingAddress && (
+            <Dialog open={editingAddress !== null} onOpenChange={(open) => !open && setEditingAddress(null)}>
+              <DialogContent className="max-w-[340px] w-[92%] mx-auto rounded-[24px] p-5 border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                <DialogHeader className="text-center">
+                  <DialogTitle className="text-sm font-black text-text-primary tracking-tight">Edit Address</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleUpdateAddress} className="space-y-4 text-left mt-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="label" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Address Label</Label>
+                    <Input
+                      id="label"
+                      required
+                      value={addressForm.label}
+                      onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
+                      className="h-10 rounded-xl text-xs font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="street" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Complete Address</Label>
+                    <textarea
+                      id="street"
+                      required
+                      rows={3}
+                      value={addressForm.street}
+                      onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                      className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="pincode" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Pincode</Label>
+                      <Input
+                        id="pincode"
+                        required
+                        value={addressForm.pincode}
+                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                        className="h-10 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="phone" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Phone</Label>
+                      <Input
+                        id="phone"
+                        required
+                        value={addressForm.phone}
+                        onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                        className="h-10 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setEditingAddress(null)}
+                      disabled={isSavingAddress}
+                      className="flex-1 h-10 rounded-xl text-xs font-bold"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSavingAddress}
+                      className="flex-1 h-10 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/95 shadow-md"
+                    >
+                      {isSavingAddress ? <Loader2 className="h-4.5 w-4.5 animate-spin mx-auto" /> : 'Save Changes'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           )}
         </TabsContent>
 

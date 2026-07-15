@@ -261,6 +261,7 @@ export default function CheckoutPage() {
   // New Address Form State
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
   const [addressForm, setAddressForm] = useState<{
     label: string
     houseNo: string
@@ -665,7 +666,7 @@ export default function CheckoutPage() {
         }
       }
 
-      const payload = {
+      const payload: any = {
         label: label || 'Home',
         houseNo: '.',
         street: street.trim(),
@@ -678,17 +679,28 @@ export default function CheckoutPage() {
         lng: finalLng,
       }
 
+      if (editingAddressId) {
+        payload.id = editingAddressId
+      }
+
       const res = await fetch('/api/addresses', {
-        method: 'POST',
+        method: editingAddressId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
       if (res.ok) {
-        const newAddress = await res.json()
-        setAddresses([newAddress, ...addresses])
-        setSelectedAddressId(newAddress.id)
+        const savedAddress = await res.json()
+        if (editingAddressId) {
+          setAddresses(addresses.map(a => a.id === editingAddressId ? savedAddress : a))
+          toast.success('Address updated successfully!')
+        } else {
+          setAddresses([savedAddress, ...addresses])
+          toast.success('Address saved successfully!')
+        }
+        setSelectedAddressId(savedAddress.id)
         setShowNewAddressForm(false)
+        setEditingAddressId(null)
         setAddressForm({
           label: 'Home',
           houseNo: '.',
@@ -701,7 +713,6 @@ export default function CheckoutPage() {
           lat: null,
           lng: null,
         })
-        toast.success('Address saved successfully!')
       } else {
         const errorData = await res.json()
         toast.error(errorData.error || 'Failed to save address')
@@ -711,6 +722,42 @@ export default function CheckoutPage() {
     } finally {
       setIsSavingAddress(false)
     }
+  }
+
+  const handleEditAddressClick = (addr: any) => {
+    triggerHaptic('light')
+    setEditingAddressId(addr.id)
+    setAddressForm({
+      label: addr.label || 'Home',
+      houseNo: addr.houseNo || '.',
+      street: addr.street || '',
+      area: addr.area || '.',
+      city: addr.city || 'Ghatampur',
+      pincode: addr.pincode || '209206',
+      phone: addr.phone || '',
+      isDefault: addr.isDefault || false,
+      lat: addr.lat || null,
+      lng: addr.lng || null,
+    })
+    setShowNewAddressForm(true)
+  }
+
+  const handleCancelAddressForm = () => {
+    triggerHaptic('light')
+    setShowNewAddressForm(false)
+    setEditingAddressId(null)
+    setAddressForm({
+      label: 'Home',
+      houseNo: '.',
+      street: '',
+      area: '.',
+      city: 'Ghatampur',
+      pincode: '209206',
+      phone: '',
+      isDefault: false,
+      lat: null,
+      lng: null,
+    })
   }
 
   // Place Order
@@ -1294,15 +1341,27 @@ export default function CheckoutPage() {
                           </div>
                           
                           <div className="flex-grow text-xs">
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="font-bold text-[10px] text-text-primary uppercase bg-muted px-2 py-0.5 rounded-md tracking-wider">
-                                {addr.label}
-                              </span>
-                              {addr.isDefault && (
-                                <span className="text-[9px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-md">
-                                  Default
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-[10px] text-text-primary uppercase bg-muted px-2 py-0.5 rounded-md tracking-wider">
+                                  {addr.label}
                                 </span>
-                              )}
+                                {addr.isDefault && (
+                                  <span className="text-[9px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-md">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditAddressClick(addr)
+                                }}
+                                className="text-[10.5px] font-black text-primary hover:underline cursor-pointer active:scale-95 transition-all"
+                              >
+                                ✏️ Edit
+                              </button>
                             </div>
                             <p className="text-text-secondary leading-relaxed font-semibold">
                               {formatAddress(addr)}
@@ -1334,7 +1393,7 @@ export default function CheckoutPage() {
                           <div className="flex justify-between items-center border-b border-border/40 pb-3">
                             <h3 className="font-black text-sm text-text-primary text-primary flex items-center gap-2">
                               <MapPin className="h-4 w-4 text-primary animate-pulse" />
-                              Choose Delivery Location
+                              {editingAddressId ? 'Edit Delivery Location' : 'Choose Delivery Location'}
                             </h3>
                           </div>
                           
@@ -1442,7 +1501,7 @@ export default function CheckoutPage() {
                             <Button
                               type="button"
                               variant="ghost"
-                              onClick={() => setShowNewAddressForm(false)}
+                              onClick={handleCancelAddressForm}
                               disabled={isSavingAddress}
                               className="rounded-xl text-xs font-bold hover:bg-muted h-10 px-4"
                             >
@@ -1458,7 +1517,7 @@ export default function CheckoutPage() {
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   Saving...
                                 </span>
-                              ) : 'Save & Select'}
+                              ) : editingAddressId ? 'Update & Select' : 'Save & Select'}
                             </Button>
                           </div>
                         </form>
