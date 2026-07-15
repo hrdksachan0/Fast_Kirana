@@ -89,7 +89,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             // Auto-detect role based on email prefix for developer convenience
             let role: 'USER' | 'ADMIN' | 'CHEF' | 'PICKER' | 'DELIVERY' = 'USER'
             if (email.startsWith('admin')) role = 'ADMIN'
-            else if (email.startsWith('chef')) role = 'CHEF'
+            else if (email.startsWith('chef') || email.startsWith('restaurant')) role = 'CHEF'
             else if (email.startsWith('picker')) role = 'PICKER'
             else if (email.startsWith('delivery')) role = 'DELIVERY'
 
