@@ -35,9 +35,10 @@ export function DeliveryBanner() {
           </div>
           <div className="text-left">
             <h3 className="text-xs md:text-sm font-bold text-text-primary">Smart Shipping Rates</h3>
-            <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
-              Within 2 km: Free above ₹199 (else ₹25). 2-3 km: Free above ₹249 (else ₹35).
-            </p>
+            <div className="text-[10px] md:text-xs text-text-secondary mt-1 leading-relaxed font-medium space-y-0.5">
+              <div>📍 0 to 2 km: FREE delivery above ₹199 (else ₹25)</div>
+              <div>📍 2 to 3 km: FREE delivery above ₹249 (else ₹35)</div>
+            </div>
           </div>
         </div>
 
