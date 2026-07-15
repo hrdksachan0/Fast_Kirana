@@ -381,7 +381,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
             </Link>
           )}
           {user.role === 'CHEF' && (
-            <Link href="/cafe-kitchen">
+            <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'}>
               <Button variant="outline" className="border-rose-500/30 text-rose-500 hover:bg-rose-500/5 rounded-xl text-xs h-10 px-4 font-bold">
                 Chef Console
               </Button>

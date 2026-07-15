@@ -73,6 +73,21 @@ export function Navbar() {
   const prevCafeOpenRef = useRef<boolean | null>(null)
   const prevRestaurantOpenRef = useRef<boolean | null>(null)
 
+  const getDashboardLink = useCallback(() => {
+    if (!session?.user) return '/account'
+    const role = session.user.role
+    const email = session.user.email || ''
+    switch (role) {
+      case 'ADMIN': return '/admin'
+      case 'CHEF':
+        if (email.toLowerCase().startsWith('restaurant')) return '/restaurant-kitchen'
+        return '/cafe-kitchen'
+      case 'PICKER': return '/picker'
+      case 'DELIVERY': return '/delivery'
+      default: return '/account'
+    }
+  }, [session])
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -380,11 +395,13 @@ export function Navbar() {
               </button>
               
               <Link
-                href="/account"
+                href={getDashboardLink()}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
               >
                 <User size={16} className="group-hover:scale-105 transition-transform stroke-[2.2]" />
-                <span className="text-xs font-black tracking-tight">{session ? 'Account' : 'Login'}</span>
+                <span className="text-xs font-black tracking-tight">
+                  {session ? (session.user.role === 'USER' ? 'Account' : 'Console') : 'Login'}
+                </span>
               </Link>
 
               {!mounted || totalItems === 0 ? (
@@ -438,12 +455,14 @@ export function Navbar() {
               </div>
             </button>
             <Link 
-              href="/account" 
+              href={getDashboardLink()} 
               className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors" 
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <User size={18} className="text-zinc-500 dark:text-zinc-400" />
-              <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Account</span>
+              <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                {session && session.user.role !== 'USER' ? 'My Console' : 'My Account'}
+              </span>
             </Link>
             <Link 
               href="/account/orders" 
