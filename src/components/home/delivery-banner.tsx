@@ -34,9 +34,9 @@ export function DeliveryBanner() {
             <Sparkles className="h-5.5 w-5.5 text-accent" />
           </div>
           <div className="text-left">
-            <h3 className="text-xs md:text-sm font-bold text-text-primary">Free Shipping On ₹249+</h3>
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Smart Shipping Rates</h3>
             <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
-              Free delivery on orders above ₹249. Min. order limit is ₹199 (Max 3 km range).
+              Within 2 km: Free above ₹199 (else ₹25). 2-3 km: Free above ₹249 (else ₹35).
             </p>
           </div>
         </div>

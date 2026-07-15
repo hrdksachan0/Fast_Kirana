@@ -44,7 +44,7 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
       distanceKm,
       minOrder: 199,
       deliveryFee: 25,
-      freeDeliveryThreshold: 249,
+      freeDeliveryThreshold: 199,
       isServiceable: true,
       zoneName: '0-2 km',
     }
