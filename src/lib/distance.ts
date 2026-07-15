@@ -42,9 +42,9 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
   if (distanceKm <= 2) {
     return {
       distanceKm,
-      minOrder: 0,
+      minOrder: 199,
       deliveryFee: 25,
-      freeDeliveryThreshold: 200,
+      freeDeliveryThreshold: 249,
       isServiceable: true,
       zoneName: '0-2 km',
     }
@@ -52,30 +52,20 @@ export function getDeliveryRules(distanceKm: number): DeliveryRules {
   if (distanceKm <= 3) {
     return {
       distanceKm,
-      minOrder: 0,
+      minOrder: 199,
       deliveryFee: 35,
-      freeDeliveryThreshold: 300,
+      freeDeliveryThreshold: 249,
       isServiceable: true,
       zoneName: '2-3 km',
     }
   }
-  if (distanceKm <= 4) {
-    return {
-      distanceKm,
-      minOrder: 0,
-      deliveryFee: 45,
-      freeDeliveryThreshold: 400,
-      isServiceable: true,
-      zoneName: '3-4 km',
-    }
-  }
   return {
     distanceKm,
-    minOrder: 0,
+    minOrder: 199,
     deliveryFee: 0,
-    freeDeliveryThreshold: 400,
+    freeDeliveryThreshold: 249,
     isServiceable: false,
-    zoneName: '4+ km (out of range)',
+    zoneName: '3+ km (out of range)',
   }
 }
 

@@ -190,6 +190,17 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
         clickable: false
       })
 
+      // Draw Admin Store Marker
+      new google.maps.Marker({
+        position: { lat: storeLat, lng: storeLng },
+        map: map,
+        title: "FastKirana Dark Store Hub",
+        label: {
+          text: "🏪",
+          fontSize: "24px"
+        }
+      })
+
       map.addListener('dragstart', () => setIsDragging(true))
       map.addListener('drag', () => {
         const center = map.getCenter()

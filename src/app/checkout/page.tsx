@@ -530,7 +530,7 @@ export default function CheckoutPage() {
   let cafeDeliveryFee = 0
 
   if (deliveryMethod === 'DELIVERY') {
-    const targetThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200
+    const targetThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249
     const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
     if (adjustedSubtotal < targetThreshold) {
       if (groceryCartItems.length > 0) {
@@ -755,7 +755,7 @@ export default function CheckoutPage() {
             const rules = getDeliveryRules(dist)
             if (!rules.isServiceable) {
               triggerHaptic('warning')
-              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 4 km.`)
+              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 3 km.`)
               setIsPlacingOrder(false)
               return
             }
@@ -950,7 +950,7 @@ export default function CheckoutPage() {
             const rules = getDeliveryRules(dist)
             if (!rules.isServiceable) {
               triggerHaptic('warning')
-              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 4 km.`)
+              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 3 km.`)
               setIsPlacingOrder(false)
               return
             }
@@ -1076,7 +1076,7 @@ export default function CheckoutPage() {
 
       if (deliveryRules && !deliveryRules.isServiceable) {
         triggerHaptic('warning')
-        toast.error(`Your address is outside our delivery zone (${distanceKm?.toFixed(1)} km away). We deliver only up to 4 km.`)
+        toast.error(`Your address is outside our delivery zone (${distanceKm?.toFixed(1)} km away). We deliver only up to 3 km.`)
         return
       }
     }
@@ -1661,9 +1661,9 @@ export default function CheckoutPage() {
                 <span className="text-[9px] text-text-muted">
                   {deliveryMethod === 'PICKUP' 
                     ? 'Store Pickup' 
-                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200)
-                    ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200}+`
-                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200}`}
+                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249)
+                    ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249}+`
+                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249}`}
                 </span>
               </div>
               <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
@@ -1695,14 +1695,14 @@ export default function CheckoutPage() {
                 {deliveryRules && !deliveryRules.isServiceable && (
                   <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-2.5 rounded-xl text-center mt-2">
                     <p className="text-[10px] font-black text-rose-600 dark:text-rose-400">
-                      ❌ Address is {distanceKm?.toFixed(1)} km away. Delivery only available up to 4 km.
+                      ❌ Address is {distanceKm?.toFixed(1)} km away. Delivery only available up to 3 km.
                     </p>
                   </div>
                 )}
-                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200) && (
+                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249) && (
                   <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl text-center mt-2">
                     <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
+                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
                     </p>
                   </div>
                 )}

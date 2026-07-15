@@ -34,9 +34,9 @@ export function DeliveryBanner() {
             <Sparkles className="h-5.5 w-5.5 text-accent" />
           </div>
           <div className="text-left">
-            <h3 className="text-xs md:text-sm font-bold text-text-primary">Free Shipping</h3>
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Free Shipping On ₹249+</h3>
             <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
-              Contactless free shipping on all orders above ₹199.
+              Free delivery on orders above ₹249. Min. order limit is ₹199.
             </p>
           </div>
         </div>

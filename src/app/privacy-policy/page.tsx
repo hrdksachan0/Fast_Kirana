@@ -83,7 +83,7 @@ export default function PrivacyPolicyPage() {
               If you have any questions, feedback, or data deletion requests regarding this Privacy Policy, please contact us:
             </p>
             <p className="text-foreground font-semibold mt-2">
-              Email: <a href="mailto:iamuv2609@gmail.com" className="text-rose-600 hover:underline font-medium">iamuv2609@gmail.com</a>
+              Email: <a href="mailto:fastkiranadelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastkiranadelivery@gmail.com</a>
             </p>
           </section>
         </div>
