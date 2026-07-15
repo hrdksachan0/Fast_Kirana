@@ -9,6 +9,8 @@ import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/
 import { motion } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
 import { ProductCard } from '@/components/product/product-card'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
 
 const getCafeSectionImage = (tag: string) => {
@@ -90,7 +92,19 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       return next
     })
   }
-  const [experienceMode, setExperienceMode] = useState<'cafe' | 'restaurant'>('cafe')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const urlMode = searchParams.get('mode')
+  const initialMode = (urlMode === 'restaurant') ? 'restaurant' : 'cafe'
+  const [experienceMode, setExperienceMode] = useState<'cafe' | 'restaurant'>(initialMode)
+
+  const handleExperienceModeChange = (mode: 'cafe' | 'restaurant') => {
+    triggerHaptic('medium')
+    setExperienceMode(mode)
+    const params = new URLSearchParams(window.location.search)
+    params.set('mode', mode)
+    router.replace(`/?${params.toString()}`, { scroll: false })
+  }
   const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
     { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
@@ -108,6 +122,14 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
   }, [categories])
   const [cafeProducts, setCafeProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Sync experienceMode with URL mode query parameter
+  useEffect(() => {
+    const urlMode = searchParams.get('mode')
+    if (urlMode === 'restaurant' || urlMode === 'cafe') {
+      setExperienceMode(urlMode)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     setIsLoading(true)
@@ -329,7 +351,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           : "border-[#e20a22]/50 dark:border-[#e20a22]/40"
       )}>
         <button
-          onClick={() => setExperienceMode('cafe')}
+          onClick={() => handleExperienceModeChange('cafe')}
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             experienceMode === 'cafe'
@@ -345,7 +367,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         </button>
         
         <button
-          onClick={() => setExperienceMode('restaurant')}
+          onClick={() => handleExperienceModeChange('restaurant')}
           className={cn(
             "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
             (experienceMode as string) === 'restaurant'
@@ -443,7 +465,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
               ))
             ) : (
               filteredCategories.map((cat) => {
-                const href = cat.tag === 'all' ? '/?mode=cafe' : `/?mode=cafe&section=${cat.tag}`
+                const href = cat.tag === 'all' ? `/?mode=${experienceMode}` : `/?mode=${experienceMode}&section=${cat.tag}`
                 const isActive = showProducts && activeCategoryTag === cat.tag
                 return (
                   <Link

@@ -49,7 +49,7 @@ export function StorefrontClient({
   // Sync tab state with query parameters on load
   useEffect(() => {
     const mode = searchParams.get('mode')
-    if (mode === 'cafe') {
+    if (mode === 'cafe' || mode === 'restaurant') {
       setActiveTab('cafe')
     } else if (mode === 'grocery') {
       setActiveTab('grocery')
