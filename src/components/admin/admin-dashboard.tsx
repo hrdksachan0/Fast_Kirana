@@ -1512,8 +1512,8 @@ export function AdminDashboard({
           mrp: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].mrp) : parseFloat(productEditForm.mrp),
           price: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].price) : parseFloat(productEditForm.price),
           unit: productEditForm.unit,
-          stock: isEditProductCafe ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
-          minStock: isEditProductCafe ? 0 : (parseInt(productEditForm.minStock) || 10),
+          stock: (isEditProductCafe || isEditProductRestaurant) ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
+          minStock: (isEditProductCafe || isEditProductRestaurant) ? 0 : (parseInt(productEditForm.minStock) || 10),
           isAvailable: productEditForm.isAvailable,
           tags: tagsArray,
           expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
@@ -1597,8 +1597,8 @@ export function AdminDashboard({
           ...newProduct,
           mrp: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].mrp) : parseFloat(newProduct.mrp),
           price: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].price) : parseFloat(newProduct.price),
-          stock: isNewProductCafe ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
-          minStock: isNewProductCafe ? 0 : (parseInt(newProduct.minStock) || 10),
+          stock: (isNewProductCafe || isNewProductRestaurant) ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
+          minStock: (isNewProductCafe || isNewProductRestaurant) ? 0 : (parseInt(newProduct.minStock) || 10),
           expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
           costPrice: parseFloat(newProduct.costPrice) || 0,
           tags: tagsArray,
@@ -2825,7 +2825,7 @@ export function AdminDashboard({
                       />
                     </div>
 
-                    {!isNewProductCafe && (
+                    {!isNewProductCafe && !isNewProductRestaurant && (
                       <div>
                         <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
                         <input
@@ -3013,7 +3013,7 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                {!isNewProductCafe && (
+                {!isNewProductCafe && !isNewProductRestaurant && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
                     <input
@@ -4943,7 +4943,7 @@ export function AdminDashboard({
                 </div>
                 {!hasVariantsEdit && (
                   <>
-                    {!isEditProductCafe && (
+                    {!isEditProductCafe && !isEditProductRestaurant && (
                       <div>
                         <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
                         <input
@@ -5137,7 +5137,7 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                {!isEditProductCafe && (
+                {!isEditProductCafe && !isEditProductRestaurant && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
                     <input
