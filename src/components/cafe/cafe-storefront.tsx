@@ -33,11 +33,13 @@ const getCafeSectionImage = (tag: string) => {
     'cold-coffee': '/cafe_coffee_category.png',
     'south-indian': '/cafe_south_indian_category.png',
     'chilled': '/cafe_cold_drinks_category.png',
+    'beverages': '/cafe_cold_drinks_category.png',
+    'drinks': '/cafe_cold_drinks_category.png',
     'bakery': '/bakery_biscuits_category.png',
     'pizza': '/cafe_pizza_category.png',
     'burgers': '/cafe_burgers_category.png',
     'garlic-bread': '/cafe_garlic_bread_category.png',
-    'desserts': '/cafe_desserts_category.png',
+    'desserts': '/ice_cream_category.png',
   }
   return mapping[tag] || null
 }
