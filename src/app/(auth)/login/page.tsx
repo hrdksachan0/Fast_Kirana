@@ -333,6 +333,82 @@ function LoginForm() {
     }
   }
 
+  const handleQuickLogin = async (identifier: string, bypassPassword?: string) => {
+    setIsLoading(true)
+    try {
+      if (bypassPassword) {
+        // Staff/Admin bypass login
+        const res = await signIn('credentials', {
+          redirect: false,
+          email: identifier,
+          password: bypassPassword,
+          callbackUrl,
+        })
+        if (res?.error) {
+          toast.error(res?.error || 'Failed to sign in')
+        } else {
+          toast.success('Logged in successfully as Admin!')
+          router.replace(getRoleRedirect('ADMIN', callbackUrl))
+        }
+      } else {
+        // Customer Quick OTP login
+        setLoginType('WHATSAPP')
+        setEmail(identifier)
+        
+        const checkRes = await fetch('/api/auth/email/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: normalizePhoneNumber(identifier) }),
+        })
+        const checkData = await checkRes.json()
+        if (!checkRes.ok) {
+          toast.error(checkData.error || 'Failed to check account status')
+          return
+        }
+
+        const finalEmail = checkData.email || normalizePhoneNumber(identifier)
+        
+        const otpRes = await fetch('/api/auth/otp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: finalEmail.toLowerCase().trim() }),
+        })
+        const otpData = await otpRes.json()
+        if (!otpRes.ok) {
+          toast.error(otpData.error || 'Failed to send OTP')
+          return
+        }
+
+        if (otpData.otp) {
+          setTestOtp(otpData.otp)
+          setOtp(otpData.otp)
+          toast.success('Verification code auto-filled for quick login!')
+          
+          const signinRes = await signIn('credentials', {
+            redirect: false,
+            email: finalEmail.toLowerCase().trim(),
+            otp: otpData.otp,
+            callbackUrl,
+          })
+          if (signinRes?.error) {
+            toast.error(signinRes.error)
+          } else {
+            toast.success('Logged in successfully!')
+            router.replace(callbackUrl)
+          }
+        } else {
+          setStep('OTP')
+          toast.info('Verification code sent. Please enter the OTP to complete login.')
+        }
+      }
+    } catch (err) {
+      toast.error('Quick login failed')
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Reset to email step
   const goBackToEmail = () => {
     setStep('EMAIL')
@@ -496,6 +572,27 @@ function LoginForm() {
                   Go back to Mobile Login
                 </button>
               )}
+            </div>
+
+            {/* Quick Demo Logins */}
+            <div className="pt-4 border-t border-border/60 mt-4 space-y-2">
+              <p className="text-[9px] font-black text-text-muted text-center uppercase tracking-widest">⚡ Developer Quick Logins</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('9999999999')}
+                  className="py-2.5 bg-card border border-border hover:bg-muted/40 rounded-xl text-[10px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  👤 Customer (OTP Bypass)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('admin@fastkirana.com', 'YuvrajHardik@2613')}
+                  className="py-2.5 bg-card border border-border hover:bg-muted/40 rounded-xl text-[10px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  🛠️ Admin Dashboard
+                </button>
+              </div>
             </div>
           </form>
         )}
