@@ -417,18 +417,18 @@ export function CartDrawer() {
                     Distance Delivery Zones (FREE Delivery 🎉)
                   </p>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-emerald-900 dark:text-emerald-200">
+                  <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-emerald-900 dark:text-emerald-200">
                   <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
                     <span>📍 0–2 km</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹200 • FREE</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">FREE on ₹199+ (else ₹25)</span>
                   </div>
                   <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
                     <span>📍 2–3 km</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹300 • FREE</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">FREE on ₹249+ (else ₹35)</span>
                   </div>
-                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
-                    <span>📍 3–4 km</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Min Order ₹400 • FREE</span>
+                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30 opacity-70">
+                    <span>📍 3+ km</span>
+                    <span className="font-extrabold text-rose-500 dark:text-rose-450">Not Serviceable</span>
                   </div>
                 </div>
               </div>

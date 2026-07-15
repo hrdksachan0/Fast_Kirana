@@ -30,6 +30,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [restaurantCloseTime, setRestaurantCloseTime] = useState('23:59')
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
+  const [restaurantEmails, setRestaurantEmails] = useState('')
   const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
   const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
   const [storeLat, setStoreLat] = useState('26.1534185')
