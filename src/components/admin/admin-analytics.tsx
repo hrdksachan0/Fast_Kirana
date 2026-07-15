@@ -13,7 +13,8 @@ import {
   Activity,
   ArrowRight,
   Sparkles,
-  PieChart
+  PieChart,
+  Utensils
 } from 'lucide-react'
 
 interface Product {
@@ -117,7 +118,6 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
     }
   }
 
-  // 1. Calculate general inventory metrics separately for Grocery and Cafe
   const metrics = useMemo(() => {
     let groceryStockValue = 0
     let groceryCostValue = 0
@@ -126,14 +126,35 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
     let groceryHealthyStock = 0
     let groceryActiveCount = 0
 
+    let restaurantStockValue = 0
+    let restaurantCostValue = 0
+    let restaurantOutOfStock = 0
+    let restaurantLowStock = 0
+    let restaurantHealthyStock = 0
+    let restaurantActiveCount = 0
+
     let cafeActiveCount = 0
 
     for (const p of products) {
       if (!p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
+      const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
       
       if (isCafe) {
         cafeActiveCount++
+      } else if (isRestaurant) {
+        restaurantActiveCount++
+        restaurantStockValue += p.price * p.stock
+        const cost = p.price * 0.75
+        restaurantCostValue += cost * p.stock
+
+        if (p.stock === 0) {
+          restaurantOutOfStock++
+        } else if (p.stock <= p.minStock) {
+          restaurantLowStock++
+        } else {
+          restaurantHealthyStock++
+        }
       } else {
         groceryActiveCount++
         groceryStockValue += p.price * p.stock
@@ -153,6 +174,9 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
     const groceryProfit = Math.max(0, groceryStockValue - groceryCostValue)
     const groceryMargin = groceryStockValue > 0 ? (groceryProfit / groceryStockValue) * 100 : 0
 
+    const restaurantProfit = Math.max(0, restaurantStockValue - restaurantCostValue)
+    const restaurantMargin = restaurantStockValue > 0 ? (restaurantProfit / restaurantStockValue) * 100 : 0
+
     return {
       grocery: {
         totalStockValue: groceryStockValue,
@@ -164,25 +188,36 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
         healthyStockCount: groceryHealthyStock,
         totalActiveProducts: groceryActiveCount,
       },
+      restaurant: {
+        totalStockValue: restaurantStockValue,
+        totalCostValue: restaurantCostValue,
+        potentialProfit: restaurantProfit,
+        margin: Math.round(restaurantMargin * 10) / 10,
+        outOfStockCount: restaurantOutOfStock,
+        lowStockCount: restaurantLowStock,
+        healthyStockCount: restaurantHealthyStock,
+        totalActiveProducts: restaurantActiveCount,
+      },
       cafe: {
         totalActiveProducts: cafeActiveCount,
       }
     }
   }, [products])
 
-  // 2. Group products by category and calculate stock value (skipping Cafe product valuations)
+  // 2. Group products by category and calculate stock value (skipping Cafe and Restaurant product valuations)
   const categoryMetrics = useMemo(() => {
     const data: Record<string, { name: string; count: number; value: number; lowStock: number }> = {}
 
     for (const p of products) {
       if (!p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
+      const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
       const catName = p.category.name
       if (!data[catName]) {
         data[catName] = { name: catName, count: 0, value: 0, lowStock: 0 }
       }
       data[catName].count++
-      if (!isCafe) {
+      if (!isCafe && !isRestaurant) {
         data[catName].value += p.price * p.stock
         if (p.stock <= p.minStock) {
           data[catName].lowStock++
@@ -288,6 +323,104 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
             <div className="text-center">
               <span className="block text-text-muted text-[9px] uppercase font-bold">Healthy SKUs</span>
               <strong className="text-accent font-extrabold">{metrics.grocery.healthyStockCount}</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Restaurant Analytics Section Header */}
+      <div className="border-b border-border/60 pb-2 pt-2">
+        <h4 className="text-xs font-extrabold text-red-500 uppercase tracking-wider flex items-center gap-1.5">
+          <Utensils className="h-4.5 w-4.5 text-red-500 animate-pulse-gentle" />
+          Restaurant Inventory Valuation
+        </h4>
+      </div>
+
+      {/* Visual Stock Status Cards for Restaurant */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Inventory Value Card */}
+        <div className="relative overflow-hidden bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col justify-between group">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
+                Inventory Valuation (Price)
+              </span>
+              <h3 className="text-2xl font-black text-text-primary">
+                {formatPrice(metrics.restaurant.totalStockValue)}
+              </h3>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+              <IndianRupee className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border/60 flex items-center justify-between text-xs text-text-secondary">
+            <span>Cost Basis: <strong className="text-text-primary font-bold">{formatPrice(metrics.restaurant.totalCostValue)}</strong></span>
+            <span className="flex items-center text-red-500 font-semibold">
+              <TrendingUp className="h-3 w-3 mr-0.5" />
+              Est. Profit: {formatPrice(metrics.restaurant.potentialProfit)}
+            </span>
+          </div>
+        </div>
+
+        {/* Expected Profit Margin Card */}
+        <div className="relative overflow-hidden bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col justify-between group">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
+                Average Markup Margin
+              </span>
+              <h3 className="text-2xl font-black text-text-primary">
+                {metrics.restaurant.margin}%
+              </h3>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+              <Activity className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border/60 text-xs text-text-secondary flex justify-between">
+            <span>Active SKU catalog: <strong className="text-text-primary font-bold">{metrics.restaurant.totalActiveProducts} items</strong></span>
+            <span className="text-red-500 font-semibold flex items-center">
+              <Sparkles className="h-3 w-3 mr-0.5 animate-pulse" />
+              Fixed Margin: 25%
+            </span>
+          </div>
+        </div>
+
+        {/* Stock Health Card */}
+        <div className="relative overflow-hidden bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col justify-between group">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
+                Stock Health Index
+              </span>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-black text-text-primary">
+                  {Math.round((metrics.restaurant.healthyStockCount / (metrics.restaurant.totalActiveProducts || 1)) * 100)}%
+                </h3>
+                <span className="text-xs font-semibold text-text-secondary">Healthy</span>
+              </div>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border/60 text-xs text-text-secondary grid grid-cols-3 gap-1">
+            <div className="text-center border-r border-border/60">
+              <span className="block text-text-muted text-[9px] uppercase font-bold">Low Stock</span>
+              <strong className="text-orange-500 font-extrabold">{metrics.restaurant.lowStockCount}</strong>
+            </div>
+            <div className="text-center border-r border-border/60">
+              <span className="block text-text-muted text-[9px] uppercase font-bold">Out of Stock</span>
+              <strong className="text-red-500 font-extrabold">{metrics.restaurant.outOfStockCount}</strong>
+            </div>
+            <div className="text-center">
+              <span className="block text-text-muted text-[9px] uppercase font-bold">Healthy SKUs</span>
+              <strong className="text-accent font-extrabold">{metrics.restaurant.healthyStockCount}</strong>
             </div>
           </div>
         </div>

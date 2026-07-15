@@ -46,6 +46,7 @@ export interface CafeMenuSection {
   description: string
   imageUrl?: string
   image?: string
+  disabled?: boolean
 }
 
 export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [

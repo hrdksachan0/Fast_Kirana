@@ -385,7 +385,8 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
       'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
     ])
 
-    const PREDEFINED_CATEGORIES = customSections || DEFAULT_CAFE_MENU_SECTIONS
+    const rawCategories = customSections || DEFAULT_CAFE_MENU_SECTIONS
+    const PREDEFINED_CATEGORIES = rawCategories.filter(cat => !cat.disabled)
 
     const sectionsMap = new Map<string, any>()
     PREDEFINED_CATEGORIES.forEach(cat => {

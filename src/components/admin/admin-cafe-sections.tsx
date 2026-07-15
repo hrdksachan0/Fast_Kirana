@@ -51,6 +51,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
   const [secDescription, setSecDescription] = useState('')
   const [secMatchTags, setSecMatchTags] = useState('')
   const [secImageUrl, setSecImageUrl] = useState('')
+  const [secDisabled, setSecDisabled] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [savingSections, setSavingSections] = useState(false)
@@ -100,6 +101,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecDescription(sec.description || '')
     setSecMatchTags(sec.matchTags ? sec.matchTags.join(', ') : sec.tag)
     setSecImageUrl(sec.imageUrl || sec.image || '')
+    setSecDisabled(!!sec.disabled)
   }
 
   const handleAddNewSectionClick = () => {
@@ -111,6 +113,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecDescription('')
     setSecMatchTags('')
     setSecImageUrl('')
+    setSecDisabled(false)
   }
 
   const handleCancelSectionEdit = () => {
@@ -122,6 +125,7 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
     setSecDescription('')
     setSecMatchTags('')
     setSecImageUrl('')
+    setSecDisabled(false)
   }
 
   const handleSaveSection = (e: React.FormEvent) => {
@@ -143,7 +147,8 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
       description: secDescription.trim(),
       matchTags: cleanMatchTags,
       imageUrl: secImageUrl.trim() || undefined,
-      image: secImageUrl.trim() || undefined
+      image: secImageUrl.trim() || undefined,
+      disabled: secDisabled
     }
 
     if (isAddingNewSec) {
@@ -316,6 +321,22 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
               />
             </div>
 
+            {/* Status (ON/OFF) */}
+            <div className="space-y-1">
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Section Status</label>
+              <button
+                type="button"
+                onClick={() => setSecDisabled(!secDisabled)}
+                className={`w-full bg-background border px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none h-[30px] flex items-center justify-center cursor-pointer ${
+                  secDisabled 
+                    ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 font-extrabold' 
+                    : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-600 font-extrabold'
+                }`}
+              >
+                {secDisabled ? '🔴 DISABLED (OFF)' : '🟢 ENABLED (ON)'}
+              </button>
+            </div>
+
             {/* Section Image / Icon */}
             <div className="md:col-span-3 space-y-1">
               <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary block">Section Image (Cloudinary / absolute link)</label>
@@ -401,7 +422,11 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
         {cafeMenuSections.map((sec, idx) => (
           <div
             key={sec.tag}
-            className="p-3 border border-border bg-muted/10 rounded-xl flex items-center justify-between gap-3"
+            className={`p-3 border rounded-xl flex items-center justify-between gap-3 transition-opacity ${
+              sec.disabled 
+                ? 'border-rose-500/20 bg-rose-500/5 opacity-60' 
+                : 'border-border bg-muted/10'
+            }`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center bg-background border shrink-0 relative">
@@ -423,7 +448,10 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <strong className="text-xs text-text-primary font-extrabold">{sec.title}</strong>
-                  <span className="text-[9px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded border">#{sec.tag}</span>
+                  <span className="text-[9px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded border border-border/40">#{sec.tag}</span>
+                  {sec.disabled && (
+                    <span className="text-[8px] font-black uppercase bg-rose-500/10 text-rose-600 px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse">OFF</span>
+                  )}
                 </div>
                 {sec.description && (
                   <p className="text-[10px] text-text-secondary truncate mt-0.5">{sec.description}</p>
@@ -453,6 +481,32 @@ export function AdminCafeSections({ onSectionsSaved, type = 'cafe' }: AdminCafeS
                   <ArrowDown className="h-3 w-3" />
                 </button>
               </div>
+
+              {/* ON/OFF Switch */}
+              <button
+                type="button"
+                onClick={() => {
+                  const copy = [...cafeMenuSections]
+                  copy[idx] = {
+                    ...copy[idx],
+                    disabled: !copy[idx].disabled
+                  }
+                  setCafeMenuSections(copy)
+                  toast.success(
+                    copy[idx].disabled
+                      ? `"${sec.title}" turned OFF! (Click Save at bottom to apply)`
+                      : `"${sec.title}" turned ON! (Click Save at bottom to apply)`
+                  )
+                }}
+                className={`px-2.5 py-1 border rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${
+                  sec.disabled 
+                    ? 'border-rose-500/25 bg-rose-500/5 text-rose-500 hover:bg-rose-500/10' 
+                    : 'border-emerald-500/25 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/10'
+                }`}
+                title={sec.disabled ? "Turn ON Section" : "Turn OFF Section"}
+              >
+                {sec.disabled ? 'OFF' : 'ON'}
+              </button>
 
               {/* Edit */}
               <button

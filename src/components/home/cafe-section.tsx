@@ -153,7 +153,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           } catch (e) {}
         }
 
-        const PREDEFINED_CATEGORIES = parsedSections || ((experienceMode as string) === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS)
+        const rawCategories = parsedSections || ((experienceMode as string) === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS)
+        const PREDEFINED_CATEGORIES = rawCategories.filter(cat => !cat.disabled)
 
         const sectionsMap = new Map<string, any>()
         PREDEFINED_CATEGORIES.forEach(cat => {
