@@ -71,7 +71,7 @@ export function CartStickyBar() {
       }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "gpu-accelerated fixed bottom-[90px] left-4 right-4 z-40 bg-[#097925] text-white rounded-3xl shadow-[0_8px_30px_rgba(9,121,37,0.22)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
+        "gpu-accelerated fixed bottom-[90px] left-3.5 right-3.5 z-40 bg-[#097925] text-white rounded-[20px] shadow-[0_8px_25px_rgba(9,121,37,0.2)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >
@@ -83,24 +83,24 @@ export function CartStickyBar() {
         />
       </div>
 
-      {/* Spacious Mockup Row */}
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Slimmer Spacing Row */}
+      <div className="px-3 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           {/* Shopping Bag Circle Container */}
-          <div className="relative w-9 h-9 rounded-full bg-green-950/40 flex items-center justify-center border border-white/10">
-            <ShoppingBag className="h-4.5 w-4.5 text-white stroke-[2.2]" />
+          <div className="relative w-8 h-8 rounded-full bg-green-950/40 flex items-center justify-center border border-white/10 shrink-0">
+            <ShoppingBag className="h-4 w-4 text-white stroke-[2.2]" />
             {/* Red Notification Badge */}
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9.5px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-sm">
+            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
               {totalItems}
             </span>
           </div>
           
           {/* Title & Subtitle Stack */}
           <div className="flex flex-col text-left">
-            <span className="text-[13.5px] font-extrabold text-white leading-tight">
+            <span className="text-xs font-black text-white leading-tight">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
             </span>
-            <span className="text-[10px] font-bold text-white/80 leading-normal mt-0.5">
+            <span className="text-[9px] font-bold text-white/80 leading-tight mt-0.5">
               {hasFreeDelivery 
                 ? "Free delivery active!" 
                 : `Add ${formatPrice(needsForFreeDelivery)} more for free delivery`}
@@ -117,10 +117,10 @@ export function CartStickyBar() {
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-white text-[#097925] font-black text-xs px-5 py-2.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer active:scale-95"
+          className="bg-white text-[#097925] font-black text-[10px] tracking-wide px-4 py-1.5 rounded-full flex items-center gap-0.5 shadow-xs transition-all cursor-pointer active:scale-95"
         >
           <span>VIEW CART</span>
-          <ChevronRight className="h-3.5 w-3.5 stroke-[2.8]" />
+          <ChevronRight className="h-3 w-3 stroke-[3]" />
         </motion.button>
       </div>
     </motion.div>
