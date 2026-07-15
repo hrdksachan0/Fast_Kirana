@@ -82,7 +82,7 @@ export default async function AdminPage() {
         where: {
           stock: { lt: 15 },
           isAvailable: true,
-          category: { slug: { notIn: ['cafe', 'restaurant'] } },
+          category: { slug: { not: 'cafe' } },
         },
       }),
       prisma.order.groupBy({
@@ -184,10 +184,10 @@ export default async function AdminPage() {
       }
     })
 
-    revenue = groceryRevenue
-    totalOrdersCount = groceryTotalOrders
-    activeOrdersCount = groceryActiveOrders
-    deliveredOrdersCount = groceryDeliveredOrders
+    revenue = groceryRevenue + restaurantRevenue + cafeRevenue
+    totalOrdersCount = groceryTotalOrders + restaurantTotalOrders + cafeTotalOrders
+    activeOrdersCount = groceryActiveOrders + restaurantActiveOrders + cafeActiveOrders
+    deliveredOrdersCount = groceryDeliveredOrders + restaurantDeliveredOrders + cafeDeliveredOrders
     orderCount = deliveredOrdersCount
 
     initialOrderCounts = {
@@ -346,46 +346,12 @@ export default async function AdminPage() {
   }))
 
   const statsList = [
-    { 
-      label: 'Grocery Revenue', 
-      value: formatPrice(groceryRevenue), 
-      subtext: `Rest: ${formatPrice(restaurantRevenue)} | Cafe: ${formatPrice(cafeRevenue)}`,
-      icon: IndianRupee, 
-      color: 'text-accent bg-accent/10' 
-    },
-    { 
-      label: 'Grocery Orders', 
-      value: groceryTotalOrders.toString(), 
-      subtext: `Rest: ${restaurantTotalOrders} | Cafe: ${cafeTotalOrders}`,
-      icon: ShoppingBag, 
-      color: 'text-primary bg-primary/10' 
-    },
-    { 
-      label: 'Grocery Active', 
-      value: groceryActiveOrders.toString(), 
-      subtext: `Rest: ${restaurantActiveOrders} | Cafe: ${cafeActiveOrders}`,
-      icon: RotateCw, 
-      color: 'text-amber-500 bg-amber-500/10' 
-    },
-    { 
-      label: 'Grocery Delivered', 
-      value: groceryDeliveredOrders.toString(), 
-      subtext: `Rest: ${restaurantDeliveredOrders} | Cafe: ${cafeDeliveredOrders}`,
-      icon: CheckCircle, 
-      color: 'text-[#00b140] bg-[#00b140]/10' 
-    },
-    { 
-      label: 'Registered Users', 
-      value: userCount.toString(), 
-      icon: Users, 
-      color: 'text-blue-500 bg-blue-500/10' 
-    },
-    { 
-      label: 'Low Stock Alert', 
-      value: lowStockCount.toString(), 
-      icon: AlertTriangle, 
-      color: 'text-discount bg-discount/10' 
-    },
+    { label: 'Total Revenue', value: formatPrice(revenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
+    { label: 'Total Orders', value: totalOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: 'Active Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
+    { label: 'Delivered Orders', value: deliveredOrdersCount.toString(), icon: CheckCircle, color: 'text-[#00b140] bg-[#00b140]/10' },
+    { label: 'Registered Users', value: userCount.toString(), icon: Users, color: 'text-blue-500 bg-blue-500/10' },
+    { label: 'Low Stock Alert', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-discount bg-discount/10' },
   ]
 
   return (
@@ -415,11 +381,6 @@ export default async function AdminPage() {
                 <span className="text-base sm:text-lg md:text-xl font-black text-text-primary mt-0.5 sm:mt-1 block truncate">
                   {card.value}
                 </span>
-                {card.subtext && (
-                  <span className="text-[9px] font-bold text-text-muted mt-1 block truncate">
-                    {card.subtext}
-                  </span>
-                )}
               </div>
             </div>
           )
