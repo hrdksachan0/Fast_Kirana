@@ -44,6 +44,18 @@ export default async function AdminPage() {
   let totalOrdersCount = 0
   let activeOrdersCount = 0
   let deliveredOrdersCount = 0
+  let groceryRevenue = 0
+  let restaurantRevenue = 0
+  let cafeRevenue = 0
+  let groceryTotalOrders = 0
+  let restaurantTotalOrders = 0
+  let cafeTotalOrders = 0
+  let groceryActiveOrders = 0
+  let restaurantActiveOrders = 0
+  let cafeActiveOrders = 0
+  let groceryDeliveredOrders = 0
+  let restaurantDeliveredOrders = 0
+  let cafeDeliveredOrders = 0
   let ordersRaw: any[] = []
   let productsRaw: any[] = []
   let categoriesRaw: any[] = []
@@ -70,12 +82,13 @@ export default async function AdminPage() {
         where: {
           stock: { lt: 15 },
           isAvailable: true,
-          category: { slug: { not: 'cafe' } },
+          category: { slug: { notIn: ['cafe', 'restaurant'] } },
         },
       }),
-      prisma.order.aggregate({
+      prisma.order.groupBy({
+        by: ['shopName', 'status'],
         _sum: { total: true },
-        where: { status: 'DELIVERED' },
+        _count: { id: true },
       }),
       prisma.$queryRaw`
         SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
@@ -94,20 +107,13 @@ export default async function AdminPage() {
           sortOrder: 'asc',
         },
       }),
-      prisma.$queryRaw`
-        SELECT o.status::text as status, COUNT(*)::int as count
-        FROM orders o
-        GROUP BY o.status
-      ` as Promise<any[]>,
     ]))
 
     userCount = results[0] as number
     lowStockCount = results[1] as number
-    const aggregateResult = results[2] as any
-    revenue = aggregateResult._sum?.total || 0
+    const groupStats = results[2] as any[]
     ordersRaw = results[3] as any[]
     categoriesRaw = results[4] as any[]
-    const statusGroups = results[5] as any[]
 
     productsRaw = []
     reviewsRaw = []
@@ -139,15 +145,49 @@ export default async function AdminPage() {
       DELIVERED: 0,
       CANCELLED: 0,
     }
-    statusGroups.forEach((group) => {
+    
+    groupStats.forEach((group: any) => {
+      const isCafe = group.shopName === 'FastKirana Cafe Kitchen'
+      const isRestaurant = group.shopName === 'FastKirana Restaurant Kitchen'
+      
+      const count = group._count?.id || 0
+      const sum = group._sum?.total || 0
+
       if (group.status && statusCountsMap[group.status] !== undefined) {
-        statusCountsMap[group.status] = group.count || 0
+        statusCountsMap[group.status] += count
+      }
+
+      if (isCafe) {
+        cafeTotalOrders += count
+        if (group.status === 'DELIVERED') {
+          cafeRevenue += sum
+          cafeDeliveredOrders += count
+        } else if (group.status !== 'CANCELLED') {
+          cafeActiveOrders += count
+        }
+      } else if (isRestaurant) {
+        restaurantTotalOrders += count
+        if (group.status === 'DELIVERED') {
+          restaurantRevenue += sum
+          restaurantDeliveredOrders += count
+        } else if (group.status !== 'CANCELLED') {
+          restaurantActiveOrders += count
+        }
+      } else {
+        groceryTotalOrders += count
+        if (group.status === 'DELIVERED') {
+          groceryRevenue += sum
+          groceryDeliveredOrders += count
+        } else if (group.status !== 'CANCELLED') {
+          groceryActiveOrders += count
+        }
       }
     })
 
-    totalOrdersCount = Object.values(statusCountsMap).reduce((a, b) => a + b, 0)
-    activeOrdersCount = statusCountsMap.PENDING + statusCountsMap.CONFIRMED + statusCountsMap.PACKED + statusCountsMap.SHIPPED
-    deliveredOrdersCount = statusCountsMap.DELIVERED
+    revenue = groceryRevenue
+    totalOrdersCount = groceryTotalOrders
+    activeOrdersCount = groceryActiveOrders
+    deliveredOrdersCount = groceryDeliveredOrders
     orderCount = deliveredOrdersCount
 
     initialOrderCounts = {
@@ -306,12 +346,46 @@ export default async function AdminPage() {
   }))
 
   const statsList = [
-    { label: 'Total Revenue', value: formatPrice(revenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
-    { label: 'Total Orders', value: totalOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
-    { label: 'Active Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
-    { label: 'Delivered Orders', value: deliveredOrdersCount.toString(), icon: CheckCircle, color: 'text-[#00b140] bg-[#00b140]/10' },
-    { label: 'Registered Users', value: userCount.toString(), icon: Users, color: 'text-blue-500 bg-blue-500/10' },
-    { label: 'Low Stock Alert', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-discount bg-discount/10' },
+    { 
+      label: 'Grocery Revenue', 
+      value: formatPrice(groceryRevenue), 
+      subtext: `Rest: ${formatPrice(restaurantRevenue)} | Cafe: ${formatPrice(cafeRevenue)}`,
+      icon: IndianRupee, 
+      color: 'text-accent bg-accent/10' 
+    },
+    { 
+      label: 'Grocery Orders', 
+      value: groceryTotalOrders.toString(), 
+      subtext: `Rest: ${restaurantTotalOrders} | Cafe: ${cafeTotalOrders}`,
+      icon: ShoppingBag, 
+      color: 'text-primary bg-primary/10' 
+    },
+    { 
+      label: 'Grocery Active', 
+      value: groceryActiveOrders.toString(), 
+      subtext: `Rest: ${restaurantActiveOrders} | Cafe: ${cafeActiveOrders}`,
+      icon: RotateCw, 
+      color: 'text-amber-500 bg-amber-500/10' 
+    },
+    { 
+      label: 'Grocery Delivered', 
+      value: groceryDeliveredOrders.toString(), 
+      subtext: `Rest: ${restaurantDeliveredOrders} | Cafe: ${cafeDeliveredOrders}`,
+      icon: CheckCircle, 
+      color: 'text-[#00b140] bg-[#00b140]/10' 
+    },
+    { 
+      label: 'Registered Users', 
+      value: userCount.toString(), 
+      icon: Users, 
+      color: 'text-blue-500 bg-blue-500/10' 
+    },
+    { 
+      label: 'Low Stock Alert', 
+      value: lowStockCount.toString(), 
+      icon: AlertTriangle, 
+      color: 'text-discount bg-discount/10' 
+    },
   ]
 
   return (
@@ -341,6 +415,11 @@ export default async function AdminPage() {
                 <span className="text-base sm:text-lg md:text-xl font-black text-text-primary mt-0.5 sm:mt-1 block truncate">
                   {card.value}
                 </span>
+                {card.subtext && (
+                  <span className="text-[9px] font-bold text-text-muted mt-1 block truncate">
+                    {card.subtext}
+                  </span>
+                )}
               </div>
             </div>
           )
