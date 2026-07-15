@@ -3,7 +3,7 @@
 import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, format12h } from '@/lib/utils'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -266,7 +266,15 @@ export function CartDrawer() {
                   Save {formatPrice(perItemSaving)}
                 </p>
               )}
-              {item.product.stock <= 0 || item.product.isAvailable === false ? (
+              {isStoreClosed ? (
+                <p className="text-[9px] font-black text-rose-500 mt-1.5 flex items-center gap-1 leading-none">
+                  <span>🏪</span> Closed (Timings: {
+                    (item.product.category?.slug === 'restaurant')
+                      ? `${format12h(settings.restaurant_open_time)} - ${format12h(settings.restaurant_close_time)}`
+                      : `${format12h(settings.cafe_open_time)} - ${format12h(settings.cafe_close_time)}`
+                  })
+                </p>
+              ) : item.product.stock <= 0 || item.product.isAvailable === false ? (
                 <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
                   <span>❌</span> Out of Stock
                 </p>
@@ -606,6 +614,27 @@ export function CartDrawer() {
                 <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 px-3.5 py-2 mb-3.5 animate-pulse-gentle">
                   <span className="text-xs font-extrabold text-[#00b140] flex items-center gap-1.5 leading-none">
                     🎉 You are saving {formatPrice(savings)} on this order!
+                  </span>
+                </div>
+              )}
+
+              {(hasClosedGroceryItems || hasClosedCafeItems) && (
+                <div className="flex flex-col rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100/50 dark:border-rose-900/30 p-3 mb-3.5 text-left">
+                  <span className="text-[10px] font-black text-rose-600 flex items-center gap-1 leading-none uppercase tracking-wide">
+                    ⚠️ Closed Items in Cart
+                  </span>
+                  <span className="text-[9px] text-zinc-550 dark:text-zinc-400 font-bold mt-1.5 leading-normal">
+                    Some items in your cart cannot be ordered now because the kitchen or store is closed.
+                    {cafeItems.some(item => isItemClosed(item.product) && item.product.category?.slug === 'restaurant') && (
+                      <strong className="block mt-1 font-extrabold text-red-500">
+                        • Restaurant Timings: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)}
+                      </strong>
+                    )}
+                    {cafeItems.some(item => isItemClosed(item.product) && item.product.category?.slug !== 'restaurant') && (
+                      <strong className="block mt-0.5 font-extrabold text-orange-500">
+                        • Cafe Timings: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)}
+                      </strong>
+                    )}
                   </span>
                 </div>
               )}

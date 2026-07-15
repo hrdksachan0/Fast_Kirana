@@ -9,6 +9,17 @@ export function formatPrice(price: number): string {
   return `₹${price.toLocaleString('en-IN')}`
 }
 
+export function format12h(timeStr: string | null | undefined): string {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  const hour = parseInt(parts[0])
+  const minute = parts[1]
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12
+  return `${displayHour}:${minute} ${ampm}`
+}
+
 export function isCafeProduct(p: any): boolean {
   if (!p) return false
   const categorySlug = p.category?.slug || p.categorySlug

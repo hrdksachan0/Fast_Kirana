@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronRight, Coffee, ChefHat } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, format12h } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { motion } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
@@ -296,8 +296,13 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
               <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
             </span>
           ) : (
-            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-zinc-800 dark:text-zinc-300 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-zinc-200" /> KITCHEN CLOSED
+            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-zinc-800 dark:text-zinc-300 uppercase leading-none mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1.5">
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-zinc-200" /> KITCHEN CLOSED
+              </span>
+              <span className="text-[7.5px] sm:text-[9px] font-bold text-red-500 normal-case tracking-normal">
+                (Opens: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)})
+              </span>
             </span>
           )}
           
@@ -421,9 +426,20 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
               />
               {/* Premium overlay for readability */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/35 to-transparent flex flex-col justify-center px-5 sm:px-8 text-white">
-                <span className="text-[8px] sm:text-[9.5px] font-black tracking-widest text-[#ffbc64] uppercase leading-none mb-1">
-                  Now Live on FastKirana
-                </span>
+                {restaurantOpen ? (
+                  <span className="text-[7.5px] sm:text-[9px] font-black tracking-widest text-emerald-400 uppercase leading-none mb-1.5 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> KITCHEN OPEN
+                  </span>
+                ) : (
+                  <span className="text-[7.5px] sm:text-[9px] font-black tracking-widest text-zinc-300 uppercase leading-none mb-1.5 flex flex-col sm:flex-row sm:items-center gap-1.5">
+                    <span className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> KITCHEN CLOSED
+                    </span>
+                    <span className="text-[7.5px] sm:text-[9px] font-bold text-red-400 normal-case tracking-normal">
+                      (Opens: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)})
+                    </span>
+                  </span>
+                )}
                 <h3 className="text-[17px] sm:text-2xl md:text-3xl font-black tracking-tight leading-none drop-shadow-md">
                   Wedson Restaurant
                 </h3>
