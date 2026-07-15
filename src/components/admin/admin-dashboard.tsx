@@ -40,6 +40,7 @@ import {
   VolumeX,
   Clock,
   Utensils,
+  Coffee,
   Bell,
   BrainCircuit,
   RefreshCw,
@@ -61,6 +62,8 @@ const AdminPushNotifications = dynamic(() => import('./admin-push-notifications'
 const AdminPromotions = dynamic(() => import('./admin-promotions').then((mod) => mod.AdminPromotions), { ssr: false })
 const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod.AdminForecast), { ssr: false })
 const AdminCafeSections = dynamic(() => import('./admin-cafe-sections').then((mod) => mod.AdminCafeSections), { ssr: false })
+const AdminCafeConsole = dynamic(() => import('./admin-cafe-console').then((mod) => mod.AdminCafeConsole), { ssr: false })
+const AdminRestaurantConsole = dynamic(() => import('./admin-restaurant-console').then((mod) => mod.AdminRestaurantConsole), { ssr: false })
 
 interface AdminDashboardProps {
   initialOrders?: any[]
@@ -79,7 +82,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'cafe-console' | 'restaurant-console'
 
 const PRODUCT_TEMPLATES = [
   {
@@ -146,7 +149,7 @@ const HUB_CONFIG = [
     icon: Package,
     color: 'from-emerald-500/10 to-teal-500/10',
     activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update'] as const
+    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update', 'cafe-console', 'restaurant-console'] as const
   },
   {
     key: 'marketing',
@@ -2060,6 +2063,8 @@ export function AdminDashboard({
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
+    { key: 'cafe-console', label: '☕ Cafe Console', icon: Coffee },
+    { key: 'restaurant-console', label: '🍳 Restaurant Console', icon: Utensils },
   ]
 
   return (
@@ -4764,6 +4769,18 @@ export function AdminDashboard({
       {activeTab === 'flash-deals' && (
         <div className="animate-fade-in">
           <AdminPromotions />
+        </div>
+      )}
+
+      {activeTab === 'cafe-console' && (
+        <div className="animate-fade-in">
+          <AdminCafeConsole />
+        </div>
+      )}
+
+      {activeTab === 'restaurant-console' && (
+        <div className="animate-fade-in">
+          <AdminRestaurantConsole />
         </div>
       )}
         </motion.div>

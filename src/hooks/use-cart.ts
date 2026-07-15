@@ -72,6 +72,38 @@ export function useCart() {
     }
 
     const storeState = useCartStore.getState()
+    
+    // Resolve product compatibility types
+    const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
+      const slug = p.category?.slug || p.categorySlug || ''
+      const tags = p.tags || []
+      if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
+      if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
+      if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
+      return 'GROCERY'
+    }
+
+    const areTypesCompatible = (t1: string, t2: string): boolean => {
+      if (t1 === t2) return true
+      if (t1 === 'BYPASS' && (t2 === 'CAFE' || t2 === 'GROCERY')) return true
+      if (t2 === 'BYPASS' && (t1 === 'CAFE' || t1 === 'GROCERY')) return true
+      return false
+    }
+
+    const newType = getProductType(product)
+    const incompatibleItem = storeState.items.find((item) => {
+      const existType = getProductType(item.product)
+      return !areTypesCompatible(newType, existType)
+    })
+
+    if (incompatibleItem) {
+      const confirmClear = window.confirm(
+        `Your cart contains items from another store segment. Adding this item will clear your current cart. Do you want to proceed?`
+      )
+      if (!confirmClear) return
+      storeState.clearCart()
+    }
+
     const limit = isCafe ? 10 : 5
     const currentQty = storeState.getItemQuantity(product.id)
     if (currentQty >= limit) {

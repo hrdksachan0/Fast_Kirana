@@ -12,8 +12,8 @@ export function formatPrice(price: number): string {
 export function isCafeProduct(p: any): boolean {
   if (!p) return false
   const categorySlug = p.category?.slug || p.categorySlug
-  if (categorySlug === 'cafe' || categorySlug === 'restaurant') return true
-  if (p.tags?.includes('cafe') || p.tags?.includes('restaurant')) return true
+  if (categorySlug === 'cafe' || categorySlug === 'restaurant' || categorySlug === 'ice-cream' || categorySlug === 'beverages') return true
+  if (p.tags?.includes('cafe') || p.tags?.includes('restaurant') || p.tags?.includes('ice-cream') || p.tags?.includes('beverages')) return true
   return false
 }
 
