@@ -213,6 +213,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      if (isCafeProduct(dbProduct)) {
+        dbStock = 999999
+      }
+
       if (dbStock < item.quantity) {
         return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
@@ -669,11 +673,17 @@ export async function POST(request: NextRequest) {
 
         // Deduct stock
         for (const item of orderItemsData) {
+          const dbProd = await tx.product.findUnique({
+            where: { id: item.productId },
+            include: { category: true }
+          })
+
+          if (dbProd && (dbProd.category?.slug === 'cafe' || dbProd.category?.slug === 'restaurant' || dbProd.tags?.includes('cafe') || dbProd.tags?.includes('restaurant'))) {
+            continue
+          }
+
           if (item.selectedVariant) {
             // Deduct stock from the variant in JSON variants
-            const dbProd = await tx.product.findUnique({
-              where: { id: item.productId }
-            })
             if (dbProd && dbProd.variants && Array.isArray(dbProd.variants)) {
               const updatedVariants = (dbProd.variants as any[]).map((v) => {
                 if (v.name === item.selectedVariant) {
