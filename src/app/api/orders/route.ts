@@ -396,11 +396,11 @@ export async function POST(request: NextRequest) {
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (deliveryRules && !deliveryRules.isServiceable) {
         return NextResponse.json({
-          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver only up to 4 km.`
+          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver only up to 3 km.`
         }, { status: 400 })
       }
 
-      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 200
+      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249
       const appliesDeliveryFee = combinedSubtotal < freeDeliveryThreshold
 
       if (appliesDeliveryFee) {
