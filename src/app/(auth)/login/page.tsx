@@ -576,33 +576,6 @@ function LoginForm() {
               )}
             </div>
 
-            {/* Quick Demo Logins */}
-            <div className="pt-4 border-t border-border/60 mt-4 space-y-2">
-              <p className="text-[9px] font-black text-text-muted text-center uppercase tracking-widest">⚡ Developer Quick Logins</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('9999999999')}
-                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  👤 Customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('restaurant@fastkirana.com', 'YuvrajHardik@2613')}
-                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  🍳 Restaurant
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('admin@fastkirana.com', 'YuvrajHardik@2613')}
-                  className="py-2 bg-card border border-border hover:bg-muted/40 rounded-xl text-[9px] font-black text-text-primary text-center hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  🛠️ Admin
-                </button>
-              </div>
-            </div>
           </form>
         )}
 
