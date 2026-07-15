@@ -109,7 +109,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
   useEffect(() => {
     setIsLoading(true)
-    const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe'
+    const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe,ice-cream,beverages'
     fetch(`/api/products?category=${categoryQuery}&limit=250`)
       .then(res => res.json())
       .then(productsRes => {

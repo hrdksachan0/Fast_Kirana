@@ -45,8 +45,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (category) {
-      where.category = {
-        slug: category,
+      if (category.includes(',')) {
+        where.category = {
+          slug: {
+            in: category.split(','),
+          },
+        }
+      } else {
+        where.category = {
+          slug: category,
+        }
       }
     }
 

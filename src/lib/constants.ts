@@ -142,10 +142,17 @@ export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
   },
   {
     tag: 'chilled',
-    matchTags: ['chilled', 'cold-drink'],
+    matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'drink'],
     title: 'Chilled Sips & Sodas',
     emoji: '🥤',
     description: 'Carbonated soft drinks and cold energy boosts',
+  },
+  {
+    tag: 'desserts',
+    matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet'],
+    title: 'Ice Creams & Desserts',
+    emoji: '🍦',
+    description: 'Chilled premium ice creams, kulfis, and desserts',
   }
 ]
 
