@@ -257,9 +257,9 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
   return (
     <section className="space-y-0">
-      {/* ✨ Gen-Z Food Banner */}
-      <div 
-        onClick={() => {
+      {experienceMode === 'cafe' && (
+        <div 
+          onClick={() => {
           const target = document.getElementById('cafe-menu-categories-anchor')
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
@@ -341,6 +341,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           </span>
         </div>
       </div>
+      )}
 
 
       {/* Experience Switcher */}
