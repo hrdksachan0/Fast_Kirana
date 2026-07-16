@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       }
       if (updateType === 'PRICE') {
         const oldValue = product.price
-        const newValue = round2(computeNewValue(oldValue, mode, value))
+        const newValue = Math.round(computeNewValue(oldValue, mode, value))
         changes.push({
           productId: product.id,
           name: product.name,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Apply changes inside a transaction
+    // Apply changes inside a transaction with custom timeout
     await prisma.$transaction(async (tx) => {
       for (const change of changes) {
         const product = products.find((p) => p.id === change.productId)!
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
           })
         }
       }
-    })
+    }, { maxWait: 15000, timeout: 60000 })
 
     return NextResponse.json({
       success: true,
