@@ -473,6 +473,8 @@ export function CafeOrdersConsole() {
         })
         setPickedItemIds(initialPicked)
         fetchOrders(true)
+        // Automatically print KOT receipt on acceptance
+        printKOTReceipt(order)
       } else {
         toast.error('Failed to accept cafe order')
       }

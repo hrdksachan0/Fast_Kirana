@@ -2037,10 +2037,12 @@ export function AdminDashboard({
       !selectedCategoryFilter || p.categoryId === selectedCategoryFilter
       
     const isCafeItem = p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
+    const isRestaurantItem = p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
     const matchesType = 
       selectedTypeFilter === 'all' ||
       (selectedTypeFilter === 'cafe' && isCafeItem) ||
-      (selectedTypeFilter === 'grocery' && !isCafeItem)
+      (selectedTypeFilter === 'restaurant' && isRestaurantItem) ||
+      (selectedTypeFilter === 'grocery' && !isCafeItem && !isRestaurantItem)
 
     return matchesSearch && matchesCategory && matchesType
   })
@@ -2505,6 +2507,7 @@ export function AdminDashboard({
                 <option value="all">All Items (Catalog)</option>
                 <option value="grocery">Grocery Only 📦</option>
                 <option value="cafe">Cafe Only ☕</option>
+                <option value="restaurant">Restaurant Only 🍳</option>
               </select>
               <select
                 value={selectedCategoryFilter}

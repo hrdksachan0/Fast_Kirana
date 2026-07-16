@@ -900,7 +900,7 @@ export async function GET(request: NextRequest) {
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         ORDER BY o."createdAt" DESC
-        LIMIT 5000
+        LIMIT 1000
       `
     } else {
       // Normal user only queries their own orders

@@ -37,6 +37,7 @@ interface TopProduct {
   quantity: number
   sales: number
   profit: number
+  categoryName?: string
 }
 
 interface ReportSummary {
@@ -58,9 +59,10 @@ export function AdminReports() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
+  const [segment, setSegment] = useState<'all' | 'grocery' | 'cafe' | 'restaurant'>('all')
   
   // Loaded report data
-  const [summary, setSummary] = useState<ReportSummary>({
+  const [rawSummary, setRawSummary] = useState<ReportSummary>({
     totalSales: 0,
     totalProfit: 0,
     totalCost: 0,
@@ -73,10 +75,73 @@ export function AdminReports() {
     productSales: 0,
     missingCostCount: 0
   })
-  const [dailySales, setDailySales] = useState<DailySale[]>([])
-  const [categorySales, setCategorySales] = useState<CategorySale[]>([])
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [rawDailySales, setRawDailySales] = useState<DailySale[]>([])
+  const [rawCategorySales, setRawCategorySales] = useState<CategorySale[]>([])
+  const [rawTopProducts, setRawTopProducts] = useState<TopProduct[]>([])
   const [missingCostProducts, setMissingCostProducts] = useState<any[]>([])
+
+  // Category segment helpers
+  const isCafeCategory = (catName: string) => {
+    const name = catName.toLowerCase()
+    return name.includes('cafe') || name.includes('sandwich') || name.includes('pasta') || name.includes('roll') || name.includes('bite') || name.includes('sip') || name.includes('shake') || name.includes('mocktail') || name.includes('soda') || name.includes('beverage') || name.includes('ice cream') || name.includes('dessert') || name.includes('chilled')
+  }
+
+  const isRestaurantCategory = (catName: string) => {
+    const name = catName.toLowerCase()
+    return name.includes('restaurant') || name.includes('indian') || name.includes('biryani') || name.includes('rice') || name.includes('meal') || name.includes('combo') || name.includes('thali') || name.includes('roti') || name.includes('paneer') || name.includes('curry')
+  }
+
+  const isGroceryCategory = (catName: string) => {
+    return !isCafeCategory(catName) && !isRestaurantCategory(catName)
+  }
+
+  // Derived filtered calculations
+  const categorySales = useMemo(() => {
+    if (segment === 'all') return rawCategorySales
+    if (segment === 'grocery') return rawCategorySales.filter(c => isGroceryCategory(c.categoryName))
+    if (segment === 'cafe') return rawCategorySales.filter(c => isCafeCategory(c.categoryName))
+    return rawCategorySales.filter(c => isRestaurantCategory(c.categoryName))
+  }, [rawCategorySales, segment])
+
+  const topProducts = useMemo(() => {
+    if (segment === 'all') return rawTopProducts
+    if (segment === 'grocery') return rawTopProducts.filter(p => isGroceryCategory(p.categoryName || ''))
+    if (segment === 'cafe') return rawTopProducts.filter(p => isCafeCategory(p.categoryName || ''))
+    return rawTopProducts.filter(p => isRestaurantCategory(p.categoryName || ''))
+  }, [rawTopProducts, segment])
+
+  const summary = useMemo(() => {
+    if (segment === 'all') return rawSummary
+    const sales = topProducts.reduce((sum, p) => sum + (p.sales || 0), 0)
+    const profit = topProducts.reduce((sum, p) => sum + (p.profit || 0), 0)
+    const cost = sales - profit
+    const totalOrders = segment === 'grocery' 
+      ? rawSummary.totalOrders 
+      : Math.round(sales / (rawSummary.averageOrderValue || 50))
+    const averageOrderValue = totalOrders > 0 ? sales / totalOrders : 0
+    const profitMargin = sales > 0 ? (profit / sales) * 100 : 0
+    return {
+      ...rawSummary,
+      totalSales: Math.round(sales * 100) / 100,
+      totalProfit: Math.round(profit * 100) / 100,
+      totalCost: Math.round(cost * 100) / 100,
+      totalOrders: totalOrders || 0,
+      averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+      profitMargin: Math.round(profitMargin * 10) / 10
+    }
+  }, [rawSummary, topProducts, segment])
+
+  const dailySales = useMemo(() => {
+    if (segment === 'all') return rawDailySales
+    const allSales = rawCategorySales.reduce((sum, c) => sum + (c.sales || 0), 0) || 1
+    const filteredSales = categorySales.reduce((sum, c) => sum + (c.sales || 0), 0)
+    const ratio = filteredSales / allSales
+    return rawDailySales.map(d => ({
+      ...d,
+      sales: Math.round(d.sales * ratio * 100) / 100,
+      profit: Math.round(d.profit * ratio * 100) / 100
+    }))
+  }, [rawDailySales, rawCategorySales, categorySales, segment])
 
   // Set default dates on load
   useEffect(() => {
@@ -117,10 +182,10 @@ export function AdminReports() {
       if (!res.ok) throw new Error('Failed to fetch report data')
       
       const data = await res.json()
-      setSummary(data.summary)
-      setDailySales(data.dailySales || [])
-      setCategorySales(data.categorySales || [])
-      setTopProducts(data.topProducts || [])
+      setRawSummary(data.summary)
+      setRawDailySales(data.dailySales || [])
+      setRawCategorySales(data.categorySales || [])
+      setRawTopProducts(data.topProducts || [])
       setMissingCostProducts(data.missingCostProducts || [])
     } catch (err) {
       console.error(err)
@@ -286,6 +351,28 @@ export function AdminReports() {
             Download CSV
           </button>
         </div>
+      </div>
+
+      {/* Segment Category Filters */}
+      <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/60 text-[11px] font-bold max-w-lg mb-6 shadow-xs gap-1">
+        {([
+          { key: 'all', label: 'All Sales' },
+          { key: 'grocery', label: 'Grocery 📦' },
+          { key: 'cafe', label: 'Cafe ☕' },
+          { key: 'restaurant', label: 'Restaurant 🍳' }
+        ] as const).map((seg) => (
+          <button
+            key={seg.key}
+            onClick={() => setSegment(seg.key)}
+            className={`flex-1 py-2 text-center rounded-xl uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              segment === seg.key 
+                ? 'bg-primary text-primary-foreground shadow-sm scale-[1.02]' 
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/40'
+            }`}
+          >
+            {seg.label}
+          </button>
+        ))}
       </div>
 
       {loading ? (

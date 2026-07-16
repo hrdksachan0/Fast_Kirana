@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     // Product performance
     const productData: Record<
       string,
-      { productId: string; name: string; quantity: number; sales: number; profit: number }
+      { productId: string; name: string; quantity: number; sales: number; profit: number; categoryName: string }
     > = {}
 
     // Process each order
@@ -199,6 +199,7 @@ export async function GET(request: NextRequest) {
             quantity: 0,
             sales: 0,
             profit: 0,
+            categoryName: item.categoryName
           }
         }
         productData[item.productId].quantity += item.quantity
