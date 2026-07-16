@@ -283,6 +283,10 @@ export function CafeOrdersConsole() {
     updatingIdRef.current = updatingId
   }, [updatingId])
 
+  const printedOrderIdsRef = useRef<Set<string>>(new Set())
+  const isFirstFetchRef = useRef<boolean>(true)
+  const printKOTReceiptRef = useRef<((order: Order) => void) | null>(null)
+
   // Real-time clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -298,6 +302,24 @@ export function CafeOrdersConsole() {
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
+
+        // Auto-print KOT for new incoming PENDING orders
+        if (isFirstFetchRef.current) {
+          // On initial load, mark all current orders as "already printed"
+          const existingIds = data.map((o: Order) => o.id)
+          printedOrderIdsRef.current = new Set(existingIds)
+          isFirstFetchRef.current = false
+        } else {
+          data.forEach((order: Order) => {
+            if (order.status === 'PENDING' && !printedOrderIdsRef.current.has(order.id)) {
+              printedOrderIdsRef.current.add(order.id)
+              // Trigger automatic print
+              printKOTReceiptRef.current?.(order)
+            } else {
+              printedOrderIdsRef.current.add(order.id)
+            }
+          })
+        }
         
         // If we have an active order, update its details from the list
         const currentActive = activeOrderRef.current
@@ -865,6 +887,8 @@ export function CafeOrdersConsole() {
     `)
     printWindow.document.close()
   }
+
+  printKOTReceiptRef.current = printKOTReceipt
 
   const totalItemsToPrepare = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0)
 
