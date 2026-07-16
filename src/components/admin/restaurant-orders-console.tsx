@@ -65,6 +65,8 @@ interface Order {
   status: string
   total: number
   deliveryFee: number
+  taxes: number
+  miscFee: number
   discount: number
   createdAt: string | Date
   paymentMethod: string
@@ -172,14 +174,28 @@ export function RestaurantOrdersConsole() {
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [taxRate, setTaxRate] = useState(0.05) // Default 5%
+  const [deliveryFeeSetting, setDeliveryFeeSetting] = useState(25)
+  const [miscFeeSetting, setMiscFeeSetting] = useState(5)
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(200)
 
   // Load settings on mount
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && data.tax_rate !== undefined) {
-          setTaxRate(parseFloat(data.tax_rate) / 100)
+        if (data) {
+          if (data.tax_rate !== undefined) {
+            setTaxRate(parseFloat(data.tax_rate) / 100)
+          }
+          if (data.delivery_fee !== undefined) {
+            setDeliveryFeeSetting(parseFloat(data.delivery_fee))
+          }
+          if (data.misc_fee !== undefined) {
+            setMiscFeeSetting(parseFloat(data.misc_fee))
+          }
+          if (data.cafe_free_delivery_threshold !== undefined) {
+            setFreeDeliveryThreshold(parseFloat(data.cafe_free_delivery_threshold))
+          }
         }
       })
       .catch(() => {})
@@ -1014,8 +1030,14 @@ export function RestaurantOrdersConsole() {
   }
 
   const computedSubtotal = editItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const computedDeliveryFee = editingOrder?.deliveryMethod === 'PICKUP' 
+    ? 0 
+    : (computedSubtotal < freeDeliveryThreshold ? deliveryFeeSetting : 0)
+  const computedMiscFee = editingOrder?.deliveryMethod === 'PICKUP' 
+    ? 0 
+    : (editingOrder?.miscFee === 0 ? 0 : miscFeeSetting)
   const computedTaxes = parseFloat((computedSubtotal * taxRate).toFixed(2))
-  const computedTotal = computedSubtotal + (editingOrder?.deliveryFee || 0) + computedTaxes - (editingOrder?.discount || 0)
+  const computedTotal = computedSubtotal + computedDeliveryFee + computedTaxes + computedMiscFee - (editingOrder?.discount || 0)
 
   return (
     <div className="space-y-6">
@@ -1377,8 +1399,14 @@ export function RestaurantOrdersConsole() {
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery Fee</span>
-                  <span className="text-text-primary">{formatPrice(editingOrder.deliveryFee)}</span>
+                  <span className="text-text-primary">{formatPrice(computedDeliveryFee)}</span>
                 </div>
+                {computedMiscFee > 0 && (
+                  <div className="flex justify-between">
+                    <span>Handling / Packaging Fee</span>
+                    <span className="text-text-primary">{formatPrice(computedMiscFee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Discount</span>
                   <span className="text-text-primary">-{formatPrice(editingOrder.discount)}</span>

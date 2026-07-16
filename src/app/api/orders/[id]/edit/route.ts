@@ -183,17 +183,67 @@ export async function POST(
     }
 
     // 6. Recalculate Order totals
-    const taxRateSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'tax_rate' }
-    })
-    const taxPercent = parseFloat(taxRateSetting?.value || '0')
+    const settings = await prisma.storeSetting.findMany()
+    const settingsMap = settings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
+    const taxPercent = parseFloat(settingsMap['tax_rate'] || '0')
+    const deliveryFeeSetting = parseFloat(settingsMap['delivery_fee'] || '25')
+    const miscFeeSetting = parseFloat(settingsMap['misc_fee'] || '5')
+    
+    let threshold = 200
+    if (order.shopName?.includes('Cafe') || order.shopName?.includes('Restaurant')) {
+      threshold = parseFloat(settingsMap['cafe_free_delivery_threshold'] || '200')
+    } else {
+      threshold = parseFloat(settingsMap['grocery_free_delivery_threshold'] || '200')
+    }
+
+    let calculatedDeliveryFee = 0
+    let calculatedMiscFee = 0
+
+    if (order.deliveryMethod === 'DELIVERY') {
+      calculatedDeliveryFee = subtotalVal < threshold ? deliveryFeeSetting : 0
+      
+      let companionHasMisc = false
+      if (order.combinedId) {
+        const companion = await prisma.order.findFirst({
+          where: {
+            combinedId: order.combinedId,
+            id: { not: order.id }
+          }
+        })
+        if (companion && companion.miscFee > 0) {
+          companionHasMisc = true
+        }
+      } else {
+        const companion = await prisma.order.findFirst({
+          where: {
+            userId: order.userId,
+            id: { not: order.id },
+            createdAt: {
+              gte: new Date(new Date(order.createdAt).getTime() - 5000),
+              lte: new Date(new Date(order.createdAt).getTime() + 5000),
+            }
+          }
+        })
+        if (companion && companion.miscFee > 0) {
+          companionHasMisc = true
+        }
+      }
+      calculatedMiscFee = companionHasMisc ? 0 : miscFeeSetting
+    }
+
     const taxesVal = parseFloat((subtotalVal * (taxPercent / 100)).toFixed(2))
-    const totalVal = subtotalVal + order.deliveryFee + taxesVal - order.discount
+    const totalVal = subtotalVal + calculatedDeliveryFee + taxesVal + calculatedMiscFee - order.discount
 
     await prisma.order.update({
       where: { id },
       data: {
         subtotal: subtotalVal,
+        deliveryFee: calculatedDeliveryFee,
+        miscFee: calculatedMiscFee,
         taxes: taxesVal,
         total: totalVal
       }
