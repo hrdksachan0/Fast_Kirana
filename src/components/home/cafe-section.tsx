@@ -375,7 +375,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         >
           <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
           <div className="flex flex-col text-left">
-            <span className="text-[12px] sm:text-[14px] font-black leading-none">Cafe</span>
+            <span className="text-[12px] sm:text-[14px] font-black leading-none">A.S Cafe</span>
             <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
           </div>
         </button>
@@ -391,7 +391,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         >
           <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
           <div className="flex flex-col text-left">
-            <span className="text-[12px] sm:text-[14px] font-black leading-none">Restaurant</span>
+            <span className="text-[12px] sm:text-[14px] font-black leading-none">Wedson Restaurant</span>
             <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
           </div>
         </button>
@@ -465,7 +465,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           {/* Café Category Section Header */}
           <div id="cafe-menu-categories-anchor" className="flex items-center justify-between px-1 scroll-mt-24">
             <h4 className="text-[11px] font-black uppercase tracking-wider text-text-muted">
-              {((experienceMode as string) === 'restaurant') ? 'Restaurant Categories' : 'Cafe Categories'}
+              {((experienceMode as string) === 'restaurant') ? 'Restaurant Categories' : 'A.S Cafe Categories'}
             </h4>
             <button
               onClick={() => {
