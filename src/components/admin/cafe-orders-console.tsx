@@ -303,20 +303,18 @@ export function CafeOrdersConsole() {
         const data = await res.json()
         setOrders(data)
 
-        // Auto-print KOT for new incoming PENDING orders
+        // Auto-print KOT for new incoming CONFIRMED orders
         if (isFirstFetchRef.current) {
-          // On initial load, mark all current orders as "already printed"
-          const existingIds = data.map((o: Order) => o.id)
-          printedOrderIdsRef.current = new Set(existingIds)
+          // On initial load, mark all current CONFIRMED orders as "already printed"
+          const existingConfirmedIds = data.filter((o: Order) => o.status === 'CONFIRMED').map((o: Order) => o.id)
+          printedOrderIdsRef.current = new Set(existingConfirmedIds)
           isFirstFetchRef.current = false
         } else {
           data.forEach((order: Order) => {
-            if (order.status === 'PENDING' && !printedOrderIdsRef.current.has(order.id)) {
+            if (order.status === 'CONFIRMED' && !printedOrderIdsRef.current.has(order.id)) {
               printedOrderIdsRef.current.add(order.id)
               // Trigger automatic print
               printKOTReceiptRef.current?.(order)
-            } else {
-              printedOrderIdsRef.current.add(order.id)
             }
           })
         }
@@ -841,11 +839,7 @@ export function CafeOrdersConsole() {
           </style>
         </head>
         <body>
-          <div class="logo-container">
-            <div class="logo-text">⚡ FASTKIRANA ⚡</div>
-            <div class="tagline">FAST • FRESH • DELICIOUS</div>
-          </div>
-          <div class="shop-name">${order.shopName || 'FastKirana Cafe Kitchen'}</div>
+          <div style="font-size: 18px; font-weight: 950; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; margin-bottom: 2px;">FASTKIRANA</div>
           <div class="subtitle">ORDER TICKET (KOT)</div>
           
           <table class="info-table">
