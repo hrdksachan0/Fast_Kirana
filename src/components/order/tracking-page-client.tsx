@@ -68,9 +68,11 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
           createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
           items: (data.items || []).map((i: any) => ({
             id: i.id,
+            productId: i.productId,
             name: i.name,
             price: i.price,
             quantity: i.quantity,
+            selectedVariant: i.selectedVariant || null
           })),
           address: {
             label: data.address?.label || 'Pickup Location',
@@ -99,7 +101,50 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
               Math.abs(new Date(o.createdAt).getTime() - orderCreatedAt) <= 5000
             )
             if (companion && isMounted) {
-              setCompanionOrder(companion)
+              const compRes = await fetch(`/api/orders/${companion.id}`)
+              if (compRes.ok) {
+                const compData = await compRes.json()
+                const mappedComp = {
+                  id: compData.id,
+                  status: compData.status,
+                  subtotal: compData.subtotal,
+                  discount: compData.discount,
+                  deliveryFee: compData.deliveryFee,
+                  taxes: compData.taxes,
+                  total: compData.total,
+                  paymentMethod: compData.paymentMethod,
+                  paymentStatus: compData.paymentStatus,
+                  estimatedDelivery: compData.estimatedDelivery ? new Date(compData.estimatedDelivery).toISOString() : null,
+                  deliveryPhoto: compData.deliveryPhoto || null,
+                  deliveryLat: compData.deliveryLat || null,
+                  deliveryLng: compData.deliveryLng || null,
+                  deliveryMethod: compData.deliveryMethod,
+                  isB2B: compData.isB2B,
+                  shopName: compData.shopName,
+                  shopPhone: compData.shopPhone,
+                  createdAt: compData.createdAt ? new Date(compData.createdAt).toISOString() : new Date().toISOString(),
+                  items: (compData.items || []).map((i: any) => ({
+                    id: i.id,
+                    productId: i.productId,
+                    name: i.name,
+                    price: i.price,
+                    quantity: i.quantity,
+                    selectedVariant: i.selectedVariant || null
+                  })),
+                  address: {
+                    label: compData.address?.label || 'Pickup Location',
+                    houseNo: compData.address?.houseNo || '',
+                    street: compData.address?.street || '',
+                    area: compData.address?.area || 'Hub Store',
+                    city: compData.address?.city || 'Kanpur',
+                    pincode: compData.address?.pincode || '209206',
+                    lat: compData.address?.lat || 26.1534185,
+                    lng: compData.address?.lng || 80.1714024,
+                  },
+                  deliveryUser: compData.deliveryUser || null
+                }
+                setCompanionOrder(mappedComp)
+              }
             }
           }
         } catch {
@@ -165,32 +210,9 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
     <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6">
       <div className="flex flex-col gap-4">
         <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Track Your Delivery</h1>
-        
-        {companionOrder && (
-          <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 rounded-2xl text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
-                {isCompanionCafe ? '☕ Cafe Order Split' : '📦 Grocery Order Split'}
-              </span>
-              <h3 className="text-sm font-black">Your Order Has Been Split!</h3>
-              <p className="text-[10px] text-white/90 leading-relaxed font-semibold">
-                {isCafeOrder
-                  ? 'To ensure your beverages and hot bites are delivered piping hot, we created a separate order for your other grocery items. Track the Grocery order here.'
-                  : 'To ensure your beverages and hot bites are delivered piping hot, we created a separate Cafe order for them. Track the Cafe order here.'}
-              </p>
-            </div>
-            <Link
-              href={`/order/${companionOrder.id}/track`}
-              className="px-4 py-2 bg-white hover:bg-white/90 text-rose-600 font-extrabold rounded-xl text-xs transition-all shrink-0 shadow-sm active:scale-98"
-            >
-              {isCompanionCafe ? 'Track Cafe Order →' : 'Track Grocery Order →'}
-            </Link>
-          </div>
-        )}
       </div>
 
-      <OrderTracker initialOrder={order} isCafeOpen={isCafeOpen} />
+      <OrderTracker initialOrder={order} companionOrder={companionOrder} isCafeOpen={isCafeOpen} />
     </div>
-
   )
 }

@@ -183,7 +183,11 @@ export async function POST(
     }
 
     // 6. Recalculate Order totals
-    const taxesVal = parseFloat((subtotalVal * 0.05).toFixed(2)) // 5% taxes
+    const taxRateSetting = await prisma.storeSetting.findUnique({
+      where: { key: 'tax_rate' }
+    })
+    const taxPercent = parseFloat(taxRateSetting?.value || '0')
+    const taxesVal = parseFloat((subtotalVal * (taxPercent / 100)).toFixed(2))
     const totalVal = subtotalVal + order.deliveryFee + taxesVal - order.discount
 
     await prisma.order.update({

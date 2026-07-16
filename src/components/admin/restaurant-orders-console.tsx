@@ -171,6 +171,19 @@ export function RestaurantOrdersConsole() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [taxRate, setTaxRate] = useState(0.05) // Default 5%
+
+  // Load settings on mount
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.tax_rate !== undefined) {
+          setTaxRate(parseFloat(data.tax_rate) / 100)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Load sound preference from localStorage
   useEffect(() => {
@@ -770,20 +783,20 @@ export function RestaurantOrdersConsole() {
           
           <table class="info-table">
             <tr>
-              <td style="font-weight: bold;">KOT ID:</td>
-              <td style="text-align: right; font-weight: bold; font-size: 14px;">#${order.id.slice(0, 8).toUpperCase()}</td>
+              <td style="font-weight: bold; width: 45%;">KOT ID:</td>
+              <td style="text-align: right; font-weight: bold; font-size: 14px; width: 55%;">#${order.id.slice(0, 8).toUpperCase()}</td>
             </tr>
             <tr>
-              <td>Date:</td>
-              <td style="text-align: right;">${dateStr}</td>
+              <td style="width: 45%;">Date:</td>
+              <td style="text-align: right; width: 55%;">${dateStr}</td>
             </tr>
             <tr>
-              <td>Type:</td>
-              <td style="text-align: right; font-weight: bold;">${order.deliveryMethod}</td>
+              <td style="width: 45%;">Type:</td>
+              <td style="text-align: right; font-weight: bold; width: 55%;">${order.deliveryMethod}</td>
             </tr>
             <tr>
-              <td>Customer:</td>
-              <td style="text-align: right; font-weight: bold;">${order.user.name}</td>
+              <td style="width: 45%;">Customer:</td>
+              <td style="text-align: right; font-weight: bold; width: 55%;">${order.user.name}</td>
             </tr>
           </table>
 
@@ -1001,7 +1014,7 @@ export function RestaurantOrdersConsole() {
   }
 
   const computedSubtotal = editItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const computedTaxes = parseFloat((computedSubtotal * 0.05).toFixed(2))
+  const computedTaxes = parseFloat((computedSubtotal * taxRate).toFixed(2))
   const computedTotal = computedSubtotal + (editingOrder?.deliveryFee || 0) + computedTaxes - (editingOrder?.discount || 0)
 
   return (
@@ -1397,7 +1410,7 @@ export function RestaurantOrdersConsole() {
                 <button
                   disabled={isSavingEdit || editItems.length === 0}
                   onClick={saveEditedOrder}
-                  className="flex-1 h-11 bg-red-650 hover:bg-red-750 text-white text-xs font-black rounded-xl cursor-pointer shadow-md shadow-red-500/15 active:scale-98 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl cursor-pointer shadow-md shadow-red-500/15 active:scale-98 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   {isSavingEdit ? (
                     <>

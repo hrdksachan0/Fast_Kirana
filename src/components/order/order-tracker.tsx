@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 import { useRouter } from 'next/navigation'
 import {
@@ -20,6 +20,10 @@ import {
   Camera,
   Home,
   X,
+  Edit,
+  AlertCircle,
+  Plus,
+  Minus
 } from 'lucide-react'
 import { cn, formatPhone, formatAddress } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -106,22 +110,143 @@ interface Order {
 
 interface OrderTrackerProps {
   initialOrder: Order
+  companionOrder?: Order | null
   isCafeOpen?: boolean
 }
 
-export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = true }: OrderTrackerProps) {
+export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initialIsCafeOpen = true }: OrderTrackerProps) {
   const router = useRouter()
   const [order, setOrder] = useState<Order>(initialOrder)
+  const [compOrder, setCompOrder] = useState<Order | null>(companionOrder || null)
   const [activeStep, setActiveStep] = useState(0)
   const [packingStep, setPackingStep] = useState(0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [supportPhone, setSupportPhone] = useState('+91 70544 70303')
   const [isCafeOpen, setIsCafeOpen] = useState(initialIsCafeOpen)
+  
+  // Customer Edit Order Modal States & Handlers
+  const [isEditing, setIsEditing] = useState(false)
+  const [editItems, setEditItems] = useState<any[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [allProducts, setAllProducts] = useState<any[]>([])
 
+  const getVariantsForProduct = (productId: string) => {
+    const prod = allProducts.find(p => p.id === productId)
+    if (!prod || !prod.variants) return []
+    try {
+      return typeof prod.variants === 'string' ? JSON.parse(prod.variants) : prod.variants
+    } catch {
+      return []
+    }
+  }
 
+  const handleOpenCustomerEdit = async () => {
+    const items = order.items.map(i => ({ ...i, orderId: order.id }))
+    if (compOrder) {
+      const compItems = compOrder.items.map(i => ({ ...i, orderId: compOrder.id }))
+      setEditItems([...items, ...compItems])
+    } else {
+      setEditItems(items)
+    }
+    setIsEditing(true)
 
-  const statusSteps = order.status === 'CANCELLED' ? [
+    try {
+      const [resRest, resCafe] = await Promise.all([
+        fetch('/api/products?category=restaurant&limit=100').catch(() => null),
+        fetch('/api/products?category=cafe&limit=100').catch(() => null)
+      ])
+      let prods: any[] = []
+      if (resRest?.ok) {
+        const d = await resRest.json()
+        prods = [...prods, ...(d.products || [])]
+      }
+      if (resCafe?.ok) {
+        const d = await resCafe.json()
+        prods = [...prods, ...(d.products || [])]
+      }
+      setAllProducts(prods)
+    } catch (err) {
+      console.error('Failed to load products for editing:', err)
+    }
+  }
+
+  const updateItemQty = (productId: string, variant: string | null, delta: number) => {
+    setEditItems(prev => prev.map(item => {
+      if (item.productId === productId && item.selectedVariant === variant) {
+        return { ...item, quantity: Math.max(0, item.quantity + delta) }
+      }
+      return item
+    }).filter(i => i.quantity > 0))
+  }
+
+  const updateItemVariant = (productId: string, oldVariant: string | null, newVariant: string, newPrice: number) => {
+    setEditItems(prev => prev.map(item => {
+      if (item.productId === productId && item.selectedVariant === oldVariant) {
+        return {
+          ...item,
+          selectedVariant: newVariant,
+          price: newPrice
+        }
+      }
+      return item
+    }))
+  }
+
+  const handleSaveEdits = async () => {
+    setIsSaving(true)
+    try {
+      const primaryUpdates = editItems.filter(i => i.orderId === order.id)
+      const companionUpdates = compOrder ? editItems.filter(i => i.orderId === compOrder.id) : []
+
+      const promises = [
+        fetch(`/api/orders/${order.id}/edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updatedItems: primaryUpdates })
+        })
+      ]
+
+      if (compOrder) {
+        promises.push(
+          fetch(`/api/orders/${compOrder.id}/edit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updatedItems: companionUpdates })
+          })
+        )
+      }
+
+      const results = await Promise.all(promises)
+      const failed = results.find(r => !r.ok)
+      if (failed) {
+        const data = await failed.json()
+        toast.error(data.error || 'Failed to modify order')
+      } else {
+        toast.success('Order items updated successfully!')
+        setIsEditing(false)
+        window.location.reload()
+      }
+    } catch (err) {
+      toast.error('Error modifying order')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const getCombinedStatus = () => {
+    if (!compOrder) return order.status
+    const statuses = [order.status, compOrder.status]
+    if (statuses.includes('CANCELLED') && statuses.every(s => s === 'CANCELLED')) return 'CANCELLED'
+    if (statuses.every(s => s === 'DELIVERED')) return 'DELIVERED'
+    if (statuses.includes('SHIPPED')) return 'SHIPPED'
+    if (statuses.every(s => s === 'PACKED' || s === 'SHIPPED' || s === 'DELIVERED')) return 'PACKED'
+    if (statuses.includes('CONFIRMED')) return 'CONFIRMED'
+    return 'PENDING'
+  }
+  const combinedStatus = getCombinedStatus()
+
+  const statusSteps = combinedStatus === 'CANCELLED' ? [
     { status: 'PENDING', label: 'Order Placed', desc: 'We have received your order.', icon: ShoppingBag },
     { status: 'CANCELLED', label: 'Order Cancelled', desc: 'This order has been cancelled.', icon: X },
   ] : order.deliveryMethod === 'PICKUP' ? [
@@ -185,46 +310,48 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
       if (document.visibilityState !== 'visible') return
       try {
         const res = await fetch(`/api/orders/${order.id}`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (!data || !data.status) return
-
-
-        setOrder((prev) => {
-          const hasStatusChange = data.status !== prev.status
-          const hasSubOrdersChange = JSON.stringify(data.subOrders) !== JSON.stringify(prev.subOrders)
-          
-          if (!hasStatusChange && !hasSubOrdersChange) return prev
-
-          if (hasStatusChange) {
-            const statusLabels: Record<string, string> = {
-              CONFIRMED: 'Confirmed by Store ✅',
-              PACKED: 'Packed & Ready 📦',
-              SHIPPED: 'Out for Delivery 🚴',
-              DELIVERED: 'Delivered! 🎉',
-              CANCELLED: 'Cancelled ❌',
-            }
-
-            toast.success(statusLabels[data.status] || `Status: ${data.status}`, {
-              description: 'Your order status has been updated',
-              duration: 4000,
+        if (res.ok) {
+          const data = await res.json()
+          if (data && data.status) {
+            setOrder((prev) => {
+              if (JSON.stringify(data) !== JSON.stringify(prev)) {
+                if (data.status !== prev.status) {
+                  toast.success(`Order Update: ${data.status} ✅`)
+                }
+                return data
+              }
+              return prev
             })
           }
+        }
 
-          return data
-        })
+        if (compOrder) {
+          const compRes = await fetch(`/api/orders/${compOrder.id}`)
+          if (compRes.ok) {
+            const compData = await compRes.json()
+            if (compData && compData.status) {
+              setCompOrder((prev) => {
+                if (prev && JSON.stringify(compData) !== JSON.stringify(prev)) {
+                  if (compData.status !== prev.status) {
+                    toast.success(`Fulfillment Update: ${compData.status} ✅`)
+                  }
+                  return compData
+                }
+                return prev
+              })
+            }
+          }
+        }
       } catch {
         // silently ignore polling errors
       }
     }, 5000)
 
     return () => clearInterval(pollInterval)
-  }, [order.id, order.status])
+  }, [order.id, order.status, compOrder?.id])
 
   // SSE connection to listen for updates (status changes, edits)
   useEffect(() => {
-    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return
-
     const eventSource = new EventSource('/api/sse/orders')
     
     eventSource.onmessage = (event) => {
@@ -244,6 +371,21 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
               }
             })
         }
+
+        if (compOrder && data.orderId === compOrder.id && (data.type === 'order-edited' || data.type === 'status-change')) {
+          fetch(`/api/orders/${compOrder.id}`)
+            .then(res => res.json())
+            .then(updatedOrder => {
+              if (updatedOrder && updatedOrder.status) {
+                setCompOrder(updatedOrder)
+                if (data.type === 'order-edited') {
+                  toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
+                    icon: '📝'
+                  })
+                }
+              }
+            })
+        }
       } catch (err) {
         console.error('SSE message parsing error in tracker:', err)
       }
@@ -252,7 +394,7 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
     return () => {
       eventSource.close()
     }
-  }, [order.id, order.status])
+  }, [order.id, compOrder?.id])
 
   // 3. Dynamically load Leaflet assets on client
   useEffect(() => {
@@ -387,10 +529,30 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
     return () => cancelAnimationFrame(animationFrame)
   }, [order.status, order.deliveryLat, order.deliveryLng, storeLat, storeLng, order.address?.lat, order.address?.lng])
 
+  // Merge items from both orders
+  const mergedItems = useMemo(() => {
+    const items = order.items.map(i => ({ ...i, shopName: order.shopName }))
+    if (compOrder) {
+      const compItems = compOrder.items.map(item => ({
+        ...item,
+        shopName: compOrder.shopName
+      }))
+      return [...items, ...compItems]
+    }
+    return items
+  }, [order.items, order.shopName, compOrder])
+
+  // Combined Billing Totals
+  const combinedSubtotal = order.subtotal + (compOrder?.subtotal || 0)
+  const combinedDiscount = order.discount + (compOrder?.discount || 0)
+  const combinedDeliveryFee = order.deliveryFee + (compOrder?.deliveryFee || 0)
+  const combinedTaxes = order.taxes + (compOrder?.taxes || 0)
+  const combinedMiscFee = order.miscFee + (compOrder?.miscFee || 0)
+  const combinedTotal = order.total + (compOrder?.total || 0)
+
   const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
   const isScheduled = order.estimatedDelivery && order.createdAt && 
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)
-
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -429,16 +591,16 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
           <div>
             <span className={cn(
               "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full",
-              order.status === 'CANCELLED'
+              combinedStatus === 'CANCELLED'
                 ? "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950/40"
                 : "text-accent bg-accent/10"
             )}>
-              {order.status === 'CANCELLED' ? 'Order Cancelled' : 'Live Tracking Active'}
+              {combinedStatus === 'CANCELLED' ? 'Order Cancelled' : 'Live Tracking Active'}
             </span>
             <h1 className="text-xl font-black text-text-primary tracking-tight mt-1">
-              {order.status === 'CANCELLED'
+              {combinedStatus === 'CANCELLED'
                 ? 'Order Cancelled'
-                : order.status === 'DELIVERED' 
+                : combinedStatus === 'DELIVERED' 
                 ? 'Order Delivered!' 
                 : order.deliveryMethod === 'PICKUP' 
                 ? 'Order Ready for Pickup!' 
@@ -447,9 +609,19 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
                 : 'Arriving Soon'}
             </h1>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted px-3 py-1.5 rounded-xl border">
-            <Clock className="h-4 w-4 text-primary" />
-            <span>Placed at: {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted px-3 py-1.5 rounded-xl border">
+              <Clock className="h-4 w-4 text-primary" />
+              <span>Placed at: {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            {combinedStatus === 'PENDING' && (
+              <button
+                onClick={handleOpenCustomerEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-xs transition-all shadow-xs cursor-pointer border border-primary/20 active:scale-95"
+              >
+                <Edit className="h-3.5 w-3.5" /> Modify Items
+              </button>
+            )}
           </div>
         </div>
 
@@ -470,8 +642,8 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
               <Clock className="h-3.5 w-3.5 shrink-0" /> Scheduled: {new Date(order.estimatedDelivery).toLocaleDateString()} {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
-          {!isScheduled && order.estimatedDelivery && order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-            order.status === 'CONFIRMED' && new Date(order.estimatedDelivery).getTime() > Date.now() ? (
+          {!isScheduled && order.estimatedDelivery && combinedStatus !== 'DELIVERED' && combinedStatus !== 'CANCELLED' && (
+            combinedStatus === 'CONFIRMED' && new Date(order.estimatedDelivery).getTime() > Date.now() ? (
               <PrepCountdown clockTarget={order.estimatedDelivery} />
             ) : (
               <span className="text-[10px] font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
@@ -482,51 +654,55 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
 
         </div>
 
-        {order.isCombined && order.subOrders && order.subOrders.length > 0 ? (
+        {compOrder ? (
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 space-y-3 text-xs font-semibold text-text-secondary">
             <h3 className="text-text-primary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <Store className="h-4 w-4 text-primary shrink-0" /> Combined Order Details
+              <Store className="h-4 w-4 text-primary shrink-0" /> Consolidated Fulfillment Status
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {order.subOrders.map((sub: any) => {
-                const isSubCafe = sub.type === 'CAFE'
-                const statusLabels: Record<string, string> = {
-                  PENDING: 'Pending Confirmation ⏳',
-                  CONFIRMED: 'Confirmed by Kitchen ✅' ,
-                  PACKED: 'Prepared & Packed 📦',
-                  SHIPPED: 'Out for Delivery 🚴',
-                  DELIVERED: 'Delivered 🎉',
-                  CANCELLED: 'Cancelled ❌',
-                }
-                const groceryLabels: Record<string, string> = {
-                  PENDING: 'Pending Confirmation ⏳',
-                  CONFIRMED: 'Confirmed by Store ✅' ,
-                  PACKED: 'Packed & Ready 📦',
-                  SHIPPED: 'Out for Delivery 🚴',
-                  DELIVERED: 'Delivered 🎉',
-                  CANCELLED: 'Cancelled ❌',
-                }
-                return (
-                  <div key={sub.id} className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg leading-none">{isSubCafe ? '☕' : '🛒'}</span>
-                      <div>
-                        <div className="text-text-primary font-extrabold text-[11px]">{isSubCafe ? 'Cafe Items' : 'Grocery Items'}</div>
-                        <div className="text-[10px] text-text-muted mt-0.5">#{sub.id.slice(-6).toUpperCase()} • {sub.itemsCount} items</div>
-                      </div>
-                    </div>
-                    <span className={cn(
-                      "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
-                      sub.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                      sub.status === 'CANCELLED' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
-                      sub.status === 'SHIPPED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-                      'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                    )}>
-                      {isSubCafe ? (statusLabels[sub.status] || sub.status) : (groceryLabels[sub.status] || sub.status)}
-                    </span>
+              {/* Primary Order Status */}
+              <div className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg leading-none">
+                    {order.shopName?.includes('Cafe') ? '☕' : '🛒'}
+                  </span>
+                  <div>
+                    <div className="text-text-primary font-extrabold text-[11px] truncate max-w-[150px]">{order.shopName || 'FastKirana Store'}</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">#{order.id.slice(-6).toUpperCase()} • {order.items.length} items</div>
                   </div>
-                )
-              })}
+                </div>
+                <span className={cn(
+                  "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                  order.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                  order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                  order.status === 'SHIPPED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                  'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                )}>
+                  {order.status}
+                </span>
+              </div>
+
+              {/* Companion Order Status */}
+              <div className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg leading-none">
+                    {compOrder.shopName?.includes('Cafe') ? '☕' : '🛒'}
+                  </span>
+                  <div>
+                    <div className="text-text-primary font-extrabold text-[11px] truncate max-w-[150px]">{compOrder.shopName || 'FastKirana Cafe'}</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">#{compOrder.id.slice(-6).toUpperCase()} • {compOrder.items.length} items</div>
+                  </div>
+                </div>
+                <span className={cn(
+                  "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                  compOrder.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                  compOrder.status === 'CANCELLED' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                  compOrder.status === 'SHIPPED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                  'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                )}>
+                  {compOrder.status}
+                </span>
+              </div>
             </div>
           </div>
         ) : (
@@ -852,50 +1028,179 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
           Receipt details
         </h3>
-        <div className="space-y-2 text-xs font-semibold text-text-secondary">
-          {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between">
-              <span>{item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''} (×{item.quantity})</span>
-              <span>₹{item.price * item.quantity}</span>
+        <div className="space-y-3 text-xs font-semibold text-text-secondary">
+          {mergedItems.map((item: any) => (
+            <div key={item.id} className="flex justify-between items-start gap-4">
+              <div>
+                <span>{item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''} (×{item.quantity})</span>
+                {item.shopName && (
+                  <span className="block text-[9px] text-text-muted mt-0.5 font-bold">
+                    📍 {item.shopName}
+                  </span>
+                )}
+              </div>
+              <span className="shrink-0">₹{item.price * item.quantity}</span>
             </div>
           ))}
           
           <div className="border-t border-border/40 pt-3 space-y-1.5">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{order.subtotal}</span>
+              <span>₹{combinedSubtotal}</span>
             </div>
-            {order.discount > 0 && (
+            {combinedDiscount > 0 && (
               <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                 <span>Discount</span>
-                <span>-₹{order.discount}</span>
+                <span>-₹{combinedDiscount}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>Delivery Fee</span>
-              <span>{order.deliveryFee > 0 ? `₹${order.deliveryFee}` : 'FREE'}</span>
+              <span>{combinedDeliveryFee > 0 ? `₹${combinedDeliveryFee}` : 'FREE'}</span>
             </div>
-            {order.taxes > 0 && (
+            {combinedTaxes > 0 && (
               <div className="flex justify-between">
                 <span>Taxes & GST</span>
-                <span>₹{order.taxes.toFixed(1)}</span>
+                <span>₹{combinedTaxes.toFixed(1)}</span>
               </div>
             )}
-            {order.miscFee > 0 && (
+            {combinedMiscFee > 0 && (
               <div className="flex justify-between">
                 <span>Handling / Miscellaneous Fee</span>
-                <span>₹{order.miscFee}</span>
+                <span>₹{combinedMiscFee}</span>
               </div>
             )}
           </div>
 
           <div className="flex justify-between text-text-primary font-black border-t border-border/80 pt-3 mt-3 text-sm">
             <span>Grand Total</span>
-            <span className="text-primary text-base font-extrabold">₹{order.total.toFixed(0)}</span>
+            <span className="text-primary text-base font-extrabold">₹{combinedTotal.toFixed(0)}</span>
           </div>
         </div>
       </div>
 
+      {/* Customer Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-card border border-border w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-scale-in overflow-hidden">
+            
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between bg-muted/20">
+              <div>
+                <h2 className="text-base font-black text-text-primary">Modify Order Items</h2>
+                <p className="text-[10px] text-text-muted mt-0.5 font-semibold">Change quantities or swap variants before store confirmation</p>
+              </div>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center text-text-secondary transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content List */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {editItems.length === 0 ? (
+                <div className="text-center py-8 text-text-secondary flex flex-col items-center gap-2">
+                  <AlertCircle className="h-8 w-8 text-primary" />
+                  <p className="text-xs font-bold">Your order is empty. You can cancel it from the tracking screen.</p>
+                </div>
+              ) : (
+                editItems.map((item) => {
+                  const productVariants = getVariantsForProduct(item.productId)
+                  return (
+                    <div key={item.id} className="p-3.5 bg-muted/20 rounded-2xl border border-border/40 flex flex-col gap-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-xs font-black text-text-primary leading-tight">{item.name}</h4>
+                          {item.shopName && (
+                            <span className="inline-block text-[9px] text-text-muted mt-1 font-bold">
+                              📍 {item.shopName}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-black text-primary">₹{(item.price * item.quantity).toFixed(0)}</span>
+                      </div>
+
+                      {/* Variant Selector */}
+                      {productVariants && productVariants.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[9px] font-bold text-text-muted uppercase">Select Size / Option</label>
+                          <select
+                            value={item.selectedVariant || ''}
+                            onChange={(e) => {
+                              const selectedOpt = productVariants.find((v: any) => v.name === e.target.value)
+                              if (selectedOpt) {
+                                updateItemVariant(item.productId, item.selectedVariant, selectedOpt.name, selectedOpt.price)
+                              }
+                            }}
+                            className="w-full text-xs font-black bg-card border border-border/80 px-2.5 py-1.5 rounded-xl text-text-primary focus:outline-none focus:border-primary"
+                          >
+                            {productVariants.map((v: any) => (
+                              <option key={v.name} value={v.name}>
+                                {v.name} (₹{v.price})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Quantity Controls */}
+                      <div className="flex justify-between items-center pt-1 border-t border-border/30 mt-1">
+                        <span className="text-[10px] text-text-secondary font-bold">Quantity</span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => updateItemQty(item.productId, item.selectedVariant, -1)}
+                            className="h-7 w-7 rounded-xl bg-card border border-border hover:bg-muted/30 flex items-center justify-center text-text-primary active:scale-90 transition-all cursor-pointer"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="text-xs font-black w-6 text-center text-text-primary">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateItemQty(item.productId, item.selectedVariant, 1)}
+                            className="h-7 w-7 rounded-xl bg-card border border-border hover:bg-muted/30 flex items-center justify-center text-text-primary active:scale-90 transition-all cursor-pointer"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-5 py-4 border-t border-border/60 bg-muted/20 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                disabled={isSaving}
+                className="flex-1 py-2.5 border border-border hover:bg-muted/30 font-bold rounded-xl text-xs transition-colors text-text-primary disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdits}
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-80 active:scale-98 cursor-pointer"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   )
 }
