@@ -19,11 +19,14 @@ import {
   UtensilsCrossed,
   PackageCheck,
   Timer,
-  RotateCcw
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  Printer
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ProductImage } from '@/components/product/product-image'
-import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { playNotificationChime, playSuccessChime, playKitchenAlarmChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
 
 interface OrderItem {
@@ -147,8 +150,58 @@ export function RestaurantOrdersConsole() {
   const [preparedToday, setPreparedToday] = useState(0)
   const [scanFocused, setScanFocused] = useState(false)
 
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [audioContextBlocked, setAudioContextBlocked] = useState(false)
+  const [prepModalOrder, setPrepModalOrder] = useState<Order | null>(null)
+  const [selectedPrepTime, setSelectedPrepTime] = useState<number>(15)
+
+  // Load sound preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('kitchen_sound_enabled')
+    if (stored !== null) {
+      setSoundEnabled(stored === 'true')
+    }
+    
+    // Check if AudioContext is blocked by browser autoplay policy
+    import('@/lib/audio').then(({ isAudioContextSuspended }) => {
+      if (isAudioContextSuspended()) {
+        setAudioContextBlocked(true)
+      }
+    })
+  }, [])
+
+  const toggleSound = () => {
+    const next = !soundEnabled
+    setSoundEnabled(next)
+    localStorage.setItem('kitchen_sound_enabled', String(next))
+    if (next) {
+      playKitchenAlarmChime()
+    }
+  }
+
+  const handleUnblockAudio = async () => {
+    const { tryUnlockAudioContext } = await import('@/lib/audio')
+    const unlocked = await tryUnlockAudioContext()
+    if (unlocked) {
+      setAudioContextBlocked(false)
+      toast.success('Sound alerts enabled! 🔔')
+      playKitchenAlarmChime()
+    }
+  }
+
   const activeOrderRef = useRef<Order | null>(null)
   const updatingIdRef = useRef<string | null>(null)
+
+  const soundEnabledRef = useRef(true)
+  const audioContextBlockedRef = useRef(false)
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
+
+  useEffect(() => {
+    audioContextBlockedRef.current = audioContextBlocked
+  }, [audioContextBlocked])
 
   const aggregatedPrepItems = useMemo(() => {
     const counts: Record<string, { name: string; quantity: number; image?: string }> = {}
@@ -256,7 +309,9 @@ export function RestaurantOrdersConsole() {
             fetchOrders(true)
             
             if (data.type === 'new-order' && data.shopName === 'FastKirana Restaurant Kitchen') {
-              playNotificationChime()
+              if (soundEnabledRef.current && !audioContextBlockedRef.current) {
+                playKitchenAlarmChime()
+              }
               triggerHaptic()
             }
           }
@@ -301,7 +356,9 @@ export function RestaurantOrdersConsole() {
     const pendingOrders = orders.filter(o => o.status === 'PENDING')
     if (pendingOrders.length === 0) return
 
-    playNotificationChime()
+    if (soundEnabled && !audioContextBlocked) {
+      playKitchenAlarmChime()
+    }
     triggerHaptic('success')
     toast.info('New pending restaurant order(s) in queue!', {
       id: 'new-restaurant-order-alert',
@@ -311,26 +368,36 @@ export function RestaurantOrdersConsole() {
     const intervalId = setInterval(() => {
       const currentPending = orders.filter(o => o.status === 'PENDING')
       if (currentPending.length > 0) {
-        playNotificationChime()
+        if (soundEnabledRef.current && !audioContextBlockedRef.current) {
+          playKitchenAlarmChime()
+        }
       } else {
         clearInterval(intervalId)
       }
-    }, 5000)
+    }, 3000)
 
     return () => clearInterval(intervalId)
-  }, [orders, status])
+  }, [orders, status, soundEnabled, audioContextBlocked])
 
-  const handleStartPreparing = async (order: Order) => {
+  const handleStartPreparing = (order: Order) => {
+    setPrepModalOrder(order)
+    setSelectedPrepTime(15) // Default 15 minutes
+  }
+
+  const confirmStartPreparing = async () => {
+    if (!prepModalOrder) return
+    const order = prepModalOrder
+    setPrepModalOrder(null)
     setUpdatingId(order.id)
     try {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CONFIRMED' }),
+        body: JSON.stringify({ status: 'CONFIRMED', prepTime: selectedPrepTime }),
       })
 
       if (res.ok) {
-        toast.success('Accepted restaurant order! Start cooking!')
+        toast.success(`Accepted restaurant order! Timer set to ${selectedPrepTime} mins.`)
         setActiveOrder(order)
         const initialPicked: Record<string, number> = {}
         order.items.forEach(item => {
@@ -452,6 +519,137 @@ export function RestaurantOrdersConsole() {
     })
   }
 
+  const printKOTReceipt = (order: Order) => {
+    const printWindow = window.open('', '_blank', 'width=600,height=800')
+    if (!printWindow) {
+      toast.error('Failed to open print window. Please allow popups!')
+      return
+    }
+
+    const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+
+    const orderTypeLabel = 'RESTAURANT'
+
+    const itemsHtml = order.items.map(item => `
+      <tr style="border-bottom: 1px dashed #ddd;">
+        <td style="padding: 6px 0; font-weight: bold; font-size: 14px; vertical-align: top; width: 35px;">[${item.quantity}x]</td>
+        <td style="padding: 6px 0; font-size: 13px;">
+          <div style="font-weight: bold;">${item.name}</div>
+          ${item.notes ? `<div style="font-size: 11px; color: #555; font-style: italic; margin-top: 2px;">📝 Notes: ${item.notes}</div>` : ''}
+        </td>
+      </tr>
+    `).join('')
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>KOT - ${order.id.slice(0, 8)}</title>
+          <style>
+            @page {
+              size: auto;
+              margin: 0mm;
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              color: #000;
+              background: #fff;
+            }
+            .title {
+              text-align: center;
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 2px;
+            }
+            .subtitle {
+              text-align: center;
+              font-size: 12px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              border-bottom: 2px dashed #000;
+              padding-bottom: 6px;
+            }
+            .info-table {
+              width: 100%;
+              font-size: 12px;
+              margin-bottom: 8px;
+              border-bottom: 2px dashed #000;
+              padding-bottom: 8px;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 10px;
+            }
+            .footer {
+              text-align: center;
+              font-size: 10px;
+              margin-top: 15px;
+              border-top: 2px dashed #000;
+              padding-top: 8px;
+              font-weight: bold;
+            }
+            @media print {
+              body {
+                width: 100%;
+                padding: 5px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="title">FASTKIRANA KITCHEN</div>
+          <div class="subtitle">${orderTypeLabel} ORDER TICKET (KOT)</div>
+          
+          <table class="info-table">
+            <tr>
+              <td style="font-weight: bold;">KOT ID:</td>
+              <td style="text-align: right; font-weight: bold; font-size: 14px;">#${order.id.slice(0, 8).toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td>Date:</td>
+              <td style="text-align: right;">${dateStr}</td>
+            </tr>
+            <tr>
+              <td>Type:</td>
+              <td style="text-align: right; font-weight: bold;">${order.deliveryMethod}</td>
+            </tr>
+            <tr>
+              <td>Customer:</td>
+              <td style="text-align: right; font-weight: bold;">${order.user.name}</td>
+            </tr>
+          </table>
+
+          <table class="items-table">
+            ${itemsHtml}
+          </table>
+
+          <div class="footer">
+            *** Happy Cooking ***<br>
+            FastKirana Partner App
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
   const totalItemsToPrepare = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0)
 
   if (isLoading && !activeOrder) {
@@ -481,15 +679,23 @@ export function RestaurantOrdersConsole() {
         {/* Active Prep Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-red-700 to-amber-700 p-5 rounded-3xl shadow-lg text-white">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => {
-                setActiveOrder(null)
-                setPickedItemIds({})
-              }}
-              className="flex items-center gap-1.5 text-xs font-black text-white/95 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
-            >
-              ← Back to Queue
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setActiveOrder(null)
+                  setPickedItemIds({})
+                }}
+                className="flex items-center gap-1.5 text-xs font-black text-white/95 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={() => printKOTReceipt(activeOrder)}
+                className="flex items-center gap-1.5 text-xs font-black bg-white text-red-700 hover:bg-zinc-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                <Printer className="h-3.5 w-3.5 text-red-600" /> Print KOT
+              </button>
+            </div>
             <div className="text-right">
               <p className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">PREPARING RESTAURANT TICKET</p>
               <p className="text-xs font-mono font-bold">{activeOrder.id.slice(0, 12)}</p>
@@ -638,6 +844,41 @@ export function RestaurantOrdersConsole() {
 
   return (
     <div className="space-y-6">
+      {/* Browser Autoplay Sound Unblock Notice Banner */}
+      {audioContextBlocked && soundEnabled && (
+        <button
+          onClick={handleUnblockAudio}
+          className="w-full text-center text-xs font-black text-rose-600 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 py-3 rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse shadow-inner"
+        >
+          <span>🔊</span> Click here to enable Live Order Sound Alerts
+        </button>
+      )}
+
+      {/* Sound Alerts Controls Header Toggle Bar */}
+      <div className="flex justify-between items-center bg-card border border-border/50 px-4 py-3 rounded-3xl shadow-xs">
+        <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
+          Kitchen Sounds
+        </span>
+        <button
+          onClick={toggleSound}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide uppercase transition-all cursor-pointer ${
+            soundEnabled
+              ? 'bg-[#00b140]/10 border-[#00b140]/25 text-[#00b140]'
+              : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
+          }`}
+        >
+          {soundEnabled ? (
+            <>
+              <Volume2 className="h-3.5 w-3.5" /> Sound Alerts: ON
+            </>
+          ) : (
+            <>
+              <VolumeX className="h-3.5 w-3.5" /> Sound Alerts: MUTED
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Overview Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-card border border-border/50 p-4 rounded-3xl text-center space-y-1 shadow-sm">
@@ -700,17 +941,28 @@ export function RestaurantOrdersConsole() {
                     <p className={`text-[10px] ${getSlaClass(order.createdAt, order.status)}`}>
                       ⏳ {formatElapsed(order.createdAt)}
                     </p>
-                    <button
-                      onClick={() => !isClaimedByOther && handleStartPreparing(order)}
-                      disabled={isClaimedByOther || updatingId === order.id}
-                      className={`text-xs font-black px-4 py-2 rounded-xl transition-all cursor-pointer active:scale-95 ${
-                        isClaimedByOther 
-                          ? 'bg-zinc-800 text-zinc-600 border border-zinc-900 cursor-not-allowed' 
-                          : 'bg-red-600 text-white hover:bg-red-700 shadow-md'
-                      }`}
-                    >
-                      {claimLabel}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isClaimedByMe && (
+                        <button
+                          onClick={() => printKOTReceipt(order)}
+                          className="p-2 bg-card hover:bg-muted text-text-secondary rounded-xl border border-border transition-all cursor-pointer shadow-xs flex items-center justify-center shrink-0"
+                          title="Print Kitchen Order Ticket (KOT)"
+                        >
+                          <Printer className="h-4 w-4 text-red-650" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => !isClaimedByOther && handleStartPreparing(order)}
+                        disabled={isClaimedByOther || updatingId === order.id}
+                        className={`text-xs font-black px-4 py-2 rounded-xl transition-all cursor-pointer active:scale-95 ${
+                          isClaimedByOther 
+                            ? 'bg-zinc-800 text-zinc-600 border border-zinc-900 cursor-not-allowed' 
+                            : 'bg-red-600 text-white hover:bg-red-700 shadow-md'
+                        }`}
+                      >
+                        {claimLabel}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -718,6 +970,78 @@ export function RestaurantOrdersConsole() {
           </div>
         </div>
       )}
+
+      {/* Smart Prep Time Modal */}
+      <AnimatePresence>
+        {prepModalOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPrepModalOrder(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="relative w-full max-w-sm overflow-hidden bg-card border border-border rounded-3xl shadow-2xl p-6 space-y-6 z-10"
+            >
+              <div className="text-center space-y-2">
+                <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-600">
+                  <Timer className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-black text-text-primary uppercase tracking-wider">
+                  Set Preparation Time
+                </h3>
+                <p className="text-[10px] text-text-secondary font-bold leading-normal">
+                  Select estimated time to cook this order. Customers will see this countdown on their tracking screen.
+                </p>
+              </div>
+
+              {/* Grid of timings options */}
+              <div className="grid grid-cols-3 gap-2">
+                {[5, 10, 15, 20, 30, 45].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setSelectedPrepTime(mins)}
+                    className={`p-3 rounded-2xl border text-xs font-black tracking-wide transition-all cursor-pointer flex flex-col items-center justify-center gap-1 active:scale-95 ${
+                      selectedPrepTime === mins
+                        ? 'bg-red-500/10 border-red-500/30 text-red-600'
+                        : 'bg-muted/40 hover:bg-muted/75 border-border/40 text-text-secondary'
+                    }`}
+                  >
+                    <span className="text-[11px] font-black">{mins} Min</span>
+                    <span className="text-[9px] font-medium opacity-80">ETA</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPrepModalOrder(null)}
+                  className="flex-1 h-11 border border-border hover:bg-muted text-text-secondary text-xs font-black rounded-xl cursor-pointer active:scale-98 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmStartPreparing}
+                  className="flex-1 h-11 bg-red-650 hover:bg-red-750 text-white text-xs font-black rounded-xl cursor-pointer shadow-md shadow-red-500/15 active:scale-98 transition-all"
+                >
+                  Start Cooking
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

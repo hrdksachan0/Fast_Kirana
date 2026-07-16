@@ -197,7 +197,7 @@ export async function PATCH(
 
   try {
     const { id } = await params
-    const { status, deliveryPhoto, deliveryLat, deliveryLng } = await request.json()
+    const { status, deliveryPhoto, deliveryLat, deliveryLng, prepTime } = await request.json()
 
     if (!status || !VALID_STATUSES.includes(status)) {
       return NextResponse.json({ error: 'Invalid order status' }, { status: 400 })
@@ -355,12 +355,18 @@ export async function PATCH(
         WHERE id = ${id}
       `
     } else if (status === 'CONFIRMED') {
+      let estimatedDeliveryVal: Date | null = null
+      if (prepTime && !isNaN(parseInt(prepTime))) {
+        estimatedDeliveryVal = new Date(Date.now() + parseInt(prepTime) * 60 * 1000)
+      }
+
       if (session.user.role === 'CHEF' || existingOrder.shopName === 'FastKirana Cafe Kitchen' || existingOrder.shopName === 'FastKirana Restaurant Kitchen') {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
               "assignedChefId" = ${session.user.id},
               "confirmedAt" = NOW(),
+              "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
           WHERE id = ${id}
         `
@@ -370,6 +376,7 @@ export async function PATCH(
           SET status = ${status}::"OrderStatus", 
               "assignedPickerId" = ${session.user.id},
               "confirmedAt" = NOW(),
+              "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
           WHERE id = ${id}
         `

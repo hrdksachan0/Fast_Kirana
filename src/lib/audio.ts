@@ -128,3 +128,57 @@ export function playNotificationChime() {
     console.warn('Web Audio Playback failed:', err);
   }
 }
+
+export function tryUnlockAudioContext(): Promise<boolean> {
+  const ctx = getAudioContext();
+  if (!ctx) return Promise.resolve(false);
+  if (ctx.state === 'suspended') {
+    return ctx.resume().then(() => ctx.state === 'running').catch(() => false);
+  }
+  return Promise.resolve(ctx.state === 'running');
+}
+
+export function isAudioContextSuspended(): boolean {
+  const ctx = getAudioContext();
+  return !!ctx && ctx.state === 'suspended';
+}
+
+/**
+ * Play a louder, distinct dual-tone chime specifically for kitchen alerts
+ */
+export function playKitchenAlarmChime() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    const startTime = ctx.currentTime;
+
+    const playTone = (freq: number, delay: number, duration: number, volume: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, startTime + delay);
+
+      gain.gain.setValueAtTime(0, startTime + delay);
+      gain.gain.linearRampToValueAtTime(volume, startTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + delay + duration);
+
+      osc.start(startTime + delay);
+      osc.stop(startTime + delay + duration + 0.05);
+    };
+
+    // Loud repeating chime pattern: G5 (783.99 Hz) and C6 (1046.50 Hz)
+    playTone(783.99, 0, 0.35, 0.25);
+    playTone(1046.50, 0.12, 0.45, 0.25);
+  } catch (err) {
+    console.warn('Web Audio Playback failed:', err);
+  }
+}
