@@ -167,7 +167,10 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
           Trending Categories
         </h2>
-        <Link href="/category/fruits-vegetables" className="text-xs font-black text-primary hover:opacity-85">
+        <Link 
+          href="/category/fruits-vegetables" 
+          className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap"
+        >
           See all
         </Link>
       </div>

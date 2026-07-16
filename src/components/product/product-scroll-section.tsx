@@ -45,7 +45,7 @@ export function ProductScrollSection({
           {href && (
             <Link
               href={href}
-              className="text-xs font-bold text-accent hover:text-accent-dark transition-colors whitespace-nowrap"
+              className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-accent hover:bg-accent/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap"
             >
               See All →
             </Link>

@@ -472,10 +472,15 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                 const target = document.getElementById('cafe-menu-categories-anchor')
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }}
-              className="text-[11px] font-bold text-rose-600 dark:text-rose-455 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
+              className={cn(
+                "text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full select-none cursor-pointer border transition-all duration-300 flex items-center gap-1 shadow-[0_1.5px_4px_rgba(0,0,0,0.02)] active:scale-95 shrink-0",
+                experienceMode === 'cafe'
+                  ? "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
+                  : "bg-red-500/10 border-red-500/20 text-[#e20a22] dark:text-red-400 hover:bg-red-500/20"
+              )}
             >
               <span>See Menu</span>
-              <ChevronRight size={10} strokeWidth={3} />
+              <ChevronRight size={11} strokeWidth={3} />
             </button>
           </div>
 
@@ -613,10 +618,15 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                         }
                       }
                     }}
-                    className="text-[11px] font-bold text-rose-600 dark:text-rose-455 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
+                    className={cn(
+                      "text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full select-none cursor-pointer border transition-all duration-300 flex items-center gap-1 shadow-[0_1.5px_4px_rgba(0,0,0,0.02)] active:scale-95 shrink-0",
+                      experienceMode === 'cafe'
+                        ? "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
+                        : "bg-red-500/10 border-red-500/20 text-[#e20a22] dark:text-red-400 hover:bg-red-500/20"
+                    )}
                   >
                     <span>{isExpanded ? 'See Less' : `See All (${cat.products.length})`}</span>
-                    <ChevronRight size={10} strokeWidth={3} className={cn("transition-transform duration-300", isExpanded && "rotate-90")} />
+                    <ChevronRight size={11} strokeWidth={3} className={cn("transition-transform duration-300", isExpanded && "rotate-90")} />
                   </button>
                 </div>
                 
