@@ -404,6 +404,16 @@ export function Navbar() {
                 </span>
               </Link>
 
+              {session && session.user.role !== 'USER' && (
+                <Link
+                  href="/account"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
+                >
+                  <User size={16} className="group-hover:scale-105 transition-transform stroke-[2.2]" />
+                  <span className="text-xs font-black tracking-tight">Account</span>
+                </Link>
+              )}
+
               {!mounted || totalItems === 0 ? (
                 <button
                   onClick={toggleCart}

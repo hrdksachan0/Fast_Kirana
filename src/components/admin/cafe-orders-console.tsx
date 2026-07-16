@@ -604,7 +604,7 @@ export function CafeOrdersConsole() {
     setSearchQuery('')
     
     try {
-      const res = await fetch(`/api/products?category=cafe&limit=100`)
+      const res = await fetch(`/api/products?category=cafe,ice-cream,beverages&limit=100`)
       if (res.ok) {
         const data = await res.json()
         setAllProducts(data.products || [])

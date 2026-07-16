@@ -174,8 +174,12 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         dbProducts.forEach((product: any) => {
           for (const cat of PREDEFINED_CATEGORIES) {
             const hasMatch = product.tags?.some((t: string) => 
-              cat.matchTags?.map((mt: string) => mt.toLowerCase()).includes(t.toLowerCase())
-            ) || (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate'].includes(product.slug))
+              cat.matchTags?.map((mt: string) => mt.toLowerCase())?.includes(t.toLowerCase())
+            ) || 
+            (product.category?.slug && cat.matchTags?.map((mt: string) => mt.toLowerCase())?.includes(product.category.slug.toLowerCase())) ||
+            (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate']?.includes(product.slug)) ||
+            (cat.tag === 'chilled' && product.category?.slug === 'beverages') ||
+            (cat.tag === 'desserts' && product.category?.slug === 'ice-cream')
 
             if (hasMatch) {
               const sec = sectionsMap.get(cat.tag)
