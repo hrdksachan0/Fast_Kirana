@@ -606,6 +606,20 @@ export function CafeOrdersConsole() {
     })
   }
 
+  const updateItemVariant = (productId: string, oldVariant: string | null, newVariant: string, newPrice: number) => {
+    setEditItems(prev => prev.map(item => {
+      if (item.productId === productId && item.selectedVariant === oldVariant) {
+        return {
+          ...item,
+          selectedVariant: newVariant,
+          price: newPrice
+        }
+      }
+      return item
+    }))
+    toast.success('Variant updated!')
+  }
+
   const markItemOutOfStock = (productId: string) => {
     if (!outOfStockIds.includes(productId)) {
       setOutOfStockIds(prev => [...prev, productId])
@@ -1331,6 +1345,35 @@ export function CafeOrdersConsole() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-text-primary truncate">{item.name}</p>
                         <p className="text-[10px] text-text-secondary font-extrabold mt-0.5">{formatPrice(item.price)}</p>
+                        {(() => {
+                          const prodDetails = allProducts.find(p => p.id === item.productId)
+                          const variants = prodDetails?.variants as any[] | undefined
+                          if (variants && Array.isArray(variants) && variants.length > 0) {
+                            return (
+                              <div className="mt-1.5 flex items-center gap-1">
+                                <span className="text-[9px] text-text-secondary font-extrabold uppercase">Variant:</span>
+                                <select
+                                  value={item.selectedVariant || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    const selectedVar = variants.find(v => v.name === val)
+                                    if (selectedVar) {
+                                      updateItemVariant(item.productId, item.selectedVariant, val, selectedVar.price)
+                                    }
+                                  }}
+                                  className="text-[9px] font-black bg-card border border-border rounded-lg px-1.5 py-0.5 focus:outline-hidden text-text-primary"
+                                >
+                                  {variants.map((v) => (
+                                    <option key={v.name} value={v.name}>
+                                      {v.name} ({formatPrice(v.price)})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-3">
