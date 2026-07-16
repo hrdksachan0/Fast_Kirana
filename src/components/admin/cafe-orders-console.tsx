@@ -43,6 +43,7 @@ interface OrderItem {
   product?: {
     slug: string
   }
+  selectedVariant?: string | null
   notes?: string | null
 }
 
@@ -568,7 +569,10 @@ export function CafeOrdersConsole() {
       <tr style="border-bottom: 1px dashed #ddd;">
         <td style="padding: 6px 0; font-weight: bold; font-size: 14px; vertical-align: top; width: 35px;">[${item.quantity}x]</td>
         <td style="padding: 6px 0; font-size: 13px;">
-          <div style="font-weight: bold;">${item.name}</div>
+          <div style="font-weight: bold;">
+            ${item.name}
+            ${item.selectedVariant ? `<span style="font-size: 11px; color: #ff0000; margin-left: 5px;">(${item.selectedVariant})</span>` : ''}
+          </div>
           ${item.notes ? `<div style="font-size: 11px; color: #555; font-style: italic; margin-top: 2px;">📝 Notes: ${item.notes}</div>` : ''}
         </td>
       </tr>
