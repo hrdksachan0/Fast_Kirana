@@ -298,7 +298,7 @@ export function CafeOrdersConsole() {
     else setIsRefreshing(true)
     
     try {
-      const res = await fetch('/api/picker/orders?type=cafe')
+      const res = await fetch(`/api/picker/orders?type=cafe&t=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
