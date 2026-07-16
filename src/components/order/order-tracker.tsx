@@ -221,6 +221,39 @@ export function OrderTracker({ initialOrder, isCafeOpen: initialIsCafeOpen = tru
     return () => clearInterval(pollInterval)
   }, [order.id, order.status])
 
+  // SSE connection to listen for updates (status changes, edits)
+  useEffect(() => {
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return
+
+    const eventSource = new EventSource('/api/sse/orders')
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.orderId === order.id && (data.type === 'order-edited' || data.type === 'status-change')) {
+          fetch(`/api/orders/${order.id}`)
+            .then(res => res.json())
+            .then(updatedOrder => {
+              if (updatedOrder && updatedOrder.status) {
+                setOrder(updatedOrder)
+                if (data.type === 'order-edited') {
+                  toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
+                    icon: '📝'
+                  })
+                }
+              }
+            })
+        }
+      } catch (err) {
+        console.error('SSE message parsing error in tracker:', err)
+      }
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [order.id, order.status])
+
   // 3. Dynamically load Leaflet assets on client
   useEffect(() => {
     if (typeof window === 'undefined') return

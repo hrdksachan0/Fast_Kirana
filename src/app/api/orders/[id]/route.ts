@@ -382,6 +382,80 @@ export async function PATCH(
         `
       }
     } else {
+      if (status === 'CANCELLED' && existingOrder.status !== 'CANCELLED') {
+        try {
+          const orderItems = await prisma.orderItem.findMany({
+            where: { orderId: id },
+          })
+          
+          for (const item of orderItems) {
+            if (!item.productId) continue
+            
+            const product = await prisma.product.findUnique({
+              where: { id: item.productId },
+              select: { stock: true, name: true, variants: true, category: true, tags: true }
+            })
+            
+            if (!product) continue
+            
+            // Skip stock restoration for Cafe & Restaurant items
+            if (product.category?.slug === 'cafe' || product.category?.slug === 'restaurant' || product.tags?.includes('cafe') || product.tags?.includes('restaurant')) {
+              continue
+            }
+
+            if (item.selectedVariant) {
+              if (product.variants && Array.isArray(product.variants)) {
+                const updatedVariants = (product.variants as any[]).map((v) => {
+                  if (v.name === item.selectedVariant) {
+                    return { ...v, stock: v.stock + item.quantity }
+                  }
+                  return v
+                })
+                const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stock, 0)
+                
+                await prisma.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    variants: updatedVariants,
+                    stock: newTotalStock
+                  }
+                })
+              }
+            } else {
+              const batches = await prisma.productBatch.findMany({
+                where: { productId: item.productId },
+                orderBy: { expiryDate: 'asc' }
+              })
+              
+              if (batches.length > 0) {
+                await prisma.productBatch.update({
+                  where: { id: batches[0].id },
+                  data: { quantity: { increment: item.quantity } }
+                })
+                
+                const activeBatches = await prisma.productBatch.findMany({
+                  where: { productId: item.productId, quantity: { gt: 0 } }
+                })
+                const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+                
+                await prisma.product.update({
+                  where: { id: item.productId },
+                  data: { stock: newTotalStock }
+                })
+              } else {
+                await prisma.product.update({
+                  where: { id: item.productId },
+                  data: { stock: { increment: item.quantity } }
+                })
+              }
+            }
+            console.log(`[Inventory Sync] Restored ${item.quantity} units of ${product.name} due to cancellation.`)
+          }
+        } catch (stockErr) {
+          console.error('Failed to restore inventory for cancelled order:', id, stockErr)
+        }
+      }
+
       await prisma.$executeRaw`
         UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE id = ${id}
       `
