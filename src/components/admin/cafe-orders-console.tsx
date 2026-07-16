@@ -1468,7 +1468,7 @@ export function CafeOrdersConsole() {
                 </div>
                 <div className="flex justify-between pt-1.5 border-t border-border/40 text-sm font-black text-text-primary">
                   <span>Estimated Total</span>
-                  <span className="text-orange-655 font-black">{formatPrice(computedTotal)}</span>
+                  <span className="text-orange-600 font-black">{formatPrice(computedTotal)}</span>
                 </div>
 
                 {editingOrder.paymentMethod === 'ONLINE' && (

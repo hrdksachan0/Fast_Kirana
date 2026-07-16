@@ -135,6 +135,9 @@ export default function CheckoutPage() {
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
   const [contactPhone, setContactPhone] = useState('+91 70544 70303')
   const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const [groceryPickupAddress, setGroceryPickupAddress] = useState('')
+  const [cafePickupAddress, setCafePickupAddress] = useState('')
+  const [restaurantPickupAddress, setRestaurantPickupAddress] = useState('')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
   const [restaurantOpen, setRestaurantOpen] = useState(true)
@@ -186,6 +189,15 @@ export default function CheckoutPage() {
         }
         if (data.contact_address) {
           setContactAddress(data.contact_address)
+        }
+        if (data.grocery_pickup_address) {
+          setGroceryPickupAddress(data.grocery_pickup_address)
+        }
+        if (data.cafe_pickup_address) {
+          setCafePickupAddress(data.cafe_pickup_address)
+        }
+        if (data.restaurant_pickup_address) {
+          setRestaurantPickupAddress(data.restaurant_pickup_address)
         }
         if (data.grocery_free_delivery_threshold) {
           setGroceryThreshold(parseFloat(data.grocery_free_delivery_threshold))
@@ -1295,17 +1307,43 @@ export default function CheckoutPage() {
                 </div>
 
                 {deliveryMethod === 'PICKUP' ? (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
                     <div className="flex items-start gap-3">
                       <span className="text-2xl">🏪</span>
-                      <div>
-                        <h4 className="text-sm font-bold text-text-primary">FastKirana Ghatampur Hub</h4>
-                        <p className="text-xs text-text-secondary leading-relaxed mt-1">
-                          {contactAddress}
+                      <div className="space-y-3 flex-1">
+                        <h4 className="text-sm font-black text-text-primary uppercase tracking-wide">Pickup Addresses</h4>
+                        
+                        {hasGrocery && (
+                          <div className="border-l-2 border-primary/30 pl-3">
+                            <span className="text-[10px] uppercase font-black text-primary">Grocery Mart Pickup</span>
+                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                              {groceryPickupAddress || contactAddress}
+                            </p>
+                          </div>
+                        )}
+
+                        {hasCafe && (
+                          <div className="border-l-2 border-orange-500/30 pl-3">
+                            <span className="text-[10px] uppercase font-black text-orange-600">Cafe Pickup</span>
+                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                              {cafePickupAddress || contactAddress}
+                            </p>
+                          </div>
+                        )}
+
+                        {hasRestaurant && (
+                          <div className="border-l-2 border-rose-500/30 pl-3">
+                            <span className="text-[10px] uppercase font-black text-rose-600">Wedson Restaurant Pickup</span>
+                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                              {restaurantPickupAddress || contactAddress}
+                            </p>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-text-secondary pt-1 border-t border-border/20">
+                          Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
                         </p>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Pin: 209206 | Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
-                        </p>
+                        
                         <div className="mt-3 text-[10px] text-accent font-bold bg-accent/10 px-2 py-1 rounded inline-block">
                           ✓ Self-Pickup Selected: No delivery charge
                         </div>

@@ -1239,7 +1239,7 @@ export function RestaurantOrdersConsole() {
                 <button
                   type="button"
                   onClick={confirmStartPreparing}
-                  className="flex-1 h-11 bg-red-650 hover:bg-red-750 text-white text-xs font-black rounded-xl cursor-pointer shadow-md shadow-red-500/15 active:scale-98 transition-all"
+                  className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl cursor-pointer shadow-md shadow-red-500/15 active:scale-98 transition-all"
                 >
                   Start Cooking
                 </button>
