@@ -269,7 +269,7 @@ export function ProductCard({ product }: ProductCardProps) {
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
+              className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
             >
               Only {resolvedStock} left
             </motion.div>
