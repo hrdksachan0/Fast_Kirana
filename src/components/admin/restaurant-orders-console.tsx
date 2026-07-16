@@ -551,8 +551,7 @@ export function RestaurantOrdersConsole() {
     setSearchQuery('')
     
     try {
-      const categorySlug = order.shopName === 'FastKirana Restaurant Kitchen' ? 'restaurant' : 'cafe'
-      const res = await fetch(`/api/products?category=${categorySlug}&limit=100`)
+      const res = await fetch(`/api/products?category=restaurant&limit=100`)
       if (res.ok) {
         const data = await res.json()
         setAllProducts(data.products || [])
