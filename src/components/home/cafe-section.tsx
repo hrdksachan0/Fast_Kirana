@@ -133,6 +133,9 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
   useEffect(() => {
     setIsLoading(true)
+    setCategories([])
+    setCafeProducts([])
+    setActiveCategoryTag('all')
     const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe,ice-cream,beverages'
     fetch(`/api/products?category=${categoryQuery}&limit=250`)
       .then(res => res.json())
@@ -550,12 +553,30 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           </div>
 
           {/* Category-wise Cafe Products Slider List (stacked vertically) */}
-          {showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
-            const displayProducts = cat.products.slice(0, 5)
-            const hasMore = cat.products.length > 5
-            const isExpanded = expandedCategories.has(cat.tag)
+          {isLoading ? (
+            // Render 2 premium loading sections
+            Array.from({ length: 2 }).map((_, secIdx) => (
+              <div key={`section-skeleton-${secIdx}`} className="space-y-3 pt-6 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 animate-pulse">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-full bg-zinc-250 dark:bg-zinc-850" />
+                    <div className="h-4 w-32 bg-zinc-250 dark:bg-zinc-850 rounded" />
+                  </div>
+                </div>
+                <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1.5 scrollbar-hide">
+                  {Array.from({ length: 4 }).map((_, itemIdx) => (
+                    <div key={`item-skeleton-${itemIdx}`} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] rounded-2xl bg-zinc-200 dark:bg-zinc-850/60 shrink-0" />
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
+              const displayProducts = cat.products.slice(0, 5)
+              const hasMore = cat.products.length > 5
+              const isExpanded = expandedCategories.has(cat.tag)
 
-            return (
+              return (
               <div 
                 key={cat.tag} 
                 id={`cafe-home-section-${cat.tag}`}
@@ -645,7 +666,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                 )}
               </div>
             )
-          })}
+          }))}
         </>
     </section>
   )
