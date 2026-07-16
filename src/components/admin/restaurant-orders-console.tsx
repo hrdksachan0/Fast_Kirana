@@ -78,6 +78,7 @@ interface Order {
   assignedChefId?: string | null
   assignedPicker?: { name: string } | null
   assignedChef?: { name: string } | null
+  shopName?: string | null
 }
 
 const foodEmojis = ['🍲', '🍛', '🍜', '🍕', '🍔', '🌮', '🥪', '🍱', '🥘', '🥙', '🍢', '🍣']
@@ -568,16 +569,36 @@ export function RestaurantOrdersConsole() {
               color: #000;
               background: #fff;
             }
-            .title {
+            .logo-container {
               text-align: center;
-              font-size: 16px;
-              font-weight: bold;
               margin-bottom: 2px;
+            }
+            .logo-text {
+              font-size: 18px;
+              font-weight: 900;
+              letter-spacing: 1.5px;
+              border: 2px solid #000;
+              padding: 3px 6px;
+              display: inline-block;
+            }
+            .tagline {
+              font-size: 8px;
+              font-weight: bold;
+              margin-top: 3px;
+              letter-spacing: 0.5px;
+            }
+            .shop-name {
+              text-align: center;
+              font-size: 11px;
+              font-weight: 800;
+              margin-top: 6px;
+              text-transform: uppercase;
             }
             .subtitle {
               text-align: center;
-              font-size: 12px;
+              font-size: 11px;
               font-weight: bold;
+              margin-top: 3px;
               margin-bottom: 10px;
               border-bottom: 2px dashed #000;
               padding-bottom: 6px;
@@ -611,8 +632,12 @@ export function RestaurantOrdersConsole() {
           </style>
         </head>
         <body>
-          <div class="title">FASTKIRANA KITCHEN</div>
-          <div class="subtitle">${orderTypeLabel} ORDER TICKET (KOT)</div>
+          <div class="logo-container">
+            <div class="logo-text">⚡ FASTKIRANA ⚡</div>
+            <div class="tagline">FAST • FRESH • DELICIOUS</div>
+          </div>
+          <div class="shop-name">${order.shopName || 'FastKirana Restaurant Kitchen'}</div>
+          <div class="subtitle">ORDER TICKET (KOT)</div>
           
           <table class="info-table">
             <tr>
