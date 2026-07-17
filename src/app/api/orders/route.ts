@@ -839,7 +839,7 @@ export async function POST(request: NextRequest) {
         if (customerPhone) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
           const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-          const customerText = `Order #${shortId} of ₹${order.total} placed successfully. Track: ${cleanAppUrl}/order/${order.id}/track`
+          const customerText = `Order #${displayId} of ₹${order.total} placed successfully. Track: ${cleanAppUrl}/order/${order.id}/track`
           whatsappPromises.push(
             sendWhatsAppOrderAlert(customerPhone, customerText)
               .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
@@ -853,7 +853,7 @@ export async function POST(request: NextRequest) {
           const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
           const customerName = order.user?.name || 'Customer'
           const customerPhone = order.address?.phone || 'N/A'
-          const adminText = `New ${orderType} Order #${shortId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+          const adminText = `New ${orderType} Order #${displayId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
           
           for (const adminPhone of adminPhones) {
             whatsappPromises.push(
