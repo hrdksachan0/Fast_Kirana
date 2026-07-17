@@ -144,7 +144,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     setCafeProducts([])
     setActiveCategoryTag('all')
     const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe,ice-cream,beverages'
-    fetch(`/api/products?category=${categoryQuery}&limit=250`)
+    fetch(`/api/products?category=${categoryQuery}&limit=9999`)
       .then(res => res.json())
       .then(productsRes => {
         const dbProducts = productsRes?.products || productsRes || []
@@ -352,7 +352,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         </div>
 
         {/* Banner Footnotes */}
-        <div className="absolute bottom-[3px] left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-black select-none z-10 gap-2">
+        <div className="absolute bottom-[1.5px] left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-black select-none z-10 gap-2">
           <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 text-black dark:text-zinc-150 px-2 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
             *Only for first user
           </span>

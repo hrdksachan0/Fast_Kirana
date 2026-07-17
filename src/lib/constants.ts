@@ -72,6 +72,13 @@ export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
     description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies',
   },
   {
+    tag: 'burgers',
+    matchTags: ['burgers', 'burger', 'veg-burger', 'cheese-burger', 'paneer-burger'],
+    title: 'Gourmet Burgers',
+    emoji: '🍔',
+    description: 'Juicy veg burgers, paneer burgers, and loaded cheese burgers',
+  },
+  {
     tag: 'frankie-rolls',
     matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll'],
     title: 'Gourmet Frankie Rolls',

@@ -110,18 +110,17 @@ export function CartDrawer() {
   }, [])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || items.length === 0) {
+      setRecommendations([])
+      return
+    }
     
-    // Fetch products from database to suggest cheap quick-add items
-    fetch('/api/products?limit=20')
+    const productIds = items.map((i) => i.product.id).join(',')
+    fetch(`/api/products/upsell?productIds=${productIds}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.products) {
-          const inCartIds = new Set(items.map((i) => i.product.id))
-          const upsellCandidates = data.products.filter(
-            (p: any) => !inCartIds.has(p.id) && p.price < 100 && p.isAvailable
-          )
-          setRecommendations(upsellCandidates.slice(0, 4))
+          setRecommendations(data.products)
         }
       })
       .catch((err) => console.error('Failed to fetch upsell products:', err))
@@ -476,10 +475,11 @@ export function CartDrawer() {
               )}
 
               {/* Smart Add-on Suggestions */}
-              {deliveryFee > 0 && recommendations.length > 0 && (
+              {recommendations.length > 0 && (
                 <div className="mt-6 border-t border-zinc-100 dark:border-zinc-900 pt-4 space-y-3 pb-4">
                   <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 px-1">
-                    <span>💡</span> Add items to unlock FREE Delivery
+                    <span>{cafeItems.length > 0 ? '🥤' : '🛒'}</span>
+                    {cafeItems.length > 0 ? 'Complete your meal!' : 'Frequently bought together'}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {recommendations.map((prod) => {
