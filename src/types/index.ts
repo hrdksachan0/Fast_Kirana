@@ -61,6 +61,7 @@ export interface Address {
 
 export interface Order {
   id: string
+  readableId?: number
   userId: string
   addressId: string
   status: string

@@ -80,6 +80,7 @@ interface OrderAddress {
 
 interface Order {
   id: string
+  readableId?: number
   status: string
   subtotal: number
   discount: number
