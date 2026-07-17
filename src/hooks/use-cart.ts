@@ -9,6 +9,22 @@ import { triggerHaptic } from '@/lib/haptic'
 import { playCartPop } from '@/lib/audio'
 import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
 
+const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
+  const slug = p.category?.slug || p.categorySlug || ''
+  const tags = p.tags || []
+  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
+  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
+  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
+  return 'GROCERY'
+}
+
+const getProductLimit = (p: any): number => {
+  const type = getProductType(p)
+  if (type === 'RESTAURANT') return 20
+  if (type === 'CAFE') return 10
+  return 5 // GROCERY / BYPASS
+}
+
 export function useCart() {
   const items = useCartStore((s) => s.items)
 
@@ -72,16 +88,6 @@ export function useCart() {
     }
 
     const storeState = useCartStore.getState()
-    
-    // Resolve product compatibility types
-    const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
-      const slug = p.category?.slug || p.categorySlug || ''
-      const tags = p.tags || []
-      if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
-      if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
-      if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
-      return 'GROCERY'
-    }
 
     const areTypesCompatible = (t1: string, t2: string): boolean => {
       if (t1 === t2) return true
@@ -101,7 +107,7 @@ export function useCart() {
       return
     }
 
-    const limit = isCafe ? 10 : 20
+    const limit = getProductLimit(product)
     const currentQty = storeState.getItemQuantity(product.id)
     if (currentQty >= limit) {
       triggerHaptic('warning')
@@ -129,7 +135,7 @@ export function useCart() {
       const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
       const item = storeState.items.find((i) => i.product.id === productId)
       if (item) {
-        const limit = isCafeProduct(item.product) ? 10 : 20
+        const limit = getProductLimit(item.product)
         if (quantity > limit) {
           triggerHaptic('warning')
           toast.error(`Maximum limit of ${limit} units reached for ${name}`, {
