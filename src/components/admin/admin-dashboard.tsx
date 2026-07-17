@@ -49,6 +49,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { CreateOrderModal } from './create-order-modal'
+import { AdminSortManager } from './admin-sort-manager'
 
 const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => mod.AdminAnalytics), { ssr: false })
 const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
@@ -547,6 +548,7 @@ export function AdminDashboard({
   
   // State for Add Product Form
   const [showAddProduct, setShowAddProduct] = useState(false)
+  const [showSortManager, setShowSortManager] = useState(false)
   const [showCsvImport, setShowCsvImport] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -2531,10 +2533,17 @@ export function AdminDashboard({
             
             <button
               onClick={() => setShowAddProduct(!showAddProduct)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all w-full md:w-auto justify-center"
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all w-full md:w-auto justify-center cursor-pointer"
             >
               <PlusCircle className="h-4 w-4" />
               Add New Product
+            </button>
+            <button
+              onClick={() => setShowSortManager(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-650 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              ⚡ Sort & Position Manager
             </button>
             <button
               onClick={() => { setShowCsvImport(!showCsvImport); setShowExportModal(false); }}
@@ -5979,6 +5988,12 @@ export function AdminDashboard({
         onSuccess={() => {
           setOrderRefreshKey(prev => prev + 1)
         }}
+      />
+
+      <AdminSortManager
+        isOpen={showSortManager}
+        onClose={() => setShowSortManager(false)}
+        categories={categories}
       />
     </div>
   )

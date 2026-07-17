@@ -63,6 +63,47 @@ export async function GET(request: NextRequest) {
       { createdAt: 'desc' }
     ]
 
+    // Check database for category-specific auto-sorting rule
+    if (category && !category.includes(',')) {
+      try {
+        const sortSetting = await prisma.storeSetting.findUnique({
+          where: { key: `category_sort_${category}` }
+        })
+        if (sortSetting && sortSetting.value !== 'manual') {
+          const rule = sortSetting.value
+          if (rule === 'best-seller') {
+            orderBy = [
+              { isBestSeller: 'desc' },
+              { sortOrder: 'desc' },
+              { createdAt: 'desc' }
+            ]
+          } else if (rule === 'stock-desc') {
+            orderBy = [
+              { stock: 'desc' },
+              { sortOrder: 'desc' },
+              { createdAt: 'desc' }
+            ]
+          } else if (rule === 'price-asc') {
+            orderBy = [
+              { price: 'asc' },
+              { sortOrder: 'desc' }
+            ]
+          } else if (rule === 'price-desc') {
+            orderBy = [
+              { price: 'desc' },
+              { sortOrder: 'desc' }
+            ]
+          } else if (rule === 'newest') {
+            orderBy = [
+              { createdAt: 'desc' }
+            ]
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch category sort rule settings:', err)
+      }
+    }
+
     if (sort === 'price-asc') {
       orderBy = { price: 'asc' }
     } else if (sort === 'price-desc') {
