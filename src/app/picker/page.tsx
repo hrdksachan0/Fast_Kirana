@@ -1284,7 +1284,7 @@ export default function PickerDashboard() {
                 </button>
               </div>
               <span className="text-[10px] font-bold text-white/70 font-mono uppercase tracking-wider">
-                #{activeOrder.id.slice(0, 8)}
+                #{activeOrder.readableId || activeOrder.id.slice(0, 8)}
               </span>
             </div>
             <div className="relative mt-3 flex flex-col gap-1.5">
@@ -1738,7 +1738,7 @@ export default function PickerDashboard() {
                                 </div>
                               )}
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] font-mono font-bold text-gray-400">#{order.id.slice(0, 8)}</span>
+                                <span className="text-[9px] font-mono font-bold text-gray-400">#{order.readableId || order.id.slice(0, 8)}</span>
                                 {order.companionOrder && (
                                   <span className="bg-rose-100 text-rose-600 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">
                                     ☕ cafe

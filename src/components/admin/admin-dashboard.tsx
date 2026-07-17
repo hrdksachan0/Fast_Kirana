@@ -884,6 +884,52 @@ export function AdminDashboard({
     return () => { active = false }
   }, [userPage, userSearch, userRoleFilter])
 
+  const [isExportingUsers, setIsExportingUsers] = useState(false)
+
+  const handleExportCustomersCsv = async () => {
+    setIsExportingUsers(true)
+    try {
+      const res = await fetch(`/api/admin/users?limit=10000&role=USER`)
+      if (!res.ok) throw new Error('Failed to fetch customers')
+      const data = await res.json()
+      const customers = data.users || []
+
+      if (customers.length === 0) {
+        toast.error('No customers found to export.')
+        return
+      }
+
+      // Format CSV
+      const headers = ['Name', 'Email', 'Phone', 'Orders Count', 'Joined Date']
+      const rows = customers.map((c: any) => [
+        `"${(c.name || '').replace(/"/g, '""')}"`,
+        `"${(c.email || '').replace(/"/g, '""')}"`,
+        `"${(c.phone || '').replace(/"/g, '""')}"`,
+        c._count?.orders ?? 0,
+        new Date(c.createdAt).toLocaleDateString('en-IN')
+      ])
+
+      const csvContent = [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n')
+      
+      // Trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', `customers_export_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('Customers data exported successfully!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Could not export customer records.')
+    } finally {
+      setIsExportingUsers(false)
+    }
+  }
+
   // Render pagination controls helper
   const renderPagination = (currentPage: number, totalItems: number, itemsPerPage: number, onPageChange: (p: number) => void) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage)
@@ -2184,7 +2230,7 @@ export function AdminDashboard({
                     className={`flex items-center justify-between rounded-xl border p-2.5 text-xs font-medium ${delayColor}`}
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-bold">Order #{order.id.slice(0, 8)}</span>
+                      <span className="font-bold">Order #{order.readableId || order.id.slice(0, 8)}</span>
                       <span className="text-[10px] opacity-80">{delayType} • {order.userName || order.userEmail || 'Guest'}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -3817,9 +3863,19 @@ export function AdminDashboard({
       {activeTab === 'users' && (
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-5 border-b border-border/40 pb-4">
-            <div>
-              <h3 className="font-extrabold text-text-primary text-base">Customer Accounts</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5">Access user profiles and check transaction frequencies.</p>
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <div>
+                <h3 className="font-extrabold text-text-primary text-base">Customer Accounts</h3>
+                <p className="text-[10px] text-text-secondary mt-0.5">Access user profiles and check transaction frequencies.</p>
+              </div>
+              <button
+                onClick={handleExportCustomersCsv}
+                disabled={isExportingUsers}
+                className="ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 shrink-0"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {isExportingUsers ? 'Exporting...' : '📥 Export Customers'}
+              </button>
             </div>
             
             {/* Search and Filters */}
@@ -4554,7 +4610,7 @@ export function AdminDashboard({
                     return (
                       <div key={order.id} className="flex justify-between items-center p-3 rounded-xl border border-rose-500/10 bg-rose-500/5 text-xs">
                         <div>
-                          <p className="font-bold text-rose-600">Order #{order.id.slice(0, 8)}</p>
+                          <p className="font-bold text-rose-600">Order #{order.readableId || order.id.slice(0, 8)}</p>
                           <p className="text-[10px] text-text-secondary mt-0.5 font-medium">
                             Status: <span className="font-bold uppercase">{order.status}</span> • Customer: {order.userName || order.userEmail}
                           </p>

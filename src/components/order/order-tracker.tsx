@@ -668,7 +668,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                   </span>
                   <div>
                     <div className="text-text-primary font-extrabold text-[11px] truncate max-w-[150px]">{order.shopName || 'FastKirana Store'}</div>
-                    <div className="text-[10px] text-text-muted mt-0.5">#{order.id.slice(-6).toUpperCase()} • {order.items.length} items</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">#{order.readableId || order.id.slice(-6).toUpperCase()} • {order.items.length} items</div>
                   </div>
                 </div>
                 <span className={cn(
@@ -690,7 +690,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                   </span>
                   <div>
                     <div className="text-text-primary font-extrabold text-[11px] truncate max-w-[150px]">{compOrder.shopName || 'FastKirana Cafe'}</div>
-                    <div className="text-[10px] text-text-muted mt-0.5">#{compOrder.id.slice(-6).toUpperCase()} • {compOrder.items.length} items</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">#{compOrder.readableId || compOrder.id.slice(-6).toUpperCase()} • {compOrder.items.length} items</div>
                   </div>
                 </div>
                 <span className={cn(

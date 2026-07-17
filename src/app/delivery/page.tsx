@@ -641,10 +641,12 @@ export default function DeliveryDashboard() {
         deliveryLng: coords?.lng || null,
       })
       if (success) {
+        const matchingOrder = orders.find((o) => o.id === capturingOrderId)
+        const displayId = matchingOrder?.readableId || capturingOrderId.slice(0, 8)
         toast.success('📸 Delivery confirmed with photo proof!', {
           description: coords 
-            ? `Photo proof and GPS coordinates saved for order #${capturingOrderId.slice(0, 8)}…`
-            : `Photo proof saved for order #${capturingOrderId.slice(0, 8)}… (GPS not available)`,
+            ? `Photo proof and GPS coordinates saved for order #${displayId}…`
+            : `Photo proof saved for order #${displayId}… (GPS not available)`,
           duration: 4000,
         })
         setCapturingOrderId(null)
@@ -689,6 +691,7 @@ export default function DeliveryDashboard() {
       {capturingOrderId && (
         <PhotoCapture
           orderId={capturingOrderId}
+          orderNumber={orders.find((o) => o.id === capturingOrderId)?.readableId}
           onConfirm={handlePhotoCaptured}
           onCancel={handlePhotoCancelled}
           isSubmitting={capturingPhotoSubmitting}
@@ -719,7 +722,7 @@ export default function DeliveryDashboard() {
                   </div>
                   <h3 className="text-lg font-black text-text-primary">COD Payment Option</h3>
                   <p className="text-xs text-text-muted">
-                    Collect payment of <span className="font-extrabold text-text-primary">{formatPrice(order.total)}</span> for Order #{order.id.slice(0, 8)}. How is the customer paying?
+                    Collect payment of <span className="font-extrabold text-text-primary">{formatPrice(order.total)}</span> for Order #{order.readableId || order.id.slice(0, 8)}. How is the customer paying?
                   </p>
                 </div>
 
@@ -765,7 +768,7 @@ export default function DeliveryDashboard() {
           const order = orders.find((o) => o.id === upiQrOrderId)
           if (!order) return null
           
-          const upiUrl = `upi://pay?pa=iamuv26@ptyes&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.id.slice(0, 8)}`
+          const upiUrl = `upi://pay?pa=iamuv26@ptyes&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.readableId || order.id.slice(0, 8)}`
           const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`
 
           return (

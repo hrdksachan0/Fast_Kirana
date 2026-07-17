@@ -615,10 +615,20 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
+        // Find highest readableId to increment
+        const lastOrder = await tx.order.findFirst({
+          orderBy: { readableId: 'desc' },
+          select: { readableId: true }
+        })
+        const nextReadableId = lastOrder && lastOrder.readableId 
+          ? lastOrder.readableId + 1 
+          : 600001
+
         // Create order
         const newOrder = await tx.order.create({
           data: {
             userId: userId,
+            readableId: nextReadableId,
             addressId: orderAddressId,
             combinedId: combinedId,
             status: OrderStatus.PENDING,
@@ -800,12 +810,13 @@ export async function POST(request: NextRequest) {
       }
 
       for (const order of createdOrders) {
-        const shortId = order.id.slice(-6).toUpperCase()
+        const displayId = order.readableId || order.id.slice(-6).toUpperCase()
         const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
 
         sseEmitter.emit('order', {
           type: 'new-order',
           orderId: order.id,
+          readableId: order.readableId,
           shopName: order.shopName,
           status: order.status,
           total: order.total,
@@ -815,7 +826,7 @@ export async function POST(request: NextRequest) {
         // Send push notifications to all workers for any new order
         sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
           title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
-          body: `Order #${shortId} of ₹${order.total} has been placed.`,
+          body: `Order #${displayId} of ₹${order.total} has been placed.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id }
         }).catch((err: any) => console.error('Error sending push notification to workers:', err))

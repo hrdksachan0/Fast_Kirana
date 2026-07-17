@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     
     if (type === 'cafe') {
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       `
     } else if (type === 'restaurant') {
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
       `
     } else {
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
 
     if (orders.length > 0 && minTime && maxTime) {
       companionOrders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o.status::text as status, o."shopName", o."createdAt"
+        SELECT o.id, o."userId", o."readableId", o.status::text as status, o."shopName", o."createdAt"
         FROM orders o
         WHERE o."userId" = ANY(${userIds})
           AND o."createdAt" >= ${minTime}

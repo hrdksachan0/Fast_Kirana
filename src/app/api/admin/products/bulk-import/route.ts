@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
 
     const createdProducts: any[] = []
 
+    // Fetch current max readableId for bulk insert numbering
+    const lastProduct = await prisma.product.findFirst({
+      orderBy: { readableId: 'desc' },
+      select: { readableId: true }
+    })
+    let nextReadableId = lastProduct && lastProduct.readableId 
+      ? lastProduct.readableId 
+      : 200000
+
     for (let i = 0; i < products.length; i++) {
       const item = products[i]
       const rowNum = i + 1
@@ -234,9 +243,11 @@ export async function POST(request: NextRequest) {
           }
           existingSlugs.add(slug)
 
+          nextReadableId++
           product = await prisma.product.create({
             data: {
               name: item.name.trim(),
+              readableId: nextReadableId,
               slug,
               description: item.description?.trim() || '',
               imageUrl: item.imageUrl?.trim() || '📦',

@@ -41,13 +41,14 @@ export async function GET(request: Request) {
     if (status && status !== 'ALL' && search) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.status::text = ${status}
           AND (
             o.id ILIKE ${searchLike}
+            OR o."readableId"::text ILIKE ${searchLike}
             OR u.name ILIKE ${searchLike}
             OR u.email ILIKE ${searchLike}
             OR o."shopName" ILIKE ${searchLike}
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
       `
     } else if (status && status !== 'ALL') {
       ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
         FROM orders o
         WHERE o.status::text = ${status}
@@ -67,11 +68,12 @@ export async function GET(request: Request) {
     } else if (search) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.id ILIKE ${searchLike}
+          OR o."readableId"::text ILIKE ${searchLike}
           OR u.name ILIKE ${searchLike}
           OR u.email ILIKE ${searchLike}
           OR o."shopName" ILIKE ${searchLike}
@@ -80,7 +82,7 @@ export async function GET(request: Request) {
       `
     } else {
       ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
+        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
         FROM orders o
         ORDER BY o."createdAt" DESC
@@ -115,6 +117,7 @@ export async function GET(request: Request) {
       const address = allAddresses.find(a => a.id === o.addressId) || null
       return {
         id: o.id,
+        readableId: o.readableId,
         status: o.status,
         total: o.total,
         createdAt: new Date(o.createdAt).toISOString(),

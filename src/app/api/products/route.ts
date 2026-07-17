@@ -466,9 +466,19 @@ export async function POST(request: NextRequest) {
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
+    // Find highest readableId to increment
+    const lastProduct = await prisma.product.findFirst({
+      orderBy: { readableId: 'desc' },
+      select: { readableId: true }
+    })
+    const nextReadableId = lastProduct && lastProduct.readableId 
+      ? lastProduct.readableId + 1 
+      : 200001
+
     const product = await prisma.product.create({
       data: {
         name,
+        readableId: nextReadableId,
         slug: finalSlug,
         description,
         imageUrl: imageUrl || '📦',

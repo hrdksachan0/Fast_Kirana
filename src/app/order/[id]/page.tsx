@@ -42,7 +42,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   try {
     await runWithRetry(async () => {
       const orders: any[] = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -226,8 +226,12 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-secondary">Order ID</span>
-              <span className="font-mono text-[10px] select-all bg-muted px-1.5 py-0.5 rounded break-all">{order.id}</span>
+              <span className="text-text-secondary">Order Number</span>
+              <span className="font-extrabold text-accent">#{order.readableId || order.id.slice(-6).toUpperCase()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-text-secondary">Order Reference</span>
+              <span className="font-mono text-[9px] select-all bg-muted/60 px-1.5 py-0.5 rounded break-all">{order.id}</span>
             </div>
           </div>
         </div>

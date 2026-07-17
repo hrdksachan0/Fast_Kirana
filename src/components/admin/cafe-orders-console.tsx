@@ -762,7 +762,7 @@ export function CafeOrdersConsole() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>KOT - ${order.id.slice(0, 8)}</title>
+          <title>KOT - ${order.readableId || order.id.slice(0, 8)}</title>
           <style>
             @page {
               size: auto;
@@ -845,7 +845,7 @@ export function CafeOrdersConsole() {
           <table class="info-table">
             <tr>
               <td style="font-weight: bold; width: 45%;">KOT ID:</td>
-              <td style="text-align: right; font-weight: bold; font-size: 14px; width: 55%;">#${order.id.slice(0, 8).toUpperCase()}</td>
+              <td style="text-align: right; font-weight: bold; font-size: 14px; width: 55%;">#${order.readableId || order.id.slice(0, 8).toUpperCase()}</td>
             </tr>
             <tr>
               <td style="width: 45%;">Date:</td>
@@ -1190,7 +1190,7 @@ export function CafeOrdersConsole() {
                 <div key={order.id} className="bg-card border border-border/55 rounded-3xl p-5 shadow-sm flex flex-col justify-between space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs font-mono font-bold text-text-primary">{order.id.slice(0, 8)}</p>
+                      <p className="text-xs font-mono font-bold text-text-primary">#{order.readableId || order.id.slice(0, 8)}</p>
                       <p className="text-[9px] text-text-muted mt-0.5">{order.user.name} • {order.deliveryMethod}</p>
                     </div>
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${

@@ -149,6 +149,7 @@ model Category {
 
 model Product {
   id          String    @id @default(cuid())
+  readableId  Int?      @unique
   name        String
   slug        String    @unique
   description String?   @db.Text
@@ -234,6 +235,7 @@ model CartItem {
 
 model Order {
   id                String        @id @default(cuid())
+  readableId        Int?          @unique
   userId            String
   addressId         String
   combinedId        String?

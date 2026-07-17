@@ -5,6 +5,7 @@ import { Camera, X, CheckCircle, RotateCcw, ImageIcon, Loader2 } from 'lucide-re
 
 interface PhotoCaptureProps {
   orderId: string
+  orderNumber?: string | number
   onConfirm: (photoBase64: string) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -51,6 +52,7 @@ function compressImage(base64Str: string, maxWidth = 800, maxHeight = 800): Prom
 
 export default function PhotoCapture({
   orderId,
+  orderNumber,
   onConfirm,
   onCancel,
   isSubmitting = false,
@@ -105,7 +107,7 @@ export default function PhotoCapture({
                 Delivery Photo Proof
               </h3>
               <p className="text-[10px] text-text-secondary mt-0.5">
-                Order #{orderId.slice(0, 8)}…
+                Order #{orderNumber || orderId.slice(0, 8)}
               </p>
             </div>
           </div>

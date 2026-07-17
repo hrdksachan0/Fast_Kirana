@@ -100,7 +100,7 @@ export async function GET() {
 
         // 5. CONFIRMED ORDERS: Accepted but not packed orders
         prisma.$queryRaw`
-          SELECT id, "updatedAt", "shopName"
+          SELECT id, "readableId", "updatedAt", "shopName"
           FROM orders
           WHERE status = 'CONFIRMED'::"OrderStatus"
         ` as Promise<any[]>,
@@ -141,7 +141,7 @@ export async function GET() {
       const delayMin = Math.floor((now.getTime() - new Date(o.updatedAt).getTime()) / 60000)
       return {
         id: o.id,
-        name: `${isCafe ? 'Cafe Order' : 'Grocery Order'} #${o.id.slice(0, 8)} accepted but not packed yet`,
+        name: `${isCafe ? 'Cafe Order' : 'Grocery Order'} #${o.readableId || o.id.slice(0, 8)} accepted but not packed yet`,
         slug: `order-${o.id}`,
         imageUrl: null,
         stock: 0,

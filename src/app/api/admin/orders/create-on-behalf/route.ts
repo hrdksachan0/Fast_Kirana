@@ -413,9 +413,19 @@ export async function POST(request: Request) {
           estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 15)
         }
 
+        // Find highest readableId to increment
+        const lastOrder = await tx.order.findFirst({
+          orderBy: { readableId: 'desc' },
+          select: { readableId: true }
+        })
+        const nextReadableId = lastOrder && lastOrder.readableId 
+          ? lastOrder.readableId + 1 
+          : 600001
+
         const newOrder = await tx.order.create({
           data: {
             userId: customerId,
+            readableId: nextReadableId,
             addressId: finalAddressId,
             status: OrderStatus.PENDING,
             subtotal: orderInfo.subtotal,

@@ -21,7 +21,7 @@ export async function GET(
 
     // Use raw SQL to avoid PrismaPg enum deserialization bug
     const orders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o."userId", o."addressId",
+      SELECT o.id, o."userId", o."addressId", o."readableId",
              o.status::text as status,
              o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
              o."paymentMethod"::text as "paymentMethod",
@@ -70,7 +70,7 @@ export async function GET(
     if (!isWorker && order.combinedId) {
       // Fetch all sub-orders of this combined order
       const combinedOrders: any[] = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
