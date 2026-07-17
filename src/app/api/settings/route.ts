@@ -57,6 +57,8 @@ const DEFAULT_SETTINGS = {
   hero_subtitle_night_mart_closed: "Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨",
   hero_subtitle_night_cafe_closed: "Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦",
   hero_subtitle_night_both_open: "Indulge in ice creams, chocolates, late night munchies, and cafe specialties.",
+  restaurant_commission: '10',
+  restaurant_profit_share: '15',
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {

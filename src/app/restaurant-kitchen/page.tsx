@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings } from 'lucide-react'
+import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee } from 'lucide-react'
 import { AdminRestaurantConsole } from '@/components/admin/admin-restaurant-console'
 import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
 import { RestaurantSalesConsole } from '@/components/admin/restaurant-sales-console'
+import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function RestaurantKitchenPage() {
@@ -14,7 +15,7 @@ export default function RestaurantKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { restaurantOpen } = useUIStore()
-  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog'>('orders')
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'payouts'>('orders')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -125,6 +126,17 @@ export default function RestaurantKitchenPage() {
             <Settings className="h-4 w-4" />
             Menu Catalog
           </button>
+          <button
+            onClick={() => setActiveTab('payouts')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeTab === 'payouts' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <IndianRupee className="h-4 w-4" />
+            Payout Ledger
+          </button>
         </div>
 
         {/* Console Container */}
@@ -132,6 +144,7 @@ export default function RestaurantKitchenPage() {
           {activeTab === 'orders' && <RestaurantOrdersConsole />}
           {activeTab === 'analytics' && <RestaurantSalesConsole />}
           {activeTab === 'catalog' && <AdminRestaurantConsole />}
+          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} />}
         </div>
 
       </div>

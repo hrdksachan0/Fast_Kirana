@@ -94,16 +94,22 @@ export async function GET(request: NextRequest) {
     // Track missing cost products
     const missingCostProductsMap: Record<string, { id: string; name: string; price: number }> = {}
 
+    // Fetch dynamic restaurant commission setting
+    const commissionSetting = await prisma.storeSetting.findUnique({
+      where: { key: 'restaurant_commission' }
+    })
+    const dynamicCommissionRate = parseFloat(commissionSetting?.value || '10') / 100
+
     // Helper: calculate cost and profit for an item
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const itemRevenue = item.price * item.quantity
 
       // Special Logic for partner Restaurant (Wedson) orders:
-      // Admin profit is 10% commission on item sales.
-      // The remaining 90% is the payout cost to the partner restaurant.
+      // Admin profit is dynamic commission on item sales.
+      // The remaining portion is the payout cost to the partner restaurant.
       if (item.shopName === 'FastKirana Restaurant Kitchen') {
-        const itemProfit = itemRevenue * 0.10
-        const itemCost = itemRevenue * 0.90
+        const itemProfit = itemRevenue * dynamicCommissionRate
+        const itemCost = itemRevenue * (1 - dynamicCommissionRate)
         return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
       }
 

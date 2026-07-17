@@ -99,13 +99,27 @@ export async function GET(request: NextRequest) {
       itemsByOrder[item.orderId].push(item)
     }
 
-    // Helper: calculate cost and profit for an item with fixed 25% margin
+    // Fetch dynamic settings from database
+    const dbSettings = await prisma.storeSetting.findMany({
+      where: {
+        key: { in: ['restaurant_commission', 'restaurant_profit_share'] }
+      }
+    })
+    const dbSettingsMap = new Map(dbSettings.map(s => [s.key, s.value]))
+    
+    // Parse rates (fallback to 10% and 15%)
+    const commissionRate = parseFloat(dbSettingsMap.get('restaurant_commission') || '10') / 100
+    const profitShareRate = parseFloat(dbSettingsMap.get('restaurant_profit_share') || '15') / 100
+    const totalMarginRate = commissionRate + profitShareRate
+    const costRate = 1 - totalMarginRate
+
+    // Helper: calculate cost and profit for an item with dynamic margin
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const totalItemSales = item.price * item.quantity
-      const cost = totalItemSales * 0.75
-      const profit = totalItemSales * 0.25
-      const restaurantProfit = totalItemSales * 0.15
-      const adminProfit = totalItemSales * 0.10
+      const cost = totalItemSales * costRate
+      const profit = totalItemSales * totalMarginRate
+      const restaurantProfit = totalItemSales * profitShareRate
+      const adminProfit = totalItemSales * commissionRate
       return { cost, sales: totalItemSales, profit, restaurantProfit, adminProfit }
     }
 

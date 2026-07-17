@@ -491,3 +491,18 @@ model StoreInventory {
   @@map("store_inventories")
 }
 
+model RestaurantPayout {
+  id              String   @id @default(cuid())
+  startDate       DateTime
+  endDate         DateTime
+  amount          Float
+  status          String   @default("PENDING") // PENDING, PAID
+  transactionId   String?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("restaurant_payouts")
+}
+
