@@ -882,12 +882,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === 'true'
-    const isAdmin = session.user?.role === 'ADMIN'
+    const isStaff = session.user?.role === 'ADMIN' || session.user?.role === 'CHEF' || session.user?.role === 'PICKER' || session.user?.role === 'DELIVERY'
 
     let orders: any[] = []
 
-    if (isAdmin && all) {
-      // Admin queries all orders with associated customer details
+    if (isStaff && all) {
+      // Staff queries all orders with associated customer details
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
@@ -936,7 +936,7 @@ export async function GET(request: NextRequest) {
       address: allAddresses.find(a => a.id === o.addressId),
     }))
 
-    if (isAdmin && all) {
+    if (isStaff && all) {
       return NextResponse.json(result)
     }
 

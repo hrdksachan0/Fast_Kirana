@@ -98,6 +98,13 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
   const initialMode = (urlMode === 'restaurant') ? 'restaurant' : 'cafe'
   const [experienceMode, setExperienceMode] = useState<'cafe' | 'restaurant'>(initialMode)
 
+  // Scroll to top on experience mode switch to prevent height collapse footer jumps
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' as any })
+    }
+  }, [experienceMode])
+
   const handleExperienceModeChange = (mode: 'cafe' | 'restaurant') => {
     triggerHaptic('medium')
     setExperienceMode(mode)

@@ -46,6 +46,13 @@ export function StorefrontClient({
   // Tab state: 'grocery' | 'cafe'
   const [activeTab, setActiveTab] = useState<'grocery' | 'cafe'>('grocery')
 
+  // Scroll to top on tab change to prevent browser scroll jump/footer issues
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' as any })
+    }
+  }, [activeTab])
+
   // Sync tab state with query parameters on load
   useEffect(() => {
     const mode = searchParams.get('mode')
