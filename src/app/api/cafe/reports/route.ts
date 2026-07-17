@@ -110,17 +110,13 @@ export async function GET(request: NextRequest) {
     // Parse rates (fallback to 10% and 15%)
     const commissionRate = parseFloat(dbSettingsMap.get('cafe_commission') || '10') / 100
     const profitShareRate = parseFloat(dbSettingsMap.get('cafe_profit_share') || '15') / 100
-    const totalMarginRate = commissionRate + profitShareRate
-    const costRate = 1 - totalMarginRate
 
     // Helper: calculate cost and profit for an item with dynamic margin
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const totalItemSales = item.price * item.quantity
-      const cost = totalItemSales * costRate
-      const profit = totalItemSales * totalMarginRate
-      const cafeProfit = totalItemSales * profitShareRate
       const adminProfit = totalItemSales * commissionRate
-      return { cost, sales: totalItemSales, profit, cafeProfit, adminProfit }
+      const cafeProfit = totalItemSales - adminProfit
+      return { cost: 0, sales: totalItemSales, profit: totalItemSales, cafeProfit, adminProfit }
     }
 
     // 3. Process Financials Summary
@@ -142,13 +138,12 @@ export async function GET(request: NextRequest) {
       const items = itemsByOrder[o.id] || []
       items.forEach(item => {
         const metrics = getItemMetrics(item)
-        totalCost += metrics.cost
         totalCafeProfit += metrics.cafeProfit
         totalAdminProfit += metrics.adminProfit
       })
     })
 
-    const netProfit = totalSales - totalCost // 25% total margin
+    const netProfit = totalSales // net profit matches total sales since no COGS is deducted at marketplace level
 
     // 4. Daily Sales Trend
     const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; adminProfit: number; orders: number }>()
@@ -221,6 +216,8 @@ export async function GET(request: NextRequest) {
         netProfit,
         ordersCount: orders.length,
         avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,
+        commissionRate: commissionRate * 100,
+        profitShareRate: profitShareRate * 100,
       },
       dailySales,
       topProducts,

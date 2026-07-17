@@ -16,6 +16,8 @@ interface Summary {
   adminProfit: number
   ordersCount: number
   avgOrderValue: number
+  commissionRate?: number
+  profitShareRate?: number
 }
 
 interface DailySale {
@@ -44,7 +46,9 @@ export function RestaurantSalesConsole() {
     restaurantProfit: 0,
     adminProfit: 0,
     ordersCount: 0,
-    avgOrderValue: 0
+    avgOrderValue: 0,
+    commissionRate: 10,
+    profitShareRate: 15
   })
   const [dailySales, setDailySales] = useState<DailySale[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
@@ -199,39 +203,39 @@ export function RestaurantSalesConsole() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Sales Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Food Revenue</span>
-                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
-                  <IndianRupee className="h-4 w-4" />
-                </div>
-              </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.totalSales)}</h3>
-              <p className="text-[9px] font-bold text-emerald-500">Excluded Delivery Fee</p>
-            </div>
-
-            {/* Restaurant Profit Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit (15%)</span>
-                <div className="h-8 w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
-                  <Percent className="h-4 w-4" />
-                </div>
-              </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.restaurantProfit)}</h3>
-              <p className="text-[9px] font-bold text-red-500">Restaurant Net Share</p>
-            </div>
-
-            {/* Admin Commission Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit (10%)</span>
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-              </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.adminProfit)}</h3>
-              <p className="text-[9px] font-bold text-blue-500">FastKirana Commission</p>
-            </div>
+               <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Net Sales</span>
+                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
+                   <IndianRupee className="h-4 w-4" />
+                 </div>
+               </div>
+               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.totalSales)}</h3>
+              <p className="text-[9px] font-bold text-emerald-500">Net Sales</p>
+             </div>
+ 
+             {/* Restaurant Profit Card */}
+             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
+               <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit ({100 - (summary.commissionRate || 10)}%)</span>
+                 <div className="h-8 w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
+                   <Percent className="h-4 w-4" />
+                 </div>
+               </div>
+               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.restaurantProfit)}</h3>
+               <p className="text-[9px] font-bold text-red-500">Restaurant Net Share</p>
+             </div>
+ 
+             {/* Admin Commission Card */}
+             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
+               <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit ({summary.commissionRate || 10}%)</span>
+                 <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
+                   <TrendingUp className="h-4 w-4" />
+                 </div>
+               </div>
+               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.adminProfit)}</h3>
+               <p className="text-[9px] font-bold text-blue-500">FastKirana Commission</p>
+             </div>
 
             {/* Orders Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">

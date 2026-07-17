@@ -181,12 +181,23 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
         const assignedProductIds = new Set<string>()
 
+        const isTagMatch = (t1: string, t2: string) => {
+          const a = t1.toLowerCase().trim()
+          const b = t2.toLowerCase().trim()
+          if (a === b) return true
+          if (a + 's' === b || b + 's' === a) return true
+          if (a + 'es' === b || b + 'es' === a) return true
+          if (a.endsWith('y') && a.slice(0, -1) + 'ies' === b) return true
+          if (b.endsWith('y') && b.slice(0, -1) + 'ies' === a) return true
+          return false
+        }
+
         dbProducts.forEach((product: any) => {
           for (const cat of PREDEFINED_CATEGORIES) {
             const hasMatch = product.tags?.some((t: string) => 
-              cat.matchTags?.map((mt: string) => mt.toLowerCase())?.includes(t.toLowerCase())
+              cat.matchTags?.some((mt: string) => isTagMatch(t, mt))
             ) || 
-            (product.category?.slug && cat.matchTags?.map((mt: string) => mt.toLowerCase())?.includes(product.category.slug.toLowerCase())) ||
+            (product.category?.slug && cat.matchTags?.some((mt: string) => isTagMatch(product.category.slug, mt))) ||
             (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate']?.includes(product.slug)) ||
             (cat.tag === 'chilled' && product.category?.slug === 'beverages') ||
             (cat.tag === 'desserts' && product.category?.slug === 'ice-cream')
@@ -584,8 +595,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             ))
           ) : (
             showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
-              const displayProducts = cat.products.slice(0, 5)
-              const hasMore = cat.products.length > 5
+              const displayProducts = cat.products.slice(0, 100)
+              const hasMore = cat.products.length > 100
               const isExpanded = expandedCategories.has(cat.tag)
 
               return (
