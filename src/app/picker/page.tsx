@@ -52,6 +52,7 @@ interface OrderItem {
 
 interface CompanionOrder {
   id: string
+  readableId?: number
   status: string
   shopName: string | null
   items: {
@@ -63,6 +64,7 @@ interface CompanionOrder {
 
 interface Order {
   id: string
+  readableId?: number
   status: string
   total: number
   createdAt: string | Date
