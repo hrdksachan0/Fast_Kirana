@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     'fast grocery delivery',
     'kirana store near me'
   ],
-  manifest: '/manifest.json',
+  manifest: '/manifest.json?v=2',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   openGraph: {
     title: 'Fast Kirana - Fast Grocery Delivery in Ghatampur',
