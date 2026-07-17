@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { Category, Product } from '@/types'
@@ -364,6 +364,26 @@ export function CategoryPageClient({
 
   const [maxPrice, setMaxPrice] = useState<number>(1000)
 
+  const [columns, setColumns] = useState<2 | 3>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('category_layout_columns')
+      if (saved === '3') return 3
+    }
+    return 2
+  })
+  const [visibleCount, setVisibleCount] = useState(12)
+
+  const toggleColumns = () => {
+    const newCols = columns === 2 ? 3 : 2
+    setColumns(newCols)
+    localStorage.setItem('category_layout_columns', String(newCols))
+  }
+
+  // Reset visibleCount when filters change
+  useEffect(() => {
+    setVisibleCount(12)
+  }, [searchQuery, activeSubcategoryId, sort, vegFilter, maxPrice])
+
   // Reset maxPrice & subcategory when switching categories
   useEffect(() => {
     setMaxPrice(maxPriceOfCategory)
@@ -373,6 +393,30 @@ export function CategoryPageClient({
       setActiveSubcategoryId('all')
     }
   }, [maxPriceOfCategory, activeCategory.slug, subcatParam])
+
+  const desktopSentinelRef = useRef<HTMLDivElement>(null)
+  const mobileSentinelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const desktopSentinel = desktopSentinelRef.current
+    const mobileSentinel = mobileSentinelRef.current
+
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0]
+      if (entry.isIntersecting) {
+        setVisibleCount((prev) => prev + 12)
+      }
+    }, {
+      rootMargin: '200px',
+    })
+
+    if (desktopSentinel) observer.observe(desktopSentinel)
+    if (mobileSentinel) observer.observe(mobileSentinel)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
 
   // Center active category tab on mobile horizontal scroll bar on mount
   useEffect(() => {
@@ -685,11 +729,17 @@ export function CategoryPageClient({
                 <h2 className="text-base font-bold text-text-primary">No products found</h2>
               </div>
             ) : (
-              <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
-                {processedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
+                  {processedProducts.slice(0, visibleCount).map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+                {/* Desktop Sentinel */}
+                <div ref={desktopSentinelRef} className="h-8 w-full flex items-center justify-center text-[10px] text-text-muted font-bold py-1 pointer-events-none select-none">
+                  {visibleCount < processedProducts.length ? 'Loading more products...' : 'All products loaded'}
+                </div>
+              </>
             )}
           </main>
         </div>
@@ -852,7 +902,16 @@ export function CategoryPageClient({
               {/* Small Info Label */}
               <div className="flex justify-between items-center text-[9px] font-black text-text-muted uppercase tracking-widest px-0.5">
                 <span>{activeSubcategory.name}</span>
-                <span>{processedProducts.length} Products</span>
+                <div className="flex items-center gap-2">
+                  <span>{processedProducts.length} Products</span>
+                  <button 
+                    type="button"
+                    onClick={toggleColumns}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-text-primary border border-zinc-200 dark:border-zinc-700/60 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all font-black text-[8px] cursor-pointer"
+                  >
+                    <span>{columns === 2 ? '3-COL 📱' : '2-COL 📱'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Search Bar inside Right Panel */}
@@ -943,11 +1002,22 @@ export function CategoryPageClient({
                 <p className="text-[10px] text-text-secondary mt-0.5">Check back later or change filters</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 pb-20">
-                {processedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className={cn(
+                  "grid gap-2 pb-20",
+                  columns === 3 
+                    ? "grid-cols-3 gap-1 min-[375px]:gap-1.5" 
+                    : "grid-cols-2 gap-2"
+                )}>
+                  {processedProducts.slice(0, visibleCount).map((product) => (
+                    <ProductCard key={product.id} product={product} isCompact={columns === 3} />
+                  ))}
+                </div>
+                {/* Mobile Sentinel */}
+                <div ref={mobileSentinelRef} className="h-8 w-full flex items-center justify-center text-[10px] text-text-muted font-bold py-1 pointer-events-none select-none">
+                  {visibleCount < processedProducts.length ? 'Loading...' : 'End of list'}
+                </div>
+              </>
             )}
           </div>
         </div>

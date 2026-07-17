@@ -15,12 +15,13 @@ import { triggerHaptic } from '@/lib/haptic'
 
 interface ProductCardProps {
   product: Product
+  isCompact?: boolean
 }
 
 import { isCafeProduct, cn } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
@@ -203,7 +204,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs p-2.5 shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800 transition-all duration-300 ease-out cursor-pointer h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800 transition-all duration-300 ease-out cursor-pointer",
+        isCompact 
+          ? "p-1.5 min-[375px]:p-2 h-[175px] min-[375px]:h-[195px] sm:h-[220px]" 
+          : "p-2.5 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
+      )}
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
@@ -232,13 +238,24 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
-          <div className="absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-2 py-0.5 text-[8.5px] min-[375px]:text-[9.5px] font-black text-white shadow-[0_2px_8px_rgba(244,63,94,0.3)] tracking-wider whitespace-nowrap pointer-events-none select-none">
+          <div className={cn(
+            "absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-2 py-0.5 font-black text-white shadow-[0_2px_8px_rgba(244,63,94,0.3)] tracking-wider whitespace-nowrap pointer-events-none select-none",
+            isCompact ? "text-[7.5px] px-1.5" : "text-[8.5px] min-[375px]:text-[9.5px]"
+          )}>
             {resolvedDiscount}% OFF
           </div>
         )}
 
         {/* Image Container */}
-        <div ref={imageRef} className="relative w-full h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px] overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0">
+        <div 
+          ref={imageRef} 
+          className={cn(
+            "relative w-full overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0",
+            isCompact 
+              ? "h-[75px] min-[375px]:h-[85px] sm:h-[110px]" 
+              : "h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px]"
+          )}
+        >
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
@@ -279,7 +296,12 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Product Info — flex-1 takes remaining space between image and bottom row */}
         <div className="flex flex-col flex-1 min-h-0 justify-center mt-1">
           {/* Name — fixed min-height for 2 lines */}
-          <h3 className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm font-bold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]">
+          <h3 className={cn(
+            "font-bold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors",
+            isCompact 
+              ? "text-[9px] min-[375px]:text-[10px] min-h-[18px] min-[375px]:min-h-[22px] sm:min-h-[26px]" 
+              : "text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]"
+          )}>
             {product.name}
           </h3>
           {/* Unit / Customisable — fixed height container */}
@@ -307,7 +329,12 @@ export function ProductCard({ product }: ProductCardProps) {
               initial={{ scale: 0.85, y: -2 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 12 }}
-              className="text-[10px] min-[375px]:text-xs sm:text-base font-bold text-text-primary block"
+              className={cn(
+                "font-bold text-text-primary block",
+                isCompact 
+                  ? "text-[9.5px] min-[375px]:text-[11px] sm:text-sm" 
+                  : "text-[10px] min-[375px]:text-xs sm:text-base"
+              )}
             >
               ₹{resolvedPrice}
             </motion.span>
@@ -331,7 +358,12 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Right Side: Add to Cart Actions */}
-        <div className="relative h-8 sm:h-9 w-[64px] min-[375px]:w-[72px] sm:w-20 shrink-0 flex-shrink-0">
+        <div className={cn(
+          "relative shrink-0 flex-shrink-0",
+          isCompact 
+            ? "h-7 min-[375px]:h-7.5 w-[52px] min-[375px]:w-[58px] sm:w-16" 
+            : "h-8 sm:h-9 w-[64px] min-[375px]:w-[72px] sm:w-20"
+        )}>
           <AnimatePresence mode="wait">
             {resolvedQuantity === 0 ? (
               <motion.div
@@ -353,7 +385,8 @@ export function ProductCard({ product }: ProductCardProps) {
                   disabled={isStoreClosed && resolvedStock > 0}
                   variant="outline"
                   className={cn(
-                    "w-full h-full border text-[10px] sm:text-xs font-bold rounded-full md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
+                    "w-full h-full border font-bold rounded-full md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
+                    isCompact ? "text-[8.5px] min-[375px]:text-[9.5px]" : "text-[10px] sm:text-xs",
                     isStoreClosed && resolvedStock > 0
                       ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                       : resolvedStock <= 0 || !resolvedIsAvailable
@@ -365,11 +398,11 @@ export function ProductCard({ product }: ProductCardProps) {
                     isNotifySubscribed ? (
                       <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                         <Check className="h-2.5 w-2.5 stroke-[3.5]" />
-                        Alerted
+                        {!isCompact && 'Alerted'}
                       </span>
                     ) : (
                       <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-500 font-bold">
-                        🔔 Notify
+                        🔔 {!isCompact && 'Notify'}
                       </span>
                     )
                   ) : isStoreClosed ? (
@@ -399,7 +432,10 @@ export function ProductCard({ product }: ProductCardProps) {
                 >
                   <Minus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
                 </motion.button>
-                <span className="w-4 min-[375px]:w-5 sm:w-7 shrink-0 flex items-center justify-center text-[9px] sm:text-xs font-bold select-none h-full bg-green-600 border-x border-white/10">
+                <span className={cn(
+                  "shrink-0 flex items-center justify-center font-bold select-none h-full bg-green-600 border-x border-white/10",
+                  isCompact ? "w-3 text-[8.5px]" : "w-4 min-[375px]:w-5 sm:w-7 text-[9px] sm:text-xs"
+                )}>
                   {quantity}
                 </span>
                 <motion.button
