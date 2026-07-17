@@ -542,6 +542,7 @@ export function AdminDashboard({
     isFlashDeal: false,
     isTopPick: false,
     isBestSeller: false,
+    sortOrder: '0',
   })
   
   // State for Add Product Form
@@ -568,6 +569,7 @@ export function AdminDashboard({
     isFlashDeal: false,
     isTopPick: false,
     isBestSeller: false,
+    sortOrder: '0',
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
@@ -1265,6 +1267,7 @@ export function AdminDashboard({
       isFlashDeal: p.isFlashDeal || false,
       isTopPick: p.isTopPick || false,
       isBestSeller: p.isBestSeller || false,
+      sortOrder: String(p.sortOrder ?? 0),
     })
 
     setShowAddProduct(true)
@@ -1478,6 +1481,7 @@ export function AdminDashboard({
       isFlashDeal: p.isFlashDeal || false,
       isTopPick: p.isTopPick || false,
       isBestSeller: p.isBestSeller || false,
+      sortOrder: String(p.sortOrder ?? 0),
     })
   }
 
@@ -1522,6 +1526,7 @@ export function AdminDashboard({
           isFlashDeal: productEditForm.isFlashDeal,
           isTopPick: productEditForm.isTopPick,
           isBestSeller: productEditForm.isBestSeller,
+          sortOrder: parseInt(productEditForm.sortOrder) || 0,
           variants: hasVariantsEdit ? editProductVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -1638,6 +1643,7 @@ export function AdminDashboard({
           isFlashDeal: false,
           isTopPick: false,
           isBestSeller: false,
+          sortOrder: '0',
         })
 
       } else {
@@ -3354,6 +3360,19 @@ export function AdminDashboard({
                     </label>
                   </div>
                 </div>
+              </div>
+
+              {/* Display Priority / Sort Order */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Display Priority / Sort Order</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 100 for top, -50 for bottom"
+                  value={newProduct.sortOrder}
+                  onChange={(e) => setNewProduct({ ...newProduct, sortOrder: e.target.value })}
+                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-text-primary"
+                />
+                <p className="text-[9px] text-text-muted mt-0.5">Higher numbers display first/on top. Lower numbers display last. Default is 0.</p>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
@@ -5485,6 +5504,20 @@ export function AdminDashboard({
                   </div>
                 </div>
               </div>
+
+              {/* Display Priority / Sort Order */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Display Priority / Sort Order</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 100 for top, -50 for bottom"
+                  value={productEditForm.sortOrder}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, sortOrder: e.target.value })}
+                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-text-primary"
+                />
+                <p className="text-[9px] text-text-muted mt-0.5">Higher numbers display first/on top. Lower numbers display last. Default is 0.</p>
+              </div>
+
               <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
                 <button
                   type="button"

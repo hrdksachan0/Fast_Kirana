@@ -58,7 +58,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' }
+    let orderBy: any = [
+      { sortOrder: 'desc' },
+      { createdAt: 'desc' }
+    ]
 
     if (sort === 'price-asc') {
       orderBy = { price: 'asc' }
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
       isFlashDeal: true,
       isTopPick: true,
       isBestSeller: true,
+      sortOrder: true,
       createdAt: true,
       updatedAt: true,
       category: {
@@ -383,7 +387,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller } = body
+    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder } = body
 
     if (!name || !categoryId || mrp === undefined || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -443,6 +447,7 @@ export async function POST(request: NextRequest) {
         isFlashDeal: isFlashDeal !== undefined ? !!isFlashDeal : false,
         isTopPick: isTopPick !== undefined ? !!isTopPick : false,
         isBestSeller: isBestSeller !== undefined ? !!isBestSeller : false,
+        sortOrder: sortOrder !== undefined ? parseInt(sortOrder) || 0 : 0,
       },
       include: {
         category: true,
