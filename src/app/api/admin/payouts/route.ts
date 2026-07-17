@@ -15,7 +15,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') || undefined
+
     const payouts = await prisma.restaurantPayout.findMany({
+      where: type ? { type } : {},
       orderBy: { createdAt: 'desc' }
     })
     return NextResponse.json(payouts)
@@ -32,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { startDate, endDate, notes } = await request.json()
+    const { startDate, endDate, notes, type = 'RESTAURANT' } = await request.json()
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Start date and End date are required' }, { status: 400 })
     }
@@ -42,17 +46,22 @@ export async function POST(request: NextRequest) {
     const end = new Date(endDate)
     end.setHours(23, 59, 59, 999)
 
+    // Set configuration based on Payout Type (RESTAURANT vs CAFE)
+    const isCafe = type === 'CAFE'
+    const shopName = isCafe ? 'FastKirana Cafe Kitchen' : 'FastKirana Restaurant Kitchen'
+    const shareKey = isCafe ? 'cafe_profit_share' : 'restaurant_profit_share'
+
     // Fetch dynamic profit share setting
     const shareSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'restaurant_profit_share' }
+      where: { key: shareKey }
     })
     const profitShareRate = parseFloat(shareSetting?.value || '15') / 100
 
-    // Fetch all delivered restaurant orders in range
+    // Fetch all delivered orders in range
     const orders = await prisma.order.findMany({
       where: {
         status: 'DELIVERED',
-        shopName: 'FastKirana Restaurant Kitchen',
+        shopName,
         createdAt: {
           gte: start,
           lte: end
@@ -60,19 +69,19 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Calculate total restaurant share
-    // share = (subtotal - discount) * profitShareRate
-    let totalRestaurantShare = 0
+    // Calculate total share
+    let totalShare = 0
     orders.forEach(o => {
       const foodSales = (o.subtotal || 0) - (o.discount || 0)
-      totalRestaurantShare += foodSales * profitShareRate
+      totalShare += foodSales * profitShareRate
     })
 
-    const finalAmount = Math.round(totalRestaurantShare * 100) / 100
+    const finalAmount = Math.round(totalShare * 100) / 100
 
     // Create payout entry
     const payout = await prisma.restaurantPayout.create({
       data: {
+        type,
         startDate: start,
         endDate: end,
         amount: finalAmount,

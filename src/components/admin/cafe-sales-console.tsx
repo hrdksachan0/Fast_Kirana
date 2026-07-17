@@ -11,6 +11,8 @@ interface Summary {
   totalDiscount: number
   totalTaxes: number
   totalMisc: number
+  cafeProfit: number
+  adminProfit: number
   netProfit: number
   ordersCount: number
   avgOrderValue: number
@@ -38,6 +40,8 @@ export function CafeSalesConsole() {
     totalDiscount: 0,
     totalTaxes: 0,
     totalMisc: 0,
+    cafeProfit: 0,
+    adminProfit: 0,
     netProfit: 0,
     ordersCount: 0,
     avgOrderValue: 0
@@ -192,7 +196,7 @@ export function CafeSalesConsole() {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Sales Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
@@ -205,16 +209,28 @@ export function CafeSalesConsole() {
               <p className="text-[9px] font-bold text-emerald-500">Collected Sales</p>
             </div>
 
-            {/* Profit Card */}
+            {/* Uska Profit Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Net Profit</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit (Cafe Share)</span>
+                <div className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shadow-inner">
+                  <Percent className="h-4 w-4" />
+                </div>
+              </div>
+              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.cafeProfit)}</h3>
+              <p className="text-[9px] font-bold text-rose-500">Cafe Net Profit Share</p>
+            </div>
+
+            {/* Mera Profit Card */}
+            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit (Admin)</span>
                 <div className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center shadow-inner">
                   <Percent className="h-4 w-4" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.netProfit)}</h3>
-              <p className="text-[9px] font-bold text-orange-500">Manual Cost Calculated</p>
+              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.adminProfit)}</h3>
+              <p className="text-[9px] font-bold text-orange-500">Admin Commission</p>
             </div>
 
             {/* Orders Card */}

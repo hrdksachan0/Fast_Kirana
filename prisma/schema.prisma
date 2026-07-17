@@ -493,6 +493,7 @@ model StoreInventory {
 
 model RestaurantPayout {
   id              String   @id @default(cuid())
+  type            String   @default("RESTAURANT") // RESTAURANT, CAFE
   startDate       DateTime
   endDate         DateTime
   amount          Float

@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Coffee, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings } from 'lucide-react'
+import { Coffee, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee } from 'lucide-react'
 import { AdminCafeConsole } from '@/components/admin/admin-cafe-console'
 import { CafeOrdersConsole } from '@/components/admin/cafe-orders-console'
 import { CafeSalesConsole } from '@/components/admin/cafe-sales-console'
+import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function CafeKitchenPage() {
@@ -14,7 +15,7 @@ export default function CafeKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { cafeOpen } = useUIStore()
-  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog'>('orders')
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'payouts'>('orders')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -125,6 +126,17 @@ export default function CafeKitchenPage() {
             <Settings className="h-4 w-4" />
             Menu Catalog
           </button>
+          <button
+            onClick={() => setActiveTab('payouts')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeTab === 'payouts' 
+                ? 'border-orange-600 text-orange-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <IndianRupee className="h-4 w-4" />
+            Payout Ledger
+          </button>
         </div>
 
         {/* Console Container */}
@@ -132,6 +144,7 @@ export default function CafeKitchenPage() {
           {activeTab === 'orders' && <CafeOrdersConsole />}
           {activeTab === 'analytics' && <CafeSalesConsole />}
           {activeTab === 'catalog' && <AdminCafeConsole />}
+          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} type="CAFE" />}
         </div>
 
       </div>

@@ -59,6 +59,8 @@ const DEFAULT_SETTINGS = {
   hero_subtitle_night_both_open: "Indulge in ice creams, chocolates, late night munchies, and cafe specialties.",
   restaurant_commission: '10',
   restaurant_profit_share: '15',
+  cafe_commission: '10',
+  cafe_profit_share: '15',
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {

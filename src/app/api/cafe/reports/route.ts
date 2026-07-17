@@ -99,26 +99,28 @@ export async function GET(request: NextRequest) {
       itemsByOrder[item.orderId].push(item)
     }
 
-    // Helper: calculate cost and profit for an item
-    const getItemMetrics = (item: typeof orderItems[0]) => {
-      let costPrice = item.costPrice
-
-      if (item.selectedVariant && item.variants) {
-        try {
-          const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
-          if (Array.isArray(variantsList)) {
-            const v = variantsList.find(x => x.name === item.selectedVariant)
-            if (v && v.costPrice !== undefined) {
-              costPrice = parseFloat(v.costPrice) || 0
-            }
-          }
-        } catch (e) {}
+    // Fetch dynamic settings from database
+    const dbSettings = await prisma.storeSetting.findMany({
+      where: {
+        key: { in: ['cafe_commission', 'cafe_profit_share'] }
       }
+    })
+    const dbSettingsMap = new Map(dbSettings.map(s => [s.key, s.value]))
+    
+    // Parse rates (fallback to 10% and 15%)
+    const commissionRate = parseFloat(dbSettingsMap.get('cafe_commission') || '10') / 100
+    const profitShareRate = parseFloat(dbSettingsMap.get('cafe_profit_share') || '15') / 100
+    const totalMarginRate = commissionRate + profitShareRate
+    const costRate = 1 - totalMarginRate
 
-      const totalItemCost = costPrice * item.quantity
+    // Helper: calculate cost and profit for an item with dynamic margin
+    const getItemMetrics = (item: typeof orderItems[0]) => {
       const totalItemSales = item.price * item.quantity
-      const profit = totalItemSales - totalItemCost
-      return { cost: totalItemCost, sales: totalItemSales, profit }
+      const cost = totalItemSales * costRate
+      const profit = totalItemSales * totalMarginRate
+      const cafeProfit = totalItemSales * profitShareRate
+      const adminProfit = totalItemSales * commissionRate
+      return { cost, sales: totalItemSales, profit, cafeProfit, adminProfit }
     }
 
     // 3. Process Financials Summary
@@ -127,9 +129,12 @@ export async function GET(request: NextRequest) {
     let totalDiscount = 0
     let totalTaxes = 0
     let totalMisc = 0
+    let totalCafeProfit = 0
+    let totalAdminProfit = 0
 
     orders.forEach(o => {
-      totalSales += o.total || 0
+      const foodSales = (o.subtotal || 0) - (o.discount || 0)
+      totalSales += foodSales
       totalDiscount += o.discount || 0
       totalTaxes += o.taxes || 0
       totalMisc += o.miscFee || 0
@@ -138,13 +143,15 @@ export async function GET(request: NextRequest) {
       items.forEach(item => {
         const metrics = getItemMetrics(item)
         totalCost += metrics.cost
+        totalCafeProfit += metrics.cafeProfit
+        totalAdminProfit += metrics.adminProfit
       })
     })
 
-    const netProfit = totalSales - totalCost - totalDiscount
+    const netProfit = totalSales - totalCost // 25% total margin
 
     // 4. Daily Sales Trend
-    const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; orders: number }>()
+    const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; adminProfit: number; orders: number }>()
     orders.forEach(o => {
       const dateStr = new Date(o.createdAt).toLocaleDateString('en-IN', {
         day: '2-digit',
@@ -152,27 +159,31 @@ export async function GET(request: NextRequest) {
       })
 
       if (!dailyTrendMap.has(dateStr)) {
-        dailyTrendMap.set(dateStr, { date: dateStr, sales: 0, profit: 0, orders: 0 })
+        dailyTrendMap.set(dateStr, { date: dateStr, sales: 0, profit: 0, adminProfit: 0, orders: 0 })
       }
 
       const dayData = dailyTrendMap.get(dateStr)!
       dayData.orders++
-      dayData.sales += o.total
+      
+      const foodSales = (o.subtotal || 0) - (o.discount || 0)
+      dayData.sales += foodSales
 
       const items = itemsByOrder[o.id] || []
-      let orderCost = 0
+      let orderCafeProfit = 0
+      let orderAdminProfit = 0
       items.forEach(item => {
         const metrics = getItemMetrics(item)
-        orderCost += metrics.cost
+        orderCafeProfit += metrics.cafeProfit
+        orderAdminProfit += metrics.adminProfit
       })
-      const orderProfit = o.total - orderCost - o.discount
-      dayData.profit += orderProfit
+      dayData.profit += orderCafeProfit // Uska Profit (15%)
+      dayData.adminProfit += orderAdminProfit // Intentional alignment to trend labels
     })
 
     const dailySales = Array.from(dailyTrendMap.values())
 
     // 5. Top Selling Products
-    const productStatsMap = new Map<string, { name: string; quantity: number; sales: number; profit: number }>()
+    const productStatsMap = new Map<string, { name: string; quantity: number; sales: number; profit: number; adminProfit: number }>()
     orderItems.forEach(item => {
       const metrics = getItemMetrics(item)
       const key = `${item.productId}_${item.selectedVariant || ''}`
@@ -182,14 +193,16 @@ export async function GET(request: NextRequest) {
           name: item.name + (item.selectedVariant ? ` (${item.selectedVariant})` : ''),
           quantity: 0,
           sales: 0,
-          profit: 0
+          profit: 0,
+          adminProfit: 0
         })
       }
 
       const stats = productStatsMap.get(key)!
       stats.quantity += item.quantity
       stats.sales += metrics.sales
-      stats.profit += metrics.profit
+      stats.profit += metrics.cafeProfit
+      stats.adminProfit += metrics.adminProfit
     })
 
     const topProducts = Array.from(productStatsMap.values())
@@ -203,6 +216,8 @@ export async function GET(request: NextRequest) {
         totalDiscount,
         totalTaxes,
         totalMisc,
+        cafeProfit: totalCafeProfit,
+        adminProfit: totalAdminProfit,
         netProfit,
         ordersCount: orders.length,
         avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,

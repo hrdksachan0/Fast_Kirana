@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Coffee, IndianRupee } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
+import { RestaurantPayoutsLedger } from './restaurant-payouts-ledger'
 
 interface Product {
   id: string
@@ -27,6 +28,7 @@ export function AdminCafeConsole() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'instock' | 'outofstock' | 'hidden'>('all')
+  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'payouts'>('catalog')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
   const [editPriceVal, setEditPriceVal] = useState('')
@@ -179,8 +181,36 @@ export function AdminCafeConsole() {
         </button>
       </div>
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+      {/* Sub-tab Navigation */}
+      <div className="flex border-b border-border/40 gap-4 pb-1">
+        <button
+          onClick={() => setActiveSubTab('catalog')}
+          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            activeSubTab === 'catalog' 
+              ? 'border-orange-600 text-orange-600' 
+              : 'border-transparent text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Coffee className="h-4 w-4" />
+          Menu Catalog
+        </button>
+        <button
+          onClick={() => setActiveSubTab('payouts')}
+          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            activeSubTab === 'payouts' 
+              ? 'border-orange-600 text-orange-600' 
+              : 'border-transparent text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <IndianRupee className="h-4 w-4" />
+          Payouts Ledger
+        </button>
+      </div>
+
+      {activeSubTab === 'catalog' && (
+        <>
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
@@ -386,6 +416,12 @@ export function AdminCafeConsole() {
             )
           })}
         </div>
+      )}
+        </>
+      )}
+
+      {activeSubTab === 'payouts' && (
+        <RestaurantPayoutsLedger isAdmin={true} type="CAFE" />
       )}
     </div>
   )

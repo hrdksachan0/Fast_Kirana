@@ -19,9 +19,10 @@ interface Payout {
 
 interface RestaurantPayoutsLedgerProps {
   isAdmin?: boolean
+  type?: 'RESTAURANT' | 'CAFE'
 }
 
-export function RestaurantPayoutsLedger({ isAdmin = false }: RestaurantPayoutsLedgerProps) {
+export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }: RestaurantPayoutsLedgerProps) {
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -40,7 +41,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false }: RestaurantPayoutsLe
   const fetchPayouts = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/payouts')
+      const res = await fetch(`/api/admin/payouts?type=${type}`)
       if (!res.ok) throw new Error('Failed to load payouts')
       const data = await res.json()
       setPayouts(data || [])
@@ -54,7 +55,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false }: RestaurantPayoutsLe
 
   useEffect(() => {
     fetchPayouts()
-  }, [])
+  }, [type])
 
   const handleCalculatePayout = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +69,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false }: RestaurantPayoutsLe
       const res = await fetch('/api/admin/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate, notes })
+        body: JSON.stringify({ startDate, endDate, notes, type })
       })
 
       if (!res.ok) {
@@ -136,8 +137,8 @@ export function RestaurantPayoutsLedger({ isAdmin = false }: RestaurantPayoutsLe
           <div className="flex items-center gap-2 border-b border-border/40 pb-3">
             <Plus className="h-5 w-5 text-red-600" />
             <div>
-              <h3 className="text-xs font-black text-text-primary uppercase tracking-wider">Calculate Partner Payout</h3>
-              <p className="text-[10px] text-text-muted mt-0.5">Generate a settlement draft based on delivered restaurant orders.</p>
+              <h3 className="text-xs font-black text-text-primary uppercase tracking-wider">Calculate {type === 'CAFE' ? 'Cafe' : 'Restaurant'} Payout</h3>
+              <p className="text-[10px] text-text-muted mt-0.5">Generate a settlement draft based on delivered {type === 'CAFE' ? 'cafe' : 'restaurant'} orders.</p>
             </div>
           </div>
 
