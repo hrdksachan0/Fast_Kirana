@@ -82,7 +82,7 @@ export function AdminReports() {
 
   // Category segment helpers
   const isCafeCategory = (catName: string) => {
-    const name = catName.toLowerCase()
+    const name = catName.toLowerCase().replace(/é/g, 'e')
     return name.includes('cafe') || name.includes('sandwich') || name.includes('pasta') || name.includes('roll') || name.includes('bite') || name.includes('sip') || name.includes('shake') || name.includes('mocktail') || name.includes('soda') || name.includes('beverage') || name.includes('ice cream') || name.includes('dessert') || name.includes('chilled')
   }
 
@@ -112,8 +112,8 @@ export function AdminReports() {
 
   const summary = useMemo(() => {
     if (segment === 'all') return rawSummary
-    const sales = topProducts.reduce((sum, p) => sum + (p.sales || 0), 0)
-    const profit = topProducts.reduce((sum, p) => sum + (p.profit || 0), 0)
+    const sales = categorySales.reduce((sum, c) => sum + (c.sales || 0), 0)
+    const profit = categorySales.reduce((sum, c) => sum + (c.profit || 0), 0)
     const cost = sales - profit
     const totalOrders = segment === 'grocery' 
       ? rawSummary.totalOrders 
@@ -129,7 +129,7 @@ export function AdminReports() {
       averageOrderValue: Math.round(averageOrderValue * 100) / 100,
       profitMargin: Math.round(profitMargin * 10) / 10
     }
-  }, [rawSummary, topProducts, segment])
+  }, [rawSummary, categorySales, segment])
 
   const dailySales = useMemo(() => {
     if (segment === 'all') return rawDailySales
