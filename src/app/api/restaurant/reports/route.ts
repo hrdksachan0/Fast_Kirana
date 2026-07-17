@@ -102,9 +102,11 @@ export async function GET(request: NextRequest) {
     // Helper: calculate cost and profit for an item with fixed 25% margin
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const totalItemSales = item.price * item.quantity
-      const profit = totalItemSales * 0.25
       const cost = totalItemSales * 0.75
-      return { cost, sales: totalItemSales, profit }
+      const profit = totalItemSales * 0.25
+      const restaurantProfit = totalItemSales * 0.15
+      const adminProfit = totalItemSales * 0.10
+      return { cost, sales: totalItemSales, profit, restaurantProfit, adminProfit }
     }
 
     // 3. Process Financials Summary
@@ -113,9 +115,12 @@ export async function GET(request: NextRequest) {
     let totalDiscount = 0
     let totalTaxes = 0
     let totalMisc = 0
+    let totalRestaurantProfit = 0
+    let totalAdminProfit = 0
 
     orders.forEach(o => {
-      totalSales += o.total || 0
+      const foodSales = (o.subtotal || 0) - (o.discount || 0)
+      totalSales += foodSales
       totalDiscount += o.discount || 0
       totalTaxes += o.taxes || 0
       totalMisc += o.miscFee || 0
@@ -124,13 +129,15 @@ export async function GET(request: NextRequest) {
       items.forEach(item => {
         const metrics = getItemMetrics(item)
         totalCost += metrics.cost
+        totalRestaurantProfit += metrics.restaurantProfit
+        totalAdminProfit += metrics.adminProfit
       })
     })
 
-    const netProfit = totalSales - totalCost - totalDiscount
+    const netProfit = totalSales - totalCost // 25% total margin
 
     // 4. Daily Sales Trend
-    const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; orders: number }>()
+    const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; adminProfit: number; orders: number }>()
     orders.forEach(o => {
       const dateStr = new Date(o.createdAt).toLocaleDateString('en-IN', {
         day: '2-digit',
@@ -138,27 +145,31 @@ export async function GET(request: NextRequest) {
       })
 
       if (!dailyTrendMap.has(dateStr)) {
-        dailyTrendMap.set(dateStr, { date: dateStr, sales: 0, profit: 0, orders: 0 })
+        dailyTrendMap.set(dateStr, { date: dateStr, sales: 0, profit: 0, adminProfit: 0, orders: 0 })
       }
 
       const dayData = dailyTrendMap.get(dateStr)!
       dayData.orders++
-      dayData.sales += o.total
+      
+      const foodSales = (o.subtotal || 0) - (o.discount || 0)
+      dayData.sales += foodSales
 
       const items = itemsByOrder[o.id] || []
-      let orderCost = 0
+      let orderRestaurantProfit = 0
+      let orderAdminProfit = 0
       items.forEach(item => {
         const metrics = getItemMetrics(item)
-        orderCost += metrics.cost
+        orderRestaurantProfit += metrics.restaurantProfit
+        orderAdminProfit += metrics.adminProfit
       })
-      const orderProfit = o.total - orderCost - o.discount
-      dayData.profit += orderProfit
+      dayData.profit += orderRestaurantProfit // Uska Profit (15%)
+      dayData.adminProfit += orderAdminProfit // Mera Profit (10%)
     })
 
     const dailySales = Array.from(dailyTrendMap.values())
 
     // 5. Top Selling Products
-    const productStatsMap = new Map<string, { name: string; quantity: number; sales: number; profit: number }>()
+    const productStatsMap = new Map<string, { name: string; quantity: number; sales: number; profit: number; adminProfit: number }>()
     orderItems.forEach(item => {
       const metrics = getItemMetrics(item)
       const key = `${item.productId}_${item.selectedVariant || ''}`
@@ -168,14 +179,16 @@ export async function GET(request: NextRequest) {
           name: item.name + (item.selectedVariant ? ` (${item.selectedVariant})` : ''),
           quantity: 0,
           sales: 0,
-          profit: 0
+          profit: 0,
+          adminProfit: 0
         })
       }
 
       const stats = productStatsMap.get(key)!
       stats.quantity += item.quantity
       stats.sales += metrics.sales
-      stats.profit += metrics.profit
+      stats.profit += metrics.restaurantProfit
+      stats.adminProfit += metrics.adminProfit
     })
 
     const topProducts = Array.from(productStatsMap.values())
@@ -189,6 +202,8 @@ export async function GET(request: NextRequest) {
         totalDiscount,
         totalTaxes,
         totalMisc,
+        restaurantProfit: totalRestaurantProfit,
+        adminProfit: totalAdminProfit,
         netProfit,
         ordersCount: orders.length,
         avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,

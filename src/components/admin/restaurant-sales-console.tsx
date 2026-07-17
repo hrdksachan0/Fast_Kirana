@@ -12,6 +12,8 @@ interface Summary {
   totalTaxes: number
   totalMisc: number
   netProfit: number
+  restaurantProfit: number
+  adminProfit: number
   ordersCount: number
   avgOrderValue: number
 }
@@ -39,6 +41,8 @@ export function RestaurantSalesConsole() {
     totalTaxes: 0,
     totalMisc: 0,
     netProfit: 0,
+    restaurantProfit: 0,
+    adminProfit: 0,
     ordersCount: 0,
     avgOrderValue: 0
   })
@@ -196,49 +200,49 @@ export function RestaurantSalesConsole() {
             {/* Sales Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Gross Revenue</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Food Revenue</span>
                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
                   <IndianRupee className="h-4 w-4" />
                 </div>
               </div>
               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.totalSales)}</h3>
-              <p className="text-[9px] font-bold text-emerald-500">Collected Sales</p>
+              <p className="text-[9px] font-bold text-emerald-500">Excluded Delivery Fee</p>
             </div>
 
-            {/* Profit Card */}
+            {/* Restaurant Profit Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Net Profit (25%)</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit (15%)</span>
                 <div className="h-8 w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
                   <Percent className="h-4 w-4" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.netProfit)}</h3>
-              <p className="text-[9px] font-bold text-red-500">Fixed Restaurant Margin</p>
+              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.restaurantProfit)}</h3>
+              <p className="text-[9px] font-bold text-red-500">Restaurant Net Share</p>
+            </div>
+
+            {/* Admin Commission Card */}
+            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit (10%)</span>
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+              </div>
+              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.adminProfit)}</h3>
+              <p className="text-[9px] font-bold text-blue-500">FastKirana Commission</p>
             </div>
 
             {/* Orders Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Total Orders</span>
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
+                <div className="h-8 w-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shadow-inner">
                   <ShoppingBag className="h-4 w-4" />
                 </div>
               </div>
               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{summary.ordersCount}</h3>
-              <p className="text-[9px] font-bold text-blue-500">Completed Orders</p>
-            </div>
-
-            {/* AOV Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Avg Order Value</span>
-                <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shadow-inner">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-              </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.avgOrderValue)}</h3>
-              <p className="text-[9px] font-bold text-amber-500">Order Ticket Average</p>
+              <p className="text-[9px] font-bold text-purple-500">Completed Orders</p>
             </div>
           </div>
 
@@ -326,7 +330,7 @@ export function RestaurantSalesConsole() {
                       </div>
                       <div className="text-right">
                         <p className="text-text-primary font-black">{formatPrice(p.sales)}</p>
-                        <p className="text-[9px] text-red-500 font-bold uppercase">Profit: {formatPrice(p.profit)}</p>
+                        <p className="text-[9px] text-red-500 font-bold uppercase">Uska Profit: {formatPrice(p.profit)}</p>
                       </div>
                     </div>
                   ))}

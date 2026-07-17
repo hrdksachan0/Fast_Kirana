@@ -64,13 +64,15 @@ export async function GET(request: NextRequest) {
         categoryName: string
         variants: any
         selectedVariant: string | null
+        shopName: string | null
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              c.name as "categoryName",
              COALESCE(oi.variants, p.variants) as "variants", 
-             oi."selectedVariant"
+             oi."selectedVariant",
+             o."shopName" as "shopName"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
       JOIN categories c ON p."categoryId" = c.id
@@ -94,6 +96,17 @@ export async function GET(request: NextRequest) {
 
     // Helper: calculate cost and profit for an item
     const getItemMetrics = (item: typeof orderItems[0]) => {
+      const itemRevenue = item.price * item.quantity
+
+      // Special Logic for partner Restaurant (Wedson) orders:
+      // Admin profit is 10% commission on item sales.
+      // The remaining 90% is the payout cost to the partner restaurant.
+      if (item.shopName === 'FastKirana Restaurant Kitchen') {
+        const itemProfit = itemRevenue * 0.10
+        const itemCost = itemRevenue * 0.90
+        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
+      }
+
       let costPrice = item.costPrice
 
       // If there is a selected variant, try to find its cost price in the variants array
@@ -115,7 +128,6 @@ export async function GET(request: NextRequest) {
       // Fallback: if cost price is 0, assume 25% margin (cost is 75% of sale price)
       const costPerUnit = hasCostPrice ? costPrice : item.price * 0.75
       const itemCost = costPerUnit * item.quantity
-      const itemRevenue = item.price * item.quantity
       const itemProfit = itemRevenue - itemCost
       
       if (!hasCostPrice) {
