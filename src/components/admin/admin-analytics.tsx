@@ -37,6 +37,7 @@ interface Product {
 
 interface Order {
   id: string
+  readableId?: number
   total: number
   createdAt: string
   status: string
