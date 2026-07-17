@@ -213,10 +213,10 @@ export function CafeSalesConsole() {
               <p className="text-[9px] font-bold text-emerald-500">Net Sales</p>
             </div>
 
-            {/* Uska Profit Card */}
+            {/* Cafe Margin Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit ({100 - (summary.commissionRate || 10)}%)</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Margin ({100 - (summary.commissionRate || 10)}%)</span>
                 <div className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shadow-inner">
                   <Percent className="h-4 w-4" />
                 </div>
@@ -225,10 +225,10 @@ export function CafeSalesConsole() {
               <p className="text-[9px] font-bold text-rose-500">Cafe Net Share</p>
             </div>
 
-            {/* Mera Profit Card */}
+            {/* FastKirana Margin Card */}
             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit ({summary.commissionRate || 10}%)</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">FastKirana Margin ({summary.commissionRate || 10}%)</span>
                 <div className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center shadow-inner">
                   <Percent className="h-4 w-4" />
                 </div>

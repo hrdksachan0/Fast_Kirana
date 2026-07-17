@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
         orderCafeProfit += metrics.cafeProfit
         orderAdminProfit += metrics.adminProfit
       })
-      dayData.profit += orderCafeProfit // Uska Profit (15%)
+      dayData.profit += orderCafeProfit // Cafe Margin
       dayData.adminProfit += orderAdminProfit // Intentional alignment to trend labels
     })
 

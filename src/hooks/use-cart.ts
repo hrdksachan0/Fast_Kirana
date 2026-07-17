@@ -101,7 +101,7 @@ export function useCart() {
       return
     }
 
-    const limit = isCafe ? 10 : 5
+    const limit = isCafe ? 10 : 20
     const currentQty = storeState.getItemQuantity(product.id)
     if (currentQty >= limit) {
       triggerHaptic('warning')
@@ -129,7 +129,7 @@ export function useCart() {
       const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
       const item = storeState.items.find((i) => i.product.id === productId)
       if (item) {
-        const limit = isCafeProduct(item.product) ? 10 : 5
+        const limit = isCafeProduct(item.product) ? 10 : 20
         if (quantity > limit) {
           triggerHaptic('warning')
           toast.error(`Maximum limit of ${limit} units reached for ${name}`, {

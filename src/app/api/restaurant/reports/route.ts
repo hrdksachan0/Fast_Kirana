@@ -171,8 +171,8 @@ export async function GET(request: NextRequest) {
         orderRestaurantProfit += metrics.restaurantProfit
         orderAdminProfit += metrics.adminProfit
       })
-      dayData.profit += orderRestaurantProfit // Uska Profit (15%)
-      dayData.adminProfit += orderAdminProfit // Mera Profit (10%)
+      dayData.profit += orderRestaurantProfit // Restaurant Margin
+      dayData.adminProfit += orderAdminProfit // FastKirana Margin
     })
 
     const dailySales = Array.from(dailyTrendMap.values())

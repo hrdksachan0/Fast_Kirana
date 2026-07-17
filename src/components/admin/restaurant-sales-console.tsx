@@ -213,10 +213,10 @@ export function RestaurantSalesConsole() {
               <p className="text-[9px] font-bold text-emerald-500">Net Sales</p>
              </div>
  
-             {/* Restaurant Profit Card */}
+             {/* Restaurant Margin Card */}
              <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
                <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Uska Profit ({100 - (summary.commissionRate || 10)}%)</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Margin ({100 - (summary.commissionRate || 10)}%)</span>
                  <div className="h-8 w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
                    <Percent className="h-4 w-4" />
                  </div>
@@ -228,7 +228,7 @@ export function RestaurantSalesConsole() {
              {/* Admin Commission Card */}
              <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
                <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Mera Profit ({summary.commissionRate || 10}%)</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">FastKirana Margin ({summary.commissionRate || 10}%)</span>
                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
                    <TrendingUp className="h-4 w-4" />
                  </div>
@@ -334,7 +334,7 @@ export function RestaurantSalesConsole() {
                       </div>
                       <div className="text-right">
                         <p className="text-text-primary font-black">{formatPrice(p.sales)}</p>
-                        <p className="text-[9px] text-red-500 font-bold uppercase">Uska Profit: {formatPrice(p.profit)}</p>
+                        <p className="text-[9px] text-red-500 font-bold uppercase">Restaurant Margin: {formatPrice(p.profit)}</p>
                       </div>
                     </div>
                   ))}
