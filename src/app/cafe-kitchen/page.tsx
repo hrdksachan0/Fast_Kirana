@@ -143,7 +143,7 @@ export default function CafeKitchenPage() {
         <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
           {activeTab === 'orders' && <CafeOrdersConsole />}
           {activeTab === 'analytics' && <CafeSalesConsole />}
-          {activeTab === 'catalog' && <AdminCafeConsole />}
+          {activeTab === 'catalog' && <AdminCafeConsole isAdmin={false} />}
           {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} type="CAFE" />}
         </div>
 

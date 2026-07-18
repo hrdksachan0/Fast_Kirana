@@ -321,14 +321,14 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
               <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
             </span>
           ) : (
-            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-zinc-800 dark:text-zinc-300 uppercase leading-none mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1.5">
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-zinc-200" /> KITCHEN CLOSED
+            <div className="mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span className="text-[7.5px] sm:text-[9px] font-black tracking-[0.15em] text-zinc-800 dark:text-zinc-300 uppercase flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
               </span>
-              <span className="text-[7.5px] sm:text-[9px] font-bold text-red-500 normal-case tracking-normal">
+              <span className="text-[7.5px] sm:text-[9px] font-extrabold text-red-500 normal-case tracking-normal leading-relaxed">
                 (Timings: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)})
               </span>
-            </span>
+            </div>
           )}
           
           <h2 className="text-[12px] sm:text-2xl md:text-3.5xl tracking-tight leading-[1.05] text-zinc-950 dark:text-white select-none">
@@ -456,14 +456,14 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> KITCHEN OPEN
                   </span>
                 ) : (
-                  <span className="text-[7.5px] sm:text-[9px] font-black tracking-widest text-zinc-300 uppercase leading-none mb-1.5 flex flex-col sm:flex-row sm:items-center gap-1.5">
-                    <span className="flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> KITCHEN CLOSED
+                  <div className="mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-zinc-300">
+                    <span className="text-[7.5px] sm:text-[9px] font-black tracking-widest uppercase flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" /> KITCHEN CLOSED
                     </span>
-                    <span className="text-[7.5px] sm:text-[9px] font-bold text-red-400 normal-case tracking-normal">
+                    <span className="text-[7.5px] sm:text-[9px] font-extrabold text-red-400 normal-case tracking-normal leading-relaxed">
                       (Timings: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)})
                     </span>
-                  </span>
+                  </div>
                 )}
                 <h3 className="text-[17px] sm:text-2xl md:text-3xl font-black tracking-tight leading-none drop-shadow-md">
                   Wedson Restaurant

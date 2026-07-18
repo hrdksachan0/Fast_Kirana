@@ -4861,13 +4861,13 @@ export function AdminDashboard({
 
       {activeTab === 'cafe-console' && (
         <div className="animate-fade-in">
-          <AdminCafeConsole />
+          <AdminCafeConsole isAdmin={true} />
         </div>
       )}
 
       {activeTab === 'restaurant-console' && (
         <div className="animate-fade-in">
-          <AdminRestaurantConsole />
+          <AdminRestaurantConsole isAdmin={true} />
         </div>
       )}
         </motion.div>

@@ -23,7 +23,11 @@ interface Product {
   }
 }
 
-export function AdminRestaurantConsole() {
+interface AdminRestaurantConsoleProps {
+  isAdmin?: boolean
+}
+
+export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConsoleProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -175,30 +179,32 @@ export function AdminRestaurantConsole() {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex border-b border-border/40 gap-4 pb-1">
-        <button
-          onClick={() => setActiveSubTab('catalog')}
-          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'catalog' 
-              ? 'border-red-650 text-red-600' 
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <Utensils className="h-4 w-4" />
-          Menu Catalog
-        </button>
-        <button
-          onClick={() => setActiveSubTab('payouts')}
-          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'payouts' 
-              ? 'border-red-650 text-red-600' 
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <IndianRupee className="h-4 w-4" />
-          Payouts Ledger
-        </button>
-      </div>
+      {isAdmin && (
+        <div className="flex border-b border-border/40 gap-4 pb-1">
+          <button
+            onClick={() => setActiveSubTab('catalog')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeSubTab === 'catalog' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Utensils className="h-4 w-4" />
+            Menu Catalog
+          </button>
+          <button
+            onClick={() => setActiveSubTab('payouts')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              activeSubTab === 'payouts' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <IndianRupee className="h-4 w-4" />
+            Payouts Ledger
+          </button>
+        </div>
+      )}
 
       {activeSubTab === 'catalog' && (
         <>
@@ -414,7 +420,7 @@ export function AdminRestaurantConsole() {
       )}
 
       {activeSubTab === 'payouts' && (
-        <RestaurantPayoutsLedger isAdmin={true} />
+        <RestaurantPayoutsLedger isAdmin={isAdmin} />
       )}
     </div>
   )
