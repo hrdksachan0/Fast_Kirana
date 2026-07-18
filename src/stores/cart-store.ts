@@ -2,6 +2,22 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { isCafeProduct } from '@/lib/utils'
 
+const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
+  const slug = p.category?.slug || p.categorySlug || ''
+  const tags = p.tags || []
+  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
+  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
+  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
+  return 'GROCERY'
+}
+
+const getProductLimit = (p: any): number => {
+  const type = getProductType(p)
+  if (type === 'RESTAURANT') return 20
+  if (type === 'CAFE') return 10
+  return 5 // GROCERY / BYPASS
+}
+
 export interface CartProduct {
   id: string
   name: string
@@ -13,6 +29,7 @@ export interface CartProduct {
   unit: string
   stock: number
   isAvailable?: boolean
+  tags?: string[]
   category?: {
     id: string
     name: string
@@ -55,7 +72,7 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: CartProduct) => {
         if (product.stock <= 0) return
-        const limit = isCafeProduct(product) ? 10 : 5
+        const limit = getProductLimit(product)
         set((state) => {
           const existing = state.items.find((item) => item.product.id === product.id)
           if (existing) {
@@ -85,7 +102,7 @@ export const useCartStore = create<CartState>()(
           return {
             items: state.items.map((item) => {
               if (item.product.id === productId) {
-                const limit = isCafeProduct(item.product) ? 10 : 5
+                const limit = getProductLimit(item.product)
                 return { ...item, quantity: Math.min(quantity, item.product.stock, limit) }
               }
               return item
