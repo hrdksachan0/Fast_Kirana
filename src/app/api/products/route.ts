@@ -22,14 +22,12 @@ export async function GET(request: NextRequest) {
     const trending = searchParams.get('trending') === 'true'
     const storeId = searchParams.get('storeId')
 
-    let isAdmin = false
-    if (includeUnavailable) {
-      const session = await auth()
-      isAdmin = session?.user?.role === 'ADMIN'
-    }
+    const session = await auth()
+    const role = session?.user?.role
+    const isWorker = role === 'ADMIN' || role === 'CHEF'
 
     // Cache check for typo-tolerant searches
-    const cacheKey = `search:${search || ''}:${category || ''}:${sort || ''}:${page}:${limit}:${isAdmin}`
+    const cacheKey = `search:${search || ''}:${category || ''}:${sort || ''}:${page}:${limit}:${isWorker}`
     if (search) {
       const cached = getCachedSearch(cacheKey)
       if (cached) {
@@ -40,7 +38,7 @@ export async function GET(request: NextRequest) {
     const where: Prisma.ProductWhereInput = {}
 
     // Only filter available products for regular users
-    if (!isAdmin) {
+    if (!isWorker) {
       where.isAvailable = true
     }
 
@@ -246,7 +244,7 @@ export async function GET(request: NextRequest) {
           ],
         }
       }
-      if (isAdmin) {
+      if (isWorker) {
         queryOptions.include = { category: true }
       } else {
         queryOptions.select = productSelect
@@ -263,7 +261,7 @@ export async function GET(request: NextRequest) {
           },
           take: 1000,
         }
-        if (isAdmin) {
+        if (isWorker) {
           fallbackOptions.include = { category: true }
         } else {
           fallbackOptions.select = productSelect
@@ -306,7 +304,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }
-      if (isAdmin) {
+      if (isWorker) {
         queryOptions.include = { category: true }
       } else {
         queryOptions.select = productSelect

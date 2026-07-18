@@ -52,7 +52,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
+  const role = session?.user?.role
+  if (!session || (role !== 'ADMIN' && role !== 'CHEF')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
