@@ -130,7 +130,7 @@ export default function CheckoutPage() {
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [onlyCod, setOnlyCod] = useState(false)
-  const [taxRate, setTaxRate] = useState(0.05)
+  const [taxRate, setTaxRate] = useState(0.00)
   const [miscFee, setMiscFee] = useState(0.0)
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
   const [contactPhone, setContactPhone] = useState('+91 70544 70303')
@@ -176,7 +176,7 @@ export default function CheckoutPage() {
           setOnlyCod(data.only_cod === 'true')
         }
         if (data.tax_rate !== undefined) {
-          setTaxRate(parseFloat(data.tax_rate) / 100)
+          setTaxRate(0.00)
         }
         if (data.misc_fee !== undefined) {
           setMiscFee(parseFloat(data.misc_fee))
@@ -1775,10 +1775,12 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div className="flex justify-between text-text-secondary">
-              <span>GST & Taxes ({Math.round(taxRate * 100)}%)</span>
-              <span>₹{taxes.toFixed(0)}</span>
-            </div>
+            {taxRate > 0 && (
+              <div className="flex justify-between text-text-secondary">
+                <span>GST & Taxes ({Math.round(taxRate * 100)}%)</span>
+                <span>₹{taxes.toFixed(0)}</span>
+              </div>
+            )}
 
             {miscFee > 0 && (
               <div className="flex justify-between text-text-secondary">

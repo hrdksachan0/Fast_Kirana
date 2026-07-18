@@ -447,10 +447,12 @@ export function AdminReports() {
                   <span className="text-text-secondary">Gross Product Sales:</span>
                   <span className="font-bold text-text-primary">{formatPrice(summary.productSales || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-secondary">GST / Taxes Collected:</span>
-                  <span className="font-bold text-[#00b140]">{formatPrice(summary.totalTaxes || 0)}</span>
-                </div>
+                {(summary.totalTaxes || 0) > 0 && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-secondary">GST / Taxes Collected:</span>
+                    <span className="font-bold text-[#00b140]">{formatPrice(summary.totalTaxes || 0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary">Delivery Charges Collected:</span>
                   <span className="font-bold text-blue-500">{formatPrice(summary.totalDeliveryFee || 0)}</span>

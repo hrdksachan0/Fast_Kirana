@@ -284,7 +284,7 @@ export async function POST(request: Request) {
     }
 
     const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
-    const serverTaxRate = noGst ? 0 : (taxPercent / 100)
+    const serverTaxRate = 0.00
     const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
 
     const grocerySubtotal = groceryItems.reduce((sum, item) => {

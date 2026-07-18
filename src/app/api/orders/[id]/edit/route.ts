@@ -235,7 +235,7 @@ export async function POST(
       calculatedMiscFee = companionHasMisc ? 0 : miscFeeSetting
     }
 
-    const taxesVal = parseFloat((subtotalVal * (taxPercent / 100)).toFixed(2))
+    const taxesVal = 0.00
     const totalVal = subtotalVal + calculatedDeliveryFee + taxesVal + calculatedMiscFee - order.discount
 
     await prisma.order.update({

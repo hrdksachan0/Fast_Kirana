@@ -7,7 +7,7 @@ export const CAFE_FREE_DELIVERY_THRESHOLD = 200
 export const COMBINED_FREE_DELIVERY_THRESHOLD = 200
 export const FREE_DELIVERY_THRESHOLD = 200
 export const DELIVERY_FEE = 25
-export const TAX_RATE = 0.05 // 5% GST
+export const TAX_RATE = 0.00 // 0% GST
 
 export const CATEGORIES = [
   { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', emoji: '🥬' },

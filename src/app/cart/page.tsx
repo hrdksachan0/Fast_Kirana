@@ -42,7 +42,7 @@ export default function CartPage() {
       .then(res => res.json())
       .then(data => {
         if (data.tax_rate !== undefined) {
-          setTaxRate(parseFloat(data.tax_rate) / 100)
+          setTaxRate(0.00)
         }
         if (data.misc_fee !== undefined) {
           setMiscFee(parseFloat(data.misc_fee))
@@ -506,10 +506,12 @@ export default function CartPage() {
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-text-secondary">GST / Taxes ({Math.round(taxRate * 100)}%)</span>
-                <span>₹{taxes.toFixed(0)}</span>
-              </div>
+              {taxRate > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">GST / Taxes ({Math.round(taxRate * 100)}%)</span>
+                  <span>₹{taxes.toFixed(0)}</span>
+                </div>
+              )}
 
               {miscFee > 0 && (
                 <div className="flex justify-between">

@@ -824,21 +824,23 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
             {settingsTab === 'finance' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* GST/Tax Rate */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">GST/Tax Rate (%) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      placeholder="e.g. 5"
-                      value={taxRate}
-                      onChange={(e) => setTaxRate(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
+                  {/* GST/Tax Rate Hidden */}
+                  {false && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">GST/Tax Rate (%) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="e.g. 5"
+                        value={taxRate}
+                        onChange={(e) => setTaxRate(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+                  )}
 
                   {/* Miscellaneous Fee */}
                   <div className="space-y-1.5">

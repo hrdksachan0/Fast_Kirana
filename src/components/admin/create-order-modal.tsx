@@ -395,9 +395,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     }
 
     const discountedSubtotal = Math.max(0, subtotal - discount)
-    const taxes = noGst ? 0 : (discountedSubtotal * 0.05) // 5% standard tax unless noGst is selected
+    const taxes = 0
     const miscFee = 5 // Standard ₹5 platform handling fee
-
     const total = discountedSubtotal + deliveryFee + taxes + miscFee
 
     return {
@@ -954,10 +953,12 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 </div>
               )}
 
-              <div className="flex justify-between font-bold text-text-secondary">
-                <span>Estimated Taxes (5%)</span>
-                <span>{formatPrice(taxes)}</span>
-              </div>
+              {taxes > 0 && (
+                <div className="flex justify-between font-bold text-text-secondary">
+                  <span>Estimated Taxes (5%)</span>
+                  <span>{formatPrice(taxes)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between font-bold text-text-secondary">
                 <span>Platform/Handling Fee</span>
