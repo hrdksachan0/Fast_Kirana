@@ -14,23 +14,13 @@ export const revalidate = 300 // Cache for 5 minutes (saves DB active CPU), purg
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
 
-  // 1. Fetch categories, category products, and active product counts in parallel
-  const [categoriesRaw, productsRaw, productCounts] = await Promise.all([
+  // 1. Fetch categories, sort setting, and active product counts in parallel
+  const [categoriesRaw, productCounts, sortSetting] = await Promise.all([
     prisma.category.findMany({
       where: {
         slug: { not: 'cafe' },
       },
       orderBy: { sortOrder: 'asc' },
-    }).catch(() => []),
-    prisma.product.findMany({
-      where: {
-        category: { slug },
-        isAvailable: true,
-      },
-      orderBy: { createdAt: 'desc' }, // default sort by newest
-      include: {
-        category: true,
-      },
     }).catch(() => []),
     prisma.product.groupBy({
       by: ['categoryId'],
@@ -39,7 +29,56 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         id: true,
       },
     }).catch(() => []),
+    prisma.storeSetting.findUnique({
+      where: { key: `category_sort_${slug}` }
+    }).catch(() => null),
   ])
+
+  const rule = sortSetting?.value || 'manual'
+
+  let orderBy: any = [
+    { sortOrder: 'desc' },
+    { createdAt: 'desc' }
+  ]
+
+  if (rule === 'best-seller') {
+    orderBy = [
+      { isBestSeller: 'desc' },
+      { sortOrder: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  } else if (rule === 'stock-desc') {
+    orderBy = [
+      { stock: 'desc' },
+      { sortOrder: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  } else if (rule === 'price-asc') {
+    orderBy = [
+      { price: 'asc' },
+      { sortOrder: 'desc' }
+    ]
+  } else if (rule === 'price-desc') {
+    orderBy = [
+      { price: 'desc' },
+      { sortOrder: 'desc' }
+    ]
+  } else if (rule === 'newest') {
+    orderBy = [
+      { createdAt: 'desc' }
+    ]
+  }
+
+  const productsRaw = await prisma.product.findMany({
+    where: {
+      category: { slug },
+      isAvailable: true,
+    },
+    orderBy,
+    include: {
+      category: true,
+    },
+  }).catch(() => [])
 
   // 2. Fetch the active category from the pre-loaded category pool
   const activeCategory = categoriesRaw.find((c) => c.slug === slug)

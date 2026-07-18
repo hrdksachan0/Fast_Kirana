@@ -497,6 +497,15 @@ export function CategoryPageClient({
       result.sort((a, b) => b.discount - a.discount)
     }
 
+    // Stable sort: keep out-of-stock items at the bottom
+    result.sort((a, b) => {
+      const aInStock = (a.stock ?? 0) > 0
+      const bInStock = (b.stock ?? 0) > 0
+      if (aInStock && !bInStock) return -1
+      if (!aInStock && bInStock) return 1
+      return 0
+    })
+
     return result
   }, [initialProducts, searchQuery, vegFilter, maxPrice, sort, activeSubcategoryId, subcategories])
 
