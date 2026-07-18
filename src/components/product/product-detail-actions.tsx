@@ -5,7 +5,7 @@ import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
 import { useUIStore } from '@/stores/ui-store'
-import { isCafeProduct } from '@/lib/utils'
+import { isCafeProduct, getProductLimit } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { triggerHaptic } from '@/lib/haptic'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
@@ -149,7 +149,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             <span className="text-base select-none">{quantity}</span>
             <button
               onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-              disabled={quantity >= resolvedStock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+              disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
               className="flex-grow h-full flex items-center justify-center rounded-r-xl hover:bg-accent-dark active:scale-90 transition-colors disabled:opacity-50 cursor-pointer"
               aria-label="Increase quantity"
             >

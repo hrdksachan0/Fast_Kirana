@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Minus, History } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
-import { formatPrice, isCafeProduct, cn } from '@/lib/utils'
+import { formatPrice, isCafeProduct, cn, getProductLimit } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { triggerHaptic } from '@/lib/haptic'
@@ -274,7 +274,7 @@ export function BuyAgainSection() {
                           <motion.button
                             whileTap={{ scale: 0.82 }}
                             onClick={(e) => handleIncrement(e, item, quantity)}
-                            disabled={quantity >= stock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+                            disabled={quantity >= stock || quantity >= getProductLimit(item) || isStoreClosed}
                             className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                             aria-label="Increase quantity"
                           >

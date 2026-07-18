@@ -1,22 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { isCafeProduct } from '@/lib/utils'
-
-const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
-  const slug = p.category?.slug || p.categorySlug || ''
-  const tags = p.tags || []
-  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
-  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
-  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
-  return 'GROCERY'
-}
-
-const getProductLimit = (p: any): number => {
-  const type = getProductType(p)
-  if (type === 'RESTAURANT') return 20
-  if (type === 'CAFE') return 10
-  return 5 // GROCERY / BYPASS
-}
+import { isCafeProduct, getProductLimit } from '@/lib/utils'
 
 export interface CartProduct {
   id: string

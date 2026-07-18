@@ -8,6 +8,7 @@ import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
+import { getProductLimit } from '@/lib/utils'
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -202,8 +203,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
-      if (isCafeProduct(dbProduct) && item.quantity > 10) {
-        return NextResponse.json({ error: `Maximum order limit of 10 units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
+      const limit = getProductLimit(dbProduct)
+      if (item.quantity > limit) {
+        return NextResponse.json({ error: `Maximum order limit of ${limit} units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
       const itemWithDb = {

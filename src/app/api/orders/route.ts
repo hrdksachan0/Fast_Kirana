@@ -9,6 +9,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
+import { getProductLimit } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }
 
-      const limit = isCafeProduct(dbProduct) ? 10 : 5
+      const limit = getProductLimit(dbProduct)
       if (item.quantity > limit) {
         return NextResponse.json({ error: `Maximum order limit of ${limit} units exceeded for product "${dbProduct.name} ${variantName ? `(${variantName})` : ''}"` }, { status: 400 })
       }

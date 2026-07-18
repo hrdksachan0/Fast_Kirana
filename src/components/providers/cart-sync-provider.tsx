@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCartStore, CartItem } from '@/stores/cart-store'
 import { useSession } from 'next-auth/react'
+import { getProductLimit } from '@/lib/utils'
 
 export function CartSyncProvider({ children }: { children: React.ReactNode }) {
   const items = useCartStore((s) => s.items)
@@ -50,7 +51,7 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
                 // Keep the maximum quantity, capped at stock
                 const maxStock = item.product.stock || 99
                 // Using limits defined in the web cart-store (10 for cafe, 5 for grocery)
-                const limit = item.product.id.includes('_') ? 10 : 5
+                const limit = getProductLimit(item.product)
                 const newQty = Math.min(Math.max(existing.quantity, item.quantity), maxStock, limit)
                 
                 mergedMap.set(item.product.id, {

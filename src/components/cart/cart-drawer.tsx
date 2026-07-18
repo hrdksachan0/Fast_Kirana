@@ -8,7 +8,7 @@ import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ProductImage } from '@/components/product/product-image'
-import { isCafeProduct, cn } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRouter } from 'next/navigation'
@@ -184,7 +184,7 @@ export function CartDrawer() {
   const total = Math.max(0, combinedAdjustedSubtotal - couponDiscount) + deliveryFee
 
   const hasInventoryIssues = items.some((item) => {
-    const limit = isCafeProduct(item.product) ? 10 : 5
+    const limit = getProductLimit(item.product)
     return item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > limit
   })
   const isItemClosed = (product: any) => {
@@ -205,7 +205,7 @@ export function CartDrawer() {
   const handleAutoAdjust = () => {
     let adjustedCount = 0
     items.forEach((item) => {
-      const limit = isCafeProduct(item.product) ? 10 : 5
+      const limit = getProductLimit(item.product)
       if (item.product.isAvailable === false || item.product.stock <= 0) {
         removeItem(item.product.id, item.product.name)
         adjustedCount++
@@ -277,9 +277,9 @@ export function CartDrawer() {
                 <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
                   <span>❌</span> Out of Stock
                 </p>
-              ) : item.quantity > (isCafe ? 10 : 5) ? (
+              ) : item.quantity > getProductLimit(item.product) ? (
                 <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
-                  <span>⚠️</span> Max limit is {isCafe ? 10 : 5} units
+                  <span>⚠️</span> Max limit is {getProductLimit(item.product)} units
                 </p>
               ) : item.quantity > item.product.stock ? (
                 <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
@@ -302,7 +302,7 @@ export function CartDrawer() {
               </span>
               <button
                 onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-                disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= (isCafe ? 10 : 5)}
+                disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product)}
                 className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 aria-label="Increase quantity"
               >

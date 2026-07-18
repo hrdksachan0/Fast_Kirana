@@ -96,5 +96,33 @@ export function sortProductsByStock<T extends { stock?: number | null }>(product
   })
 }
 
+export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' {
+  if (!p) return 'GROCERY'
+  const slug = p.category?.slug || p.categorySlug || ''
+  const tags = p.tags || []
+  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
+  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
+  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
+  return 'GROCERY'
+}
+
+export function getProductLimit(p: any): number {
+  const type = getProductType(p)
+  if (type === 'RESTAURANT') return 20
+  if (type === 'CAFE') return 10
+  return 5 // GROCERY / BYPASS
+}
+
+export function isProductStoreClosed(
+  p: any,
+  status: { groceryMartOpen: boolean; cafeOpen: boolean; restaurantOpen: boolean }
+): boolean {
+  const type = getProductType(p)
+  if (type === 'RESTAURANT') return !status.restaurantOpen
+  if (type === 'CAFE') return !status.cafeOpen
+  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen // Open if either is open
+  return !status.groceryMartOpen
+}
+
 
 

@@ -4,26 +4,10 @@ import { useCallback } from 'react'
 import { useCartStore, CartProduct } from '@/stores/cart-store'
 import { useUIStore } from '@/stores/ui-store'
 import { toast } from 'sonner'
-import { isCafeProduct } from '@/lib/utils'
+import { isCafeProduct, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 import { playCartPop } from '@/lib/audio'
 import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
-
-const getProductType = (p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' => {
-  const slug = p.category?.slug || p.categorySlug || ''
-  const tags = p.tags || []
-  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
-  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
-  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
-  return 'GROCERY'
-}
-
-const getProductLimit = (p: any): number => {
-  const type = getProductType(p)
-  if (type === 'RESTAURANT') return 20
-  if (type === 'CAFE') return 10
-  return 5 // GROCERY / BYPASS
-}
 
 export function useCart() {
   const items = useCartStore((s) => s.items)
@@ -66,19 +50,22 @@ export function useCart() {
   }, [])
 
   const addItem = useCallback((product: CartProduct) => {
-    const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
-    const isCafe = isCafeProduct(product)
+    const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
     const categorySlug = product.category?.slug || ''
     const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
     
-    if (isCafe && (!cafeOpen || !isCategoryOpen)) {
+    if (!isCategoryOpen) {
       triggerHaptic('warning')
-      toast.error(`FastKirana Cafe or category is closed. Cannot add ${product.name}.`)
+      toast.error(`Category is closed. Cannot add ${product.name}.`)
       return
     }
-    if (!isCafe && (!groceryMartOpen || !isCategoryOpen)) {
+
+    const isClosed = isProductStoreClosed(product, { groceryMartOpen, cafeOpen, restaurantOpen })
+    if (isClosed) {
       triggerHaptic('warning')
-      toast.error(`Grocery Mart or category is closed. Cannot add ${product.name}.`)
+      const type = getProductType(product)
+      const storeName = type === 'RESTAURANT' ? 'Restaurant Kitchen' : type === 'CAFE' ? 'Cafe' : 'Grocery Mart'
+      toast.error(`${storeName} is closed. Cannot add ${product.name}.`)
       return
     }
     if (product.stock <= 0) {
@@ -132,7 +119,7 @@ export function useCart() {
     const currentQty = storeState.getItemQuantity(productId)
 
     if (quantity > currentQty) {
-      const { groceryMartOpen, cafeOpen, categoryStatus } = useUIStore.getState()
+      const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
       const item = storeState.items.find((i) => i.product.id === productId)
       if (item) {
         const limit = getProductLimit(item.product)
@@ -148,18 +135,21 @@ export function useCart() {
           toast.error(`Cannot add more. Only ${item.product.stock} units available in stock.`)
           return
         }
-        const isCafe = isCafeProduct(item.product)
         const categorySlug = item.product.category?.slug || ''
         const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
 
-        if (isCafe && (!cafeOpen || !isCategoryOpen)) {
+        if (!isCategoryOpen) {
           triggerHaptic('warning')
-          toast.error(`FastKirana Cafe or category is closed. Cannot increase quantity.`)
+          toast.error(`Category is closed. Cannot increase quantity.`)
           return
         }
-        if (!isCafe && (!groceryMartOpen || !isCategoryOpen)) {
+
+        const isClosed = isProductStoreClosed(item.product, { groceryMartOpen, cafeOpen, restaurantOpen })
+        if (isClosed) {
           triggerHaptic('warning')
-          toast.error(`Grocery Mart or category is closed. Cannot increase quantity.`)
+          const type = getProductType(item.product)
+          const storeName = type === 'RESTAURANT' ? 'Restaurant Kitchen' : type === 'CAFE' ? 'Cafe' : 'Grocery Mart'
+          toast.error(`${storeName} is closed. Cannot increase quantity.`)
           return
         }
       }

@@ -5,7 +5,7 @@ import { useCart } from '@/hooks/use-cart'
 import { X, Plus, Minus, ShieldCheck, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMemo, useEffect } from 'react'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, isCafeProduct, getProductLimit } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { Product } from '@/types'
@@ -126,7 +126,7 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
             </span>
             <button
               onClick={handleIncrement}
-              disabled={quantity >= resolvedStock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+              disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
               className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
               aria-label="Increase quantity"
             >

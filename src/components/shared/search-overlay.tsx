@@ -7,7 +7,7 @@ import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff } fro
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { ProductImage } from '@/components/product/product-image'
-import { isCafeProduct, cn } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
 import { Product } from '@/types'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
@@ -448,7 +448,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   </span>
                                   <button
                                     onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-                                    disabled={quantity >= product.stock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+                                    disabled={quantity >= product.stock || quantity >= getProductLimit(product) || isStoreClosed}
                                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
                                     aria-label="Increase quantity"
                                   >

@@ -18,7 +18,7 @@ interface ProductCardProps {
   isCompact?: boolean
 }
 
-import { isCafeProduct, cn } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 
 export function ProductCard({ product, isCompact = false }: ProductCardProps) {
@@ -441,7 +441,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 <motion.button
                   whileTap={{ scale: 0.82 }}
                   onClick={handleIncrement}
-                  disabled={quantity >= resolvedStock || quantity >= (isCafe ? 10 : 5) || isStoreClosed}
+                  disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
                   className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                   aria-label="Increase quantity"
                 >
