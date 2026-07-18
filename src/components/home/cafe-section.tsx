@@ -283,13 +283,12 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
   return (
     <section className="space-y-0">
-      {experienceMode === 'cafe' && (
-        <div 
-          onClick={() => {
+      <div 
+        onClick={() => {
           const target = document.getElementById('cafe-menu-categories-anchor')
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
-        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
+        className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full min-h-[125px] sm:min-h-[145px] md:h-[170px] lg:h-[200px] aspect-[2.5/1] sm:aspect-[2.9/1] md:aspect-none shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
       >
         <Image
           src="/food_banner_bg.png"
@@ -314,33 +313,33 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         />
         
         {/* Banner Content Overlays */}
-        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%]">
+        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-4 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%] py-2 sm:py-3">
           {/* Dynamic Kitchen Status Badge */}
           {(experienceMode === 'cafe' ? cafeOpen : restaurantOpen) ? (
             <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-[#00b140] dark:text-emerald-400 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
             </span>
           ) : (
-            <div className="mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span className="text-[7.5px] sm:text-[9px] font-black tracking-[0.15em] text-zinc-800 dark:text-zinc-300 uppercase flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
+            <div className="mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+              <span className="text-[7px] sm:text-[9px] font-black tracking-[0.15em] text-zinc-800 dark:text-zinc-300 uppercase flex items-center gap-1">
+                <span className="h-1.2 w-1.2 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
               </span>
-              <span className="text-[7.5px] sm:text-[9px] font-extrabold text-red-500 normal-case tracking-normal leading-relaxed">
-                (Timings: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)})
+              <span className="text-[7px] sm:text-[9px] font-extrabold text-red-500 normal-case tracking-normal leading-relaxed">
+                (Timings: {format12h(experienceMode === 'cafe' ? settings.cafe_open_time : settings.restaurant_open_time)} - {format12h(experienceMode === 'cafe' ? settings.cafe_close_time : settings.restaurant_close_time)})
               </span>
             </div>
           )}
           
-          <h2 className="text-[12px] sm:text-2xl md:text-3.5xl tracking-tight leading-[1.05] text-zinc-950 dark:text-white select-none">
-            <span className="font-extrabold tracking-[0.1em] uppercase text-[8px] sm:text-[12px] text-zinc-800 dark:text-zinc-300">FastKirana Presents</span>
+          <h2 className="text-[11px] sm:text-2xl md:text-3.5xl tracking-tight leading-[1.05] text-zinc-950 dark:text-white select-none">
+            <span className="font-extrabold tracking-[0.1em] uppercase text-[7.5px] sm:text-[12px] text-zinc-800 dark:text-zinc-300">FastKirana Presents</span>
             <br />
-            <span className="text-[#e20a22] dark:text-red-500 font-black tracking-tighter uppercase text-[13px] sm:text-[25px] md:text-[36px] block mt-0.5 sm:mt-1">
+            <span className="text-[#e20a22] dark:text-red-500 font-black tracking-tighter uppercase text-[12px] sm:text-[25px] md:text-[36px] block mt-0.5 sm:mt-1">
               Cafe &amp; Restaurant
             </span>
           </h2>
           
           {/* Clickable & Copiable Coupon Code Badge - Optimized for Single Line */}
-          <div className="mt-3 sm:mt-4 flex select-none">
+          <div className="mt-2 sm:mt-4 flex select-none">
             <button 
               onClick={(e) => {
                 e.stopPropagation()
@@ -349,30 +348,30 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                   toast.success('Coupon code "FIRST5" copied! 📋')
                 }
               }}
-              className="group/btn flex items-center gap-1 px-2.5 py-1 rounded-full border border-red-500/20 bg-[#e20a22]/10 hover:bg-[#e20a22]/20 dark:bg-red-500/10 dark:hover:bg-red-500/20 active:scale-95 shadow-[0_2px_8px_rgba(226,10,34,0.04)] cursor-pointer transition-all shrink-0"
+              className="group/btn flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-red-500/20 bg-[#e20a22]/10 hover:bg-[#e20a22]/20 dark:bg-red-500/10 dark:hover:bg-red-500/20 active:scale-95 shadow-[0_2px_8px_rgba(226,10,34,0.04)] cursor-pointer transition-all shrink-0"
             >
-              <span className="text-[7.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-450 uppercase tracking-wider">
+              <span className="text-[6.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-450 uppercase tracking-wider">
                 CODE: <span className="underline decoration-solid font-black">FIRST5</span>
               </span>
-              <span className="text-zinc-400 dark:text-zinc-650 text-[7px] sm:text-[9px] select-none">•</span>
-              <span className="text-[7px] sm:text-[8px] font-bold text-zinc-655 dark:text-zinc-300 uppercase tracking-wide">
+              <span className="text-zinc-400 dark:text-zinc-650 text-[6.5px] sm:text-[9px] select-none">•</span>
+              <span className="text-[6.5px] sm:text-[8px] font-bold text-zinc-655 dark:text-zinc-300 uppercase tracking-wide">
                 5% OFF (TAP)
               </span>
+              <ChevronRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500/60 dark:text-red-400/60 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
             </button>
           </div>
-        </div>
 
-        {/* Banner Footnotes */}
-        <div className="absolute bottom-[1.5px] left-5 right-9 flex justify-between items-center text-[6.5px] sm:text-[8.5px] font-black select-none z-10 gap-2">
-          <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 text-black dark:text-zinc-150 px-2 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-            *Only for first user
-          </span>
-          <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 text-black dark:text-zinc-150 px-2 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-            *T&amp;C Apply
-          </span>
+          {/* Banner Footnotes (Self-adjusting in flow) */}
+          <div className="mt-2 flex items-center gap-1.5 text-[6px] sm:text-[8.5px] font-black select-none text-zinc-500 dark:text-zinc-300 shrink-0">
+            <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 px-1.5 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              *Only for first user
+            </span>
+            <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 px-1.5 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              *T&amp;C Apply
+            </span>
+          </div>
         </div>
       </div>
-      )}
 
 
       {/* Experience Switcher */}
