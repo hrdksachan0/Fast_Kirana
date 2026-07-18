@@ -36,12 +36,22 @@
 }
 
 /* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-background);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enable momentum / smooth scrolling on all overflow scroll containers */
+.overflow-x-auto, .overflow-y-auto {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 .gpu-accelerated {
   transform: translateZ(0);
