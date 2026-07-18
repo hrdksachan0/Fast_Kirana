@@ -326,7 +326,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                 <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-zinc-200" /> KITCHEN CLOSED
               </span>
               <span className="text-[7.5px] sm:text-[9px] font-bold text-red-500 normal-case tracking-normal">
-                (Opens: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)})
+                (Timings: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)})
               </span>
             </span>
           )}
@@ -461,7 +461,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                       <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> KITCHEN CLOSED
                     </span>
                     <span className="text-[7.5px] sm:text-[9px] font-bold text-red-400 normal-case tracking-normal">
-                      (Opens: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)})
+                      (Timings: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)})
                     </span>
                   </span>
                 )}
