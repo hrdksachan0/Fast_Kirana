@@ -179,32 +179,30 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
       </div>
 
       {/* Sub-tab Navigation */}
-      {isAdmin && (
-        <div className="flex border-b border-border/40 gap-4 pb-1">
-          <button
-            onClick={() => setActiveSubTab('catalog')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-              activeSubTab === 'catalog' 
-                ? 'border-red-650 text-red-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            <Utensils className="h-4 w-4" />
-            Menu Catalog
-          </button>
-          <button
-            onClick={() => setActiveSubTab('payouts')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-              activeSubTab === 'payouts' 
-                ? 'border-red-650 text-red-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            <IndianRupee className="h-4 w-4" />
-            Payouts Ledger
-          </button>
-        </div>
-      )}
+      <div className="flex border-b border-border/40 gap-4 pb-1">
+        <button
+          onClick={() => setActiveSubTab('catalog')}
+          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            activeSubTab === 'catalog' 
+              ? 'border-red-650 text-red-600' 
+              : 'border-transparent text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Utensils className="h-4 w-4" />
+          Menu Catalog
+        </button>
+        <button
+          onClick={() => setActiveSubTab('payouts')}
+          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            activeSubTab === 'payouts' 
+              ? 'border-red-650 text-red-600' 
+              : 'border-transparent text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <IndianRupee className="h-4 w-4" />
+          Payouts Ledger
+        </button>
+      </div>
 
       {activeSubTab === 'catalog' && (
         <>
