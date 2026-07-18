@@ -140,6 +140,15 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
     }
   }
 
+  const handleSaveClick = async () => {
+    if (sortRule === 'manual') {
+      await handleSavePositions()
+    } else {
+      await handleSaveRule(sortRule)
+      onClose()
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -237,37 +246,37 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
                 </div>
               ) : (
                 <div className="border border-border rounded-2xl overflow-hidden shadow-xs">
-                  <div className="max-h-[35vh] overflow-y-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead className="bg-muted/40 font-black text-text-secondary border-b border-border/60 sticky top-0 z-10 select-none">
-                        <tr>
-                          <th className="py-2.5 px-4">Product Name</th>
-                          <th className="py-2.5 px-4 text-center">Price</th>
-                          <th className="py-2.5 px-4 text-center">Stock</th>
-                          <th className="py-2.5 px-4 text-center">Best Seller</th>
-                          <th className="py-2.5 px-4 text-center w-28">Position Index</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40 font-semibold text-text-secondary bg-card">
-                        {products.map((p) => (
-                          <tr key={p.id} className="hover:bg-muted/10 transition-colors">
-                            <td className="py-2 px-4 font-bold text-text-primary">{p.name}</td>
-                            <td className="py-2 px-4 text-center">{formatPrice(p.price)}</td>
-                            <td className="py-2 px-4 text-center">{p.stock}</td>
-                            <td className="py-2 px-4 text-center">{p.isBestSeller ? '🔥 Yes' : 'No'}</td>
-                            <td className="py-2 px-4 text-center">
-                              <input
-                                type="number"
-                                disabled={sortRule !== 'manual'}
-                                value={modifiedPositions[p.id] ?? 0}
-                                onChange={(e) => handlePositionChange(p.id, e.target.value)}
-                                className="w-20 px-2.5 py-1 text-center font-bold text-text-primary border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary disabled:opacity-50 disabled:bg-muted/10"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="max-h-[40vh] overflow-y-auto relative bg-card">
+                    {/* Header */}
+                    <div className="bg-zinc-100 dark:bg-zinc-800/80 backdrop-blur-xs font-black text-text-secondary border-b border-border/60 sticky top-0 z-20 select-none py-3 px-4 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-5">Product Name</div>
+                      <div className="col-span-2 text-center">Price</div>
+                      <div className="col-span-1 text-center">Stock</div>
+                      <div className="col-span-2 text-center">Best Seller</div>
+                      <div className="col-span-2 text-center">Position Index</div>
+                    </div>
+                    {/* Body */}
+                    <div className="divide-y divide-border/40 font-semibold text-text-secondary bg-card">
+                      {products.map((p) => (
+                        <div key={p.id} className="hover:bg-muted/10 transition-colors py-2.5 px-4 grid grid-cols-12 items-center text-xs">
+                          <div className="col-span-5 font-bold text-text-primary truncate pr-2" title={p.name}>
+                            {p.name}
+                          </div>
+                          <div className="col-span-2 text-center text-text-primary font-bold">{formatPrice(p.price)}</div>
+                          <div className="col-span-1 text-center">{p.stock}</div>
+                          <div className="col-span-2 text-center">{p.isBestSeller ? '🔥 Yes' : 'No'}</div>
+                          <div className="col-span-2 flex justify-center">
+                            <input
+                              type="number"
+                              disabled={sortRule !== 'manual'}
+                              value={modifiedPositions[p.id] ?? 0}
+                              onChange={(e) => handlePositionChange(p.id, e.target.value)}
+                              className="w-20 px-2 py-1 text-center font-bold text-text-primary border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary disabled:opacity-50 disabled:bg-muted/10 text-xs"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -288,8 +297,8 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
               Cancel
             </button>
             <button
-              onClick={handleSavePositions}
-              disabled={saving || !selectedCategorySlug || sortRule !== 'manual'}
+              onClick={handleSaveClick}
+              disabled={saving || !selectedCategorySlug}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-black rounded-xl hover:bg-primary/95 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
             >
               {saving ? (
@@ -300,7 +309,7 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save Positions
+                  {sortRule === 'manual' ? 'Save Positions' : 'Save Sorting Rule'}
                 </>
               )}
             </button>

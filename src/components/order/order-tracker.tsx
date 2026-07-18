@@ -1025,57 +1025,82 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       </div>
 
       {/* Receipt mini summary */}
-      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
-          Receipt details
-        </h3>
-        <div className="space-y-3 text-xs font-semibold text-text-secondary">
-          {mergedItems.map((item: any) => (
-            <div key={item.id} className="flex justify-between items-start gap-4">
-              <div>
-                <span>{item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''} (×{item.quantity})</span>
-                {item.shopName && (
-                  <span className="block text-[9px] text-text-muted mt-0.5 font-bold">
-                    📍 {item.shopName}
+      <div className="bg-white dark:bg-zinc-900 border border-border/60 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
+        <div className="flex items-center gap-2 border-b border-dashed border-border/60 pb-3">
+          <span className="text-lg">🧾</span>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-text-primary">
+              Order Receipt
+            </h3>
+            <p className="text-[9px] text-text-muted font-bold uppercase mt-0.5">
+              Payment Mode: {order.paymentMethod === 'COD' ? 'Cash on Delivery' : order.paymentMethod}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {/* Items List */}
+          <div className="space-y-2">
+            {mergedItems.map((item: any) => (
+              <div key={item.id} className="flex justify-between items-center py-1">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="inline-flex items-center justify-center text-[10px] font-black text-accent bg-accent/5 dark:bg-accent/10 px-2 py-0.5 rounded-lg border border-accent/10 shrink-0">
+                    {item.quantity}x
                   </span>
-                )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-text-primary truncate">
+                      {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
+                    </p>
+                    {item.shopName && (
+                      <p className="text-[9px] text-text-muted font-semibold flex items-center gap-0.5 mt-0.5">
+                        <span>🏢</span> {item.shopName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs font-extrabold text-text-primary shrink-0 ml-4">
+                  ₹{item.price * item.quantity}
+                </span>
               </div>
-              <span className="shrink-0">₹{item.price * item.quantity}</span>
-            </div>
-          ))}
+            ))}
+          </div>
           
-          <div className="border-t border-border/40 pt-3 space-y-1.5">
-            <div className="flex justify-between">
+          {/* Cost Breakdown */}
+          <div className="border-t border-dashed border-border/60 pt-3.5 space-y-2.5 text-xs">
+            <div className="flex justify-between text-text-secondary font-semibold">
               <span>Subtotal</span>
-              <span>₹{combinedSubtotal}</span>
+              <span className="font-bold text-text-primary">₹{combinedSubtotal}</span>
             </div>
             {combinedDiscount > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Discount</span>
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                <span>Discount Applied</span>
                 <span>-₹{combinedDiscount}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span>Delivery Fee</span>
-              <span>{combinedDeliveryFee > 0 ? `₹${combinedDeliveryFee}` : 'FREE'}</span>
+            <div className="flex justify-between text-text-secondary font-semibold">
+              <span>Delivery Charge</span>
+              <span className={cn(combinedDeliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400 font-black" : "font-bold text-text-primary")}>
+                {combinedDeliveryFee > 0 ? `₹${combinedDeliveryFee}` : 'FREE 🎉'}
+              </span>
             </div>
             {combinedTaxes > 0 && (
-              <div className="flex justify-between">
+              <div className="flex justify-between text-text-secondary font-semibold">
                 <span>Taxes & GST</span>
-                <span>₹{combinedTaxes.toFixed(1)}</span>
+                <span className="font-bold text-text-primary">₹{combinedTaxes.toFixed(1)}</span>
               </div>
             )}
             {combinedMiscFee > 0 && (
-              <div className="flex justify-between">
-                <span>Handling / Miscellaneous Fee</span>
-                <span>₹{combinedMiscFee}</span>
+              <div className="flex justify-between text-text-secondary font-semibold">
+                <span>Platform Handling Fee</span>
+                <span className="font-bold text-text-primary">₹{combinedMiscFee}</span>
               </div>
             )}
           </div>
 
-          <div className="flex justify-between text-text-primary font-black border-t border-border/80 pt-3 mt-3 text-sm">
-            <span>Grand Total</span>
-            <span className="text-primary text-base font-extrabold">₹{combinedTotal.toFixed(0)}</span>
+          {/* Grand Total */}
+          <div className="flex justify-between items-center text-text-primary font-black border-t-2 border-dashed border-border/80 pt-4 mt-1">
+            <span className="text-xs uppercase tracking-wider text-text-secondary">Grand Total</span>
+            <span className="text-primary text-lg font-black tracking-tight">₹{combinedTotal.toFixed(0)}</span>
           </div>
         </div>
       </div>
