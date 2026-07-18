@@ -17,6 +17,11 @@ export interface Product {
   category?: Category
   images?: ProductImage[]
   reviews?: Review[]
+  isBestSeller?: boolean
+  isFlashDeal?: boolean
+  isTopPick?: boolean
+  sortOrder?: number
+  createdAt?: string
 }
 
 export interface Category {

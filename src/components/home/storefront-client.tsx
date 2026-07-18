@@ -26,6 +26,7 @@ interface StorefrontClientProps {
   teaProducts: Product[]
   nightProducts: Product[]
   settingsMap: Record<string, string>
+  sortRules: Record<string, string>
 }
 
 export function StorefrontClient({
@@ -39,6 +40,7 @@ export function StorefrontClient({
   teaProducts,
   nightProducts,
   settingsMap,
+  sortRules,
 }: StorefrontClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -207,6 +209,7 @@ export function StorefrontClient({
                   lunchProducts={lunchProducts}
                   teaProducts={teaProducts}
                   nightProducts={nightProducts}
+                  sortRules={sortRules}
                 />
               </div>
 

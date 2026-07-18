@@ -401,6 +401,7 @@ interface DealsCurationHubProps {
   lunchProducts: any[]
   teaProducts: any[]
   nightProducts: any[]
+  sortRules?: Record<string, string>
 }
 
 export function DealsCurationHub({
@@ -410,7 +411,8 @@ export function DealsCurationHub({
   breakfastProducts,
   lunchProducts,
   teaProducts,
-  nightProducts
+  nightProducts,
+  sortRules = {}
 }: DealsCurationHubProps) {
   const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'trending' | 'dynamic-craving'>('all')
   const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
@@ -590,8 +592,59 @@ export function DealsCurationHub({
       }
       groups[categoryName].products.push(product)
     })
-    return Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder)
-  }, [currentCuration])
+
+    const result = Object.values(groups).map((group) => {
+      const rule = sortRules[group.categorySlug] || 'manual'
+      
+      const sorted = [...group.products].sort((a, b) => {
+        // 1. Apply the main sorting rule
+        if (rule === 'best-seller') {
+          const aBest = a.isBestSeller ? 1 : 0
+          const bBest = b.isBestSeller ? 1 : 0
+          if (bBest !== aBest) return bBest - aBest
+        } else if (rule === 'stock-desc') {
+          const aStock = a.stock ?? 0
+          const bStock = b.stock ?? 0
+          if (bStock !== aStock) return bStock - aStock
+        } else if (rule === 'price-asc') {
+          if (a.price !== b.price) return a.price - b.price
+        } else if (rule === 'price-desc') {
+          if (b.price !== a.price) return b.price - a.price
+        } else if (rule === 'newest') {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          if (bTime !== aTime) return bTime - aTime
+        }
+
+        // 2. Fallbacks (for manual, or when rule comparisons are equal)
+        // sortOrder: desc
+        const aSort = a.sortOrder ?? 0
+        const bSort = b.sortOrder ?? 0
+        if (bSort !== aSort) return bSort - aSort
+
+        // createdAt: desc
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return bTime - aTime
+      })
+
+      // 3. Put in-stock products first (matching sortProductsByStock helper)
+      const finalProducts = [...sorted].sort((a, b) => {
+        const aInStock = (a.stock ?? 0) > 0
+        const bInStock = (b.stock ?? 0) > 0
+        if (aInStock && !bInStock) return -1
+        if (!aInStock && bInStock) return 1
+        return 0
+      })
+
+      return {
+        ...group,
+        products: finalProducts,
+      }
+    })
+
+    return result.sort((a, b) => a.sortOrder - b.sortOrder)
+  }, [currentCuration, sortRules])
 
   return (
     <section className="relative py-4 md:py-8 space-y-6 px-1 transition-all duration-500">

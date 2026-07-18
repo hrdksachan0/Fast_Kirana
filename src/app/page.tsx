@@ -32,6 +32,11 @@ const productSelect = {
   tags: true,
   minStock: true,
   variants: true,
+  isBestSeller: true,
+  isFlashDeal: true,
+  isTopPick: true,
+  sortOrder: true,
+  createdAt: true,
   category: {
     select: {
       id: true,
@@ -234,6 +239,21 @@ const getCachedStoreSettings = unstable_cache(
   { revalidate: 3600, tags: ['settings'] }
 )
 
+const getCachedCategorySortRules = unstable_cache(
+  async () => {
+    return prisma.storeSetting.findMany({
+      where: {
+        key: {
+          startsWith: 'category_sort_'
+        }
+      }
+    })
+  },
+  ['storefront-category-sort-rules'],
+  { revalidate: 3600, tags: ['settings', 'categories'] }
+)
+
+
 const getCachedManualTopPicks = unstable_cache(
   async () => {
     return prisma.product.findMany({
@@ -302,6 +322,7 @@ export default async function Home() {
   let teaRaw: any[] = []
   let nightRaw: any[] = []
   let settingsRaw: any[] = []
+  let sortRulesRaw: any[] = []
 
   // Fetch independent data pools in parallel using cached functions to avoid sequence waterfalls and DB load
   let manualTopPicks: any[] = []
@@ -321,6 +342,7 @@ export default async function Home() {
       settingsRes,
       manualTopPicksRes,
       popularProductsRes,
+      sortRulesRes,
     ] = await Promise.all([
       getCachedBanners(),
       getCachedCategories(),
@@ -334,6 +356,7 @@ export default async function Home() {
       getCachedStoreSettings(),
       getCachedManualTopPicks(),
       getCachedPopularProducts(),
+      getCachedCategorySortRules(),
     ])
 
     promoBanners = bannersRes
@@ -348,6 +371,7 @@ export default async function Home() {
     settingsRaw = settingsRes
     manualTopPicks = manualTopPicksRes
     popularProducts = popularProductsRes
+    sortRulesRaw = sortRulesRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -407,6 +431,11 @@ export default async function Home() {
     tags: p.tags,
     minStock: p.minStock,
     variants: p.variants,
+    isBestSeller: p.isBestSeller,
+    isFlashDeal: p.isFlashDeal,
+    isTopPick: p.isTopPick,
+    sortOrder: p.sortOrder,
+    createdAt: p.createdAt ? p.createdAt.toISOString() : undefined,
     category: p.category ? {
       id: p.category.id,
       name: p.category.name,
@@ -435,6 +464,12 @@ export default async function Home() {
     settingsMap[s.key] = s.value
   })
 
+  const sortRulesMap: Record<string, string> = {}
+  sortRulesRaw.forEach((s) => {
+    const slug = s.key.replace('category_sort_', '')
+    sortRulesMap[slug] = s.value
+  })
+
   return (
     <>
       <StorefrontClient
@@ -448,6 +483,7 @@ export default async function Home() {
         teaProducts={teaProducts}
         nightProducts={nightProducts}
         settingsMap={settingsMap}
+        sortRules={sortRulesMap}
       />
 
       {/* LocalBusiness JSON-LD Schema Markup */}
