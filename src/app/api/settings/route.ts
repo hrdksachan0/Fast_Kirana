@@ -61,6 +61,8 @@ const DEFAULT_SETTINGS = {
   restaurant_profit_share: '15',
   cafe_commission: '10',
   cafe_profit_share: '15',
+  cafe_default_margin: '30',
+  restaurant_default_margin: '30',
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {

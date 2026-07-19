@@ -82,6 +82,13 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
+  const [isManualAddress, setIsManualAddress] = useState(false)
+  const [manualHouseNo, setManualHouseNo] = useState('')
+  const [manualStreet, setManualStreet] = useState('')
+  const [manualArea, setManualArea] = useState('')
+  const [manualPincode, setManualPincode] = useState('209206')
+  const [manualPhone, setManualPhone] = useState('')
+  const [manualCity, setManualCity] = useState('Ghatampur')
 
   // Product selection states
   const [productSearch, setProductSearch] = useState('')
@@ -173,8 +180,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       setAddresses([])
       setSelectedAddressId('')
       setActiveCartItems([])
+      setIsManualAddress(false)
+      setManualHouseNo('')
+      setManualStreet('')
+      setManualArea('')
+      setManualPincode('209206')
+      setManualPhone('')
       return
     }
+
+    // Prefill phone from customer
+    setManualPhone(selectedCustomer.phone || '')
+    setManualHouseNo('')
+    setManualStreet('')
+    setManualArea('')
+    setManualPincode('209206')
 
     const fetchAddressesAndCart = async () => {
       try {
@@ -184,6 +204,9 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           setAddresses(data || [])
           if (data && data.length > 0) {
             setSelectedAddressId(data[0].id)
+            setIsManualAddress(false)
+          } else {
+            setIsManualAddress(true)
           }
         }
       } catch (err) {
@@ -412,9 +435,22 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       toast.error('Please select a customer')
       return
     }
-    if (deliveryMethod === 'DELIVERY' && !selectedAddressId) {
-      toast.error('Please select a delivery address')
-      return
+    if (deliveryMethod === 'DELIVERY') {
+      if (isManualAddress) {
+        if (!manualHouseNo.trim() || !manualStreet.trim() || !manualArea.trim() || !manualPincode.trim() || !manualPhone.trim()) {
+          toast.error('Please fill in all manual address fields')
+          return
+        }
+        if (manualPincode.trim() !== '209206') {
+          toast.error('Only pincode 209206 is serviceable for delivery.')
+          return
+        }
+      } else {
+        if (!selectedAddressId) {
+          toast.error('Please select a delivery address')
+          return
+        }
+      }
     }
     if (selectedItems.length === 0) {
       toast.error('Please add at least one product to the cart')
@@ -427,9 +463,33 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setSubmitError(null)
 
     try {
+      let resolvedAddressId = selectedAddressId
+
+      if (deliveryMethod === 'DELIVERY' && isManualAddress) {
+        const addrRes = await fetch(`/api/admin/users/${selectedCustomer.id}/addresses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: 'Home (Admin)',
+            houseNo: manualHouseNo.trim(),
+            street: manualStreet.trim(),
+            area: manualArea.trim(),
+            city: manualCity.trim(),
+            pincode: manualPincode.trim(),
+            phone: manualPhone.trim(),
+          })
+        })
+        if (!addrRes.ok) {
+          const err = await addrRes.json()
+          throw new Error(err.error || 'Failed to save custom delivery address')
+        }
+        const savedAddr = await addrRes.json()
+        resolvedAddressId = savedAddr.id
+      }
+
       const payload = {
         customerId: selectedCustomer.id,
-        addressId: deliveryMethod === 'PICKUP' ? null : selectedAddressId,
+        addressId: deliveryMethod === 'PICKUP' ? null : resolvedAddressId,
         deliveryMethod,
         paymentMethod,
         noGst,
@@ -658,14 +718,22 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
                 {deliveryMethod === 'DELIVERY' && (
                   <div className="space-y-2">
-                    {addresses.length === 0 ? (
-                      <div className="p-4 border border-dashed border-border bg-muted/10 rounded-xl text-center">
-                        <MapPin className="h-6 w-6 text-text-muted mx-auto mb-1.5" />
-                        <p className="text-[10px] font-bold text-text-muted">
-                          Customer has no registered delivery addresses. Please ask them to add an address in their profile.
-                        </p>
-                      </div>
-                    ) : (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-text-secondary">
+                        {isManualAddress ? "Custom Address Mode" : "Select Shipping Address"}
+                      </span>
+                      {addresses.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsManualAddress(!isManualAddress)}
+                          className="text-[10px] text-primary hover:underline font-extrabold cursor-pointer"
+                        >
+                          {isManualAddress ? "← Select Saved Address" : "+ Write Custom Address"}
+                        </button>
+                      )}
+                    </div>
+
+                    {!isManualAddress && addresses.length > 0 ? (
                       <div className="relative">
                         <select
                           value={selectedAddressId}
@@ -678,6 +746,70 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                             </option>
                           ))}
                         </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 bg-muted/10 border border-border/60 p-3.5 rounded-xl animate-fade-in">
+                        <div className="text-[10px] font-black text-text-secondary uppercase tracking-wider mb-1">
+                          ✍️ Enter Custom Delivery Address
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-text-secondary">House / Flat / Floor *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Flat 402, B-Block"
+                              value={manualHouseNo}
+                              onChange={(e) => setManualHouseNo(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-background focus:outline-none font-semibold text-text-primary"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-text-secondary">Street / Landmark *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Near Vikas Medical Store"
+                              value={manualStreet}
+                              onChange={(e) => setManualStreet(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-background focus:outline-none font-semibold text-text-primary"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-text-secondary">Area / Mohalla *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Kanpur Road"
+                              value={manualArea}
+                              onChange={(e) => setManualArea(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-background focus:outline-none font-semibold text-text-primary"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-text-secondary">Pincode *</label>
+                            <input
+                              type="text"
+                              required
+                              disabled
+                              value={manualPincode}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/30 text-text-muted focus:outline-none font-semibold"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-text-secondary">Recipient Phone *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="10-digit mobile"
+                              value={manualPhone}
+                              onChange={(e) => setManualPhone(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-background focus:outline-none font-semibold text-text-primary"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

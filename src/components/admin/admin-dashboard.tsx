@@ -544,6 +544,7 @@ export function AdminDashboard({
     isTopPick: false,
     isBestSeller: false,
     sortOrder: '0',
+    barcode: '',
   })
   
   // State for Add Product Form
@@ -572,6 +573,7 @@ export function AdminDashboard({
     isTopPick: false,
     isBestSeller: false,
     sortOrder: '0',
+    barcode: '',
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
@@ -1316,6 +1318,7 @@ export function AdminDashboard({
       isTopPick: p.isTopPick || false,
       isBestSeller: p.isBestSeller || false,
       sortOrder: String(p.sortOrder ?? 0),
+      barcode: p.barcode || '',
     })
 
     setShowAddProduct(true)
@@ -1530,6 +1533,7 @@ export function AdminDashboard({
       isTopPick: p.isTopPick || false,
       isBestSeller: p.isBestSeller || false,
       sortOrder: String(p.sortOrder ?? 0),
+      barcode: p.barcode || '',
     })
   }
 
@@ -1575,6 +1579,7 @@ export function AdminDashboard({
           isTopPick: productEditForm.isTopPick,
           isBestSeller: productEditForm.isBestSeller,
           sortOrder: parseInt(productEditForm.sortOrder) || 0,
+          barcode: productEditForm.barcode || null,
           variants: hasVariantsEdit ? editProductVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -1692,6 +1697,7 @@ export function AdminDashboard({
           isTopPick: false,
           isBestSeller: false,
           sortOrder: '0',
+          barcode: '',
         })
 
       } else {
@@ -2541,77 +2547,84 @@ export function AdminDashboard({
         <div className="space-y-6 animate-fade-in">
           
           {/* Controls row */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
-            <div className="flex flex-1 w-full gap-3">
-              <div className="relative flex-1">
+          <div className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-4">
+            {/* Row 1: Search & Type & Category Filters */}
+            <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full md:max-w-md">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search products by name..."
+                  placeholder="Search products by name, ID, or barcode..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 w-full text-xs rounded-xl border border-border bg-muted/30 focus:outline-none focus:border-primary font-semibold"
+                  className="pl-9 pr-4 py-2.5 w-full text-xs rounded-xl border border-border bg-muted/30 focus:outline-none focus:border-primary font-semibold"
                 />
               </div>
-              <select
-                value={selectedTypeFilter}
-                onChange={(e) => setSelectedTypeFilter(e.target.value as any)}
-                className="px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
-              >
-                <option value="all">All Items (Catalog)</option>
-                <option value="grocery">Grocery Only 📦</option>
-                <option value="cafe">Cafe Only ☕</option>
-                <option value="restaurant">Restaurant Only 🍳</option>
-              </select>
-              <select
-                value={selectedCategoryFilter}
-                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
-              >
-                <option value="">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              
+              <div className="flex gap-3 w-full md:w-auto">
+                <select
+                  value={selectedTypeFilter}
+                  onChange={(e) => setSelectedTypeFilter(e.target.value as any)}
+                  className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
+                >
+                  <option value="all">All Items (Catalog)</option>
+                  <option value="grocery">Grocery Only 📦</option>
+                  <option value="cafe">Cafe Only ☕</option>
+                  <option value="restaurant">Restaurant Only 🍳</option>
+                </select>
+                <select
+                  value={selectedCategoryFilter}
+                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                  className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            
-            <button
-              onClick={() => setShowAddProduct(!showAddProduct)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all w-full md:w-auto justify-center cursor-pointer"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add New Product
-            </button>
-            <button
-              onClick={() => setShowSortManager(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-650 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              ⚡ Sort & Position Manager
-            </button>
-            <button
-              onClick={() => { setShowCsvImport(!showCsvImport); setShowExportModal(false); }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
-            >
-              <FileText className="h-4 w-4" />
-              📥 CSV Import
-            </button>
-            <button
-              onClick={() => { setShowExportModal(!showExportModal); setShowCsvImport(false); }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer"
-            >
-              <Download className="h-4 w-4" />
-              📤 Export CSV
-            </button>
-            <button
-              onClick={handleReplenishCsv}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all w-full md:w-auto justify-center cursor-pointer shadow-sm"
-            >
-              <AlertCircle className="h-4 w-4" />
-              ⚠️ Replenish CSV
-            </button>
+
+            {/* Row 2: Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
+              <button
+                onClick={() => setShowAddProduct(!showAddProduct)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all cursor-pointer"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Add New Product
+              </button>
+              <button
+                onClick={() => setShowSortManager(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-650 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                ⚡ Sort & Position Manager
+              </button>
+              <button
+                onClick={() => { setShowCsvImport(!showCsvImport); setShowExportModal(false); }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                <FileText className="h-4 w-4" />
+                📥 CSV Import
+              </button>
+              <button
+                onClick={() => { setShowExportModal(!showExportModal); setShowCsvImport(false); }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                <Download className="h-4 w-4" />
+                📤 Export CSV
+              </button>
+              <button
+                onClick={handleReplenishCsv}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                <AlertCircle className="h-4 w-4" />
+                ⚠️ Replenish CSV
+              </button>
+            </div>
           </div>
 
 
@@ -2884,7 +2897,17 @@ export function AdminDashboard({
                         required={!hasVariantsNew}
                         placeholder="e.g. 80"
                         value={newProduct.price}
-                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          let calculatedCost = newProduct.costPrice
+                          if (isNewProductCafe || isNewProductRestaurant) {
+                            const marginKey = isNewProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
+                            const marginPercent = parseFloat(settingsMap[marginKey] || '30')
+                            const priceNum = parseFloat(val) || 0
+                            calculatedCost = (priceNum * (1 - marginPercent / 100)).toFixed(2)
+                          }
+                          setNewProduct({ ...newProduct, price: val, costPrice: calculatedCost })
+                        }}
                         className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                       />
                     </div>
@@ -2962,6 +2985,17 @@ export function AdminDashboard({
                             type="number"
                             id="new-var-price"
                             placeholder="Selling"
+                            onChange={(e) => {
+                              if (isNewProductCafe || isNewProductRestaurant) {
+                                const costInput = document.getElementById('new-var-cost') as HTMLInputElement
+                                if (costInput) {
+                                  const marginKey = isNewProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
+                                  const marginPercent = parseFloat(settingsMap[marginKey] || '30')
+                                  const priceVal = parseFloat(e.target.value) || 0
+                                  costInput.value = (priceVal * (1 - marginPercent / 100)).toFixed(2)
+                                }
+                              }
+                            }}
                             className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
                           />
                         </div>
@@ -3085,6 +3119,18 @@ export function AdminDashboard({
                       placeholder="e.g. 10"
                       value={newProduct.minStock}
                       onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
+                {!isNewProductCafe && !isNewProductRestaurant && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Barcode (EAN/UPC)</label>
+                    <input
+                      type="text"
+                      placeholder="Scan or enter barcode"
+                      value={newProduct.barcode}
+                      onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                     />
                   </div>
@@ -3497,7 +3543,14 @@ export function AdminDashboard({
                               </span>
                               <div>
                                 <div className="font-bold text-text-primary">{p.name}</div>
-                                <div className="text-[10px] text-text-muted font-normal">{p.unit}</div>
+                                <div className="text-[10px] text-text-muted font-normal flex items-center gap-1.5">
+                                  <span>{p.unit}</span>
+                                  {p.barcode && (
+                                    <span className="text-[9px] bg-blue-500/10 text-blue-600 dark:text-blue-450 px-1 py-0.5 rounded font-mono">
+                                      {p.barcode}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -5045,7 +5098,17 @@ export function AdminDashboard({
                         step="0.01"
                         required={!hasVariantsEdit}
                         value={productEditForm.price}
-                        onChange={(e) => setProductEditForm({ ...productEditForm, price: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          let calculatedCost = productEditForm.costPrice
+                          if (isEditProductCafe || isEditProductRestaurant) {
+                            const marginKey = isEditProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
+                            const marginPercent = parseFloat(settingsMap[marginKey] || '30')
+                            const priceNum = parseFloat(val) || 0
+                            calculatedCost = (priceNum * (1 - marginPercent / 100)).toFixed(2)
+                          }
+                          setProductEditForm({ ...productEditForm, price: val, costPrice: calculatedCost })
+                        }}
                         className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                       />
                     </div>
@@ -5109,6 +5172,17 @@ export function AdminDashboard({
                             type="number"
                             id="edit-var-price"
                             placeholder="Selling"
+                            onChange={(e) => {
+                              if (isEditProductCafe || isEditProductRestaurant) {
+                                const costInput = document.getElementById('edit-var-cost') as HTMLInputElement
+                                if (costInput) {
+                                  const marginKey = isEditProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
+                                  const marginPercent = parseFloat(settingsMap[marginKey] || '30')
+                                  const priceVal = parseFloat(e.target.value) || 0
+                                  costInput.value = (priceVal * (1 - marginPercent / 100)).toFixed(2)
+                                }
+                              }
+                            }}
                             className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
                           />
                         </div>
@@ -5216,6 +5290,18 @@ export function AdminDashboard({
                       type="number"
                       value={productEditForm.minStock}
                       onChange={(e) => setProductEditForm({ ...productEditForm, minStock: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
+                {!isEditProductCafe && !isEditProductRestaurant && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Barcode (EAN/UPC)</label>
+                    <input
+                      type="text"
+                      placeholder="Scan or enter barcode"
+                      value={productEditForm.barcode}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, barcode: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                     />
                   </div>

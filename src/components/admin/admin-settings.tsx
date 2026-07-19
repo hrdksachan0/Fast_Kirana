@@ -56,8 +56,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [deliveryFee, setDeliveryFee] = useState('25')
   const [restaurantCommission, setRestaurantCommission] = useState('10')
   const [restaurantProfitShare, setRestaurantProfitShare] = useState('15')
+  const [restaurantDefaultMargin, setRestaurantDefaultMargin] = useState('30')
   const [cafeCommission, setCafeCommission] = useState('10')
   const [cafeProfitShare, setCafeProfitShare] = useState('15')
+  const [cafeDefaultMargin, setCafeDefaultMargin] = useState('30')
 
   const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
   const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
@@ -147,8 +149,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.delivery_fee) setDeliveryFee(data.delivery_fee)
         if (data.restaurant_commission) setRestaurantCommission(data.restaurant_commission)
         if (data.restaurant_profit_share) setRestaurantProfitShare(data.restaurant_profit_share)
+        if (data.restaurant_default_margin) setRestaurantDefaultMargin(data.restaurant_default_margin)
         if (data.cafe_commission) setCafeCommission(data.cafe_commission)
         if (data.cafe_profit_share) setCafeProfitShare(data.cafe_profit_share)
+        if (data.cafe_default_margin) setCafeDefaultMargin(data.cafe_default_margin)
 
         if (data.hero_greeting_closed) setHeroGreetingClosed(data.hero_greeting_closed)
         if (data.hero_subtitle_closed) setHeroSubtitleClosed(data.hero_subtitle_closed)
@@ -192,8 +196,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     
     if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
         !groceryPickupAddress.trim() || !cafePickupAddress.trim() || !restaurantPickupAddress.trim() ||
-        !restaurantCommission.trim() || !restaurantProfitShare.trim() ||
-        !cafeCommission.trim() || !cafeProfitShare.trim() ||
+        !restaurantCommission.trim() || !restaurantProfitShare.trim() || !restaurantDefaultMargin.trim() ||
+        !cafeCommission.trim() || !cafeProfitShare.trim() || !cafeDefaultMargin.trim() ||
         !groceryFreeDeliveryThreshold.trim() || !cafeFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
         !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
         !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
@@ -249,8 +253,10 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           delivery_fee: deliveryFee.trim(),
           restaurant_commission: restaurantCommission.trim(),
           restaurant_profit_share: restaurantProfitShare.trim(),
+          restaurant_default_margin: restaurantDefaultMargin.trim(),
           cafe_commission: cafeCommission.trim(),
           cafe_profit_share: cafeProfitShare.trim(),
+          cafe_default_margin: cafeDefaultMargin.trim(),
           contact_phone: contactPhone.trim(),
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
@@ -934,76 +940,106 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                 </div>
 
                  {/* Partner Restaurant Commission Settings */}
-                <div className="border-t border-border/40 pt-4 mt-2">
-                  <h4 className="text-xs font-black text-text-primary mb-3">🍳 Partner Restaurant Payout & Commission Settings</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Admin Commission Rate */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="100"
-                        placeholder="e.g. 10"
-                        value={restaurantCommission}
-                        onChange={(e) => setRestaurantCommission(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
+                 <div className="border-t border-border/40 pt-4 mt-2">
+                   <h4 className="text-xs font-black text-text-primary mb-3">🍳 Partner Restaurant Payout & Commission Settings</h4>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     {/* Admin Commission Rate */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 10"
+                         value={restaurantCommission}
+                         onChange={(e) => setRestaurantCommission(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
 
-                    {/* Restaurant Profit Share Rate */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Net Profit Share (%) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="100"
-                        placeholder="e.g. 15"
-                        value={restaurantProfitShare}
-                        onChange={(e) => setRestaurantProfitShare(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
+                     {/* Restaurant Profit Share Rate */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Net Profit Share (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 15"
+                         value={restaurantProfitShare}
+                         onChange={(e) => setRestaurantProfitShare(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
 
-                {/* Partner Cafe Commission Settings */}
-                <div className="border-t border-border/40 pt-4 mt-2">
-                  <h4 className="text-xs font-black text-text-primary mb-3">☕ Partner Cafe Payout & Commission Settings</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Admin Commission Rate */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="100"
-                        placeholder="e.g. 10"
-                        value={cafeCommission}
-                        onChange={(e) => setCafeCommission(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
+                     {/* Restaurant Default Margin */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Default Profit Margin (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 30"
+                         value={restaurantDefaultMargin}
+                         onChange={(e) => setRestaurantDefaultMargin(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
+                   </div>
+                 </div>
 
-                    {/* Cafe Profit Share Rate */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Net Profit Share (%) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="100"
-                        placeholder="e.g. 15"
-                        value={cafeProfitShare}
-                        onChange={(e) => setCafeProfitShare(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
+                 {/* Partner Cafe Commission Settings */}
+                 <div className="border-t border-border/40 pt-4 mt-2">
+                   <h4 className="text-xs font-black text-text-primary mb-3">☕ Partner Cafe Payout & Commission Settings</h4>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     {/* Admin Commission Rate */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 10"
+                         value={cafeCommission}
+                         onChange={(e) => setCafeCommission(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
+
+                     {/* Cafe Profit Share Rate */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Net Profit Share (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 15"
+                         value={cafeProfitShare}
+                         onChange={(e) => setCafeProfitShare(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
+
+                     {/* Cafe Default Margin */}
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Default Profit Margin (%) *</label>
+                       <input
+                         type="number"
+                         required
+                         min="0"
+                         max="100"
+                         placeholder="e.g. 30"
+                         value={cafeDefaultMargin}
+                         onChange={(e) => setCafeDefaultMargin(e.target.value)}
+                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                       />
+                     </div>
+                   </div>
+                 </div>
 
                 {/* Cloudinary Configuration */}
                 <div className="border-t border-border/40 pt-4 mt-2">

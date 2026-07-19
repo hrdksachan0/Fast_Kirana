@@ -94,11 +94,14 @@ export async function GET(request: NextRequest) {
     // Track missing cost products
     const missingCostProductsMap: Record<string, { id: string; name: string; price: number }> = {}
 
-    // Fetch dynamic restaurant commission setting
-    const commissionSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'restaurant_commission' }
+    // Fetch dynamic settings
+    const settingsList = await prisma.storeSetting.findMany({
+      where: { key: { in: ['restaurant_commission', 'restaurant_default_margin', 'cafe_default_margin'] } }
     })
-    const dynamicCommissionRate = parseFloat(commissionSetting?.value || '10') / 100
+    const settingsMap = new Map(settingsList.map(s => [s.key, s.value]))
+    const dynamicCommissionRate = parseFloat(settingsMap.get('restaurant_commission') || '10') / 100
+    const restaurantDefaultMargin = parseFloat(settingsMap.get('restaurant_default_margin') || '30')
+    const cafeDefaultMargin = parseFloat(settingsMap.get('cafe_default_margin') || '30')
 
     // Helper: calculate cost and profit for an item
     const getItemMetrics = (item: typeof orderItems[0]) => {
@@ -131,8 +134,16 @@ export async function GET(request: NextRequest) {
       }
 
       const hasCostPrice = costPrice > 0
-      // Fallback: if cost price is 0, assume 25% margin (cost is 75% of sale price)
-      const costPerUnit = hasCostPrice ? costPrice : item.price * 0.75
+      let costPerUnit = costPrice
+      if (!hasCostPrice) {
+        if (item.shopName === 'FastKirana Cafe Kitchen') {
+          costPerUnit = item.price * (1 - cafeDefaultMargin / 100)
+        } else if (item.shopName === 'FastKirana Restaurant Kitchen') {
+          costPerUnit = item.price * (1 - restaurantDefaultMargin / 100)
+        } else {
+          costPerUnit = item.price * 0.75
+        }
+      }
       const itemCost = costPerUnit * item.quantity
       const itemProfit = itemRevenue - itemCost
       

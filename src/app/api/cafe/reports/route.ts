@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     // Fetch dynamic settings from database
     const dbSettings = await prisma.storeSetting.findMany({
       where: {
-        key: { in: ['cafe_commission', 'cafe_profit_share'] }
+        key: { in: ['cafe_commission', 'cafe_profit_share', 'cafe_default_margin'] }
       }
     })
     const dbSettingsMap = new Map(dbSettings.map(s => [s.key, s.value]))
@@ -110,13 +110,36 @@ export async function GET(request: NextRequest) {
     // Parse rates (fallback to 10% and 15%)
     const commissionRate = parseFloat(dbSettingsMap.get('cafe_commission') || '10') / 100
     const profitShareRate = parseFloat(dbSettingsMap.get('cafe_profit_share') || '15') / 100
+    const cafeDefaultMargin = parseFloat(dbSettingsMap.get('cafe_default_margin') || '30')
 
     // Helper: calculate cost and profit for an item with dynamic margin
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const totalItemSales = item.price * item.quantity
       const adminProfit = totalItemSales * commissionRate
       const cafeProfit = totalItemSales - adminProfit
-      return { cost: 0, sales: totalItemSales, profit: totalItemSales, cafeProfit, adminProfit }
+
+      let costPrice = item.costPrice
+
+      // If there is a selected variant, try to find its cost price in the variants array
+      if (item.selectedVariant && item.variants) {
+        try {
+          const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
+          if (Array.isArray(variantsList)) {
+            const matchedVariant = variantsList.find((v: any) => v.name === item.selectedVariant)
+            if (matchedVariant && matchedVariant.costPrice !== undefined) {
+              costPrice = parseFloat(matchedVariant.costPrice) || 0
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing variants for item cost calculation:', e)
+        }
+      }
+
+      const costPerUnit = costPrice > 0 ? costPrice : item.price * (1 - cafeDefaultMargin / 100)
+      const ingredientCost = costPerUnit * item.quantity
+      const netCafeProfit = cafeProfit - ingredientCost
+
+      return { cost: ingredientCost, sales: totalItemSales, profit: netCafeProfit, cafeProfit, adminProfit }
     }
 
     // 3. Process Financials Summary
@@ -140,10 +163,11 @@ export async function GET(request: NextRequest) {
         const metrics = getItemMetrics(item)
         totalCafeProfit += metrics.cafeProfit
         totalAdminProfit += metrics.adminProfit
+        totalCost += metrics.cost
       })
     })
 
-    const netProfit = totalSales // net profit matches total sales since no COGS is deducted at marketplace level
+    const netProfit = totalCafeProfit - totalCost
 
     // 4. Daily Sales Trend
     const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; adminProfit: number; orders: number }>()

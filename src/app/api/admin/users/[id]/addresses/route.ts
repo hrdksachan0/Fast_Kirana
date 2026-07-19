@@ -26,3 +26,43 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 })
   }
 }
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const { label, houseNo, street, area, city, pincode, phone } = await request.json()
+
+    if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const cleanPhone = phone.toString().trim().replace(/\D/g, '')
+
+    const address = await prisma.address.create({
+      data: {
+        userId: id,
+        label: label.trim(),
+        houseNo: houseNo.trim(),
+        street: street.trim(),
+        area: area.trim(),
+        city: city.trim(),
+        pincode: pincode.trim(),
+        phone: cleanPhone,
+        isDefault: false,
+      }
+    })
+
+    return NextResponse.json(address)
+  } catch (error: any) {
+    console.error('Failed to create user address by admin:', error)
+    return NextResponse.json({ error: error.message || 'Failed to create address' }, { status: 500 })
+  }
+}
