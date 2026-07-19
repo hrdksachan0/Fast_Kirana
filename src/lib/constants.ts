@@ -167,7 +167,7 @@ export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
 export const DEFAULT_RESTAURANT_MENU_SECTIONS: CafeMenuSection[] = [
   {
     tag: 'north-indian',
-    matchTags: ['north-indian', 'curry', 'roti', 'dal-makhani', 'paneer-butter-masala', 'paneer', 'naan'],
+    matchTags: ['north-indian', 'curry', 'roti', 'dal-makhani', 'paneer-butter-masala', 'paneer', 'naan', 'main-course'],
     title: 'North Indian Curries & Breads',
     emoji: '🥘',
     description: 'Rich paneer butter masala, creamy dal makhani, and warm butter naans',
@@ -199,6 +199,13 @@ export const DEFAULT_RESTAURANT_MENU_SECTIONS: CafeMenuSection[] = [
     title: 'Desserts & Sweet Sips',
     emoji: '🍨',
     description: 'Hot gulab jamuns, premium ice creams, and traditional sweets',
+  },
+  {
+    tag: 'breakfast',
+    matchTags: ['breakfast', 'paratha', 'poori', 'chole-bhature', 'nashta'],
+    title: 'Breakfast & Nashta',
+    emoji: '🍳',
+    description: 'Chole Bhature, Parathas, Poori and morning favorites',
   }
 ]
 

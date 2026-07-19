@@ -214,8 +214,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         })
 
         const excludeTags = new Set([
-          'cafe', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
-          'breakfast', 'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
+          'cafe', 'restaurant', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
+          'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
           'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
           'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
           'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
@@ -269,7 +269,26 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           }
         })
 
-        // Only show configured/predefined categories that have products in the database
+        // Also add dynamically discovered categories for unmatched product tags
+        dynamicSections
+          .sort((a, b) => b.productsCount - a.productsCount)
+          .forEach(ds => {
+            const matchedProducts = dbProducts.filter((p: any) =>
+              !assignedProductIds.has(p.id) &&
+              p.tags?.some((t: string) => t.toLowerCase() === ds.tag)
+            )
+            if (matchedProducts.length > 0) {
+              finalCategories.push({
+                tag: ds.tag,
+                title: ds.title,
+                emoji: ds.emoji,
+                image: ds.image,
+                products: matchedProducts
+              })
+            }
+          })
+
+        // Show configured/predefined + dynamic categories that have products in the database
         setCategories([
           { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png', products: dbProducts },
           ...finalCategories
