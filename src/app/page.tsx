@@ -148,7 +148,7 @@ const getCachedBreakfastDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ],
       },
       take: 16,
@@ -170,7 +170,7 @@ const getCachedLunchDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ],
       },
       take: 16,
@@ -192,7 +192,7 @@ const getCachedTeaDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ],
       },
       take: 16,
@@ -209,7 +209,7 @@ const getCachedNightCravings = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { category: { slug: { in: ['cafe', 'beverages', 'ice-cream'] } } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream'] } } },
           { tags: { hasSome: ['snacks', 'drinks', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night'] } }
         ]
       },
@@ -262,7 +262,7 @@ const getCachedManualTopPicks = unstable_cache(
         isAvailable: true,
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ]
       },
       select: productSelect,
@@ -281,7 +281,7 @@ const getCachedProductsByIds = unstable_cache(
         isAvailable: true,
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ]
       },
       select: productSelect,
@@ -299,7 +299,7 @@ const getCachedPopularProducts = unstable_cache(
         tags: { has: 'popular' },
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
         ]
       },
       take: 12,

@@ -89,7 +89,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       isAvailable: true,
       NOT: [
         { tags: { has: 'cafe' } },
-        { category: { slug: 'cafe' } }
+        { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } }
       ]
     }
 

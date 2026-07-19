@@ -45,16 +45,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (category) {
-      if (category.includes(',')) {
-        where.category = {
-          slug: {
-            in: category.split(','),
-          },
-        }
-      } else {
-        where.category = {
-          slug: category,
-        }
+      const slugs = category.split(',')
+      const expandedSlugs = slugs.flatMap(s => s === 'cafe' ? ['cafe', 'fastkirana-cafe'] : [s])
+      where.category = {
+        slug: {
+          in: expandedSlugs,
+        },
       }
     }
 

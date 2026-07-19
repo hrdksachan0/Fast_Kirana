@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     if (type === 'cafe') {
       andClauses.push({
         OR: [
-          { category: { slug: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
           { tags: { has: 'cafe' } }
         ]
       })
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       })
     } else if (type === 'grocery') {
       andClauses.push({
-        category: { slug: { notIn: ['cafe', 'restaurant'] } }
+        category: { slug: { notIn: ['cafe', 'fastkirana-cafe', 'restaurant'] } }
       })
       andClauses.push({
         NOT: {
