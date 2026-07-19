@@ -150,7 +150,7 @@ const HUB_CONFIG = [
     icon: Package,
     color: 'from-emerald-500/10 to-teal-500/10',
     activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update', 'cafe-console', 'restaurant-console'] as const
+    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update'] as const
   },
   {
     key: 'marketing',

@@ -23,7 +23,8 @@ import {
   Activity,
   History,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Camera
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -118,6 +119,50 @@ export function AdminInventoryCenter() {
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const qtyInputRef = useRef<HTMLInputElement>(null)
 
+  // Camera scanner states for Inward
+  const [isInwardCameraScanning, setIsInwardCameraScanning] = useState(false)
+  const inwardVideoRef = useRef<HTMLVideoElement>(null)
+  const inwardVideoStreamRef = useRef<MediaStream | null>(null)
+
+  const startInwardCamera = async () => {
+    setIsInwardCameraScanning(true)
+  }
+
+  const stopInwardCamera = () => {
+    setIsInwardCameraScanning(false)
+    if (inwardVideoStreamRef.current) {
+      inwardVideoStreamRef.current.getTracks().forEach(track => track.stop())
+      inwardVideoStreamRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    if (isInwardCameraScanning) {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      }).then(stream => {
+        inwardVideoStreamRef.current = stream
+        if (inwardVideoRef.current) {
+          inwardVideoRef.current.srcObject = stream
+        }
+      }).catch(err => {
+        console.warn('Camera access error:', err)
+        toast.error('Could not access camera. Please check permissions.')
+        setIsInwardCameraScanning(false)
+      })
+    } else {
+      if (inwardVideoStreamRef.current) {
+        inwardVideoStreamRef.current.getTracks().forEach(track => track.stop())
+        inwardVideoStreamRef.current = null
+      }
+    }
+    return () => {
+      if (inwardVideoStreamRef.current) {
+        inwardVideoStreamRef.current.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [isInwardCameraScanning])
+
   // Focus scanner on tab switch & mount
   useEffect(() => {
     if (activeTab === 'inward' && barcodeInputRef.current) {
@@ -126,16 +171,21 @@ export function AdminInventoryCenter() {
   }, [activeTab])
 
   // Trigger search when barcode is entered (supports handheld scanner instant submit)
-  const handleBarcodeSubmit = async (e?: React.FormEvent) => {
+  const handleBarcodeSubmit = async (e?: React.FormEvent, customBarcode?: string) => {
     if (e) e.preventDefault()
-    if (!inwardBarcode.trim()) return
+    const barcodeToSearch = (customBarcode || inwardBarcode).trim()
+    if (!barcodeToSearch) return
+
+    if (customBarcode) {
+      setInwardBarcode(customBarcode)
+    }
 
     try {
       setSearchingMaster(true)
       setScannedProduct(null)
       setIsLinkingMode(false)
 
-      const res = await fetch(`/api/admin/inventory/master-lookup?barcode=${inwardBarcode.trim()}`)
+      const res = await fetch(`/api/admin/inventory/master-lookup?barcode=${barcodeToSearch}`)
       if (!res.ok) throw new Error('Master lookup failed')
       const data = await res.json()
 
@@ -171,7 +221,7 @@ export function AdminInventoryCenter() {
       } else {
         // Not found anywhere -> Open Add New Product form
         setScannedProduct({
-          barcode: inwardBarcode.trim(),
+          barcode: barcodeToSearch,
           name: '',
           brand: '',
           categoryId: categories[0]?.id || '',
@@ -190,6 +240,61 @@ export function AdminInventoryCenter() {
       setSearchingMaster(false)
     }
   }
+
+  // Barcode Detection Loop
+  useEffect(() => {
+    if (!isInwardCameraScanning) return
+
+    let active = true
+    let barcodeDetector: any = null
+
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        // @ts-ignore
+        barcodeDetector = new window.BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
+        })
+      } catch (e) {
+        console.warn('BarcodeDetector initialization failed:', e)
+      }
+    }
+
+    const checkFrame = async () => {
+      if (!active || !isInwardCameraScanning || !inwardVideoRef.current) return
+
+      const video = inwardVideoRef.current
+      if (video.readyState === video.HAVE_ENOUGH_DATA && barcodeDetector) {
+        try {
+          const barcodes = await barcodeDetector.detect(video)
+          if (barcodes && barcodes.length > 0 && active) {
+            const code = barcodes[0].rawValue
+            toast.success(`📸 Barcode detected: ${code}`)
+            handleBarcodeSubmit(undefined, code)
+            active = false
+            stopInwardCamera()
+            return
+          }
+        } catch (err) {
+          // ignore single frame errors
+        }
+      }
+      
+      if (active) {
+        requestAnimationFrame(checkFrame)
+      }
+    }
+
+    const timeout = setTimeout(() => {
+      if (active) {
+        checkFrame()
+      }
+    }, 1000)
+
+    return () => {
+      active = false
+      clearTimeout(timeout)
+    }
+  }, [isInwardCameraScanning])
 
   // Handle Inward Register Submit
   const handleInwardSubmit = async (e: React.FormEvent) => {
@@ -229,6 +334,25 @@ export function AdminInventoryCenter() {
         toast.error(err.message || 'Error creating product')
         setSubmittingInward(false)
         return
+      }
+    } else if (scannedProduct.status === 'exists') {
+      // Direct Price Update during Inward
+      const originalProd = products.find(p => p.id === scannedProduct.id)
+      if (originalProd && (originalProd.mrp !== parseFloat(scannedProduct.mrp) || originalProd.price !== parseFloat(scannedProduct.price))) {
+        try {
+          const updateRes = await fetch(`/api/products/${scannedProduct.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mrp: parseFloat(scannedProduct.mrp),
+              price: parseFloat(scannedProduct.price)
+            })
+          })
+          if (!updateRes.ok) throw new Error('Failed to update catalog prices')
+          toast.success('🏷️ Product catalog prices updated successfully!')
+        } catch (err: any) {
+          toast.error(err.message || 'Error updating product catalog prices')
+        }
       }
     }
 
@@ -303,9 +427,11 @@ export function AdminInventoryCenter() {
   }
 
   // =========================================================================
-  // TAB 2: RETAIL POS COUNTER (DUKAN CHECKOUT)
+  // TAB 2: RETAIL POS COUNTER (STORE CHECKOUT)
   // =========================================================================
-  const [posBarcode, setPosBarcode] = useState('')
+  const [posSearchQuery, setPosSearchQuery] = useState('')
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const [posCart, setPosCart] = useState<CartItem[]>([])
   const [posPricingMode, setPosPricingMode] = useState<'mrp' | 'website'>('mrp')
   const [posPaymentMethod, setPosPaymentMethod] = useState<'COD' | 'UPI'>('COD')
@@ -319,34 +445,56 @@ export function AdminInventoryCenter() {
     }
   }, [activeTab])
 
-  // Scan product into Retail POS cart
+  // Filter products for the search results dropdown
+  const posSearchResults = useMemo(() => {
+    const query = posSearchQuery.trim().toLowerCase()
+    if (!query) return []
+    return products.filter(p => 
+      p.name.toLowerCase().includes(query) || 
+      (p.barcode && p.barcode.toLowerCase().includes(query))
+    ).slice(0, 10)
+  }, [posSearchQuery, products])
+
+  const handleAddProductToCart = (product: Product) => {
+    setPosCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id)
+      const price = posPricingMode === 'mrp' ? product.mrp : product.price
+
+      if (existing) {
+        return prev.map(item => 
+          item.product.id === product.id 
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      } else {
+        return [...prev, { product, quantity: 1, price }]
+      }
+    })
+    toast.success(`🛒 Added ${product.name} to retail cart`, { duration: 1000 })
+  }
+
+  // Scan or search product into Retail POS cart
   const handlePosBarcodeSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!posBarcode.trim()) return
+    const query = posSearchQuery.trim()
+    if (!query) return
 
-    const product = products.find(p => p.barcode === posBarcode.trim())
+    // 1. Try to find by exact barcode
+    let product = products.find(p => p.barcode === query)
+
+    // 2. If not found by barcode, select the highlighted search result if available
+    if (!product && posSearchResults.length > 0 && highlightedIndex >= 0 && highlightedIndex < posSearchResults.length) {
+      product = posSearchResults[highlightedIndex]
+    }
 
     if (product) {
-      // Add to cart
-      setPosCart(prev => {
-        const existing = prev.find(item => item.product.id === product.id)
-        const price = posPricingMode === 'mrp' ? product.mrp : product.price
-
-        if (existing) {
-          return prev.map(item => 
-            item.product.id === product.id 
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          )
-        } else {
-          return [...prev, { product, quantity: 1, price }]
-        }
-      })
-      toast.success(`🛒 Added ${product.name} to retail cart`, { duration: 1000 })
+      handleAddProductToCart(product)
+      setPosSearchQuery('')
+      setShowSearchResults(false)
+      setHighlightedIndex(0)
     } else {
-      toast.error(`❌ Barcode "${posBarcode}" not found in catalog! Please create or link it first.`, { duration: 2500 })
+      toast.error(`❌ Product or Barcode "${query}" not found in catalog!`, { duration: 2500 })
     }
-    setPosBarcode('')
   }
 
   // Recalculate cart prices when pricing mode (MRP vs Website Price) changes
@@ -587,20 +735,28 @@ export function AdminInventoryCenter() {
                     </p>
                   </div>
 
-                  <form onSubmit={handleBarcodeSubmit} className="space-y-4">
+                  <form onSubmit={(e) => handleBarcodeSubmit(e)} className="space-y-4">
                     <div className="space-y-1 relative">
                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Scan Item Barcode</label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-text-muted" />
+                          <Search className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
                           <input
                             ref={barcodeInputRef}
                             type="text"
                             value={inwardBarcode}
                             onChange={(e) => setInwardBarcode(e.target.value)}
                             placeholder="Scan packet barcode or type code..."
-                            className="w-full bg-muted/40 border border-border/80 pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-accent focus:bg-card font-mono font-bold"
+                            className="w-full bg-muted/40 border border-border/80 pl-9 pr-10 py-2.5 rounded-xl text-sm focus:outline-none focus:border-accent focus:bg-card font-mono font-bold"
                           />
+                          <button
+                            type="button"
+                            onClick={startInwardCamera}
+                            className="absolute right-3 top-2.5 text-text-secondary hover:text-accent p-1 rounded-lg transition-colors cursor-pointer"
+                            title="Open Camera Barcode Scanner"
+                          >
+                            <Camera className="h-4 w-4" />
+                          </button>
                         </div>
                         <button
                           type="submit"
@@ -706,15 +862,32 @@ export function AdminInventoryCenter() {
                         </div>
                         <div className="space-y-1 flex-1">
                           {scannedProduct.status === 'exists' ? (
-                            <>
-                              <h4 className="font-extrabold text-sm text-text-primary leading-tight">{scannedProduct.name}</h4>
-                              <p className="text-xs text-text-muted">
-                                ID: <strong className="text-text-primary">FK{String(scannedProduct.readableId || '').padStart(6, '0')}</strong> | Barcode: <strong className="text-text-primary">{scannedProduct.barcode}</strong>
-                              </p>
-                              <p className="text-xs text-text-muted">
-                                Current stock: <strong className="text-accent font-black text-sm">{scannedProduct.stock} {scannedProduct.unit}</strong>
-                              </p>
-                            </>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                              <div className="space-y-1 md:col-span-2">
+                                <h4 className="font-extrabold text-sm text-text-primary leading-tight">{scannedProduct.name}</h4>
+                                <p className="text-xs text-text-muted mt-0.5">
+                                  ID: <strong className="text-text-primary">FK{String(scannedProduct.readableId || '').padStart(6, '0')}</strong> | Barcode: <strong className="text-text-primary">{scannedProduct.barcode}</strong> | Current stock: <strong className="text-accent font-black">{scannedProduct.stock} {scannedProduct.unit}</strong>
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-extrabold text-text-secondary uppercase">Current MRP (₹) [Edit to update]</label>
+                                <input
+                                  type="number"
+                                  value={scannedProduct.mrp}
+                                  onChange={(e) => setScannedProduct({ ...scannedProduct, mrp: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-card border border-border px-2 py-1 rounded-lg text-xs font-semibold focus:outline-none focus:border-accent"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-extrabold text-text-secondary uppercase">Current Price (₹) [Edit to update]</label>
+                                <input
+                                  type="number"
+                                  value={scannedProduct.price}
+                                  onChange={(e) => setScannedProduct({ ...scannedProduct, price: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-card border border-border px-2 py-1 rounded-lg text-xs font-semibold focus:outline-none focus:border-accent"
+                                />
+                              </div>
+                            </div>
                           ) : (
                             // Input fields for creating new / master product details
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
@@ -949,11 +1122,11 @@ export function AdminInventoryCenter() {
                   <div className="flex flex-wrap justify-between items-center gap-4">
                     <div>
                       <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                        <ShoppingCart className="h-5 w-5 text-accent animate-pulse-slow" />
-                        Retail Dukan Counter POS
+                        <ShoppingCart className="h-5 w-5 text-accent" />
+                        Professional Retail POS
                       </h3>
                       <p className="text-xs text-text-secondary mt-0.5">
-                        Scan products to checkout walk-in retail customers.
+                        Scan barcodes or search products to checkout walk-in retail customers.
                       </p>
                     </div>
 
@@ -965,7 +1138,7 @@ export function AdminInventoryCenter() {
                           posPricingMode === 'mrp' ? 'bg-card text-accent shadow-sm' : 'text-text-secondary'
                         }`}
                       >
-                        MRP (Dukan Rate)
+                        MRP (Retail Price)
                       </button>
                       <button
                         onClick={() => setPosPricingMode('website')}
@@ -978,18 +1151,82 @@ export function AdminInventoryCenter() {
                     </div>
                   </div>
 
-                  {/* POS Barcode scan form */}
-                  <form onSubmit={handlePosBarcodeSubmit} className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-text-muted" />
-                    <input
-                      ref={posBarcodeRef}
-                      type="text"
-                      value={posBarcode}
-                      onChange={(e) => setPosBarcode(e.target.value)}
-                      placeholder="Scan counter product barcode..."
-                      className="w-full bg-muted/40 border border-border/80 pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-accent focus:bg-card font-mono font-bold"
-                    />
-                  </form>
+                  {/* POS Barcode scan / product search form */}
+                  <div className="relative">
+                    <form onSubmit={handlePosBarcodeSubmit} className="relative">
+                      <Search className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
+                      <input
+                        ref={posBarcodeRef}
+                        type="text"
+                        value={posSearchQuery}
+                        onChange={(e) => {
+                          setPosSearchQuery(e.target.value)
+                          setHighlightedIndex(0)
+                          setShowSearchResults(true)
+                        }}
+                        onFocus={() => setShowSearchResults(true)}
+                        onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                        placeholder="Search product by name, brand or scan barcode..."
+                        className="w-full bg-muted/40 border border-border/80 pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-accent focus:bg-card font-bold"
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault()
+                            setHighlightedIndex(prev => Math.min(prev + 1, posSearchResults.length - 1))
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault()
+                            setHighlightedIndex(prev => Math.max(prev - 1, 0))
+                          } else if (e.key === 'Escape') {
+                            setShowSearchResults(false)
+                          }
+                        }}
+                      />
+                    </form>
+
+                    {/* Floating Search Results Dropdown */}
+                    {showSearchResults && posSearchQuery.trim() && (
+                      <div className="absolute z-50 left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl max-h-80 overflow-y-auto divide-y divide-border/60">
+                        {posSearchResults.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-text-secondary">
+                            No products found matching "{posSearchQuery}"
+                          </div>
+                        ) : (
+                          posSearchResults.map((product, index) => (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => {
+                                handleAddProductToCart(product)
+                                setPosSearchQuery('')
+                                setShowSearchResults(false)
+                              }}
+                              className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 text-xs transition-colors cursor-pointer ${
+                                index === highlightedIndex ? 'bg-accent/5 text-accent border-l-4 border-accent font-bold' : 'text-text-primary hover:bg-muted/30 font-semibold'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-lg bg-muted border border-border/40 flex items-center justify-center overflow-hidden shrink-0">
+                                  {product.imageUrl ? (
+                                    <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                                  ) : (
+                                    <Package className="h-5 w-5 text-text-muted" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 text-left">
+                                  <span className="font-extrabold block truncate text-text-primary">{product.name}</span>
+                                  <span className="text-[10px] text-text-muted mt-0.5 block">
+                                    MRP: {formatPrice(product.mrp)} | Stock: {product.stock} {product.unit} | Barcode: {product.barcode || 'N/A'}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-black text-accent shrink-0 bg-accent/10 px-2.5 py-1 rounded-lg">
+                                Add to Cart
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* POS Cart List */}
                   <div className="space-y-4">
@@ -1351,6 +1588,97 @@ export function AdminInventoryCenter() {
 
         </AnimatePresence>
       </div>
+
+      {/* Camera Scanner Modal Overlay for Inward */}
+      <AnimatePresence>
+        {isInwardCameraScanning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-zinc-900 border border-zinc-800 text-white rounded-3xl p-5 w-full max-w-sm flex flex-col items-center space-y-4 shadow-2xl"
+            >
+              <div className="text-center w-full flex justify-between items-center pb-2 border-b border-zinc-800">
+                <span className="text-xs font-extrabold tracking-wider text-accent flex items-center gap-1.5">
+                  <Camera className="h-4 w-4" /> CAMERA BARCODE SCANNER
+                </span>
+                <button
+                  type="button"
+                  onClick={stopInwardCamera}
+                  className="text-xs text-zinc-400 hover:text-white font-bold cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+
+              {/* Camera view screen */}
+              <div className="relative w-full h-[240px] rounded-2xl overflow-hidden bg-black border border-zinc-800 flex items-center justify-center">
+                <video
+                  ref={inwardVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Scanner targeting laser line */}
+                <div className="absolute left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse" style={{ top: '50%' }} />
+                
+                {/* Simulated frame */}
+                <div className="absolute inset-8 border border-white/20 rounded-xl pointer-events-none flex items-center justify-center">
+                  <span className="text-[10px] text-white/50 font-bold bg-black/40 px-2 py-0.5 rounded">Center Barcode</span>
+                </div>
+              </div>
+
+              <div className="text-center w-full space-y-2">
+                <p className="text-[11px] font-bold text-zinc-400 animate-pulse">
+                  Hold barcode up to camera...
+                </p>
+                <p className="text-[9px] text-zinc-500">
+                  Detects standard barcodes (UPC/EAN/Code-128) automatically.
+                </p>
+              </div>
+
+              {/* Backup / Simulator for testing */}
+              <div className="w-full pt-3 border-t border-zinc-800 space-y-2">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-zinc-500 block">
+                  Scan Simulator / Backup Selection
+                </span>
+                <div className="flex gap-2">
+                  <select
+                    className="flex-1 bg-zinc-800 border border-zinc-700 text-white rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-accent font-semibold"
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val) {
+                        const prod = products.find(p => p.id === val)
+                        if (prod && prod.barcode) {
+                          handleBarcodeSubmit(undefined, prod.barcode)
+                          stopInwardCamera()
+                        } else {
+                          toast.error("This product has no barcode to scan!")
+                        }
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select a product to simulate scan...</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.barcode ? `(${p.barcode})` : '(No Barcode)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )
