@@ -7,7 +7,42 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Product, Category, Order, OrderItem, ProductBatch, StockLog, User, Address
+from models import Product, Category, Order, OrderItem, ProductBatch, StockLog, User, Address, StoreSetting
+
+class CategoryResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    imageUrl: Optional[str] = None
+    parentId: Optional[str] = None
+    sortOrder: int = 0
+
+class ProductResponse(BaseModel):
+    id: str
+    readableId: Optional[int] = None
+    name: str
+    slug: str
+    description: Optional[str] = None
+    imageUrl: Optional[str] = None
+    categoryId: str
+    mrp: float
+    price: float
+    discount: float = 0.0
+    unit: str
+    stock: int = 0
+    isAvailable: bool = True
+    minStock: int = 10
+    expiryDate: Optional[datetime] = None
+    costPrice: float = 0.0
+    location: Optional[str] = None
+    isFlashDeal: bool = False
+    isTopPick: bool = False
+    isBestSeller: bool = False
+    sortOrder: int = 0
+    createdAt: datetime
+    updatedAt: datetime
+    barcode: Optional[str] = None
+    category: Optional[CategoryResponse] = None
 
 app = FastAPI(title="FastKirana Mobile API Hub", version="1.0.0")
 
@@ -103,23 +138,85 @@ def get_categories(session: Session = Depends(get_session)):
 
 
 # --- 2. PRODUCTS API ---
-@app.get("/api/products", response_model=List[Product])
-def get_products(categoryId: Optional[str] = None, session: Session = Depends(get_session)):
+@app.get("/api/products", response_model=List[ProductResponse])
+def get_products(
+    categoryId: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = 100,
+    session: Session = Depends(get_session)
+):
+    statement = select(Product).where(Product.isAvailable == True)
+    
+    # 1. Filter by category slug or list of slugs
+    if category:
+        slugs = [s.strip() for s in category.split(",") if s.strip()]
+        if slugs:
+            cat_stmt = select(Category).where(Category.slug.in_(slugs))
+            categories = session.exec(cat_stmt).all()
+            cat_ids = [c.id for c in categories]
+            statement = statement.where(Product.categoryId.in_(cat_ids))
+            
+    # 2. Filter by categoryId directly if provided
     if categoryId:
-        statement = select(Product).where(
-            Product.isAvailable == True,
-            Product.categoryId == categoryId
-        ).order_by(Product.sortOrder.asc())
-    else:
-        statement = select(Product).where(Product.isAvailable == True).order_by(Product.sortOrder.asc())
-    return session.exec(statement).all()
+        statement = statement.where(Product.categoryId == categoryId)
+        
+    # 3. Filter by search query (case-insensitive)
+    if search:
+        search_lower = f"%{search.lower()}%"
+        statement = statement.where(Product.name.ilike(search_lower))
+        
+    # 4. Resolve the sorting rule
+    order_by_clauses = [Product.sortOrder.desc(), Product.createdAt.desc()]
+    if category and "," not in category:
+        setting_key = f"category_sort_{category.strip()}"
+        setting = session.exec(select(StoreSetting).where(StoreSetting.key == setting_key)).first()
+        if setting and setting.value != "manual":
+            rule = setting.value
+            if rule == "best-seller":
+                order_by_clauses = [Product.isBestSeller.desc(), Product.sortOrder.desc(), Product.createdAt.desc()]
+            elif rule == "stock-desc":
+                order_by_clauses = [Product.stock.desc(), Product.sortOrder.desc(), Product.createdAt.desc()]
+            elif rule == "price-asc":
+                order_by_clauses = [Product.price.asc(), Product.sortOrder.desc()]
+            elif rule == "price-desc":
+                order_by_clauses = [Product.price.desc(), Product.sortOrder.desc()]
+            elif rule == "newest":
+                order_by_clauses = [Product.createdAt.desc()]
+                
+    statement = statement.order_by(*order_by_clauses)
+    
+    if limit:
+        statement = statement.limit(limit)
+        
+    products = session.exec(statement).all()
+    
+    # 5. Populate categories (efficient batch lookup to avoid N+1 queries)
+    cat_ids = list(set(p.categoryId for p in products))
+    categories_map = {}
+    if cat_ids:
+        cats = session.exec(select(Category).where(Category.id.in_(cat_ids))).all()
+        categories_map = {c.id: c for c in cats}
+        
+    response = []
+    for p in products:
+        p_dict = p.model_dump()
+        cat = categories_map.get(p.categoryId)
+        p_dict["category"] = cat.model_dump() if cat else None
+        response.append(p_dict)
+        
+    return response
 
-@app.get("/api/products/{product_id}", response_model=Product)
+@app.get("/api/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: str, session: Session = Depends(get_session)):
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+    
+    p_dict = product.model_dump()
+    cat = session.get(Category, product.categoryId)
+    p_dict["category"] = cat.model_dump() if cat else None
+    return p_dict
 
 
 # --- 3. AUTHENTICATION (REGISTER & LOGIN) ---

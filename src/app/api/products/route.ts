@@ -6,6 +6,8 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
   if (limited) return limited

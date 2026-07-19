@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 
+export const dynamic = 'force-dynamic'
+
 // GET: Fetch sorting rule for a category
 export async function GET(request: NextRequest) {
   try {
