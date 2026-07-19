@@ -55,7 +55,7 @@ const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => m
 const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
 const AdminBulkUpdate = dynamic(() => import('./admin-bulk-update').then((mod) => mod.AdminBulkUpdate), { ssr: false })
 const AdminReports = dynamic(() => import('./admin-reports').then((mod) => mod.AdminReports), { ssr: false })
-const AdminInward = dynamic(() => import('./admin-inward').then((mod) => mod.AdminInward), { ssr: false })
+const AdminInventoryCenter = dynamic(() => import('./admin-inventory-center').then((mod) => mod.AdminInventoryCenter), { ssr: false })
 const AdminBanners = dynamic(() => import('./admin-banners').then((mod) => mod.AdminBanners), { ssr: false })
 const AdminSettings = dynamic(() => import('./admin-settings').then((mod) => mod.AdminSettings), { ssr: false })
 const AdminCsvImport = dynamic(() => import('./admin-csv-import').then((mod) => mod.AdminCsvImport), { ssr: false })
@@ -4788,22 +4788,7 @@ export function AdminDashboard({
 
       {activeTab === 'inward' && (
         <div className="animate-fade-in">
-          <AdminInward
-            onInwardCompleted={async () => {
-              try {
-                const res = await fetch('/api/products?limit=1000')
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data.products) {
-                    setProducts(data.products)
-                    setAllProducts(data.products)
-                  }
-                }
-              } catch (err) {
-                console.error(err)
-              }
-            }}
-          />
+          <AdminInventoryCenter />
         </div>
       )}
 

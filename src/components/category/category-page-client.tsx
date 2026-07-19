@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { Category, Product } from '@/types'
-import { cn } from '@/lib/utils'
+import { cn, isProductInStock, getProductPrice } from '@/lib/utils'
 import { ShoppingBag, Search, X, ChevronRight } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -490,17 +490,17 @@ export function CategoryPageClient({
 
     // 4. Sort results
     if (sort === 'price-asc') {
-      result.sort((a, b) => a.price - b.price)
+      result.sort((a, b) => getProductPrice(a) - getProductPrice(b))
     } else if (sort === 'price-desc') {
-      result.sort((a, b) => b.price - a.price)
+      result.sort((a, b) => getProductPrice(b) - getProductPrice(a))
     } else if (sort === 'discount-desc') {
       result.sort((a, b) => b.discount - a.discount)
     }
 
     // Stable sort: keep out-of-stock items at the bottom
     result.sort((a, b) => {
-      const aInStock = (a.stock ?? 0) > 0
-      const bInStock = (b.stock ?? 0) > 0
+      const aInStock = isProductInStock(a)
+      const bInStock = isProductInStock(b)
       if (aInStock && !bInStock) return -1
       if (!aInStock && bInStock) return 1
       return 0

@@ -86,14 +86,30 @@ export function formatAddress(
   return parts.join(', ')
 }
 
-export function sortProductsByStock<T extends { stock?: number | null }>(products: T[]): T[] {
+export function sortProductsByStock<T extends { stock?: number | null; variants?: any }>(products: T[]): T[] {
   return [...products].sort((a, b) => {
-    const aInStock = (a.stock ?? 0) > 0
-    const bInStock = (b.stock ?? 0) > 0
+    const aInStock = isProductInStock(a)
+    const bInStock = isProductInStock(b)
     if (aInStock && !bInStock) return -1
     if (!aInStock && bInStock) return 1
     return 0
   })
+}
+
+/** Variant-aware stock check — matches the mobile app's isProductOutOfStock logic */
+export function isProductInStock(p: { stock?: number | null; variants?: any }): boolean {
+  const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
+  if (!hasVariants) return (p.stock ?? 0) > 0
+  const totalStock = (p.variants as any[]).reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+  return totalStock > 0
+}
+
+/** Variant-aware price resolver — returns cheapest variant price or base price */
+export function getProductPrice(p: { price: number; variants?: any }): number {
+  const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
+  if (!hasVariants) return p.price || 0
+  const prices = (p.variants as any[]).map((v: any) => v.price).filter((pr: number) => pr > 0)
+  return prices.length > 0 ? Math.min(...prices) : (p.price || 0)
 }
 
 export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' {

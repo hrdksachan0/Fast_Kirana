@@ -696,6 +696,7 @@ export async function POST(request: NextRequest) {
           if (item.selectedVariant) {
             // Deduct stock from the variant in JSON variants
             if (dbProd && dbProd.variants && Array.isArray(dbProd.variants)) {
+              const prevStock = dbProd.stock
               const updatedVariants = (dbProd.variants as any[]).map((v) => {
                 if (v.name === item.selectedVariant) {
                   return { ...v, stock: Math.max(0, v.stock - item.quantity) }
@@ -709,6 +710,16 @@ export async function POST(request: NextRequest) {
                 data: {
                   variants: updatedVariants,
                   stock: newTotalStock,
+                }
+              })
+
+              await tx.stockLog.create({
+                data: {
+                  productId: item.productId,
+                  quantity: -item.quantity,
+                  type: 'ONLINE_ORDER',
+                  prevStock,
+                  newStock: newTotalStock
                 }
               })
             }
@@ -745,7 +756,10 @@ export async function POST(request: NextRequest) {
               orderBy: { expiryDate: 'asc' }
             })
 
-            const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+            const prevStock = dbProd ? dbProd.stock : 0
+            const newTotalStock = activeBatches.length > 0 
+              ? activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+              : Math.max(0, prevStock - item.quantity)
             const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
 
             if (activeBatches.length > 0 || batches.length > 0) {
@@ -762,6 +776,16 @@ export async function POST(request: NextRequest) {
                 data: { stock: { decrement: item.quantity } }
               })
             }
+
+            await tx.stockLog.create({
+              data: {
+                productId: item.productId,
+                quantity: -item.quantity,
+                type: 'ONLINE_ORDER',
+                prevStock,
+                newStock: newTotalStock
+              }
+            })
           }
         }
       }
