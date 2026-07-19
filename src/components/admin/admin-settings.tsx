@@ -60,6 +60,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [cafeCommission, setCafeCommission] = useState('10')
   const [cafeProfitShare, setCafeProfitShare] = useState('15')
   const [cafeDefaultMargin, setCafeDefaultMargin] = useState('30')
+  const [minOrderValue, setMinOrderValue] = useState('0')
 
   const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
   const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
@@ -153,6 +154,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.cafe_commission) setCafeCommission(data.cafe_commission)
         if (data.cafe_profit_share) setCafeProfitShare(data.cafe_profit_share)
         if (data.cafe_default_margin) setCafeDefaultMargin(data.cafe_default_margin)
+        if (data.min_order_value !== undefined) setMinOrderValue(data.min_order_value)
 
         if (data.hero_greeting_closed) setHeroGreetingClosed(data.hero_greeting_closed)
         if (data.hero_subtitle_closed) setHeroSubtitleClosed(data.hero_subtitle_closed)
@@ -194,7 +196,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
+    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !minOrderValue.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
         !groceryPickupAddress.trim() || !cafePickupAddress.trim() || !restaurantPickupAddress.trim() ||
         !restaurantCommission.trim() || !restaurantProfitShare.trim() || !restaurantDefaultMargin.trim() ||
         !cafeCommission.trim() || !cafeProfitShare.trim() || !cafeDefaultMargin.trim() ||
@@ -245,6 +247,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           delivered_today: deliveredToday.trim(),
           fresh_stock_loaded: freshStockLoaded.trim(),
           tax_rate: taxRate.trim(),
+          min_order_value: minOrderValue.trim(),
           misc_fee: miscFee.trim(),
           misc_fee_label: miscFeeLabel.trim(),
           grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
@@ -891,6 +894,20 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                         placeholder="e.g. 25"
                         value={deliveryFee}
                         onChange={(e) => setDeliveryFee(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                      />
+                    </div>
+
+                    {/* Minimum Order Value */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Minimum Order Value (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 0"
+                        value={minOrderValue}
+                        onChange={(e) => setMinOrderValue(e.target.value)}
                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                       />
                     </div>
