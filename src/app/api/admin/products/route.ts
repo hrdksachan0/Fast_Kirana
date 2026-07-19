@@ -121,6 +121,7 @@ export async function GET(request: Request) {
       costPrice: p.costPrice ?? 0,
       minStock: p.minStock ?? 10,
       location: p.location,
+      barcode: p.barcode || '',
       isFlashDeal: p.isFlashDeal,
       isTopPick: p.isTopPick,
       isBestSeller: p.isBestSeller,
