@@ -116,13 +116,22 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
         sortOrder
       }))
 
+      if (positionsArray.length === 0) {
+        toast.warning('No position changes to save.')
+        setSaving(false)
+        return
+      }
+
       const res = await fetch('/api/admin/products/bulk-sort', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ positions: positionsArray })
       })
 
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Server returned an error')
+      }
       
       toast.success('Successfully updated all product positions!')
       
@@ -133,8 +142,8 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
           sortOrder: modifiedPositions[p.id] ?? p.sortOrder
         })).sort((a, b) => (modifiedPositions[b.id] ?? b.sortOrder) - (modifiedPositions[a.id] ?? a.sortOrder))
       )
-    } catch {
-      toast.error('Failed to save product positions')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save product positions')
     } finally {
       setSaving(false)
     }
