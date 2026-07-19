@@ -435,7 +435,7 @@ export default async function Home() {
     isFlashDeal: p.isFlashDeal,
     isTopPick: p.isTopPick,
     sortOrder: p.sortOrder,
-    createdAt: p.createdAt ? p.createdAt.toISOString() : undefined,
+    createdAt: p.createdAt ? (p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt)) : undefined,
     category: p.category ? {
       id: p.category.id,
       name: p.category.name,
