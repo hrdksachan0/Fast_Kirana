@@ -539,21 +539,27 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             </button>
           </div>
 
-          {/* Café Menu Categories Horizontal Scrollbar: Premium Pill-Style categories */}
-          <div className="sticky top-[95px] md:top-[60px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md pb-2.5 pt-2 px-4 -mx-4 border-b border-zinc-150 dark:border-zinc-800/40 w-[calc(100%+2rem)] sm:-mx-6 sm:px-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:px-8 md:w-[calc(100%+4rem)] transition-all duration-300">
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth select-none w-full justify-start items-center px-1">
+          {/* Café Menu Categories Horizontal Scrollbar: Circular Photo Item Style */}
+          <div className="sticky top-[95px] md:top-[60px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md pb-3 pt-2.5 px-4 -mx-4 border-b border-zinc-150 dark:border-zinc-800/40 w-[calc(100%+2rem)] sm:-mx-6 sm:px-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:px-8 md:w-[calc(100%+4rem)] transition-all duration-300">
+            <div className="flex gap-5 sm:gap-7 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth select-none w-full justify-start items-center px-1">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <div key={`skeleton-${idx}`} className="h-9 w-28 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse shrink-0 snap-start" />
+                  <div key={`skeleton-${idx}`} className="flex flex-col items-center gap-2 shrink-0 snap-start">
+                    <div className="h-16 w-16 sm:h-18 sm:w-18 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
+                    <div className="h-3 w-12 rounded bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
+                  </div>
                 ))
               ) : (
                 filteredCategories.map((cat) => {
                   const href = cat.tag === 'all' ? `/?mode=${experienceMode}` : `/?mode=${experienceMode}&section=${cat.tag}`
                   const isActive = showProducts && activeCategoryTag === cat.tag
-                  const activeColor = experienceMode === 'cafe' 
-                    ? 'border-orange-500 text-orange-500 bg-orange-500/10 dark:bg-orange-500/20 shadow-[0_3px_12px_rgba(249,115,22,0.18)] font-black scale-102' 
-                    : 'border-[#e20a22] text-[#e20a22] bg-[#e20a22]/10 dark:bg-[#e20a22]/20 shadow-[0_3px_12px_rgba(226,10,34,0.18)] font-black scale-102'
-                  
+                  const activeBorder = experienceMode === 'cafe'
+                    ? "border-orange-500 scale-105 shadow-[0_4px_14px_rgba(249,115,22,0.22)]"
+                    : "border-[#e20a22] scale-105 shadow-[0_4px_14px_rgba(226,10,34,0.22)]"
+                  const activeText = experienceMode === 'cafe'
+                    ? "text-orange-500 font-black"
+                    : "text-[#e20a22] font-black"
+
                   return (
                     <Link
                       key={cat.tag}
@@ -572,19 +578,40 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                           }
                         }
                       }}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 shrink-0 snap-start select-none cursor-pointer rounded-full border-1.5 transition-all duration-300 font-extrabold text-[12px] sm:text-xs bg-white dark:bg-zinc-950 active:scale-95 shadow-xs outline-none",
-                        isActive 
-                          ? activeColor
-                          : "border-zinc-200 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                      )}
+                      className="flex flex-col items-center gap-1.5 shrink-0 snap-start select-none cursor-pointer group outline-none"
                     >
-                      {/* Emoji */}
-                      <span className="text-sm select-none flex items-center justify-center shrink-0">
-                        {cat.emoji || '🍽️'}
-                      </span>
-                      {/* Title */}
-                      <span>
+                      {/* Circle Photo Wrapper */}
+                      <div 
+                        className={cn(
+                          "relative w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden flex items-center justify-center p-1 transition-all duration-300 shadow-xs border-2 bg-white dark:bg-zinc-950",
+                          isActive 
+                            ? activeBorder
+                            : "border-zinc-200/70 dark:border-zinc-800/60 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 group-hover:scale-102"
+                        )}
+                      >
+                        <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center">
+                          {cat.image ? (
+                            <Image
+                              src={cat.image}
+                              alt={cat.title}
+                              fill
+                              sizes="(max-width: 640px) 64px, 72px"
+                              className="object-cover transition-transform duration-500 group-hover:scale-108"
+                            />
+                          ) : (
+                            <span className="text-xl select-none">{cat.emoji}</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Centered label below */}
+                      <span 
+                        className={cn(
+                          "text-[10.5px] sm:text-xs font-black text-center tracking-tight transition-colors duration-300",
+                          isActive 
+                            ? activeText
+                            : "text-zinc-800 dark:text-zinc-200 group-hover:text-zinc-950 dark:group-hover:text-white"
+                        )}
+                      >
                         {cat.title}
                       </span>
                     </Link>
