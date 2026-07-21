@@ -316,6 +316,70 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       })
   }, [settings, experienceMode])
 
+  const isClickingTabRef = useRef(false)
+
+  // ScrollSpy: Automatically update active category and scroll category tab into view as user scrolls down page
+  useEffect(() => {
+    if (!showProducts || categories.length === 0) return
+
+    let rafId: number
+    const handleScroll = () => {
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        if (isClickingTabRef.current) return
+
+        const categorySections = categories
+          .filter(c => c.tag !== 'all')
+          .map(c => ({
+            tag: c.tag,
+            el: document.getElementById(`cafe-home-section-${c.tag}`)
+          }))
+          .filter((c): c is { tag: string; el: HTMLElement } => c.el !== null)
+
+        if (categorySections.length === 0) return
+
+        const offsetTop = 180
+        let currentActiveTag = 'all'
+
+        for (let i = 0; i < categorySections.length; i++) {
+          const rect = categorySections[i].el.getBoundingClientRect()
+          if (rect.top <= offsetTop && rect.bottom > offsetTop) {
+            currentActiveTag = categorySections[i].tag
+            break
+          } else if (rect.top < offsetTop) {
+            currentActiveTag = categorySections[i].tag
+          }
+        }
+
+        const firstSecTop = categorySections[0]?.el.getBoundingClientRect().top
+        if (firstSecTop !== undefined && firstSecTop > offsetTop + 60) {
+          currentActiveTag = 'all'
+        }
+
+        setActiveCategoryTag(prev => {
+          if (prev !== currentActiveTag) {
+            const categoryTabEl = document.getElementById(`cafe-category-tab-${currentActiveTag}`)
+            if (categoryTabEl) {
+              categoryTabEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center'
+              })
+            }
+            return currentActiveTag
+          }
+          return prev
+        })
+      })
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      cancelAnimationFrame(rafId)
+    }
+  }, [showProducts, categories])
+
   return (
     <section className="space-y-0">
       <div 
@@ -563,11 +627,23 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                   return (
                     <Link
                       key={cat.tag}
+                      id={`cafe-category-tab-${cat.tag}`}
                       href={href}
                       onClick={(e) => {
                         if (showProducts) {
                           e.preventDefault()
+                          isClickingTabRef.current = true
                           setActiveCategoryTag(cat.tag)
+
+                          const categoryTabEl = document.getElementById(`cafe-category-tab-${cat.tag}`)
+                          if (categoryTabEl) {
+                            categoryTabEl.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'nearest',
+                              inline: 'center'
+                            })
+                          }
+
                           const targetId = cat.tag === 'all' ? 'cafe-menu-categories-anchor' : `cafe-home-section-${cat.tag}`
                           const target = document.getElementById(targetId)
                           if (target) {
@@ -576,6 +652,10 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
                             navigator.vibrate(8)
                           }
+
+                          setTimeout(() => {
+                            isClickingTabRef.current = false
+                          }, 800)
                         }
                       }}
                       className="flex flex-col items-center gap-1.5 shrink-0 snap-start select-none cursor-pointer group outline-none"
