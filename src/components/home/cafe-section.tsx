@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { ChevronRight, Coffee, ChefHat } from 'lucide-react'
 import { cn, format12h } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
 import { ProductCard } from '@/components/product/product-card'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -112,6 +112,41 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     params.set('mode', mode)
     router.replace(`/?${params.toString()}`, { scroll: false })
   }
+
+  // Scroll tracking to auto-hide Experience Switcher
+  const [isSwitcherVisible, setIsSwitcherVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      // Hide if scrolling down and scrolled past threshold (180px)
+      if (currentScrollY > lastScrollY && currentScrollY > 180) {
+        setIsSwitcherVisible(false)
+      } 
+      // Show if scrolling up or near the top
+      else if (currentScrollY < lastScrollY || currentScrollY < 120) {
+        setIsSwitcherVisible(true)
+      }
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
+
+  const handleFabTap = () => {
+    // Scroll smoothly to switcher position and show it
+    const target = document.getElementById('experience-switcher-anchor')
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    setIsSwitcherVisible(true)
+    triggerHaptic('medium')
+  }
+
   const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
     { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
@@ -406,67 +441,81 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       </div>
 
 
-      {/* Experience Switcher */}
-      <div className={cn(
-        "relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border transition-all duration-300 overflow-hidden mt-4 mb-3.5 select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]",
-        experienceMode === 'cafe'
-          ? "border-orange-500/50 dark:border-orange-500/40"
-          : "border-[#e20a22]/50 dark:border-[#e20a22]/40"
-      )}>
-        <button
-          onClick={() => handleExperienceModeChange('cafe')}
-          className={cn(
-            "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
-            experienceMode === 'cafe'
-              ? "text-white font-black scale-102"
-              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
-          )}
-        >
-          <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
-          <div className="flex flex-col text-left">
-            <span className="text-[12px] sm:text-[14px] font-black leading-none">A.S Cafe</span>
-            <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
-          </div>
-        </button>
-        
-        <button
-          onClick={() => handleExperienceModeChange('restaurant')}
-          className={cn(
-            "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
-            (experienceMode as string) === 'restaurant'
-              ? "text-white font-black scale-102"
-              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
-          )}
-        >
-          <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
-          <div className="flex flex-col text-left">
-            <span className="text-[12px] sm:text-[14px] font-black leading-none">Wedson Restaurant</span>
-            <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
-          </div>
-        </button>
+      {/* Experience Switcher Anchor and wrapper */}
+      <div id="experience-switcher-anchor" className="scroll-mt-24" />
+      <motion.div
+        initial={{ height: 'auto', opacity: 1 }}
+        animate={{ 
+          height: isSwitcherVisible ? 'auto' : 0, 
+          opacity: isSwitcherVisible ? 1 : 0,
+          marginBottom: isSwitcherVisible ? 14 : 0,
+          marginTop: isSwitcherVisible ? 16 : 0
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="overflow-hidden"
+      >
+        {/* Experience Switcher */}
+        <div className={cn(
+          "relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border transition-all duration-300 overflow-hidden select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]",
+          experienceMode === 'cafe'
+            ? "border-orange-500/50 dark:border-orange-500/40"
+            : "border-[#e20a22]/50 dark:border-[#e20a22]/40"
+        )}>
+          <button
+            onClick={() => handleExperienceModeChange('cafe')}
+            className={cn(
+              "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+              experienceMode === 'cafe'
+                ? "text-white font-black scale-102"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
+            )}
+          >
+            <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+            <div className="flex flex-col text-left">
+              <span className="text-[12px] sm:text-[14px] font-black leading-none">A.S Cafe</span>
+              <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => handleExperienceModeChange('restaurant')}
+            className={cn(
+              "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+              (experienceMode as string) === 'restaurant'
+                ? "text-white font-black scale-102"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
+            )}
+          >
+            <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+            <div className="flex flex-col text-left">
+              <span className="text-[12px] sm:text-[14px] font-black leading-none">Wedson Restaurant</span>
+              <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
+            </div>
+          </button>
 
-        {/* Sliding Liquid Pill Indicator - Color filled */}
-        <motion.div
-          animate={{
-            x: experienceMode === 'cafe' ? 0 : '100%',
-          }}
-          transition={{
-            type: 'spring',
-            stiffness: 380,
-            damping: 22,
-            mass: 0.65
-          }}
-          className={cn(
-            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.06)] z-10 transition-colors duration-300",
-            experienceMode === 'cafe'
-              ? "bg-orange-500"
-              : "bg-[#e20a22]"
-          )}
-          style={{
-            left: '4px',
-          }}
-        />
-      </div>
+          {/* Sliding Liquid Pill Indicator - Color filled */}
+          <motion.div
+            animate={{
+              x: experienceMode === 'cafe' ? 0 : '100%',
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 380,
+              damping: 22,
+              mass: 0.65
+            }}
+            className={cn(
+              "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.06)] z-10 transition-colors duration-300",
+              experienceMode === 'cafe'
+                ? "bg-orange-500"
+                : "bg-[#e20a22]"
+            )}
+            style={{
+              left: '4px',
+            }}
+          />
+        </div>
+      </motion.div>
 
         <>
           {/* Wedson Restaurant Compact Promo Banner */}
@@ -533,19 +582,20 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             </button>
           </div>
 
-          {/* Café Menu Categories Horizontal Scrollbar: Circular Item Style */}
-          <div className="flex gap-5 sm:gap-7 overflow-x-auto pb-4 pt-2.5 scrollbar-none px-1 snap-x snap-mandatory scroll-smooth select-none w-full justify-start">
+          {/* Café Menu Categories Horizontal Scrollbar: Premium Pill-Style categories */}
+          <div className="flex gap-2.5 overflow-x-auto pb-4 pt-2.5 scrollbar-none px-1 snap-x snap-mandatory scroll-smooth select-none w-full justify-start items-center">
             {isLoading ? (
               Array.from({ length: 5 }).map((_, idx) => (
-                <div key={`skeleton-${idx}`} className="flex flex-col items-center gap-2 shrink-0 snap-start">
-                  <div className="h-18 w-18 sm:h-20 sm:w-20 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
-                  <div className="h-3 w-12 rounded bg-zinc-200 dark:bg-zinc-800/40 animate-pulse" />
-                </div>
+                <div key={`skeleton-${idx}`} className="h-9 w-28 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse shrink-0 snap-start" />
               ))
             ) : (
               filteredCategories.map((cat) => {
                 const href = cat.tag === 'all' ? `/?mode=${experienceMode}` : `/?mode=${experienceMode}&section=${cat.tag}`
                 const isActive = showProducts && activeCategoryTag === cat.tag
+                const activeColor = experienceMode === 'cafe' 
+                  ? 'border-orange-500 text-orange-500 bg-orange-500/10 dark:bg-orange-500/20 shadow-[0_3px_12px_rgba(249,115,22,0.18)] font-black scale-102' 
+                  : 'border-[#e20a22] text-[#e20a22] bg-[#e20a22]/10 dark:bg-[#e20a22]/20 shadow-[0_3px_12px_rgba(226,10,34,0.18)] font-black scale-102'
+                
                 return (
                   <Link
                     key={cat.tag}
@@ -564,40 +614,19 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                         }
                       }
                     }}
-                    className="flex flex-col items-center gap-2 shrink-0 snap-start select-none cursor-pointer group outline-none"
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 shrink-0 snap-start select-none cursor-pointer rounded-full border-1.5 transition-all duration-300 font-extrabold text-[12px] sm:text-xs bg-white dark:bg-zinc-950 active:scale-95 shadow-xs outline-none",
+                      isActive 
+                        ? activeColor
+                        : "border-zinc-200 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                    )}
                   >
-                    {/* Circle Image Wrapper */}
-                    <div 
-                      className={cn(
-                        "relative w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden flex items-center justify-center p-1 transition-all duration-300 shadow-xs border-2 bg-white dark:bg-zinc-950",
-                        isActive 
-                          ? "border-orange-500 scale-105 shadow-[0_4px_14px_rgba(249,115,22,0.22)]" 
-                          : "border-zinc-200/70 dark:border-zinc-800/60 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 group-hover:scale-102"
-                      )}
-                    >
-                      <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center">
-                        {cat.image ? (
-                          <Image
-                            src={cat.image}
-                            alt={cat.title}
-                            fill
-                            sizes="(max-width: 640px) 72px, 80px"
-                            className="object-cover transition-transform duration-500 group-hover:scale-108"
-                          />
-                        ) : (
-                          <span className="text-2xl select-none">{cat.emoji}</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Centered label below */}
-                    <span 
-                      className={cn(
-                        "text-[11px] sm:text-xs font-black text-center tracking-tight transition-colors duration-300",
-                        isActive 
-                          ? "text-orange-500" 
-                          : "text-zinc-850 dark:text-zinc-250 group-hover:text-zinc-900 dark:group-hover:text-white"
-                      )}
-                    >
+                    {/* Emoji */}
+                    <span className="text-sm select-none flex items-center justify-center shrink-0">
+                      {cat.emoji || '🍽️'}
+                    </span>
+                    {/* Title */}
+                    <span>
                       {cat.title}
                     </span>
                   </Link>
@@ -727,6 +756,23 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             )
           }))}
         </>
+      <AnimatePresence>
+        {!isSwitcherVisible && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 50 }}
+            onClick={handleFabTap}
+            className={cn(
+              "fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-black text-white shadow-lg cursor-pointer transition-all active:scale-95 border border-white/10 select-none",
+              experienceMode === 'cafe' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[#e20a22] hover:bg-[#e20a22]/90'
+            )}
+          >
+            <span>🍴</span>
+            <span>Switch Kitchen ({experienceMode === 'cafe' ? 'Wedson' : 'A.S Cafe'})</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
