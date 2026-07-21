@@ -18,10 +18,42 @@ interface ProductItem {
   stock: number
   isBestSeller: boolean
   sortOrder: number
+  createdAt?: string
   category: {
     name: string
     slug: string
   }
+}
+
+const getSortedProducts = (items: ProductItem[], rule: string) => {
+  const list = [...items]
+  if (rule === 'best-seller') {
+    return list.sort((a, b) => {
+      if (a.isBestSeller && !b.isBestSeller) return -1
+      if (!a.isBestSeller && b.isBestSeller) return 1
+      if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    })
+  } else if (rule === 'stock-desc') {
+    return list.sort((a, b) => {
+      if (b.stock !== a.stock) return b.stock - a.stock
+      if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    })
+  } else if (rule === 'price-asc') {
+    return list.sort((a, b) => {
+      if (a.price !== b.price) return a.price - b.price
+      return b.sortOrder - a.sortOrder
+    })
+  } else if (rule === 'price-desc') {
+    return list.sort((a, b) => {
+      if (b.price !== a.price) return b.price - a.price
+      return b.sortOrder - a.sortOrder
+    })
+  } else if (rule === 'newest') {
+    return list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  }
+  return list.sort((a, b) => b.sortOrder - a.sortOrder)
 }
 
 export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManagerProps) {
@@ -46,18 +78,21 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
         // 1. Fetch category sort rule
         const ruleRes = await fetch(`/api/admin/categories/sort-rule?categorySlug=${selectedCategorySlug}`)
         const ruleData = await ruleRes.json()
-        setSortRule(ruleData.rule || 'manual')
+        const activeRule = ruleData.rule || 'manual'
+        setSortRule(activeRule)
 
         // 2. Fetch all products in category
         const prodRes = await fetch(`/api/products?category=${selectedCategorySlug}&admin=true&limit=500`)
         const prodData = await prodRes.json()
         const dbProducts = prodData.products || prodData || []
         
-        setProducts(dbProducts)
+        // Sort initially based on active rule
+        const sorted = getSortedProducts(dbProducts, activeRule)
+        setProducts(sorted)
         
         // Reset modified positions map
         const initialMap: Record<string, number> = {}
-        dbProducts.forEach((p: ProductItem) => {
+        sorted.forEach((p: ProductItem) => {
           initialMap[p.id] = p.sortOrder ?? 0
         })
         setModifiedPositions(initialMap)
@@ -71,19 +106,52 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
     loadCategoryData()
   }, [selectedCategorySlug])
 
-  // Save Auto-Sort Rule (Way 3)
+  // Save Auto-Sort Rule (Way 3) and automatically sequence the positions
   const handleSaveRule = async (newRule: string) => {
     setSortRule(newRule)
+    setSaving(true)
     try {
-      const res = await fetch('/api/admin/categories/sort-rule', {
+      // 1. Sort products list in the UI based on the new rule
+      const sorted = getSortedProducts(products, newRule)
+      setProducts(sorted)
+
+      // 2. Automatically assign positions (100, 99, 98...) matching the new sequence
+      const updatedMap: Record<string, number> = {}
+      sorted.forEach((p, idx) => {
+        updatedMap[p.id] = 100 - idx
+      })
+      setModifiedPositions(updatedMap)
+
+      // 3. Save sorting rule to settings
+      const ruleRes = await fetch('/api/admin/categories/sort-rule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categorySlug: selectedCategorySlug, rule: newRule })
       })
-      if (!res.ok) throw new Error()
-      toast.success(`Default sorting rule updated to "${newRule}"`)
-    } catch {
-      toast.error('Failed to save sorting rule')
+      if (!ruleRes.ok) throw new Error('Failed to save sorting rule')
+
+      // 4. Save the auto-sequenced positions to DB if rule is not manual
+      if (newRule !== 'manual') {
+        const positionsArray = Object.entries(updatedMap).map(([id, sortOrder]) => ({
+          id,
+          sortOrder
+        }))
+        const sortRes = await fetch('/api/admin/products/bulk-sort', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positions: positionsArray })
+        })
+        if (!sortRes.ok) throw new Error('Failed to save auto-sequenced product positions')
+      }
+
+      toast.success(newRule === 'manual' 
+        ? 'Switched to Manual Sort! You can now adjust indices and click Save.' 
+        : `Default sorting rule updated to "${newRule}" and product positions auto-sequenced!`
+      )
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save sorting rule')
+    } finally {
+      setSaving(false)
     }
   }
 
