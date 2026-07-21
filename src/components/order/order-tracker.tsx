@@ -25,7 +25,7 @@ import {
   Plus,
   Minus
 } from 'lucide-react'
-import { cn, formatPhone, formatAddress } from '@/lib/utils'
+import { cn, formatPhone, formatAddress, getDeliveryPin, calculateDistance } from '@/lib/utils'
 import { toast } from 'sonner'
 
 function PrepCountdown({ clockTarget }: { clockTarget: string | Date }) {
@@ -301,6 +301,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const riderMarkerRef = useRef<any>(null)
+  const routeLineRef = useRef<any>(null)
 
 
   // 2. Poll order status from API every 5 seconds
@@ -478,17 +479,19 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       .addTo(map)
       .bindPopup('<b>Your Location</b>')
 
-    const routeLine = L.polyline([[pickupLat, pickupLng], [destLat, destLng]], {
+    const riderLat = order.deliveryLat || storeLat
+    const riderLng = order.deliveryLng || storeLng
+
+    const routeLine = L.polyline([[riderLat, riderLng], [destLat, destLng]], {
       color: '#e20a22',
       weight: 3,
       dashArray: '5, 8',
       opacity: 0.7,
     }).addTo(map)
+    routeLineRef.current = routeLine
 
     map.fitBounds(routeLine.getBounds(), { padding: [40, 40] })
 
-    const riderLat = order.deliveryLat || storeLat
-    const riderLng = order.deliveryLng || storeLng
     const riderMarker = L.marker([riderLat, riderLng], { icon: riderIcon }).addTo(map)
     riderMarkerRef.current = riderMarker
 
@@ -511,17 +514,27 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     
     const animateRider = () => {
       if (!riderMarkerRef.current) return
+      let currentLat = storeLat
+      let currentLng = storeLng
       if (order.status === 'SHIPPED' && !order.deliveryLat) {
         const elapsed = (Date.now() - startTime) % 20000
         const t = elapsed / 20000
-        const currentLat = storeLat + (destLat - storeLat) * t
-        const currentLng = storeLng + (destLng - storeLng) * t
+        currentLat = storeLat + (destLat - storeLat) * t
+        currentLng = storeLng + (destLng - storeLng) * t
         riderMarkerRef.current.setLatLng([currentLat, currentLng])
       } else if (order.deliveryLat && order.deliveryLng) {
-        riderMarkerRef.current.setLatLng([order.deliveryLat, order.deliveryLng])
+        currentLat = order.deliveryLat
+        currentLng = order.deliveryLng
+        riderMarkerRef.current.setLatLng([currentLat, currentLng])
       } else {
         riderMarkerRef.current.setLatLng([storeLat, storeLng])
       }
+
+      // Update route line path dynamically from current rider position to destination
+      if (routeLineRef.current) {
+        routeLineRef.current.setLatLngs([[currentLat, currentLng], [destLat, destLng]])
+      }
+
       animationFrame = requestAnimationFrame(animateRider)
     }
 
@@ -550,6 +563,33 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const combinedTaxes = order.taxes + (compOrder?.taxes || 0)
   const combinedMiscFee = order.miscFee + (compOrder?.miscFee || 0)
   const combinedTotal = order.total + (compOrder?.total || 0)
+
+  // Live rider distance and ETA
+  const trackingMetrics = useMemo(() => {
+    if (order.deliveryMethod === 'PICKUP') return null
+    const destLat = order.address?.lat || storeLat + 0.004
+    const destLng = order.address?.lng || storeLng + 0.005
+    
+    // Default coordinates
+    let riderLat = order.deliveryLat
+    let riderLng = order.deliveryLng
+    
+    // Fallback if SHIPPED but riderCoordinates are not set
+    if (order.status === 'SHIPPED' && !riderLat) {
+      riderLat = storeLat
+      riderLng = storeLng
+    }
+    
+    if (!riderLat || !riderLng) return null
+    
+    const distanceKm = calculateDistance(riderLat, riderLng, destLat, destLng)
+    const etaMins = Math.max(2, Math.round(distanceKm * 3.5)) // Average 3.5 mins per km
+    
+    return {
+      distance: distanceKm.toFixed(1),
+      eta: etaMins
+    }
+  }, [order.status, order.deliveryLat, order.deliveryLng, order.address?.lat, order.address?.lng, storeLat, storeLng])
 
   const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
   const isScheduled = order.estimatedDelivery && order.createdAt && 
@@ -609,6 +649,11 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'Arriving at Scheduled Time' 
                 : 'Arriving Soon'}
             </h1>
+            {trackingMetrics && order.status === 'SHIPPED' && (
+              <p className="text-xs font-bold text-accent mt-1 animate-pulse flex items-center gap-1">
+                🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span>
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted px-3 py-1.5 rounded-xl border">
@@ -654,6 +699,27 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           )}
 
         </div>
+
+        {/* Delivery PIN Verification Card */}
+        {order.deliveryMethod !== 'PICKUP' && (order.status === 'SHIPPED' || order.status === 'PACKED') && (
+          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-primary/10 border border-amber-500/25 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[9px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                🔑 Delivery PIN Verification
+              </span>
+              <h3 className="text-xs sm:text-sm font-black text-text-primary">Share this PIN with Rider on arrival</h3>
+              <p className="text-[10px] text-text-secondary leading-relaxed font-semibold max-w-sm">
+                To confirm successful delivery, please share this 4-digit verification code with your delivery rider.
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-1 bg-card border border-amber-500/30 px-6 py-3 rounded-2xl shadow-xs shrink-0">
+              <span className="text-[9px] font-black text-text-muted uppercase tracking-wider">Delivery PIN</span>
+              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-widest leading-none">
+                {getDeliveryPin(order.id)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {compOrder ? (
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 space-y-3 text-xs font-semibold text-text-secondary">
