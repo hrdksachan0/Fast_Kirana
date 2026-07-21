@@ -79,7 +79,7 @@ export function StorefrontClient({
   return (
     <div
       className={cn(
-        "w-full min-h-screen transition-all duration-700 ease-in-out bg-[#fafafa] dark:bg-[#09090b] pb-12 mt-3 relative overflow-hidden",
+        "w-full min-h-screen transition-all duration-700 ease-in-out bg-[#fafafa] dark:bg-[#09090b] pb-12 mt-3 relative",
         activeTab === 'grocery'
           ? "bg-gradient-to-b from-red-500/[0.02] via-transparent to-transparent"
           : "bg-gradient-to-b from-orange-500/[0.02] via-transparent to-transparent"
