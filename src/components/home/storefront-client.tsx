@@ -9,6 +9,13 @@ import { CategoryGrid } from '@/components/home/category-grid'
 import { CafeSection } from '@/components/home/cafe-section'
 import { HeroArea } from '@/components/home/hero-area'
 import { SpeedStrip } from '@/components/home/speed-strip'
+import FeaturedCategoryCard from '@/components/home/featured-category-card'
+import {
+  asCafeCategories,
+  asCafeProducts,
+  wedsonCategories,
+  wedsonProducts,
+} from '@/components/data/products'
 import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { LastOrderBanner } from '@/components/home/last-order-banner'
@@ -196,6 +203,19 @@ export function StorefrontClient({
                   deliveredCount={settingsMap.delivered_today}
                   freshStock={settingsMap.fresh_stock_loaded}
                   happyFamilies={settingsMap.happy_families}
+                />
+              </div>
+
+              {/* Featured Food Partners */}
+              <div className="my-2">
+                <FeaturedCategoryCard
+                  title="Wedson Restaurant"
+                  eyebrow="🌟 Premium Fine Dining"
+                  bannerEmojis={[]}
+                  theme="restaurant"
+                  categories={wedsonCategories}
+                  products={wedsonProducts}
+                  onSeeAll={() => handleTabChange('cafe')}
                 />
               </div>
 
