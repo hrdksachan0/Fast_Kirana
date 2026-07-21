@@ -224,6 +224,15 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
         ])
 
+        // Identify tags belonging to disabled predefined categories to prevent them from showing up as dynamic sections
+        const disabledMatchTags = new Set<string>()
+        rawCategories.forEach(cat => {
+          if (cat.disabled) {
+            disabledMatchTags.add(cat.tag.toLowerCase())
+            cat.matchTags?.forEach((t: string) => disabledMatchTags.add(t.toLowerCase()))
+          }
+        })
+
         const dynamicTagsMap = new Map<string, number>()
         dbProducts.forEach((product: any) => {
           if (assignedProductIds.has(product.id)) return
@@ -231,6 +240,10 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           product.tags?.forEach((t: string) => {
             const lowerTag = t.toLowerCase()
             if (excludeTags.has(lowerTag)) return
+
+            // Skip if the tag matches any disabled category's tag or matchTags
+            const isAnyDisabledMatch = Array.from(disabledMatchTags).some(dt => isTagMatch(lowerTag, dt))
+            if (isAnyDisabledMatch) return
 
             dynamicTagsMap.set(lowerTag, (dynamicTagsMap.get(lowerTag) || 0) + 1)
           })
