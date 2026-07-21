@@ -700,27 +700,6 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
         </div>
 
-        {/* Delivery PIN Verification Card */}
-        {order.deliveryMethod !== 'PICKUP' && (order.status === 'SHIPPED' || order.status === 'PACKED') && (
-          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-primary/10 border border-amber-500/25 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[9px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                🔑 Delivery PIN Verification
-              </span>
-              <h3 className="text-xs sm:text-sm font-black text-text-primary">Share this PIN with Rider on arrival</h3>
-              <p className="text-[10px] text-text-secondary leading-relaxed font-semibold max-w-sm">
-                To confirm successful delivery, please share this 4-digit verification code with your delivery rider.
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-1 bg-card border border-amber-500/30 px-6 py-3 rounded-2xl shadow-xs shrink-0">
-              <span className="text-[9px] font-black text-text-muted uppercase tracking-wider">Delivery PIN</span>
-              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-widest leading-none">
-                {getDeliveryPin(order.id)}
-              </span>
-            </div>
-          </div>
-        )}
-
         {compOrder ? (
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 space-y-3 text-xs font-semibold text-text-secondary">
             <h3 className="text-text-primary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
