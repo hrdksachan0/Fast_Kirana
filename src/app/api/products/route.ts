@@ -6,7 +6,25 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 
-export const dynamic = 'force-dynamic'
+const SYNONYM_DICTIONARY: Record<string, string[]> = {
+  'aalu': ['potato', 'aloo'],
+  'aloo': ['potato', 'aalu'],
+  'pyaz': ['onion', 'pyaj'],
+  'pyaj': ['onion', 'pyaz'],
+  'doodh': ['milk', 'dudh'],
+  'dudh': ['milk', 'doodh'],
+  'dahi': ['curd', 'yogurt'],
+  'anda': ['egg', 'eggs'],
+  'tamatar': ['tomato', 'tomatoes'],
+  'makhan': ['butter'],
+  'nimbu': ['lemon', 'lime'],
+  'chai': ['tea'],
+  'patti': ['tea'],
+  'pani': ['water'],
+  'chawal': ['rice'],
+  'chini': ['sugar'],
+  'namak': ['salt']
+}
 
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
@@ -229,17 +247,27 @@ export async function GET(request: NextRequest) {
 
     let products: any[] = []
     let total = 0
-
     if (search) {
-      // 1. Try to fetch matching products from database first (broad indexed filter)
+      // 1. Split query into tokens, expand with synonyms, and build an intersection query
+      const searchWords = search.trim().toLowerCase().split(/\s+/)
+      const wordClauses = searchWords.map(w => {
+        const syns = SYNONYM_DICTIONARY[w] || []
+        const wordOptions = [w, ...syns]
+        
+        return {
+          OR: wordOptions.flatMap(opt => [
+            { name: { contains: opt, mode: 'insensitive' } },
+            { description: { contains: opt, mode: 'insensitive' } },
+            { tags: { has: opt } }
+          ])
+        }
+      })
+
       const queryOptions: any = {
         where: {
           category: where.category,
           isAvailable: where.isAvailable,
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ],
+          AND: wordClauses
         }
       }
       if (isWorker) {
