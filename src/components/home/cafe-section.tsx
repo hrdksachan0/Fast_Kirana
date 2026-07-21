@@ -699,9 +699,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                     </div>
                   </div>
                 ))
-              ) : null}
-          ) : (
-            showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
+              ) : (
+                showProducts && filteredCategories.filter(cat => cat.tag !== 'all' && cat.products?.length > 0).map((cat) => {
               const displayProducts = cat.products.slice(0, 100)
               const hasMore = cat.products.length > 100
               const isExpanded = expandedCategories.has(cat.tag)
