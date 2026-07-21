@@ -50,10 +50,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
   useEffect(() => {
     setMounted(true)
     const getISTHour = () => {
-      const serverTime = new Date()
-      // Indian Standard Time is UTC + 5.5 hours
-      const istTime = new Date(serverTime.getTime() + (serverTime.getTimezoneOffset() * 60000) + (5.5 * 60 * 60 * 1000))
-      return istTime.getHours()
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        hour12: false
+      })
+      const parts = formatter.formatToParts(new Date())
+      return parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
     }
     setCurrentHour(getISTHour())
 

@@ -145,9 +145,44 @@ export async function POST(request: Request) {
       return acc
     }, {} as Record<string, string>)
 
-    const groceryMartOpen = settingsMap['grocery_mart_open'] !== 'false'
-    const cafeOpen = settingsMap['cafe_open'] !== 'false'
-    const restaurantOpen = settingsMap['restaurant_open'] !== 'false'
+    function getStoreStatus(prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
+      const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
+      if (!autoTiming) {
+        if (prefix === 'grocery') return settingsMap['grocery_mart_open'] !== 'false'
+        if (prefix === 'cafe') return settingsMap['cafe_open'] !== 'false'
+        return settingsMap['restaurant_open'] !== 'false'
+      }
+
+      const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
+      const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
+
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      })
+      const parts = formatter.formatToParts(new Date())
+      const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+      const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+      const currentTotal = currentH * 60 + currentM
+
+      const [openH, openM] = openTime.split(':').map(Number)
+      const openTotal = openH * 60 + openM
+
+      const [closeH, closeM] = closeTime.split(':').map(Number)
+      const closeTotal = closeH * 60 + closeM
+
+      if (closeTotal >= openTotal) {
+        return currentTotal >= openTotal && currentTotal <= closeTotal
+      } else {
+        return currentTotal >= openTotal || currentTotal <= closeTotal
+      }
+    }
+
+    const groceryMartOpen = getStoreStatus('grocery')
+    const cafeOpen = getStoreStatus('cafe')
+    const restaurantOpen = getStoreStatus('restaurant')
     const cafeItems: any[] = []
     const restaurantItems: any[] = []
     const groceryItems: any[] = []

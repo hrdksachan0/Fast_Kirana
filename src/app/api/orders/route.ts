@@ -142,10 +142,16 @@ export async function POST(request: NextRequest) {
       const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
       const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
 
-      const now = new Date()
-      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
-      const istTime = new Date(utcTime + (3600000 * 5.5))
-      const currentTotal = istTime.getHours() * 60 + istTime.getMinutes()
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      })
+      const parts = formatter.formatToParts(new Date())
+      const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+      const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+      const currentTotal = currentH * 60 + currentM
 
       const [openH, openM] = openTime.split(':').map(Number)
       const openTotal = openH * 60 + openM

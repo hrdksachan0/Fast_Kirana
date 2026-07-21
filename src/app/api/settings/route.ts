@@ -77,11 +77,15 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
   const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
 
   // Get current Indian Standard Time (IST) (UTC + 5:30)
-  const now = new Date()
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
-  const istTime = new Date(utcTime + (3600000 * 5.5))
-  const currentHours = istTime.getHours()
-  const currentMinutes = istTime.getMinutes()
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(new Date())
+  const currentHours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+  const currentMinutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
   const currentTotal = currentHours * 60 + currentMinutes
 
   const [openH, openM] = openTime.split(':').map(Number)

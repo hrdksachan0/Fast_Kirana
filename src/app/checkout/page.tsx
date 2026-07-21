@@ -96,10 +96,16 @@ function isNearClosing(closeTimeStr: string): boolean {
   const closeM = parseInt(closeMStr, 10) || 0
   if (isNaN(closeH)) return false
 
-  const now = new Date()
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
-  const istTime = new Date(utcTime + (3600000 * 5.5))
-  const currentTotal = istTime.getHours() * 60 + istTime.getMinutes()
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(new Date())
+  const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+  const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+  const currentTotal = currentH * 60 + currentM
   
   const closeTotal = closeH * 60 + closeM
   let diff = closeTotal - currentTotal
