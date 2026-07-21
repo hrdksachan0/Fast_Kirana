@@ -113,39 +113,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     router.replace(`/?${params.toString()}`, { scroll: false })
   }
 
-  // Scroll tracking to auto-hide Experience Switcher
-  const [isSwitcherVisible, setIsSwitcherVisible] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      // Hide if scrolling down and scrolled past threshold (180px)
-      if (currentScrollY > lastScrollY && currentScrollY > 180) {
-        setIsSwitcherVisible(false)
-      } 
-      // Show if scrolling up or near the top
-      else if (currentScrollY < lastScrollY || currentScrollY < 120) {
-        setIsSwitcherVisible(true)
-      }
-      setLastScrollY(currentScrollY)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
-
-  const handleFabTap = () => {
-    // Scroll smoothly to switcher position and show it
-    const target = document.getElementById('experience-switcher-anchor')
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-    setIsSwitcherVisible(true)
-    triggerHaptic('medium')
-  }
 
   const [categories, setCategories] = useState<any[]>([
     { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
@@ -441,19 +409,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       </div>
 
 
-      {/* Experience Switcher Anchor and wrapper */}
-      <div id="experience-switcher-anchor" className="scroll-mt-24" />
-      <motion.div
-        initial={{ height: 'auto', opacity: 1 }}
-        animate={{ 
-          height: isSwitcherVisible ? 'auto' : 0, 
-          opacity: isSwitcherVisible ? 1 : 0,
-          marginBottom: isSwitcherVisible ? 14 : 0,
-          marginTop: isSwitcherVisible ? 16 : 0
-        }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="overflow-hidden"
-      >
+
         {/* Experience Switcher */}
         <div className={cn(
           "relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border transition-all duration-300 overflow-hidden select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]",
@@ -515,7 +471,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             }}
           />
         </div>
-      </motion.div>
+
+
 
         <>
           {/* Wedson Restaurant Compact Promo Banner */}
@@ -583,56 +540,58 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           </div>
 
           {/* Café Menu Categories Horizontal Scrollbar: Premium Pill-Style categories */}
-          <div className="flex gap-2.5 overflow-x-auto pb-4 pt-2.5 scrollbar-none px-1 snap-x snap-mandatory scroll-smooth select-none w-full justify-start items-center">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, idx) => (
-                <div key={`skeleton-${idx}`} className="h-9 w-28 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse shrink-0 snap-start" />
-              ))
-            ) : (
-              filteredCategories.map((cat) => {
-                const href = cat.tag === 'all' ? `/?mode=${experienceMode}` : `/?mode=${experienceMode}&section=${cat.tag}`
-                const isActive = showProducts && activeCategoryTag === cat.tag
-                const activeColor = experienceMode === 'cafe' 
-                  ? 'border-orange-500 text-orange-500 bg-orange-500/10 dark:bg-orange-500/20 shadow-[0_3px_12px_rgba(249,115,22,0.18)] font-black scale-102' 
-                  : 'border-[#e20a22] text-[#e20a22] bg-[#e20a22]/10 dark:bg-[#e20a22]/20 shadow-[0_3px_12px_rgba(226,10,34,0.18)] font-black scale-102'
-                
-                return (
-                  <Link
-                    key={cat.tag}
-                    href={href}
-                    onClick={(e) => {
-                      if (showProducts) {
-                        e.preventDefault()
-                        setActiveCategoryTag(cat.tag)
-                        const targetId = cat.tag === 'all' ? 'cafe-menu-categories-anchor' : `cafe-home-section-${cat.tag}`
-                        const target = document.getElementById(targetId)
-                        if (target) {
-                          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          <div className="sticky top-[95px] md:top-[60px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md pb-2.5 pt-2 px-4 -mx-4 border-b border-zinc-150 dark:border-zinc-800/40 w-[calc(100%+2rem)] sm:-mx-6 sm:px-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:px-8 md:w-[calc(100%+4rem)] transition-all duration-300">
+            <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth select-none w-full justify-start items-center px-1">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={`skeleton-${idx}`} className="h-9 w-28 rounded-full bg-zinc-200 dark:bg-zinc-800/40 animate-pulse shrink-0 snap-start" />
+                ))
+              ) : (
+                filteredCategories.map((cat) => {
+                  const href = cat.tag === 'all' ? `/?mode=${experienceMode}` : `/?mode=${experienceMode}&section=${cat.tag}`
+                  const isActive = showProducts && activeCategoryTag === cat.tag
+                  const activeColor = experienceMode === 'cafe' 
+                    ? 'border-orange-500 text-orange-500 bg-orange-500/10 dark:bg-orange-500/20 shadow-[0_3px_12px_rgba(249,115,22,0.18)] font-black scale-102' 
+                    : 'border-[#e20a22] text-[#e20a22] bg-[#e20a22]/10 dark:bg-[#e20a22]/20 shadow-[0_3px_12px_rgba(226,10,34,0.18)] font-black scale-102'
+                  
+                  return (
+                    <Link
+                      key={cat.tag}
+                      href={href}
+                      onClick={(e) => {
+                        if (showProducts) {
+                          e.preventDefault()
+                          setActiveCategoryTag(cat.tag)
+                          const targetId = cat.tag === 'all' ? 'cafe-menu-categories-anchor' : `cafe-home-section-${cat.tag}`
+                          const target = document.getElementById(targetId)
+                          if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }
+                          if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                            navigator.vibrate(8)
+                          }
                         }
-                        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                          navigator.vibrate(8)
-                        }
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 shrink-0 snap-start select-none cursor-pointer rounded-full border-1.5 transition-all duration-300 font-extrabold text-[12px] sm:text-xs bg-white dark:bg-zinc-950 active:scale-95 shadow-xs outline-none",
-                      isActive 
-                        ? activeColor
-                        : "border-zinc-200 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                    )}
-                  >
-                    {/* Emoji */}
-                    <span className="text-sm select-none flex items-center justify-center shrink-0">
-                      {cat.emoji || '🍽️'}
-                    </span>
-                    {/* Title */}
-                    <span>
-                      {cat.title}
-                    </span>
-                  </Link>
-                )
-              })
-            )}
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 shrink-0 snap-start select-none cursor-pointer rounded-full border-1.5 transition-all duration-300 font-extrabold text-[12px] sm:text-xs bg-white dark:bg-zinc-950 active:scale-95 shadow-xs outline-none",
+                        isActive 
+                          ? activeColor
+                          : "border-zinc-200 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                      )}
+                    >
+                      {/* Emoji */}
+                      <span className="text-sm select-none flex items-center justify-center shrink-0">
+                        {cat.emoji || '🍽️'}
+                      </span>
+                      {/* Title */}
+                      <span>
+                        {cat.title}
+                      </span>
+                    </Link>
+                  )
+                })
+              )}
+            </div>
           </div>
 
           {/* Category-wise Cafe Products Slider List (stacked vertically) */}
@@ -756,23 +715,6 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             )
           }))}
         </>
-      <AnimatePresence>
-        {!isSwitcherVisible && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 50 }}
-            onClick={handleFabTap}
-            className={cn(
-              "fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-black text-white shadow-lg cursor-pointer transition-all active:scale-95 border border-white/10 select-none",
-              experienceMode === 'cafe' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[#e20a22] hover:bg-[#e20a22]/90'
-            )}
-          >
-            <span>🍴</span>
-            <span>Switch Kitchen ({experienceMode === 'cafe' ? 'Wedson' : 'A.S Cafe'})</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
     </section>
   )
 }
