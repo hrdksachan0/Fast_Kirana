@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
@@ -622,14 +622,9 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
-        // Find highest readableId to increment
-        const lastOrder = await tx.order.findFirst({
-          orderBy: { readableId: 'desc' },
-          select: { readableId: true }
-        })
-        const nextReadableId = lastOrder && lastOrder.readableId 
-          ? lastOrder.readableId + 1 
-          : 600001
+        // Get next unique readableId using PostgreSQL sequence atomically
+        const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
+        const nextReadableId = Number(seqResult[0].nextval)
 
         // Create order
         const newOrder = await tx.order.create({
@@ -809,99 +804,88 @@ export async function POST(request: NextRequest) {
       }
 
       return results
-    }, { timeout: 20000 })
+    }, { maxWait: 20000, timeout: 25000 })
 
-    // Invalidate storefront caches on-demand since stock levels changed
-    try {
-      const uniqueCategorySlugs = new Set(
-        dbProducts.map((p) => p.category?.slug).filter(Boolean)
-      )
-      // Revalidate main pages
-      revalidateStorefront()
-      // Revalidate affected categories
-      for (const catSlug of uniqueCategorySlugs) {
-        revalidateStorefront(catSlug)
-      }
-    } catch (revalErr) {
-      console.error('Failed to revalidate paths after order placement:', revalErr)
-    }
-
-    // Emit real-time SSE event for each newly created order and send push notifications to staff roles
-    try {
-      // Build admin phones list to notify based on settings
-      const adminPhones: string[] = []
-      const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] !== 'false'
-      const notifyPhone2 = settingsMap['whatsapp_notify_8112849854'] !== 'false'
-
-      if (notifyPhone1) {
-        adminPhones.push('7054470303')
-      }
-      if (notifyPhone2) {
-        adminPhones.push('8112849854')
-      }
-
-      for (const order of createdOrders) {
-        const displayId = order.readableId || order.id.slice(-6).toUpperCase()
-        const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
-
-        sseEmitter.emit('order', {
-          type: 'new-order',
-          orderId: order.id,
-          readableId: order.readableId,
-          shopName: order.shopName,
-          status: order.status,
-          total: order.total,
-          createdAt: order.createdAt,
-        })
-
-        // Send push notifications to all workers for any new order
-        sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-          title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
-          body: `Order #${displayId} of ₹${order.total} has been placed.`,
-          tag: `order-${order.id}`,
-          data: { orderId: order.id }
-        }).catch((err: any) => console.error('Error sending push notification to workers:', err))
-
-        const whatsappPromises: Promise<any>[] = []
-
-        // 1. WhatsApp Alert to Customer (DISABLED per request)
-        /*
-        const customerPhone = order.address?.phone
-        if (customerPhone) {
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
-          const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-          const customerText = `Order #${displayId} of ₹${order.total} placed successfully. Track: ${cleanAppUrl}/order/${order.id}/track`
-          whatsappPromises.push(
-            sendWhatsAppOrderAlert(customerPhone, customerText)
-              .catch((err: any) => console.error('Failed to send customer WhatsApp order alert:', err))
-          )
+    // Perform storefront revalidation and notifications asynchronously in the background
+    after(async () => {
+      // Invalidate storefront caches on-demand since stock levels changed
+      try {
+        const uniqueCategorySlugs = new Set(
+          dbProducts.map((p) => p.category?.slug).filter(Boolean)
+        )
+        // Revalidate main pages
+        revalidateStorefront()
+        // Revalidate affected categories
+        for (const catSlug of uniqueCategorySlugs) {
+          revalidateStorefront(catSlug)
         }
-        */
+      } catch (revalErr) {
+        console.error('Failed to revalidate paths after order placement:', revalErr)
+      }
 
-        // 2. WhatsApp Alert to Admins/Staff
-        if (adminPhones.length > 0) {
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
-          const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-          const customerName = order.user?.name || 'Customer'
-          const customerPhone = order.address?.phone || 'N/A'
-          const adminText = `New ${orderType} Order #${displayId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
-          
-          for (const adminPhone of adminPhones) {
-            whatsappPromises.push(
-              sendWhatsAppOrderAlert(adminPhone, adminText)
-                .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
-            )
+      // Emit real-time SSE event for each newly created order and send push notifications to staff roles
+      try {
+        // Build admin phones list to notify based on settings
+        const adminPhones: string[] = []
+        const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] !== 'false'
+        const notifyPhone2 = settingsMap['whatsapp_notify_8112849854'] !== 'false'
+
+        if (notifyPhone1) {
+          adminPhones.push('7054470303')
+        }
+        if (notifyPhone2) {
+          adminPhones.push('8112849854')
+        }
+
+        for (const order of createdOrders) {
+          const displayId = order.readableId || order.id.slice(-6).toUpperCase()
+          const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
+
+          sseEmitter.emit('order', {
+            type: 'new-order',
+            orderId: order.id,
+            readableId: order.readableId,
+            shopName: order.shopName,
+            status: order.status,
+            total: order.total,
+            createdAt: order.createdAt,
+          })
+
+          // Send push notifications to all workers for any new order
+          sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
+            title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
+            body: `Order #${displayId} of ₹${order.total} has been placed.`,
+            tag: `order-${order.id}`,
+            data: { orderId: order.id }
+          }).catch((err: any) => console.error('Error sending push notification to workers:', err))
+
+          const whatsappPromises: Promise<any>[] = []
+
+          // 2. WhatsApp Alert to Admins/Staff
+          if (adminPhones.length > 0) {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+            const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+            const customerName = order.user?.name || 'Customer'
+            const customerPhone = order.address?.phone || 'N/A'
+            const adminText = `New ${orderType} Order #${displayId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+            
+            for (const adminPhone of adminPhones) {
+              whatsappPromises.push(
+                sendWhatsAppOrderAlert(adminPhone, adminText)
+                  .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
+              )
+            }
+          }
+
+          // Wait for all WhatsApp notifications to finish before continuing
+          if (whatsappPromises.length > 0) {
+            await Promise.allSettled(whatsappPromises)
           }
         }
-
-        // Wait for all WhatsApp notifications to finish before continuing
-        if (whatsappPromises.length > 0) {
-          await Promise.allSettled(whatsappPromises)
-        }
+      } catch (sseErr) {
+        console.error('Failed to emit SSE/notifications for new orders:', sseErr)
       }
-    } catch (sseErr) {
-      console.error('Failed to emit SSE/notifications for new orders:', sseErr)
-    }
+    })
 
     const mainOrder = createdOrders.find((o) => o.shopName !== 'FastKirana Cafe Kitchen') || createdOrders[0]
     return NextResponse.json(mainOrder)

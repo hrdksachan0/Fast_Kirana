@@ -450,14 +450,9 @@ export async function POST(request: Request) {
           estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 15)
         }
 
-        // Find highest readableId to increment
-        const lastOrder = await tx.order.findFirst({
-          orderBy: { readableId: 'desc' },
-          select: { readableId: true }
-        })
-        const nextReadableId = lastOrder && lastOrder.readableId 
-          ? lastOrder.readableId + 1 
-          : 600001
+        // Get next unique readableId using PostgreSQL sequence atomically
+        const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
+        const nextReadableId = Number(seqResult[0].nextval)
 
         const newOrder = await tx.order.create({
           data: {
@@ -592,7 +587,7 @@ export async function POST(request: Request) {
       }
 
       return results
-    }, { timeout: 20000 })
+    }, { maxWait: 20000, timeout: 25000 })
 
     // Invalidate caches
     try {

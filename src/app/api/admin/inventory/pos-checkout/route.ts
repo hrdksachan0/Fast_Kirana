@@ -75,11 +75,9 @@ export async function POST(request: NextRequest) {
 
     // 3. Process the checkout inside a database transaction
     const order = await prisma.$transaction(async (tx) => {
-      // Find the highest readableId for the order counter
-      const lastOrder = await tx.order.findFirst({
-        orderBy: { readableId: 'desc' }
-      })
-      const nextReadableId = (lastOrder?.readableId || 0) + 1
+      // Get next unique readableId using PostgreSQL sequence atomically
+      const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
+      const nextReadableId = Number(seqResult[0].nextval)
 
       // Create Order
       const newOrder = await tx.order.create({
@@ -186,7 +184,7 @@ export async function POST(request: NextRequest) {
       }
 
       return newOrder
-    })
+    }, { maxWait: 20000, timeout: 25000 })
 
     // Revalidate storefront cache
     try {

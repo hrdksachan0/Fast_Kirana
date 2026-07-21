@@ -119,9 +119,20 @@ function getSlaClass(createdAt: string | Date, status: string): string {
   const now = new Date()
   const diffMs = now.getTime() - created.getTime()
   const mins = Math.floor(diffMs / 60000)
-  if (mins >= 30) return 'text-rose-500 font-black animate-pulse'
-  if (mins >= 15) return 'text-amber-500 font-black animate-pulse'
+  if (mins >= 5) return 'text-rose-500 font-black animate-pulse'
+  if (mins >= 2) return 'text-amber-500 font-black animate-pulse'
   return 'text-gray-400 font-semibold'
+}
+
+function getOrderCardSlaBorder(createdAt: string | Date, status: string): string {
+  if (status !== 'PENDING') return 'border-border/55'
+  const created = new Date(createdAt)
+  const now = new Date()
+  const diffMs = now.getTime() - created.getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins >= 5) return 'border-rose-500 dark:border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.2)] animate-pulse'
+  if (mins >= 2) return 'border-amber-450 dark:border-amber-450/80 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+  return 'border-border/55'
 }
 
 const containerVariants = {
@@ -351,6 +362,7 @@ export function CafeOrdersConsole() {
     if (status !== 'authenticated') return
     
     let eventSource: EventSource | null = null
+    let updateTimeout: NodeJS.Timeout | null = null
     
     const connectSSE = () => {
       eventSource = new EventSource('/api/sse/orders')
@@ -390,7 +402,11 @@ export function CafeOrdersConsole() {
           }
 
           if (data.type === 'new-order' || data.type === 'status-change') {
-            fetchOrders(true)
+            // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
             
             if (data.type === 'new-order' && data.shopName === 'FastKirana Cafe Kitchen') {
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
@@ -415,6 +431,9 @@ export function CafeOrdersConsole() {
     return () => {
       if (eventSource) {
         eventSource.close()
+      }
+      if (updateTimeout) {
+        clearTimeout(updateTimeout)
       }
     }
   }, [status, fetchOrders])
@@ -502,6 +521,68 @@ export function CafeOrdersConsole() {
       }
     } catch (err) {
       toast.error('Error accepting cafe order')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleQuickAccept = async (order: Order) => {
+    setUpdatingId(order.id)
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
+      })
+
+      if (res.ok) {
+        toast.success(`Accepted cafe order! Timer set to 15 mins.`)
+        setActiveOrder(order)
+        const initialPicked: Record<string, number> = {}
+        order.items.forEach(item => {
+          initialPicked[item.id] = 0
+        })
+        setPickedItemIds(initialPicked)
+        fetchOrders(true)
+        printKOTReceipt(order)
+      } else {
+        toast.error('Failed to accept cafe order')
+      }
+    } catch (err) {
+      toast.error('Error accepting cafe order')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleQuickAcceptAndPack = async (order: Order) => {
+    setUpdatingId(order.id)
+    const toastId = toast.loading('☕ Quick accepting & packing cafe order...')
+    try {
+      // 1. Confirm order
+      const confirmRes = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
+      })
+      if (!confirmRes.ok) throw new Error('Failed to confirm cafe order')
+
+      // 2. Pack order
+      const packRes = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'PACKED' }),
+      })
+      if (!packRes.ok) throw new Error('Failed to pack cafe order')
+
+      toast.dismiss(toastId)
+      toast.success('☕ Order accepted, prepared, and packed in one click!', { duration: 4000 })
+      setPreparedToday(prev => prev + 1)
+      fetchOrders(true)
+      printKOTReceipt(order)
+    } catch (err: any) {
+      toast.dismiss(toastId)
+      toast.error(err.message || 'Error quick packing cafe order')
     } finally {
       setUpdatingId(null)
     }
@@ -931,6 +1012,19 @@ export function CafeOrdersConsole() {
               >
                 <Printer className="h-3.5 w-3.5 text-orange-500" /> Print KOT
               </button>
+              <button
+                onClick={() => {
+                  const updated: Record<string, number> = {}
+                  activeOrder.items.forEach(item => {
+                    updated[item.id] = item.quantity
+                  })
+                  setPickedItemIds(updated)
+                  autoPackOrder(activeOrder.id)
+                }}
+                className="flex items-center gap-1.5 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 border border-emerald-500/20"
+              >
+                <CheckCircle className="h-3.5 w-3.5" /> Mark Ready (Pack All)
+              </button>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">PREPARING CAFE TICKET</p>
@@ -1188,11 +1282,29 @@ export function CafeOrdersConsole() {
               const isClaimedByOther = !!(order.status === 'CONFIRMED' && order.assignedChefId && !isClaimedByMe)
               const claimLabel = isClaimedByOther ? `Preparing by ${order.assignedChef?.name || 'Chef'}` : isClaimedByMe ? 'Preparing' : 'Claim Order'
 
+              const pendingOrders = orders.filter(o => o.status === 'PENDING')
+              const pendingIdx = pendingOrders.findIndex(o => o.id === order.id)
+              const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+
               return (
-                <div key={order.id} className="bg-card border border-border/55 rounded-3xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+                <div 
+                  key={order.id} 
+                  className={`bg-card border ${getOrderCardSlaBorder(order.createdAt, order.status)} rounded-3xl p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-300`}
+                >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs font-mono font-bold text-text-primary">#{order.readableId || order.id.slice(0, 8)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-mono font-bold text-text-primary">#{order.readableId || order.id.slice(0, 8)}</p>
+                        {fifoRank && (
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
+                            fifoRank === 1 
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
+                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
+                          }`}>
+                            {fifoRank === 1 ? '👑 FIFO #1 (Oldest)' : `FIFO #${fifoRank}`}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[9px] text-text-muted mt-0.5">{order.user.name} • {order.deliveryMethod}</p>
                     </div>
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
@@ -1234,10 +1346,32 @@ export function CafeOrdersConsole() {
                           <Printer className="h-4 w-4 text-orange-500" />
                         </button>
                       )}
+                      
+                      {!isClaimedByMe && !isClaimedByOther && (
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => handleQuickAccept(order)}
+                            disabled={updatingId === order.id}
+                            className="text-[10px] font-black px-2.5 py-2 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
+                            title="Accept and set 15m timer instantly"
+                          >
+                            ⚡ Accept (15m)
+                          </button>
+                          <button
+                            onClick={() => handleQuickAcceptAndPack(order)}
+                            disabled={updatingId === order.id}
+                            className="text-[10px] font-black px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
+                            title="Accept, prepare and pack immediately"
+                          >
+                            🍲 Accept & Pack
+                          </button>
+                        </div>
+                      )}
+                      
                       <button
                         onClick={() => !isClaimedByOther && handleStartPreparing(order)}
                         disabled={isClaimedByOther || updatingId === order.id}
-                        className={`text-xs font-black px-4 py-2 rounded-xl transition-all cursor-pointer active:scale-95 ${
+                        className={`text-xs font-black px-4 py-2 rounded-xl transition-all cursor-pointer active:scale-95 shrink-0 ${
                           isClaimedByOther 
                             ? 'bg-zinc-800 text-zinc-600 border border-zinc-900 cursor-not-allowed' 
                             : 'bg-orange-600 text-white hover:bg-orange-700 shadow-md'

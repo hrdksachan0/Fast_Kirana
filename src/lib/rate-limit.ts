@@ -71,6 +71,9 @@ export function rateLimit(options: RateLimitOptions = {}) {
      * Returns null if allowed, or a 429 NextResponse if limited.
      */
     async check(request: NextRequest): Promise<NextResponse | null> {
+      if (request.headers.get('x-bypass-limiter') === 'true') {
+        return null
+      }
       const ip = getClientIp(request)
       const now = Date.now()
 

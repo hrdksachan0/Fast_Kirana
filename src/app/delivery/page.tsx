@@ -381,6 +381,7 @@ export default function DeliveryDashboard() {
     if (status !== 'authenticated') return
     
     let eventSource: EventSource | null = null
+    let updateTimeout: NodeJS.Timeout | null = null
     
     const connectSSE = () => {
       eventSource = new EventSource('/api/sse/orders')
@@ -415,8 +416,11 @@ export default function DeliveryDashboard() {
           }
 
           if (data.type === 'new-order' || data.type === 'status-change') {
-            // Instant refresh of orders list
-            fetchOrders(true)
+            // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
             
             // Audio sound if order became PACKED (ready for rider pickup)
             if (data.type === 'status-change' && data.status === 'PACKED') {
@@ -440,6 +444,9 @@ export default function DeliveryDashboard() {
     return () => {
       if (eventSource) {
         eventSource.close()
+      }
+      if (updateTimeout) {
+        clearTimeout(updateTimeout)
       }
     }
   }, [status, fetchOrders])

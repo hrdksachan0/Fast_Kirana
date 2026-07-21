@@ -205,6 +205,14 @@ export function AdminDashboard({
     }
   })
   const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders || [])
+  
+  // Memoized live pending orders sorted by creation time (strict FIFO)
+  const livePendingOrders = useMemo(() => {
+    return liveOrders
+      .filter((o: any) => o.status === 'PENDING')
+      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }, [liveOrders])
+
   const [orderRefreshKey, setOrderRefreshKey] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [isChimeMuted, setIsChimeMuted] = useState(false)
@@ -405,6 +413,16 @@ export function AdminDashboard({
       }
     }
 
+    let updateTimeout: NodeJS.Timeout | null = null
+
+    const debouncedRefresh = () => {
+      if (updateTimeout) clearTimeout(updateTimeout)
+      updateTimeout = setTimeout(() => {
+        fetchLiveOrdersList()
+        setOrderRefreshKey(prev => prev + 1)
+      }, 1000)
+    }
+
     const sse = new EventSource('/api/sse/orders')
 
     sse.onmessage = (event) => {
@@ -414,12 +432,10 @@ export function AdminDashboard({
           console.log('SSE: New order received:', data.orderId)
           toast.success(`🛎️ New Order Received: #${data.orderId.slice(0, 8)}`)
           playNewOrderChime()
-          fetchLiveOrdersList() // Refresh live orders list instantly
-          setOrderRefreshKey(prev => prev + 1) // Refresh paginated order table
+          debouncedRefresh()
         } else if (data.type === 'status-change') {
           console.log('SSE: Order status changed:', data.orderId, data.status)
-          fetchLiveOrdersList() // Refresh live orders list
-          setOrderRefreshKey(prev => prev + 1) // Refresh paginated order table
+          debouncedRefresh()
         }
       } catch (err) {
         console.error('Failed to parse SSE message:', err)
@@ -439,6 +455,7 @@ export function AdminDashboard({
     return () => {
       sse.close()
       clearInterval(interval)
+      if (updateTimeout) clearTimeout(updateTimeout)
     }
   }, [isChimeMuted])
 
@@ -2232,13 +2249,27 @@ export function AdminDashboard({
                   delayColor = 'border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400'
                 }
 
+                const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)
+                const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+
                 return (
                   <div 
                     key={order.id}
                     className={`flex items-center justify-between rounded-xl border p-2.5 text-xs font-medium ${delayColor}`}
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-bold">Order #{order.readableId || order.id.slice(0, 8)}</span>
+                      <span className="font-bold flex items-center gap-1.5">
+                        Order #{order.readableId || order.id.slice(0, 8)}
+                        {fifoRank && (
+                          <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
+                            fifoRank === 1 
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
+                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
+                          }`}>
+                            {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
+                          </span>
+                        )}
+                      </span>
                       <span className="text-[10px] opacity-80">{delayType} • {order.userName || order.userEmail || 'Guest'}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2458,9 +2489,31 @@ export function AdminDashboard({
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((o) => (
-                    <tr key={o.id} className="hover:bg-muted/30">
-                      <td className="py-3 px-4 font-mono font-bold text-[10px]">{o.id}</td>
+                  filteredOrders.map((o) => {
+                    const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
+                    const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+
+                    return (
+                      <tr key={o.id} className="hover:bg-muted/30">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-[10px] text-text-primary">
+                              #{o.readableId || o.id.slice(0, 8)}
+                            </span>
+                            {fifoRank && (
+                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
+                                fifoRank === 1 
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
+                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
+                              }`}>
+                                {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
+                            ID: {o.id.slice(0, 12)}...
+                          </div>
+                        </td>
                       <td className="py-3 px-4">
                         <div className="font-bold">{o.userName || 'No Name'}</div>
                         <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
@@ -2505,19 +2558,62 @@ export function AdminDashboard({
                       </td>
                       <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
                       <td className="py-3 px-4">
-                        <select
-                          value={o.status}
-                          onChange={(e) => handleOrderStatusChange(o.id, e.target.value)}
-                          disabled={updatingOrderId === o.id}
-                          className="bg-muted px-2.5 py-1 rounded-lg border text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
-                        >
-                          <option value="PENDING">Placed</option>
-                          <option value="CONFIRMED">Confirmed</option>
-                          <option value="PACKED">Packed</option>
-                          <option value="SHIPPED">On the Way</option>
-                          <option value="DELIVERED">Delivered</option>
-                          <option value="CANCELLED">Cancelled</option>
-                        </select>
+                        <div className="flex flex-col sm:flex-row items-center gap-1.5">
+                          <select
+                            value={o.status}
+                            onChange={(e) => handleOrderStatusChange(o.id, e.target.value)}
+                            disabled={updatingOrderId === o.id}
+                            className="bg-muted px-2.5 py-1 rounded-lg border text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+                          >
+                            <option value="PENDING">Placed</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                            <option value="PACKED">Packed</option>
+                            <option value="SHIPPED">On the Way</option>
+                            <option value="DELIVERED">Delivered</option>
+                            <option value="CANCELLED">Cancelled</option>
+                          </select>
+                          
+                          {o.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleOrderStatusChange(o.id, 'CONFIRMED')}
+                              disabled={updatingOrderId === o.id}
+                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                              title="Accept & Confirm Order"
+                            >
+                              ✓ Accept
+                            </button>
+                          )}
+                          {o.status === 'CONFIRMED' && (
+                            <button
+                              onClick={() => handleOrderStatusChange(o.id, 'PACKED')}
+                              disabled={updatingOrderId === o.id}
+                              className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                              title="Mark Order Packed"
+                            >
+                              ✓ Pack
+                            </button>
+                          )}
+                          {o.status === 'PACKED' && (
+                            <button
+                              onClick={() => handleOrderStatusChange(o.id, 'SHIPPED')}
+                              disabled={updatingOrderId === o.id}
+                              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                              title="Dispatch / Ship Order"
+                            >
+                              ✓ Ship
+                            </button>
+                          )}
+                          {o.status === 'SHIPPED' && (
+                            <button
+                              onClick={() => handleOrderStatusChange(o.id, 'DELIVERED')}
+                              disabled={updatingOrderId === o.id}
+                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                              title="Complete & Deliver Order"
+                            >
+                              ✓ Deliver
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         {updatingOrderId === o.id ? (
@@ -2532,7 +2628,8 @@ export function AdminDashboard({
                         )}
                       </td>
                     </tr>
-                  ))
+                  )
+                })
                 )}
               </tbody>
             </table>
@@ -4662,10 +4759,25 @@ export function AdminDashboard({
                     const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
                     const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
                     const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
+                    
+                    const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)
+                    const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+
                     return (
                       <div key={order.id} className="flex justify-between items-center p-3 rounded-xl border border-rose-500/10 bg-rose-500/5 text-xs">
                         <div>
-                          <p className="font-bold text-rose-600">Order #{order.readableId || order.id.slice(0, 8)}</p>
+                          <p className="font-bold text-rose-600 flex items-center gap-1.5">
+                            Order #{order.readableId || order.id.slice(0, 8)}
+                            {fifoRank && (
+                              <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
+                                fifoRank === 1 
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
+                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
+                              }`}>
+                                {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
+                              </span>
+                            )}
+                          </p>
                           <p className="text-[10px] text-text-secondary mt-0.5 font-medium">
                             Status: <span className="font-bold uppercase">{order.status}</span> • Customer: {order.userName || order.userEmail}
                           </p>

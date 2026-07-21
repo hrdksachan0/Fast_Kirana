@@ -359,6 +359,7 @@ export default function PickerDashboard() {
     if (status !== 'authenticated') return
     
     let eventSource: EventSource | null = null
+    let updateTimeout: NodeJS.Timeout | null = null
     
     const connectSSE = () => {
       eventSource = new EventSource('/api/sse/orders')
@@ -440,8 +441,11 @@ export default function PickerDashboard() {
           }
 
           if (data.type === 'new-order' || data.type === 'status-change') {
-            // Instant refresh of orders list
-            fetchOrders(true)
+            // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
             
             // Urgent sound if new grocery order
             if (data.type === 'new-order' && (data.shopName === null || data.shopName !== 'FastKirana Cafe Kitchen')) {
@@ -465,6 +469,9 @@ export default function PickerDashboard() {
     return () => {
       if (eventSource) {
         eventSource.close()
+      }
+      if (updateTimeout) {
+        clearTimeout(updateTimeout)
       }
     }
   }, [status, fetchOrders])
