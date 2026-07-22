@@ -347,12 +347,14 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   }}
                   disabled={isStoreClosed && resolvedStock > 0}
                   className={cn(
-                    "w-full h-full border-2 font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
+                    "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
                     isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
                     isStoreClosed && resolvedStock > 0
                       ? "border-zinc-300 bg-zinc-50 text-zinc-400 cursor-not-allowed"
                       : resolvedStock <= 0 || !resolvedIsAvailable
                       ? "border-amber-500 bg-amber-500/5 text-amber-600"
+                      : isCafe
+                      ? "border-orange-500 bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 md:hover:bg-orange-500 md:hover:text-white"
                       : isRestaurant
                       ? "border-[#e20a22] bg-white dark:bg-zinc-900 text-[#e20a22] dark:text-red-400 md:hover:bg-[#e20a22] md:hover:text-white"
                       : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white"
@@ -372,7 +374,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               ) : (
                 <div className={cn(
                   "flex h-full w-full items-center justify-between rounded-lg text-white font-bold shadow-xs overflow-hidden",
-                  isRestaurant ? "bg-[#e20a22]" : "bg-[#22c55e]"
+                  isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-[#22c55e]"
                 )}>
                   <button
                     onClick={handleDecrement}

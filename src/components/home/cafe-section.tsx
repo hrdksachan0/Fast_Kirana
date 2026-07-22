@@ -472,44 +472,42 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         </div>
       </div>
 
-
-
         {/* Experience Switcher */}
         <div className={cn(
-          "relative flex w-full h-[52px] sm:h-14 p-1 bg-zinc-150/60 dark:bg-zinc-900/40 rounded-full border transition-all duration-300 overflow-hidden select-none shadow-[0_4px_16px_rgba(0,0,0,0.01)]",
+          "relative flex w-full h-[46px] sm:h-12 p-1 bg-zinc-150/70 dark:bg-zinc-900/50 rounded-full border transition-all duration-300 overflow-hidden select-none shadow-xs my-2.5",
           experienceMode === 'cafe'
-            ? "border-orange-500/50 dark:border-orange-500/40"
-            : "border-[#e20a22]/50 dark:border-[#e20a22]/40"
+            ? "border-orange-500/40 dark:border-orange-500/30"
+            : "border-[#e20a22]/40 dark:border-[#e20a22]/30"
         )}>
           <button
             onClick={() => handleExperienceModeChange('cafe')}
             className={cn(
-              "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+              "relative flex-1 h-full z-15 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer rounded-full select-none outline-none transition-all duration-300 px-2",
               experienceMode === 'cafe'
                 ? "text-white font-black scale-102"
                 : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
             )}
           >
-            <Coffee className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+            <Coffee className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" strokeWidth={2.5} />
             <div className="flex flex-col text-left">
-              <span className="text-[12px] sm:text-[14px] font-black leading-none">A.S Cafe</span>
-              <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
+              <span className="text-[11px] sm:text-[13px] font-black leading-none">A.S Cafe</span>
+              <span className="text-[8.5px] sm:text-[9.5px] font-bold opacity-85 leading-tight mt-0.5">Coffee, Snacks &amp; More</span>
             </div>
           </button>
           
           <button
             onClick={() => handleExperienceModeChange('restaurant')}
             className={cn(
-              "relative flex-1 h-full z-15 flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer rounded-full select-none outline-none transition-all duration-300",
+              "relative flex-1 h-full z-15 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer rounded-full select-none outline-none transition-all duration-300 px-2",
               (experienceMode as string) === 'restaurant'
                 ? "text-white font-black scale-102"
                 : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 font-extrabold"
             )}
           >
-            <ChefHat className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+            <ChefHat className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" strokeWidth={2.5} />
             <div className="flex flex-col text-left">
-              <span className="text-[12px] sm:text-[14px] font-black leading-none">Wedson Restaurant</span>
-              <span className="text-[9px] sm:text-[10px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
+              <span className="text-[11px] sm:text-[13px] font-black leading-none">Wedson Restaurant</span>
+              <span className="text-[8.5px] sm:text-[9.5px] font-bold opacity-85 leading-tight mt-0.5">Meals, Combos &amp; More</span>
             </div>
           </button>
 
@@ -536,12 +534,10 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           />
         </div>
 
-
-
         <>
           {/* Wedson Restaurant Compact Promo Banner */}
           {((experienceMode as string) === 'restaurant') && (
-            <div className="relative w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm mb-4 mt-1 select-none">
+            <div className="relative w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm my-2.5 select-none">
               <Image
                 src="/wedson_restaurant_bg.png"
                 alt="Wedson Restaurant"
@@ -596,7 +592,10 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, idx) => (
-                  <div key={`side-skeleton-${idx}`} className="flex flex-col md:flex-row items-center gap-1.5 p-2 rounded-2xl bg-zinc-150/60 dark:bg-zinc-850/40 animate-pulse h-16 md:h-12 w-full" />
+                  <div key={`side-skeleton-${idx}`} className="flex flex-col md:flex-row items-center gap-1.5 p-1.5 md:px-2.5 md:py-2 rounded-2xl bg-zinc-100/60 dark:bg-zinc-900/40 border border-zinc-200/40 dark:border-zinc-800/40 animate-pulse w-full shrink-0">
+                    <div className="w-9 h-9 min-[375px]:w-10 min-[375px]:h-10 md:w-8 md:h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                    <div className="h-2.5 w-10 md:w-20 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                  </div>
                 ))
               ) : (
                 filteredCategories.map((cat) => {
@@ -688,13 +687,24 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                   <div key={`section-skeleton-${secIdx}`} className="space-y-3 pt-2 animate-pulse">
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-zinc-250 dark:bg-zinc-850" />
-                        <div className="h-4 w-32 bg-zinc-250 dark:bg-zinc-850 rounded" />
+                        <div className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                        <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
                       </div>
                     </div>
                     <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1.5 scrollbar-hide">
                       {Array.from({ length: 3 }).map((_, itemIdx) => (
-                        <div key={`item-skeleton-${itemIdx}`} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] rounded-2xl bg-zinc-200 dark:bg-zinc-850/60 shrink-0" />
+                        <div 
+                          key={`item-skeleton-${itemIdx}`} 
+                          className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[220px] h-[185px] min-[375px]:h-[205px] sm:h-[230px] rounded-3xl p-2 bg-white/95 dark:bg-zinc-950/70 border border-zinc-200/50 dark:border-zinc-850/60 shrink-0 flex flex-col justify-between"
+                        >
+                          <div className="w-full h-[75px] min-[375px]:h-[85px] sm:h-[105px] rounded-2xl bg-zinc-150 dark:bg-zinc-900 shrink-0" />
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="h-2.5 w-10 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                            <div className="h-6 w-12 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 rounded-lg" />
+                          </div>
+                          <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800 rounded-full mt-1" />
+                          <div className="h-3 w-3/4 bg-zinc-200 dark:bg-zinc-800 rounded-full mt-1 mb-1" />
+                        </div>
                       ))}
                     </div>
                   </div>

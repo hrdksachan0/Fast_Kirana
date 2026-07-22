@@ -22,17 +22,17 @@ export async function GET(request: Request) {
     // Fetch store coordinates & radius settings
     let storeLat = DEFAULT_STORE_LAT
     let storeLng = DEFAULT_STORE_LNG
-    let maxRadiusKm = 5.0
+    let maxRadiusKm = 2.0
     let surgeFee = 0
 
     try {
       const settings = await prisma.storeSetting.findMany({
-        where: { key: { in: ['store_lat', 'store_lng', 'max_delivery_radius', 'surge_charge'] } },
+        where: { key: { in: ['store_lat', 'store_lng', 'delivery_radius', 'max_delivery_radius', 'surge_charge'] } },
       })
       for (const s of settings) {
         if (s.key === 'store_lat' && s.value) storeLat = parseFloat(s.value)
         if (s.key === 'store_lng' && s.value) storeLng = parseFloat(s.value)
-        if (s.key === 'max_delivery_radius' && s.value) maxRadiusKm = parseFloat(s.value)
+        if ((s.key === 'delivery_radius' || s.key === 'max_delivery_radius') && s.value) maxRadiusKm = parseFloat(s.value)
         if (s.key === 'surge_charge' && s.value) surgeFee = parseFloat(s.value)
       }
     } catch {

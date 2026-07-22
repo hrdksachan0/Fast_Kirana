@@ -60,7 +60,7 @@ export function FreeMapPicker({
   initialLng = 80.1714024,
   storeLat = 26.1534185,
   storeLng = 80.1714024,
-  deliveryRadiusKm = 5.0,
+  deliveryRadiusKm = 2.0,
   onLocationSelect,
   onClose,
 }: FreeMapPickerProps) {

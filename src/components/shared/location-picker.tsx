@@ -55,7 +55,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   // Store & Radius settings
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
-  const [deliveryRadius, setDeliveryRadius] = useState(5.0)
+  const [deliveryRadius, setDeliveryRadius] = useState(2.0)
 
   // Location state
   const [currentLat, setCurrentLat] = useState<number>(26.156803)

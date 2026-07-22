@@ -106,7 +106,7 @@ export function Navbar() {
           const gOpen = data.grocery_mart_open !== 'false'
           const cOpen = data.cafe_open !== 'false'
           const rOpen = data.restaurant_open !== 'false'
-          const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 5.0
+          const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 2.0
           const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
           const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
 

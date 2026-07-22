@@ -118,25 +118,55 @@ export async function POST(request: NextRequest) {
       }
 
       // Calculate distance if address has GPS coordinates
-      if (address.lat && address.lng) {
-        const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
-        const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
-        const maxRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'max_delivery_radius' } })
-        const surgeFeeSetting = await prisma.storeSetting.findUnique({ where: { key: 'surge_charge' } })
+      const targetLat = address.lat ?? ((address as any).latitude ? parseFloat((address as any).latitude) : null)
+      const targetLng = address.lng ?? ((address as any).longitude ? parseFloat((address as any).longitude) : null)
 
-        const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
-        const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
-        const maxRadiusKm = maxRadiusSetting?.value ? parseFloat(maxRadiusSetting.value) : 5.0
-        const surgeFee = surgeFeeSetting?.value ? parseFloat(surgeFeeSetting.value) : 0
+      const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
+      const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
+      const delRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'delivery_radius' } })
+      const maxRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'max_delivery_radius' } })
+      const surgeFeeSetting = await prisma.storeSetting.findUnique({ where: { key: 'surge_charge' } })
 
-        const distanceKm = getDistanceKm(storeLat, storeLng, address.lat, address.lng)
+      const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
+      const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
+      const maxRadiusKm = delRadiusSetting?.value ? parseFloat(delRadiusSetting.value) : (maxRadiusSetting?.value ? parseFloat(maxRadiusSetting.value) : 2.0)
+      const surgeFee = surgeFeeSetting?.value ? parseFloat(surgeFeeSetting.value) : 0
+
+      let resolvedLat = targetLat
+      let resolvedLng = targetLng
+
+      if (!resolvedLat || !resolvedLng) {
+        try {
+          const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || 'Ghatampur'}, ${address.pincode || '209206'}`
+          const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+          if (apiKey) {
+            const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressQuery)}&key=${apiKey.trim()}`)
+            if (geoRes.ok) {
+              const geoData = await geoRes.json()
+              if (geoData.results && geoData.results[0]?.geometry?.location) {
+                resolvedLat = geoData.results[0].geometry.location.lat
+                resolvedLng = geoData.results[0].geometry.location.lng
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Server-side geocode error:', err)
+        }
+      }
+
+      if (resolvedLat && resolvedLng) {
+        const distanceKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
         deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
 
-        if (!deliveryRules.isServiceable) {
+        if (!deliveryRules.isServiceable || distanceKm > maxRadiusKm) {
           return NextResponse.json({
-            error: `Your address is ${distanceKm.toFixed(1)} km away. Delivery is available only up to ${maxRadiusKm.toFixed(1)} km.`
+            error: `Your location is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from Ghatampur Store.`
           }, { status: 400 })
         }
+      } else {
+        return NextResponse.json({
+          error: 'Please tap "Select Location" on the map to confirm your delivery address is within our 2 km service zone.'
+        }, { status: 400 })
       }
     }
 

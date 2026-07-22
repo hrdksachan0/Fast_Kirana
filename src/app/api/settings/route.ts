@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS = {
   restaurant_auto_timing: 'false',
   restaurant_open_time: '06:00',
   restaurant_close_time: '23:59',
-  delivery_radius: '5',
+  delivery_radius: '2',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
   avg_delivery_time: '8 min',
