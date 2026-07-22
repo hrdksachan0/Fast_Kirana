@@ -255,7 +255,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
 
   const isWithinZone = distance <= deliveryRadius
 
-  // GPS detect location handler using Google Maps API
+  // GPS detect location handler using Google Maps API & IP fallback
   const handleDetectLocation = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser')
@@ -263,6 +263,8 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
     }
 
     setIsDetecting(true)
+    toast.info('Detecting your GPS location...', { icon: '📡' })
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         let { latitude, longitude } = position.coords
@@ -287,11 +289,34 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
         setIsDetecting(false)
         toast.success('GPS location detected!')
       },
-      () => {
+      (error) => {
         setIsDetecting(false)
-        toast.error('Unable to detect location. Please check browser permissions.')
+        if (error.code === 1) {
+          toast.error('Location permission denied. Please allow location access in your browser settings or search address manually.', { duration: 5000 })
+        } else {
+          toast.info('GPS signal unavailable. Trying IP location fallback...')
+          fetch('https://ipapi.co/json/')
+            .then(res => res.json())
+            .then(data => {
+              if (data.latitude && data.longitude) {
+                setCurrentLat(data.latitude)
+                setCurrentLng(data.longitude)
+                if (mapRef.current) {
+                  mapRef.current.panTo({ lat: data.latitude, lng: data.longitude })
+                  mapRef.current.setZoom(15)
+                }
+                resolveAddress(data.latitude, data.longitude)
+                toast.success(`Approximate location set to ${data.city || 'your area'}`)
+              } else {
+                toast.error('Unable to detect location. Please search manually.')
+              }
+            })
+            .catch(() => {
+              toast.error('Unable to detect location. Please search manually.')
+            })
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }, [storeLat, storeLng, resolveAddress])
 
