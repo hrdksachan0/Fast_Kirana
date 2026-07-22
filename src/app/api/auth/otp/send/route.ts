@@ -47,6 +47,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
     }
 
+    // Check if user account is blocked
+    const existingUserRecord = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          isPhoneNumber(trimmed) ? { phone: getNormalizedPhone(trimmed) } : null
+        ].filter(Boolean) as any
+      },
+      select: { isBlocked: true, blockReason: true }
+    })
+
+    if (existingUserRecord?.isBlocked) {
+      return NextResponse.json({
+        error: `Your account has been blocked. ${existingUserRecord.blockReason ? `Reason: ${existingUserRecord.blockReason}` : 'Please contact customer support.'}`
+      }, { status: 403 })
+    }
+
     // 1. Generate a 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     console.log(`[OTP Generated] For ${normalizedEmail}: ${otp}`)

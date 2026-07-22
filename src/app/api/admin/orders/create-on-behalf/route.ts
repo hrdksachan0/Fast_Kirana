@@ -47,6 +47,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
+    if (customer.isBlocked) {
+      return NextResponse.json({
+        error: `Selected customer account is blocked.${customer.blockReason ? ` Reason: ${customer.blockReason}` : ''} Please unblock the customer first to place an order.`
+      }, { status: 400 })
+    }
+
     // 2. Resolve address
     let finalAddressId = addressId
     if (deliveryMethod === 'PICKUP') {

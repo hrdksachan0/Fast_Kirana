@@ -47,6 +47,17 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
       console.log('Provider:', account?.provider)
       console.log('User email:', user?.email)
       console.log('Account type:', account?.type)
+      
+      if (user?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { isBlocked: true, blockReason: true }
+        })
+        if (dbUser?.isBlocked) {
+          console.log(`[Blocked Sign-In Rejected] ${user.email} is blocked. Reason: ${dbUser.blockReason}`)
+          return false
+        }
+      }
       return true // allow sign-in
     },
   },
@@ -83,6 +94,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         let user = await prisma.user.findUnique({
           where: { email },
         })
+
+        if (user && user.isBlocked) {
+          throw new Error(`Your account has been blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`)
+        }
 
         if (isBypass) {
           if (!user) {
@@ -205,6 +220,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           where: { email }
         })
 
+        if (user && user.isBlocked) {
+          throw new Error(`Your account has been blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`)
+        }
+
         if (!user) {
           let userPhone = phone || null
           if (email.startsWith('wa-') && !userPhone) {
@@ -271,6 +290,9 @@ export async function auth(...args: any[]) {
           let dbUser = await prisma.user.findUnique({
             where: { email }
           });
+          if (dbUser && dbUser.isBlocked) {
+            return null;
+          }
           if (dbUser) {
             resolvedUserId = dbUser.id;
           } else {

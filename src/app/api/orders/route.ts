@@ -21,6 +21,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Check if account is blocked
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isBlocked: true, blockReason: true }
+  })
+
+  if (currentUser?.isBlocked) {
+    return NextResponse.json({
+      error: `Your account has been blocked from placing orders.${currentUser.blockReason ? ` Reason: ${currentUser.blockReason}` : ' Please contact support.'}`
+    }, { status: 403 })
+  }
+
   try {
     const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null } = await request.json()
 

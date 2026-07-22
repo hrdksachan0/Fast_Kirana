@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
+import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { 
   Loader2, 
@@ -769,6 +770,10 @@ export function AdminDashboard({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('ALL')
+  const [userStatusFilter, setUserStatusFilter] = useState('ALL')
+  const [blockingUser, setBlockingUser] = useState<any | null>(null)
+  const [blockReasonInput, setBlockReasonInput] = useState('')
+  const [isUpdatingBlockStatus, setIsUpdatingBlockStatus] = useState(false)
 
   // Pagination page resets
   useEffect(() => {
@@ -781,7 +786,7 @@ export function AdminDashboard({
 
   useEffect(() => {
     setUserPage(1)
-  }, [userSearch, userRoleFilter])
+  }, [userSearch, userRoleFilter, userStatusFilter])
 
   // Fetch paginated/filtered orders
   useEffect(() => {
@@ -887,7 +892,7 @@ export function AdminDashboard({
     const fetchUsers = async () => {
       setIsLoadingUsers(true)
       try {
-        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}`)
+        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}&status=${userStatusFilter}`)
         if (res.ok && active) {
           const data = await res.json()
           setUsers(data.users)
@@ -901,7 +906,39 @@ export function AdminDashboard({
     }
     fetchUsers()
     return () => { active = false }
-  }, [userPage, userSearch, userRoleFilter])
+  }, [userPage, userSearch, userRoleFilter, userStatusFilter])
+
+  const handleToggleBlock = async (userToBlock: any, isBlocked: boolean, reason?: string) => {
+    setIsUpdatingBlockStatus(true)
+    try {
+      const res = await fetch('/api/admin/users/block', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userToBlock.id,
+          isBlocked,
+          blockReason: reason
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update user block status')
+      }
+      toast.success(data.message)
+      setBlockingUser(null)
+      setBlockReasonInput('')
+      setUsers(prev => prev.map(u => u.id === userToBlock.id ? { 
+        ...u, 
+        isBlocked, 
+        blockReason: isBlocked ? (reason?.trim() || 'Blocked by administrator') : null, 
+        blockedAt: isBlocked ? new Date().toISOString() : null 
+      } : u))
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating block status')
+    } finally {
+      setIsUpdatingBlockStatus(false)
+    }
+  }
 
   const [isExportingUsers, setIsExportingUsers] = useState(false)
 
@@ -919,11 +956,14 @@ export function AdminDashboard({
       }
 
       // Format CSV
-      const headers = ['Name', 'Email', 'Phone', 'Orders Count', 'Joined Date']
+      const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Block Reason', 'Orders Count', 'Joined Date']
       const rows = customers.map((c: any) => [
         `"${(c.name || '').replace(/"/g, '""')}"`,
         `"${(c.email || '').replace(/"/g, '""')}"`,
         `"${(c.phone || '').replace(/"/g, '""')}"`,
+        `"${(c.role || 'USER')}"`,
+        `"${c.isBlocked ? 'BLOCKED' : 'ACTIVE'}"`,
+        `"${(c.blockReason || '').replace(/"/g, '""')}"`,
         c._count?.orders ?? 0,
         new Date(c.createdAt).toLocaleDateString('en-IN')
       ])
@@ -2619,12 +2659,36 @@ export function AdminDashboard({
                         {updatingOrderId === o.id ? (
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         ) : (
-                          <Link
-                            href={`/order/${o.id}/track`}
-                            className="text-primary hover:underline text-[11px] font-bold"
-                          >
-                            Live Track
-                          </Link>
+                          <div className="flex flex-col gap-1">
+                            <Link
+                              href={`/order/${o.id}/track`}
+                              className="text-primary hover:underline text-[11px] font-bold"
+                            >
+                              Live Track
+                            </Link>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
+                                  const isRest = o.shopName === 'FastKirana Restaurant Kitchen'
+                                  printKOTReceipt(o, isCafe ? 'CAFE' : isRest ? 'RESTAURANT' : 'STORE')
+                                }}
+                                className="px-1.5 py-0.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[9px] font-black rounded transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                                title="Print Thermal Kitchen Order Ticket (KOT)"
+                              >
+                                🖨️ KOT
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => printCustomerInvoice(o)}
+                                className="px-1.5 py-0.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9px] font-black rounded transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                                title="Print Customer Tax Invoice"
+                              >
+                                📄 Invoice
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -4054,6 +4118,15 @@ export function AdminDashboard({
                 <option value="DELIVERY">Riders</option>
                 <option value="ADMIN">Admins</option>
               </select>
+              <select
+                value={userStatusFilter}
+                onChange={(e) => setUserStatusFilter(e.target.value)}
+                className="px-3 py-1.5 text-[10px] rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">🟢 Active Only</option>
+                <option value="BLOCKED">🔴 Blocked Only</option>
+              </select>
             </div>
           </div>
 
@@ -4065,9 +4138,11 @@ export function AdminDashboard({
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Phone</th>
                   <th className="py-3 px-4 text-center">Role</th>
+                  <th className="py-3 px-4 text-center">Account Status</th>
                   <th className="py-3 px-4 text-center">Password</th>
                   <th className="py-3 px-4 text-center">Orders Placed</th>
-                  <th className="py-3 px-4 text-right">Joined Date</th>
+                  <th className="py-3 px-4 text-center">Joined Date</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
@@ -4096,6 +4171,24 @@ export function AdminDashboard({
                         <option value="DELIVERY">Delivery Rider</option>
                         <option value="ADMIN">Admin</option>
                       </select>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {u.isBlocked ? (
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-500/10 text-rose-600 border border-rose-500/20" title={u.blockReason ? `Reason: ${u.blockReason}` : undefined}>
+                            🔴 Blocked
+                          </span>
+                          {u.blockReason && (
+                            <span className="text-[8px] text-rose-500/80 max-w-[120px] truncate mt-0.5 font-medium" title={u.blockReason}>
+                              {u.blockReason}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                          🟢 Active
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {u.role !== 'USER' ? (
@@ -4144,12 +4237,36 @@ export function AdminDashboard({
                         {u._count?.orders || 0} orders
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right text-text-muted font-medium">
+                    <td className="py-3 px-4 text-center text-text-muted font-medium">
                       {new Date(u.createdAt).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
                       })}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {u.role === 'ADMIN' ? (
+                        <span className="text-[10px] text-text-muted italic">Admin</span>
+                      ) : u.isBlocked ? (
+                        <button
+                          onClick={() => handleToggleBlock(u, false)}
+                          disabled={isUpdatingBlockStatus}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20 rounded-lg transition-colors cursor-pointer active:scale-95"
+                        >
+                          Unblock
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setBlockingUser(u)
+                            setBlockReasonInput('')
+                          }}
+                          disabled={isUpdatingBlockStatus}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 rounded-lg transition-colors cursor-pointer active:scale-95"
+                        >
+                          Block
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -6217,6 +6334,84 @@ export function AdminDashboard({
                 className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
               >
                 <span>🟢</span> Open WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Customer Reason Modal */}
+      {blockingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
+            <div className="flex justify-between items-center border-b border-border/60 pb-3">
+              <div>
+                <h4 className="font-extrabold text-rose-600 text-base flex items-center gap-1.5">
+                  <span>🚫</span> Block Customer Account
+                </h4>
+                <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
+                  Customer: <span className="font-extrabold text-text-primary">{blockingUser.name || 'Anonymous User'}</span> ({blockingUser.email})
+                </p>
+              </div>
+              <button 
+                onClick={() => setBlockingUser(null)} 
+                className="text-text-secondary hover:text-text-primary p-1 rounded-lg hover:bg-muted cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-text-secondary block">Select or Enter Reason for Blocking</label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Repeated Fake COD Orders",
+                  "Abusive Behavior",
+                  "Fraudulent Account",
+                  "Payment Default / Refusal"
+                ].map((reason, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setBlockReasonInput(reason)}
+                    className={`px-2.5 py-1 text-[10px] rounded-lg border transition-all font-bold cursor-pointer ${
+                      blockReasonInput === reason
+                        ? 'bg-rose-500/10 border-rose-500 text-rose-600 dark:text-rose-400'
+                        : 'bg-muted/10 border-border hover:bg-muted/30 text-text-secondary'
+                    }`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-secondary block">Reason Details (Optional)</label>
+                <textarea
+                  value={blockReasonInput}
+                  onChange={(e) => setBlockReasonInput(e.target.value)}
+                  placeholder="Specify why this account is being blocked..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-rose-500 font-bold leading-relaxed resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+              <button
+                type="button"
+                onClick={() => setBlockingUser(null)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingBlockStatus}
+                onClick={() => handleToggleBlock(blockingUser, true, blockReasonInput)}
+                className="flex items-center gap-1.5 px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {isUpdatingBlockStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : '🚫 Block Customer'}
               </button>
             </div>
           </div>
