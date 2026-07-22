@@ -786,14 +786,7 @@ export function RestaurantOrdersConsole() {
   }
 
   const printKOTReceipt = (order: Order) => {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            }
-          </script>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
+    silentPrintKOT(order, 'RESTAURANT')
   }
 
   printKOTReceiptRef.current = printKOTReceipt
