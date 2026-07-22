@@ -127,9 +127,7 @@ export async function GET() {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'public, max-age=5, stale-while-revalidate=30',
       }
     })
   } catch (error) {
@@ -142,9 +140,7 @@ export async function GET() {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'public, max-age=5, stale-while-revalidate=30',
       }
     })
   }
