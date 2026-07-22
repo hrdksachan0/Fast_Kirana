@@ -540,6 +540,27 @@ export function AdminDashboard({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any | null>(null)
+  const [isLoadingOrderItems, setIsLoadingOrderItems] = useState<boolean>(false)
+  const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'history'>('active')
+
+  const handleOpenOrderModal = useCallback(async (order: any) => {
+    if (!order) return
+    setSelectedOrderForTracking(order)
+    if (!order.items || order.items.length === 0) {
+      setIsLoadingOrderItems(true)
+      try {
+        const res = await fetch(`/api/orders/${order.id}`)
+        if (res.ok) {
+          const fullData = await res.json()
+          setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))
+        }
+      } catch (err) {
+        console.error('Failed to fetch full order details:', err)
+      } finally {
+        setIsLoadingOrderItems(false)
+      }
+    }
+  }, [])
   
   // Modal Edit states for Products
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
@@ -2457,396 +2478,441 @@ export function AdminDashboard({
             const activeOrdersCount = rawActiveList.length
 
             return (
-              <div className="space-y-6 animate-fade-in">
-                
-                {/* TABLE 1: LIVE ACTION QUEUE */}
-                <div className="bg-card border-2 border-amber-500/30 dark:border-amber-500/20 rounded-3xl p-4 sm:p-6 shadow-md overflow-hidden bg-gradient-to-b from-amber-500/[0.02] to-transparent">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-3 w-3 rounded-full bg-amber-500 animate-ping" />
-                      <h3 className="font-black text-text-primary text-base sm:text-lg flex items-center gap-2">
-                        🔥 Live Action Queue
-                        <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-black border border-amber-500/20">
-                          {rawActiveList.length} Active
-                        </span>
-                      </h3>
-                      <button
-                        onClick={() => setIsCreateOrderOpen(true)}
-                        className="bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-xs border border-white/10 ml-1"
-                      >
-                        <Plus className="h-3.5 w-3.5 stroke-[3]" />
-                        <span>Create Order</span>
-                      </button>
-                    </div>
+              <div className="space-y-4 animate-fade-in">
+
+                {/* ORDERS SUB-TABS SWITCHER */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-2xl p-2.5 shadow-2xs">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setOrdersSubTab('active'); setOrderStatusFilter('ALL'); }}
+                      className={`flex-1 sm:flex-initial px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                        ordersSubTab === 'active'
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102'
+                          : 'bg-muted/20 border-border hover:bg-muted text-text-secondary'
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                      <span>🔥 Live Action Queue ({rawActiveList.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setOrdersSubTab('history'); setOrderStatusFilter('ALL'); }}
+                      className={`flex-1 sm:flex-initial px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                        ordersSubTab === 'history'
+                          ? 'bg-primary text-white border-primary shadow-xs scale-102'
+                          : 'bg-muted/20 border-border hover:bg-muted text-text-secondary'
+                      }`}
+                    >
+                      <span>📜 Completed &amp; Past Orders ({rawHistoryList.length})</span>
+                    </button>
                   </div>
 
-                  {/* Direct Load Alert Banner inside Active Queue */}
-                  {activeOrdersCount >= 8 && (
-                    <div className="mb-4 p-3.5 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-rose-500/10 text-xs animate-glow-pulse">
-                      <div className="flex items-start gap-2.5">
-                        <span className="text-base">🔥</span>
-                        <div>
-                          <h4 className="font-black text-rose-600 dark:text-rose-400">High Action Load: {activeOrdersCount} Live Processing Orders</h4>
-                          <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
-                            Ensure fast picking &amp; cooking to meet the SLA! 
-                            Go to <button onClick={() => setActiveTab('users')} className="text-primary hover:underline font-black cursor-pointer">Customers tab</button> to assign staff to **Picker** or **Chef** roles.
-                          </p>
-                        </div>
+                  <button
+                    onClick={() => setIsCreateOrderOpen(true)}
+                    className="bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-xs border border-white/10 ml-auto"
+                  >
+                    <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                    <span>Create Order</span>
+                  </button>
+                </div>
+                
+                {/* SUB-TAB 1: LIVE ACTION QUEUE */}
+                {ordersSubTab === 'active' && (
+                  <div className="bg-card border-2 border-amber-500/30 dark:border-amber-500/20 rounded-3xl p-4 sm:p-6 shadow-md overflow-hidden bg-gradient-to-b from-amber-500/[0.02] to-transparent">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3 w-3 rounded-full bg-amber-500 animate-ping" />
+                        <h3 className="font-black text-text-primary text-base sm:text-lg flex items-center gap-2">
+                          🔥 Live Action Queue
+                          <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-black border border-amber-500/20">
+                            {rawActiveList.length} Active
+                          </span>
+                        </h3>
                       </div>
                     </div>
-                  )}
 
-                  {/* Active Queue Process-Wise Tabs & Search */}
-                  <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
-                    <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
-                      {[
-                        { key: 'ALL', label: '🔥 All Active', color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
-                        { key: 'PENDING', label: '⏳ Placed (New)', color: 'bg-amber-500/10 text-amber-600 border border-amber-500/20' },
-                        { key: 'CONFIRMED', label: '✓ Confirmed', color: 'bg-blue-500/10 text-blue-600 border border-blue-500/20' },
-                        { key: 'PACKED', label: '📦 Packed', color: 'bg-[#00b140]/10 text-[#00b140] border border-[#00b140]/20' },
-                        { key: 'SHIPPED', label: '🛵 On the Way', color: 'bg-purple-500/10 text-purple-600 border border-purple-500/20' },
-                      ].map((pill) => {
-                        const count = pill.key === 'ALL' 
-                          ? rawActiveList.length 
-                          : (orderCounts[pill.key] ?? 0)
-                        const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
-                        return (
-                          <button
-                            key={pill.key}
-                            type="button"
-                            onClick={() => setOrderStatusFilter(pill.key)}
-                            className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
-                              isActive 
-                                ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102' 
-                                : 'bg-card border-border hover:bg-muted text-text-secondary'
-                            }`}
-                          >
-                            {pill.label} ({count})
-                          </button>
-                        )
-                      })}
+                    {/* Direct Load Alert Banner inside Active Queue */}
+                    {activeOrdersCount >= 8 && (
+                      <div className="mb-4 p-3.5 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-rose-500/10 text-xs animate-glow-pulse">
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-base">🔥</span>
+                          <div>
+                            <h4 className="font-black text-rose-600 dark:text-rose-400">High Action Load: {activeOrdersCount} Live Processing Orders</h4>
+                            <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
+                              Ensure fast picking &amp; cooking to meet the SLA! 
+                              Go to <button onClick={() => setActiveTab('users')} className="text-primary hover:underline font-black cursor-pointer">Customers tab</button> to assign staff to **Picker** or **Chef** roles.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Active Queue Process-Wise Tabs & Search */}
+                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
+                      <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
+                        {[
+                          { key: 'ALL', label: '🔥 All Active', color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
+                          { key: 'PENDING', label: '⏳ Placed (New)', color: 'bg-amber-500/10 text-amber-600 border border-amber-500/20' },
+                          { key: 'CONFIRMED', label: '✓ Confirmed', color: 'bg-blue-500/10 text-blue-600 border border-blue-500/20' },
+                          { key: 'PACKED', label: '📦 Packed', color: 'bg-[#00b140]/10 text-[#00b140] border border-[#00b140]/20' },
+                          { key: 'SHIPPED', label: '🛵 On the Way', color: 'bg-purple-500/10 text-purple-600 border border-purple-500/20' },
+                        ].map((pill) => {
+                          const count = pill.key === 'ALL' 
+                            ? rawActiveList.length 
+                            : (orderCounts[pill.key] ?? 0)
+                          const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
+                          return (
+                            <button
+                              key={pill.key}
+                              type="button"
+                              onClick={() => setOrderStatusFilter(pill.key)}
+                              className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
+                                isActive 
+                                  ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102' 
+                                  : 'bg-card border-border hover:bg-muted text-text-secondary'
+                              }`}
+                            >
+                              {pill.label} ({count})
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="relative w-full md:w-56">
+                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+                        <input
+                          type="text"
+                          placeholder="Search active orders..."
+                          value={orderSearchQuery}
+                          onChange={(e) => setOrderSearchQuery(e.target.value)}
+                          className="pl-9 pr-4 py-1.5 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-amber-500 font-semibold"
+                        />
+                      </div>
                     </div>
-                    <div className="relative w-full md:w-56">
-                      <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
-                      <input
-                        type="text"
-                        placeholder="Search active orders..."
-                        value={orderSearchQuery}
-                        onChange={(e) => setOrderSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-1.5 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-amber-500 font-semibold"
-                      />
+
+                    {/* Active Orders Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
+                            <th className="py-2.5 px-3">Order ID</th>
+                            <th className="py-2.5 px-3">Customer</th>
+                            <th className="py-2.5 px-3">Address</th>
+                            <th className="py-2.5 px-3">Total</th>
+                            <th className="py-2.5 px-3 text-center">Status</th>
+                            <th className="py-2.5 px-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40 font-semibold">
+                          {filteredActiveOrders.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-text-secondary text-[11px] font-bold">
+                                🎉 No active orders in this queue right now. All caught up!
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredActiveOrders.map((o) => {
+                              const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
+                              const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+
+                              return (
+                                <tr key={o.id} className="hover:bg-amber-500/5 transition-colors">
+                                  <td 
+                                    className="py-3 px-3 cursor-pointer group/cell"
+                                    onClick={() => handleOpenOrderModal(o)}
+                                    title="Click to view full order items & details"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-mono font-black text-[11px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
+                                        #{o.readableId || o.id.slice(0, 8)}
+                                      </span>
+                                      {fifoRank && (
+                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
+                                          fifoRank === 1 
+                                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
+                                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
+                                        }`}>
+                                          {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
+                                      ID: {o.id.slice(0, 12)}...
+                                    </div>
+                                  </td>
+                                  <td 
+                                    className="py-3 px-3 cursor-pointer group/cell"
+                                    onClick={() => handleOpenOrderModal(o)}
+                                    title="Click to view full order items & details"
+                                  >
+                                    <div className="font-bold group-hover/cell:text-amber-600 transition-colors">{o.userName || 'No Name'}</div>
+                                    <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
+                                    {(o.userPhone || o.address?.phone) && (
+                                      <div className="text-[10px] text-text-secondary font-bold font-mono mt-0.5">
+                                        📞 {o.userPhone || o.address?.phone}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-3 text-[11px]">
+                                    <div className="line-clamp-2">{formatAddress(o.address)}</div>
+                                    <div className="mt-1 flex items-center gap-1.5">
+                                      <span className="font-mono text-[9px] text-text-muted">
+                                        [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
+                                      </span>
+                                      {o.deliveryLat && o.deliveryLng && (
+                                        <a
+                                          href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                                          title="Open exact GPS coordinates on Google Maps"
+                                        >
+                                          📍
+                                        </a>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 font-black text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
+                                  <td className="py-3 px-3 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-1.5 min-w-[105px]">
+                                      <select
+                                        value={o.status}
+                                        onChange={(e) => handleOrderStatusChange(o.id, e.target.value)}
+                                        disabled={updatingOrderId === o.id}
+                                        className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg border border-border text-[11px] font-extrabold text-text-primary focus:outline-none cursor-pointer w-full text-center shadow-2xs"
+                                      >
+                                        <option value="PENDING">Placed</option>
+                                        <option value="CONFIRMED">Confirmed</option>
+                                        <option value="PACKED">Packed</option>
+                                        <option value="SHIPPED">On the Way</option>
+                                        <option value="DELIVERED">Delivered</option>
+                                        <option value="CANCELLED">Cancelled</option>
+                                      </select>
+                                      
+                                      {o.status === 'PENDING' && (
+                                        <button
+                                          onClick={() => handleOrderStatusChange(o.id, 'CONFIRMED')}
+                                          disabled={updatingOrderId === o.id}
+                                          className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
+                                          title="Accept & Confirm Order"
+                                        >
+                                          ✓ Accept
+                                        </button>
+                                      )}
+                                      {o.status === 'CONFIRMED' && (
+                                        <button
+                                          onClick={() => handleOrderStatusChange(o.id, 'PACKED')}
+                                          disabled={updatingOrderId === o.id}
+                                          className="w-full py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
+                                          title="Mark Order Packed"
+                                        >
+                                          ✓ Pack
+                                        </button>
+                                      )}
+                                      {o.status === 'PACKED' && (
+                                        <button
+                                          onClick={() => handleOrderStatusChange(o.id, 'SHIPPED')}
+                                          disabled={updatingOrderId === o.id}
+                                          className="w-full py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
+                                          title="Dispatch / Ship Order"
+                                        >
+                                          ✓ Ship
+                                        </button>
+                                      )}
+                                      {o.status === 'SHIPPED' && (
+                                        <button
+                                          onClick={() => handleOrderStatusChange(o.id, 'DELIVERED')}
+                                          disabled={updatingOrderId === o.id}
+                                          className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
+                                          title="Complete & Deliver Order"
+                                        >
+                                          ✓ Deliver
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 text-center">
+                                    {updatingOrderId === o.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
+                                    ) : (
+                                      <div className="flex flex-col items-center justify-center gap-1.5 min-w-[120px]">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenOrderModal(o)}
+                                          className="inline-flex items-center justify-center w-full py-1 px-2 rounded-md bg-rose-500/10 dark:bg-rose-500/20 text-[#e20a22] dark:text-red-400 border border-red-500/20 hover:bg-rose-500/20 text-[10px] font-black tracking-wide transition-all shadow-2xs cursor-pointer whitespace-nowrap active:scale-95"
+                                          title="View full ordered items & details"
+                                        >
+                                          👁️ Quick View
+                                        </button>
+                                        <div className="flex items-center justify-center gap-1 w-full">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
+                                              const isRest = o.shopName === 'FastKirana Restaurant Kitchen'
+                                              printKOTReceipt(o, isCafe ? 'CAFE' : isRest ? 'RESTAURANT' : 'STORE')
+                                            }}
+                                            className="flex-1 py-1 px-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
+                                            title="Print Thermal Kitchen Order Ticket (KOT)"
+                                          >
+                                            🖨️ KOT
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => printCustomerInvoice(o)}
+                                            className="flex-1 py-1 px-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
+                                            title="Print Customer Tax Invoice"
+                                          >
+                                            📄 Invoice
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
+                )}
 
-                  {/* Active Orders Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
-                          <th className="py-2.5 px-3">Order ID</th>
-                          <th className="py-2.5 px-3">Customer</th>
-                          <th className="py-2.5 px-3">Address</th>
-                          <th className="py-2.5 px-3">Total</th>
-                          <th className="py-2.5 px-3 text-center">Status</th>
-                          <th className="py-2.5 px-3 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40 font-semibold">
-                        {filteredActiveOrders.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="text-center py-8 text-text-secondary text-[11px] font-bold">
-                              🎉 No active orders in this queue right now. All caught up!
-                            </td>
+
+                {/* SUB-TAB 2: COMPLETED & PAST ORDERS HISTORY */}
+                {ordersSubTab === 'history' && (
+                  <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <h3 className="font-extrabold text-text-primary text-base sm:text-lg flex items-center gap-2">
+                        📜 Completed &amp; Past Orders History
+                        <span className="text-xs bg-muted text-text-secondary px-2.5 py-0.5 rounded-full font-bold border border-border">
+                          {rawHistoryList.length} Archived
+                        </span>
+                      </h3>
+                    </div>
+
+                    {/* History Process-Wise Tabs & Search */}
+                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
+                      <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
+                        {[
+                          { key: 'ALL_HISTORY', label: '📋 All History', status: 'ALL' },
+                          { key: 'DELIVERED', label: '✅ Delivered', status: 'DELIVERED' },
+                          { key: 'CANCELLED', label: '❌ Cancelled', status: 'CANCELLED' },
+                        ].map((pill) => {
+                          const count = pill.key === 'ALL_HISTORY' 
+                            ? rawHistoryList.length 
+                            : (orderCounts[pill.status] ?? 0)
+                          const isActive = orderStatusFilter === pill.status || (orderStatusFilter === 'ALL' && pill.key === 'ALL_HISTORY')
+                          return (
+                            <button
+                              key={pill.key}
+                              type="button"
+                              onClick={() => setOrderStatusFilter(pill.status)}
+                              className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
+                                isActive 
+                                  ? 'bg-primary text-white border-primary shadow-xs' 
+                                  : 'bg-card border-border hover:bg-muted text-text-secondary'
+                              }`}
+                            >
+                              {pill.label} ({count})
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="relative w-full md:w-56">
+                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
+                        <input
+                          type="text"
+                          placeholder="Search history orders..."
+                          value={orderSearchQuery}
+                          onChange={(e) => setOrderSearchQuery(e.target.value)}
+                          className="pl-9 pr-4 py-1.5 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* History Orders Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
+                            <th className="py-2.5 px-3">Order ID</th>
+                            <th className="py-2.5 px-3">Customer</th>
+                            <th className="py-2.5 px-3">Address</th>
+                            <th className="py-2.5 px-3">Total</th>
+                            <th className="py-2.5 px-3 text-center">Status</th>
+                            <th className="py-2.5 px-3 text-center">Actions</th>
                           </tr>
-                        ) : (
-                          filteredActiveOrders.map((o) => {
-                            const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
-                            const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
-
-                            return (
-                              <tr key={o.id} className="hover:bg-amber-500/5 transition-colors">
+                        </thead>
+                        <tbody className="divide-y divide-border/40 font-semibold text-xs opacity-90">
+                          {filteredHistoryOrders.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-6 text-text-secondary text-[11px] font-bold">
+                                No history orders in this status.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredHistoryOrders.map((o) => (
+                              <tr key={o.id} className="hover:bg-muted/30 transition-colors">
                                 <td 
                                   className="py-3 px-3 cursor-pointer group/cell"
-                                  onClick={() => setSelectedOrderForTracking(o)}
+                                  onClick={() => handleOpenOrderModal(o)}
                                   title="Click to view full order items & details"
                                 >
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-mono font-black text-[11px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
-                                      #{o.readableId || o.id.slice(0, 8)}
-                                    </span>
-                                    {fifoRank && (
-                                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
-                                        fifoRank === 1 
-                                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
-                                          : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
-                                      }`}>
-                                        {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
+                                    #{o.readableId || o.id.slice(0, 8)}
+                                  </span>
                                   <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                                     ID: {o.id.slice(0, 12)}...
                                   </div>
                                 </td>
                                 <td 
                                   className="py-3 px-3 cursor-pointer group/cell"
-                                  onClick={() => setSelectedOrderForTracking(o)}
+                                  onClick={() => handleOpenOrderModal(o)}
                                   title="Click to view full order items & details"
                                 >
-                                  <div className="font-bold group-hover/cell:text-amber-600 transition-colors">{o.userName || 'No Name'}</div>
+                                  <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || 'No Name'}</div>
                                   <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
-                                  {(o.userPhone || o.address?.phone) && (
-                                    <div className="text-[10px] text-text-secondary font-bold font-mono mt-0.5">
-                                      📞 {o.userPhone || o.address?.phone}
-                                    </div>
-                                  )}
                                 </td>
                                 <td className="py-3 px-3 text-[11px]">
                                   <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                                  <div className="mt-1 flex items-center gap-1.5">
-                                    <span className="font-mono text-[9px] text-text-muted">
-                                      [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
-                                    </span>
-                                    {o.deliveryLat && o.deliveryLng && (
-                                      <a
-                                        href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
-                                        title="Open exact GPS coordinates on Google Maps"
-                                      >
-                                        📍
-                                      </a>
-                                    )}
-                                  </div>
                                 </td>
-                                <td className="py-3 px-3 font-black text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
+                                <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
                                 <td className="py-3 px-3 text-center">
-                                  <div className="flex flex-col items-center justify-center gap-1.5 min-w-[105px]">
-                                    <select
-                                      value={o.status}
-                                      onChange={(e) => handleOrderStatusChange(o.id, e.target.value)}
-                                      disabled={updatingOrderId === o.id}
-                                      className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg border border-border text-[11px] font-extrabold text-text-primary focus:outline-none cursor-pointer w-full text-center shadow-2xs"
+                                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                                    o.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                                  }`}>
+                                    {o.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-3 text-center">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenOrderModal(o)}
+                                      className="px-2 py-1 bg-muted hover:bg-muted/80 text-text-primary border border-border text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
                                     >
-                                      <option value="PENDING">Placed</option>
-                                      <option value="CONFIRMED">Confirmed</option>
-                                      <option value="PACKED">Packed</option>
-                                      <option value="SHIPPED">On the Way</option>
-                                      <option value="DELIVERED">Delivered</option>
-                                      <option value="CANCELLED">Cancelled</option>
-                                    </select>
-                                    
-                                    {o.status === 'PENDING' && (
-                                      <button
-                                        onClick={() => handleOrderStatusChange(o.id, 'CONFIRMED')}
-                                        disabled={updatingOrderId === o.id}
-                                        className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
-                                        title="Accept & Confirm Order"
-                                      >
-                                        ✓ Accept
-                                      </button>
-                                    )}
-                                    {o.status === 'CONFIRMED' && (
-                                      <button
-                                        onClick={() => handleOrderStatusChange(o.id, 'PACKED')}
-                                        disabled={updatingOrderId === o.id}
-                                        className="w-full py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
-                                        title="Mark Order Packed"
-                                      >
-                                        ✓ Pack
-                                      </button>
-                                    )}
-                                    {o.status === 'PACKED' && (
-                                      <button
-                                        onClick={() => handleOrderStatusChange(o.id, 'SHIPPED')}
-                                        disabled={updatingOrderId === o.id}
-                                        className="w-full py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
-                                        title="Dispatch / Ship Order"
-                                      >
-                                        ✓ Ship
-                                      </button>
-                                    )}
-                                    {o.status === 'SHIPPED' && (
-                                      <button
-                                        onClick={() => handleOrderStatusChange(o.id, 'DELIVERED')}
-                                        disabled={updatingOrderId === o.id}
-                                        className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
-                                        title="Complete & Deliver Order"
-                                      >
-                                        ✓ Deliver
-                                      </button>
-                                    )}
+                                      👁️ Details
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => printCustomerInvoice(o)}
+                                      className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
+                                    >
+                                      📄 Invoice
+                                    </button>
                                   </div>
-                                </td>
-                                <td className="py-3 px-3 text-center">
-                                  {updatingOrderId === o.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
-                                  ) : (
-                                    <div className="flex flex-col items-center justify-center gap-1.5 min-w-[120px]">
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedOrderForTracking(o)}
-                                        className="inline-flex items-center justify-center w-full py-1 px-2 rounded-md bg-rose-500/10 dark:bg-rose-500/20 text-[#e20a22] dark:text-red-400 border border-red-500/20 hover:bg-rose-500/20 text-[10px] font-black tracking-wide transition-all shadow-2xs cursor-pointer whitespace-nowrap active:scale-95"
-                                        title="View full ordered items & details"
-                                      >
-                                        👁️ Quick View
-                                      </button>
-                                      <div className="flex items-center justify-center gap-1 w-full">
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
-                                            const isRest = o.shopName === 'FastKirana Restaurant Kitchen'
-                                            printKOTReceipt(o, isCafe ? 'CAFE' : isRest ? 'RESTAURANT' : 'STORE')
-                                          }}
-                                          className="flex-1 py-1 px-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
-                                          title="Print Thermal Kitchen Order Ticket (KOT)"
-                                        >
-                                          🖨️ KOT
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => printCustomerInvoice(o)}
-                                          className="flex-1 py-1 px-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
-                                          title="Print Customer Tax Invoice"
-                                        >
-                                          📄 Invoice
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
                                 </td>
                               </tr>
-                            )
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-
-                {/* TABLE 2: COMPLETED & PAST ORDERS HISTORY */}
-                <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                    <h3 className="font-extrabold text-text-primary text-base sm:text-lg flex items-center gap-2">
-                      📜 Completed &amp; Past Orders History
-                      <span className="text-xs bg-muted text-text-secondary px-2.5 py-0.5 rounded-full font-bold border border-border">
-                        {rawHistoryList.length} Archived
-                      </span>
-                    </h3>
-                  </div>
-
-                  {/* History Process-Wise Tabs */}
-                  <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
-                    <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
-                      {[
-                        { key: 'ALL_HISTORY', label: '📋 All History', status: 'ALL' },
-                        { key: 'DELIVERED', label: '✅ Delivered', status: 'DELIVERED' },
-                        { key: 'CANCELLED', label: '❌ Cancelled', status: 'CANCELLED' },
-                      ].map((pill) => {
-                        const count = pill.key === 'ALL_HISTORY' 
-                          ? rawHistoryList.length 
-                          : (orderCounts[pill.status] ?? 0)
-                        const isActive = orderStatusFilter === pill.status || (orderStatusFilter === 'ALL' && pill.key === 'ALL_HISTORY')
-                        return (
-                          <button
-                            key={pill.key}
-                            type="button"
-                            onClick={() => setOrderStatusFilter(pill.status)}
-                            className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
-                              isActive 
-                                ? 'bg-primary text-white border-primary shadow-xs' 
-                                : 'bg-card border-border hover:bg-muted text-text-secondary'
-                            }`}
-                          >
-                            {pill.label} ({count})
-                          </button>
-                        )
-                      })}
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-
-                  {/* History Orders Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
-                          <th className="py-2.5 px-3">Order ID</th>
-                          <th className="py-2.5 px-3">Customer</th>
-                          <th className="py-2.5 px-3">Address</th>
-                          <th className="py-2.5 px-3">Total</th>
-                          <th className="py-2.5 px-3 text-center">Status</th>
-                          <th className="py-2.5 px-3 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40 font-semibold text-xs opacity-90">
-                        {filteredHistoryOrders.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="text-center py-6 text-text-secondary text-[11px] font-bold">
-                              No history orders in this status.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredHistoryOrders.map((o) => (
-                            <tr key={o.id} className="hover:bg-muted/30 transition-colors">
-                              <td 
-                                className="py-3 px-3 cursor-pointer group/cell"
-                                onClick={() => setSelectedOrderForTracking(o)}
-                                title="Click to view full order items & details"
-                              >
-                                <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
-                                  #{o.readableId || o.id.slice(0, 8)}
-                                </span>
-                                <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
-                                  ID: {o.id.slice(0, 12)}...
-                                </div>
-                              </td>
-                              <td 
-                                className="py-3 px-3 cursor-pointer group/cell"
-                                onClick={() => setSelectedOrderForTracking(o)}
-                                title="Click to view full order items & details"
-                              >
-                                <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || 'No Name'}</div>
-                                <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
-                              </td>
-                              <td className="py-3 px-3 text-[11px]">
-                                <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                              </td>
-                              <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
-                              <td className="py-3 px-3 text-center">
-                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                                  o.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                                }`}>
-                                  {o.status}
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedOrderForTracking(o)}
-                                    className="px-2 py-1 bg-muted hover:bg-muted/80 text-text-primary border border-border text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
-                                  >
-                                    👁️ Details
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => printCustomerInvoice(o)}
-                                    className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
-                                  >
-                                    📄 Invoice
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                )}
 
               </div>
             )
@@ -6696,29 +6762,40 @@ export function AdminDashboard({
                 <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
                   🛍️ Ordered Items ({selectedOrderForTracking.items?.length || 0})
                 </span>
-                <div className="divide-y divide-border/40 border border-border/60 rounded-2xl overflow-hidden">
-                  {selectedOrderForTracking.items?.map((item: any) => (
-                    <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-card hover:bg-muted/10">
-                      <div className="flex items-center gap-3">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} className="w-10 h-10 object-cover rounded-xl border border-border/40" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-sm font-bold">📦</div>
-                        )}
-                        <div>
-                          <div className="font-bold text-xs text-text-primary">{item.name}</div>
-                          {item.selectedVariant && (
-                            <span className="text-[10px] text-text-muted font-medium block">Variant: {item.selectedVariant}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-black text-xs text-text-primary">
-                          {item.quantity} x ₹{item.price} = ₹{item.quantity * item.price}
-                        </div>
-                      </div>
+                <div className="divide-y divide-border/40 border border-border/60 rounded-2xl overflow-hidden min-h-[60px]">
+                  {isLoadingOrderItems ? (
+                    <div className="p-4 text-center text-xs font-bold text-text-muted flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Fetching item details...
                     </div>
-                  ))}
+                  ) : !selectedOrderForTracking.items || selectedOrderForTracking.items.length === 0 ? (
+                    <div className="p-4 text-center text-xs font-bold text-text-muted">
+                      No items recorded for this order.
+                    </div>
+                  ) : (
+                    selectedOrderForTracking.items.map((item: any) => (
+                      <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-card hover:bg-muted/10">
+                        <div className="flex items-center gap-3">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name} className="w-10 h-10 object-cover rounded-xl border border-border/40" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-sm font-bold">📦</div>
+                          )}
+                          <div>
+                            <div className="font-bold text-xs text-text-primary">{item.name}</div>
+                            {item.selectedVariant && (
+                              <span className="text-[10px] text-text-muted font-medium block">Variant: {item.selectedVariant}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-black text-xs text-text-primary">
+                            {item.quantity} x ₹{item.price} = ₹{item.quantity * item.price}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 

@@ -90,10 +90,11 @@ export async function GET(request: Request) {
       `
     }
 
+    const orderIds = ordersRaw.map(o => o.id)
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
 
-    const [allUsers, allAddresses, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
+    const [allUsers, allAddresses, allOrderItems, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -101,6 +102,9 @@ export async function GET(request: Request) {
         : [],
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds } } })
+        : [],
+      orderIds.length > 0
+        ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
         : [],
       prisma.order.count({ where }),
       prisma.order.count({ where: whereForCounts }),
@@ -115,6 +119,15 @@ export async function GET(request: Request) {
     const orders = ordersRaw.map((o) => {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
       const address = allAddresses.find(a => a.id === o.addressId) || null
+      const items = allOrderItems.filter(item => item.orderId === o.id).map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl,
+        selectedVariant: item.selectedVariant,
+      }))
+
       return {
         id: o.id,
         readableId: o.readableId,
@@ -129,6 +142,7 @@ export async function GET(request: Request) {
         deliveryMethod: o.deliveryMethod,
         shopName: o.shopName,
         shopPhone: o.shopPhone,
+        items,
         address: address ? {
           houseNo: address.houseNo,
           street: address.street,
