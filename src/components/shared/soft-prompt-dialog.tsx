@@ -80,7 +80,7 @@ export function SoftPromptDialog() {
                 <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastKirana</span>
                 <span className="text-[7.5px] text-text-muted">5m ago</span>
               </div>
-              <p className="text-[10px] font-black text-text-primary mt-0.5">⚡ Flash Deal ending in 3 mins!</p>
+              <p className="text-[10px] font-black text-text-primary mt-0.5">⚡ Flash Deal ending soon!</p>
               <p className="text-[8.5px] text-text-secondary mt-0.5 font-semibold leading-tight">Tata Salt 1kg @ ₹18 — 60% off, only 4 left.</p>
             </div>
           </div>

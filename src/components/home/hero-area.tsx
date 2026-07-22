@@ -98,7 +98,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
           ? (settings.hero_subtitle_morning_mart_closed || 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨')
           : isCafeClosed
           ? (settings.hero_subtitle_morning_cafe_closed || 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦')
-          : (settings.hero_subtitle_morning_both_open || 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.'),
+          : (settings.hero_subtitle_morning_both_open || 'Fresh milk, fruits, hot brews, and breakfast essentials delivered to your doorstep.'),
         icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 shrink-0" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
         modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Morning Mode',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',

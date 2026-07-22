@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Minus, Check, Zap } from 'lucide-react'
+import { Plus, Minus, Check, Zap, Heart } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
@@ -205,10 +205,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800 transition-all duration-300 ease-out cursor-pointer",
+        "group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 ease-out cursor-pointer",
+        isRestaurant 
+          ? "border-red-500/25 dark:border-red-500/35 bg-gradient-to-b from-white via-white to-red-50/20 dark:from-zinc-950 dark:to-red-950/20 shadow-2xs hover:shadow-md hover:border-red-500/50"
+          : "border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800",
         isCompact 
-          ? "p-1.5 min-[375px]:p-2 h-[175px] min-[375px]:h-[195px] sm:h-[220px]" 
-          : "p-2.5 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px]"
+          ? "p-1.5 min-[375px]:p-2 h-[185px] min-[375px]:h-[205px] sm:h-[230px]" 
+          : "p-2 min-[375px]:p-2.5 h-[225px] min-[375px]:h-[245px] sm:h-[265px] md:h-[300px]"
       )}
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
@@ -250,10 +253,10 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         <div 
           ref={imageRef} 
           className={cn(
-            "relative w-full overflow-hidden rounded-xl bg-muted/10 dark:bg-white/[0.02] flex items-center justify-center shrink-0",
+            "relative w-full overflow-hidden rounded-2xl bg-muted/15 dark:bg-white/[0.03] flex items-center justify-center shrink-0 border border-border/30",
             isCompact 
-              ? "h-[75px] min-[375px]:h-[85px] sm:h-[110px]" 
-              : "h-[105px] min-[375px]:h-[120px] sm:h-[135px] md:h-[160px]"
+              ? "h-[75px] min-[375px]:h-[85px] sm:h-[105px]" 
+              : "h-[95px] min-[375px]:h-[110px] sm:h-[125px] md:h-[145px]"
           )}
         >
           <ProductImage
@@ -262,119 +265,79 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             categorySlug={categorySlug}
             isBestseller={product.tags?.includes('popular')}
             width={200}
-            className="h-full w-full object-contain p-1 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
+            className="h-full w-full object-contain p-1.5 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
           />
 
+          {/* Green Veg Icon Badge for Restaurant Dishes */}
+          {isRestaurant && (
+            <div className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center h-3.5 w-3.5 rounded-xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs pointer-events-none select-none" title="Pure Veg Dish">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+            </div>
+          )}
+
           {/* Bestseller Tag */}
-          {product.tags?.includes('popular') && (
-            <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full bg-amber-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(245,158,11,0.2)]">
-              ⭐ Bestseller
+          {(product.tags?.includes('popular') || product.isBestSeller) && (
+            <div className={cn(
+              "absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white pointer-events-none select-none",
+              isRestaurant 
+                ? "bg-gradient-to-r from-red-600 to-amber-600 shadow-[0_2px_8px_rgba(226,10,34,0.3)]" 
+                : "bg-amber-500/95 shadow-[0_2px_8px_rgba(245,158,11,0.25)]"
+            )}>
+              {isRestaurant ? '👨‍🍳 Wedson Special' : '⭐ Bestseller'}
             </div>
           )}
 
           {/* Cafe Fresh Tag */}
           {isCafe && (
-            <div className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-orange-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(249,115,22,0.2)]">
+            <div className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-orange-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(249,115,22,0.2)] pointer-events-none select-none">
               ☕ Cafe Fresh
             </div>
           )}
 
-          {/* Low Stock Badge — overlay on image */}
+          {/* Low Stock Badge */}
           {isLowStock && (
             <motion.div
               key={resolvedStock}
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none"
+              className={cn(
+                "absolute z-10 flex items-center gap-0.5 rounded-md bg-red-500/95 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none",
+                (product.tags?.includes('popular') || product.isBestSeller)
+                  ? "bottom-7 left-1.5"
+                  : "bottom-1.5 right-1.5"
+              )}
             >
               Only {resolvedStock} left
             </motion.div>
           )}
         </div>
 
-        {/* Product Info — flex-1 takes remaining space between image and bottom row */}
-        <div className="flex flex-col flex-1 min-h-0 justify-center mt-1">
-          {/* Name — fixed min-height for 2 lines */}
-          <h3 className={cn(
-            "font-bold text-text-primary line-clamp-2 leading-tight md:group-hover:text-primary transition-colors",
-            isCompact 
-              ? "text-[9px] min-[375px]:text-[10px] min-h-[18px] min-[375px]:min-h-[22px] sm:min-h-[26px]" 
-              : "text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm min-h-[22px] min-[375px]:min-h-[26px] sm:min-h-[32px]"
-          )}>
-            {product.name}
-          </h3>
-          {/* Unit / Customisable — fixed height container */}
-          <div className="h-4 min-[375px]:h-[18px] sm:h-5 flex items-center">
+        {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Immediately below image container */}
+        <div className="flex items-center justify-between gap-1 mt-1.5 mb-1 shrink-0 w-full min-w-0">
+          <div className="min-w-0 flex-1 overflow-hidden">
             {hasVariants ? (
-              <span className="inline-flex items-center gap-1 text-[8px] min-[375px]:text-[9px] font-bold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 leading-none">
+              <span className="inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap truncate max-w-full leading-tight">
                 {variantsList.length} Options ▾
               </span>
             ) : (
-              <span className="text-[8px] min-[375px]:text-[9px] sm:text-xs font-semibold text-text-muted leading-none">
+              <span className="text-[8.5px] min-[375px]:text-[9.5px] sm:text-xs font-bold text-zinc-600 dark:text-zinc-400 leading-none truncate block whitespace-nowrap">
                 {product.unit}
               </span>
             )}
           </div>
-        </div>
-      </Link>
 
-      {/* Consolidated Bottom Row: Price, MRP, Savings and ADD Button — always pinned to bottom */}
-      <div className="flex items-end justify-between gap-1 mt-auto pt-1 w-full min-w-0 shrink-0">
-        {/* Left Side: Pricing & Savings */}
-        <div className="flex flex-col min-w-0 flex-1">
-          <div className="flex items-baseline gap-1 flex-wrap leading-none">
-            <motion.span
-              key={resolvedPrice}
-              initial={{ scale: 0.85, y: -2 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 12 }}
-              className={cn(
-                "font-bold text-text-primary block",
-                isCompact 
-                  ? "text-[9.5px] min-[375px]:text-[11px] sm:text-sm" 
-                  : "text-[10px] min-[375px]:text-xs sm:text-base"
-              )}
-            >
-              ₹{resolvedPrice}
-            </motion.span>
-            {resolvedMrp > resolvedPrice && (
-              <span className="text-[8px] min-[375px]:text-[9px] text-text-muted line-through font-semibold">
-                ₹{resolvedMrp}
-              </span>
-            )}
-          </div>
-          {/* Savings — always reserves height for stable layout */}
-          <span 
-            className={cn(
-              "text-[7.5px] min-[375px]:text-[8px] font-bold mt-0.5 block truncate tracking-tight leading-none h-[10px] min-[375px]:h-[11px]",
-              savings > 0 ? "text-[#2e7d32] dark:text-emerald-400" : "text-transparent select-none pointer-events-none"
-            )}
-            title={savings > 0 ? `Save ₹${savings}` : undefined}
-            aria-hidden={savings <= 0}
-          >
-            {savings > 0 ? `Save ₹${savings}` : '\u00A0'}
-          </span>
-        </div>
-
-        {/* Right Side: Add to Cart Actions */}
-        <div className={cn(
-          "relative shrink-0 flex-shrink-0",
-          isCompact 
-            ? "h-7 min-[375px]:h-7.5 w-[52px] min-[375px]:w-[58px] sm:w-16" 
-            : "h-8 sm:h-9 w-[64px] min-[375px]:w-[72px] sm:w-20"
-        )}>
-          <AnimatePresence mode="wait">
-            {resolvedQuantity === 0 ? (
-              <motion.div
-                key="add-to-cart-button"
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.92 }}
-                transition={{ duration: 0.15 }}
-                className="w-full h-full"
-              >
-                <Button
+          {/* Right Side: ADD Button / Qty Selector */}
+          <div className={cn(
+            "relative shrink-0 flex-shrink-0 ml-auto",
+            isCompact 
+              ? "h-6 min-[375px]:h-6.5 w-[44px] min-[375px]:w-[50px] sm:w-14" 
+              : "h-6.5 sm:h-7.5 w-[50px] min-[375px]:w-[56px] sm:w-16"
+          )}>
+            <AnimatePresence mode="wait">
+              {resolvedQuantity === 0 ? (
+                <button
+                  type="button"
                   onClick={(e) => {
                     if (resolvedStock <= 0 || !resolvedIsAvailable) {
                       handleNotifyMe(e)
@@ -383,75 +346,86 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                     }
                   }}
                   disabled={isStoreClosed && resolvedStock > 0}
-                  variant="outline"
                   className={cn(
-                    "w-full h-full border font-bold rounded-full md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-sm",
-                    isCompact ? "text-[8.5px] min-[375px]:text-[9.5px]" : "text-[10px] sm:text-xs",
+                    "w-full h-full border-2 font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
+                    isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
                     isStoreClosed && resolvedStock > 0
-                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                      ? "border-zinc-300 bg-zinc-50 text-zinc-400 cursor-not-allowed"
                       : resolvedStock <= 0 || !resolvedIsAvailable
-                      ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                      : "border-green-600 bg-gradient-to-b from-white to-green-50/50 dark:from-zinc-900 dark:to-zinc-800 text-green-600 dark:text-emerald-400 md:hover:bg-green-600 md:hover:text-white"
+                      ? "border-amber-500 bg-amber-500/5 text-amber-600"
+                      : isRestaurant
+                      ? "border-[#e20a22] bg-white dark:bg-zinc-900 text-[#e20a22] dark:text-red-400 md:hover:bg-[#e20a22] md:hover:text-white"
+                      : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white"
                   )}
                 >
                   {resolvedStock <= 0 || !resolvedIsAvailable ? (
-                    isNotifySubscribed ? (
-                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                        <Check className="h-2.5 w-2.5 stroke-[3.5]" />
-                        {!isCompact && 'Alerted'}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-500 font-bold">
-                        🔔 {!isCompact && 'Notify'}
-                      </span>
-                    )
+                    'Notify'
                   ) : isStoreClosed ? (
                     'Closed'
                   ) : (
                     <>
                       ADD
-                      <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
+                      <Plus className="h-2.5 w-2.5 stroke-[3]" />
                     </>
                   )}
-                </Button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="qty-counter-selector"
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.92 }}
-                transition={{ duration: 0.15 }}
-                className="flex h-full w-full items-center justify-between rounded-full bg-gradient-to-r from-green-600 to-emerald-700 text-white font-bold shadow-sm overflow-hidden transition-all duration-300"
-              >
-                <motion.button
-                  whileTap={{ scale: 0.82 }}
-                  onClick={handleDecrement}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" />
-                </motion.button>
-                <span className={cn(
-                  "shrink-0 flex items-center justify-center font-bold select-none h-full bg-green-600 border-x border-white/10",
-                  isCompact ? "w-3 text-[8.5px]" : "w-4 min-[375px]:w-5 sm:w-7 text-[9px] sm:text-xs"
+                </button>
+              ) : (
+                <div className={cn(
+                  "flex h-full w-full items-center justify-between rounded-lg text-white font-bold shadow-xs overflow-hidden",
+                  isRestaurant ? "bg-[#e20a22]" : "bg-[#22c55e]"
                 )}>
-                  {quantity}
-                </span>
-                <motion.button
-                  whileTap={{ scale: 0.82 }}
-                  onClick={handleIncrement}
-                  disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
-                  className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <button
+                    onClick={handleDecrement}
+                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
+                  >
+                    <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                  </button>
+                  <span className="shrink-0 flex items-center justify-center font-black select-none text-[9px] min-[375px]:text-[10px]">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={handleIncrement}
+                    disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
+                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Plus className="h-2.5 w-2.5 stroke-[3]" />
+                  </button>
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+
+        {/* ROW 2: Price & MRP */}
+        <div className="flex items-baseline gap-1.5 flex-wrap leading-none mb-1">
+          <motion.span
+            key={resolvedPrice}
+            className={cn(
+              "font-black text-text-primary block tracking-tight",
+              isCompact 
+                ? "text-[11px] min-[375px]:text-xs sm:text-sm" 
+                : "text-[12px] min-[375px]:text-sm sm:text-base"
+            )}
+          >
+            ₹{resolvedPrice}
+          </motion.span>
+          {resolvedMrp > resolvedPrice && (
+            <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold">
+              ₹{resolvedMrp}
+            </span>
+          )}
+        </div>
+
+        {/* ROW 3: Product Name / Title */}
+        <h3 className={cn(
+          "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors mb-1",
+          isCompact 
+            ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
+            : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
+        )}>
+          {product.name}
+        </h3>
+      </Link>
     </div>
   )
 }

@@ -15,13 +15,13 @@ interface SpeedStripProps {
 }
 
 export function SpeedStrip({
-  avgDelivery = '8 min',
+  avgDelivery = 'Ghatampur',
   deliveredCount = '1,231+',
   freshStock = '2 hrs ago',
   happyFamilies = '5,000+',
 }: SpeedStripProps) {
   const stats: SpeedStat[] = [
-    { icon: Zap, iconColor: 'text-amber-500 fill-amber-500/10', label: 'Avg Delivery', value: avgDelivery },
+    { icon: Zap, iconColor: 'text-amber-500 fill-amber-500/10', label: 'Delivery Zone', value: 'Ghatampur' },
     { icon: Package, iconColor: 'text-blue-500 fill-blue-500/10', label: 'Delivered Today', value: deliveredCount },
     { icon: Leaf, iconColor: 'text-emerald-500 fill-emerald-500/10', label: 'Fresh Stock Loaded', value: freshStock },
     { icon: Heart, iconColor: 'text-rose-500 fill-rose-500/10', label: 'Happy Families', value: happyFamilies },
@@ -36,7 +36,7 @@ export function SpeedStrip({
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
           </span>
           <Zap className="h-3 w-3 text-amber-500 fill-amber-500/10" />
-          <span className="text-[10px] font-black text-text-primary">{avgDelivery}</span>
+          <span className="text-[10px] font-black text-text-primary">Ghatampur</span>
         </div>
         <span className="h-3 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
         <div className="flex items-center gap-1.5">

@@ -131,6 +131,61 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const [editItems, setEditItems] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [allProducts, setAllProducts] = useState<any[]>([])
+  const [modifySearchQuery, setModifySearchQuery] = useState('')
+
+  const isModifyCafeOrder = useMemo(() => {
+    const shop = order.shopName || ''
+    return shop.includes('Cafe') || order.items.some((i: any) => i.product?.tags?.includes('cafe'))
+  }, [order])
+
+  const isModifyRestaurantOrder = useMemo(() => {
+    const shop = order.shopName || ''
+    return shop.includes('Restaurant') || order.items.some((i: any) => i.product?.tags?.includes('restaurant'))
+  }, [order])
+
+  const availableProdsToAdd = useMemo(() => {
+    if (!modifySearchQuery.trim()) return []
+    const query = modifySearchQuery.toLowerCase().trim()
+    return allProducts.filter(p => {
+      if (isModifyCafeOrder) {
+        const isCafe = p.category?.slug === 'cafe' || p.tags?.includes('cafe')
+        if (!isCafe) return false
+      } else if (isModifyRestaurantOrder) {
+        const isRest = p.category?.slug === 'restaurant' || p.tags?.includes('restaurant')
+        if (!isRest) return false
+      } else {
+        const isKitchen = p.category?.slug === 'cafe' || p.category?.slug === 'restaurant' || p.tags?.includes('cafe') || p.tags?.includes('restaurant')
+        if (isKitchen) return false
+      }
+      return p.name.toLowerCase().includes(query) || (p.tags && p.tags.toLowerCase().includes(query))
+    }).slice(0, 8)
+  }, [allProducts, modifySearchQuery, isModifyCafeOrder, isModifyRestaurantOrder])
+
+  const handleAddProductToOrder = (prod: any) => {
+    const existingIndex = editItems.findIndex(i => i.productId === prod.id)
+    if (existingIndex !== -1) {
+      setEditItems(prev => prev.map((item, idx) => idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item))
+    } else {
+      const hasVariants = prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0
+      const defaultVariant = hasVariants ? prod.variants[0].name : null
+      const defaultPrice = hasVariants ? prod.variants[0].price : prod.price
+      setEditItems(prev => [
+        ...prev,
+        {
+          id: `new-${prod.id}-${Date.now()}`,
+          orderId: order.id,
+          productId: prod.id,
+          name: prod.name,
+          price: defaultPrice,
+          quantity: 1,
+          selectedVariant: defaultVariant,
+          imageUrl: prod.imageUrl,
+          shopName: order.shopName
+        }
+      ])
+    }
+    toast.success(`Added ${prod.name} to order`)
+  }
 
   const getVariantsForProduct = (productId: string) => {
     const prod = allProducts.find(p => p.id === productId)
@@ -150,23 +205,15 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     } else {
       setEditItems(items)
     }
+    setModifySearchQuery('')
     setIsEditing(true)
 
     try {
-      const [resRest, resCafe] = await Promise.all([
-        fetch('/api/products?category=restaurant&limit=100').catch(() => null),
-        fetch('/api/products?category=cafe&limit=100').catch(() => null)
-      ])
-      let prods: any[] = []
-      if (resRest?.ok) {
-        const d = await resRest.json()
-        prods = [...prods, ...(d.products || [])]
+      const res = await fetch('/api/products?limit=250').catch(() => null)
+      if (res?.ok) {
+        const d = await res.json()
+        setAllProducts(d.products || [])
       }
-      if (resCafe?.ok) {
-        const d = await resCafe.json()
-        prods = [...prods, ...(d.products || [])]
-      }
-      setAllProducts(prods)
     } catch (err) {
       console.error('Failed to load products for editing:', err)
     }
@@ -662,16 +709,12 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 {trackingMetrics.isArrived ? (
                   <span>📍 Rider has reached near your doorstep!</span>
                 ) : trackingMetrics.distanceNum >= 0.3 ? (
-                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span></span>
+                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away</span>
                 ) : (
-                  <span>🚴 Rider is heading to your address • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span></span>
+                  <span>🚴 Rider is heading to your address</span>
                 )}
               </p>
-            ) : (order.status === 'CONFIRMED' || order.status === 'PENDING' || order.status === 'PACKED') && (
-              <p className="text-xs font-semibold text-text-secondary mt-1">
-                ⏱️ Estimated Delivery: <span className="font-bold text-emerald-600 dark:text-emerald-400">~12 - 18 mins</span>
-              </p>
-            )}
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted px-3 py-1.5 rounded-xl border">
@@ -705,15 +748,6 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             <span className="text-[10px] font-black text-amber-800 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 shrink-0" /> Scheduled: {new Date(order.estimatedDelivery).toLocaleDateString()} {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
-          )}
-          {!isScheduled && order.estimatedDelivery && combinedStatus !== 'DELIVERED' && combinedStatus !== 'CANCELLED' && (
-            combinedStatus === 'CONFIRMED' && new Date(order.estimatedDelivery).getTime() > Date.now() ? (
-              <PrepCountdown clockTarget={order.estimatedDelivery} />
-            ) : (
-              <span className="text-[10px] font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 shrink-0" /> Estimated Delivery: {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )
           )}
 
         </div>
@@ -1189,6 +1223,54 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
             {/* Content List */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+              {/* Product Search & Add Section (Scoped strictly to order type) */}
+              <div className="bg-muted/30 p-3 rounded-2xl border border-border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary flex items-center gap-1">
+                    🔍 Add More Items To Order
+                  </label>
+                  <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {isModifyCafeOrder ? '☕ Cafe Items Only' : isModifyRestaurantOrder ? '🍳 Wedson Restaurant Items Only' : '📦 Grocery Mart Items Only'}
+                  </span>
+                </div>
+                
+                <input
+                  type="text"
+                  placeholder={isModifyCafeOrder ? "Search Cafe items (Sandwiches, Chai, Shakes)..." : isModifyRestaurantOrder ? "Search Wedson dishes (Paneer, Biryani, Naan)..." : "Search Grocery items (Milk, Atta, Snacks)..."}
+                  value={modifySearchQuery}
+                  onChange={(e) => setModifySearchQuery(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-border/80 bg-card text-text-primary focus:outline-none focus:border-primary shadow-xs"
+                />
+
+                {/* Search Results Dropdown */}
+                {availableProdsToAdd.length > 0 && (
+                  <div className="divide-y divide-border/40 border border-border/60 rounded-xl bg-card overflow-hidden max-h-48 overflow-y-auto shadow-md">
+                    {availableProdsToAdd.map((prod: any) => (
+                      <div key={prod.id} className="p-2 flex items-center justify-between gap-2 hover:bg-muted/20">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {prod.imageUrl ? (
+                            <img src={prod.imageUrl} alt={prod.name} className="w-8 h-8 object-cover rounded-lg border border-border/40 shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-xs shrink-0">📦</div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-text-primary truncate">{prod.name}</p>
+                            <p className="text-[10px] text-text-muted font-bold">₹{prod.price} {prod.unit ? `• ${prod.unit}` : ''}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddProductToOrder(prod)}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all shrink-0 active:scale-95 cursor-pointer shadow-xs"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {editItems.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary flex flex-col items-center gap-2">
                   <AlertCircle className="h-8 w-8 text-primary" />

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "web": "next dev",
     "build": "npm install @prisma/client && npx prisma generate && next build",
     "start": "next start",
     "lint": "eslint"

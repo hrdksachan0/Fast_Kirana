@@ -397,7 +397,6 @@ export default function FeaturedCategoryCard({
                     )}
                     <h3 className="pcard-title">{p.name}</h3>
                     <div className="pcard-meta">
-                      <span>⏱ {p.deliveryTime || '15 mins'}</span>
                       {(p.stock || p.stockLeft) <= 3 && <span>📦 {p.stock || p.stockLeft} left</span>}
                     </div>
                     <div 
