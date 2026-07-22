@@ -619,7 +619,17 @@ export async function POST(request: Request) {
 
       for (const order of createdOrders) {
         const shortId = order.id.slice(-6).toUpperCase()
-        const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
+        const orderType = order.shopName === 'FastKirana Cafe Kitchen'
+          ? 'Cafe'
+          : order.shopName === 'FastKirana Restaurant Kitchen'
+          ? 'Restaurant'
+          : 'Grocery'
+
+        const notificationTitle = order.shopName === 'FastKirana Cafe Kitchen'
+          ? 'New Cafe Order ☕'
+          : order.shopName === 'FastKirana Restaurant Kitchen'
+          ? 'New Restaurant Order 🍲'
+          : 'New Grocery Order 📦'
 
         sseEmitter.emit('order', {
           type: 'new-order',
@@ -631,7 +641,7 @@ export async function POST(request: Request) {
         })
 
         sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-          title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
+          title: notificationTitle,
           body: `Admin placed order #${shortId} for ${order.user?.name || 'customer'} of ₹${order.total}.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id }

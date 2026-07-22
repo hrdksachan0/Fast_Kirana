@@ -851,7 +851,17 @@ export async function POST(request: NextRequest) {
 
         for (const order of createdOrders) {
           const displayId = order.readableId || order.id.slice(-6).toUpperCase()
-          const orderType = order.shopName === 'FastKirana Cafe Kitchen' ? 'Cafe' : 'Grocery'
+          const orderType = order.shopName === 'FastKirana Cafe Kitchen'
+            ? 'Cafe'
+            : order.shopName === 'FastKirana Restaurant Kitchen'
+            ? 'Restaurant'
+            : 'Grocery'
+
+          const notificationTitle = order.shopName === 'FastKirana Cafe Kitchen'
+            ? 'New Cafe Order ☕'
+            : order.shopName === 'FastKirana Restaurant Kitchen'
+            ? 'New Restaurant Order 🍲'
+            : 'New Grocery Order 📦'
 
           sseEmitter.emit('order', {
             type: 'new-order',
@@ -865,7 +875,7 @@ export async function POST(request: NextRequest) {
 
           // Send push notifications to all workers for any new order
           sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-            title: order.shopName === 'FastKirana Cafe Kitchen' ? 'New Cafe Order ☕' : 'New Grocery Order 📦',
+            title: notificationTitle,
             body: `Order #${displayId} of ₹${order.total} has been placed.`,
             tag: `order-${order.id}`,
             data: { orderId: order.id }
