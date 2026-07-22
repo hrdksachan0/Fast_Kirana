@@ -542,6 +542,8 @@ export function AdminDashboard({
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any | null>(null)
   const [isLoadingOrderItems, setIsLoadingOrderItems] = useState<boolean>(false)
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'history'>('active')
+  const [orderShopFilter, setOrderShopFilter] = useState<'ALL' | 'GROCERY' | 'CAFE' | 'RESTAURANT'>('ALL')
+  const [orderMethodFilter, setOrderMethodFilter] = useState<'ALL' | 'DELIVERY' | 'SELF_PICKUP'>('ALL')
 
   const handleOpenOrderModal = useCallback(async (order: any) => {
     if (!order) return
@@ -2449,9 +2451,22 @@ export function AdminDashboard({
             const rawActiveList = orders.filter((o) => activeStatuses.includes(o.status))
             const rawHistoryList = orders.filter((o) => historyStatuses.includes(o.status))
 
-            // Filter Active Table by tab & search query
+            const isOrderPickup = (o: any) => {
+              const method = (o.deliveryMethod || '').toUpperCase()
+              return method === 'SELF_PICKUP' || method === 'PICKUP' || o.isSelfPickup === true
+            }
+
+            const getOrderStoreType = (o: any) => {
+              if (o.shopName === 'FastKirana Cafe Kitchen') return 'CAFE'
+              if (o.shopName === 'FastKirana Restaurant Kitchen') return 'RESTAURANT'
+              return 'GROCERY'
+            }
+
+            // Filter Active Table by status, store, method & search query
             const filteredActiveOrders = rawActiveList.filter((o) => {
               const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
+              const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
+              const matchesMethod = orderMethodFilter === 'ALL' || (orderMethodFilter === 'SELF_PICKUP' ? isOrderPickup(o) : !isOrderPickup(o))
               const matchesSearch = 
                 orderSearchQuery.trim() === '' || 
                 o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
@@ -2459,12 +2474,14 @@ export function AdminDashboard({
                 (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase())) ||
                 (o.userPhone && o.userPhone.includes(orderSearchQuery)) ||
                 (o.address?.phone && o.address.phone.includes(orderSearchQuery))
-              return matchesFilter && matchesSearch
+              return matchesFilter && matchesShop && matchesMethod && matchesSearch
             })
 
-            // Filter History Table by tab & search query
+            // Filter History Table by status, store, method & search query
             const filteredHistoryOrders = rawHistoryList.filter((o) => {
               const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
+              const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
+              const matchesMethod = orderMethodFilter === 'ALL' || (orderMethodFilter === 'SELF_PICKUP' ? isOrderPickup(o) : !isOrderPickup(o))
               const matchesSearch = 
                 orderSearchQuery.trim() === '' || 
                 o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
@@ -2472,7 +2489,7 @@ export function AdminDashboard({
                 (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase())) ||
                 (o.userPhone && o.userPhone.includes(orderSearchQuery)) ||
                 (o.address?.phone && o.address.phone.includes(orderSearchQuery))
-              return matchesFilter && matchesSearch
+              return matchesFilter && matchesShop && matchesMethod && matchesSearch
             })
 
             const activeOrdersCount = rawActiveList.length
@@ -2550,7 +2567,7 @@ export function AdminDashboard({
                     )}
 
                     {/* Active Queue Process-Wise Tabs & Search */}
-                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
+                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-3 border-b border-border/40 pb-3">
                       <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
                         {[
                           { key: 'ALL', label: '🔥 All Active', color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
@@ -2591,12 +2608,63 @@ export function AdminDashboard({
                       </div>
                     </div>
 
+                    {/* Store Type & Fulfillment Method Filter Pills */}
+                    <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4 p-2 bg-muted/20 border border-border/40 rounded-2xl">
+                      {/* Store Category Pills */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] font-black uppercase text-text-muted px-1">Category:</span>
+                        {[
+                          { key: 'ALL', label: '🏪 All Stores' },
+                          { key: 'GROCERY', label: '🛒 Grocery' },
+                          { key: 'CAFE', label: '☕ Cafe' },
+                          { key: 'RESTAURANT', label: '🍽️ Restaurant' },
+                        ].map((s) => (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => setOrderShopFilter(s.key as any)}
+                            className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                              orderShopFilter === s.key
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                                : 'bg-card border-border hover:bg-muted text-text-secondary'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Fulfillment Method Pills */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] font-black uppercase text-text-muted px-1">Type:</span>
+                        {[
+                          { key: 'ALL', label: '📦 All Types' },
+                          { key: 'DELIVERY', label: '🛵 Delivery' },
+                          { key: 'SELF_PICKUP', label: '🛍️ Self Pickup' },
+                        ].map((m) => (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => setOrderMethodFilter(m.key as any)}
+                            className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                              orderMethodFilter === m.key
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                                : 'bg-card border-border hover:bg-muted text-text-secondary'
+                            }`}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Active Orders Table */}
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
-                            <th className="py-2.5 px-3">Order ID</th>
+                            <th className="py-2.5 px-3">Order ID &amp; Store</th>
+                            <th className="py-2.5 px-3">Type</th>
                             <th className="py-2.5 px-3">Customer</th>
                             <th className="py-2.5 px-3">Address</th>
                             <th className="py-2.5 px-3">Total</th>
@@ -2607,7 +2675,7 @@ export function AdminDashboard({
                         <tbody className="divide-y divide-border/40 font-semibold">
                           {filteredActiveOrders.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="text-center py-8 text-text-secondary text-[11px] font-bold">
+                              <td colSpan={7} className="text-center py-8 text-text-secondary text-[11px] font-bold">
                                 🎉 No active orders in this queue right now. All caught up!
                               </td>
                             </tr>
@@ -2615,6 +2683,8 @@ export function AdminDashboard({
                             filteredActiveOrders.map((o) => {
                               const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
                               const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+                              const isPickup = isOrderPickup(o)
+                              const storeType = getOrderStoreType(o)
 
                               return (
                                 <tr key={o.id} className="hover:bg-amber-500/5 transition-colors">
@@ -2623,7 +2693,7 @@ export function AdminDashboard({
                                     onClick={() => handleOpenOrderModal(o)}
                                     title="Click to view full order items & details"
                                   >
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="font-mono font-black text-[11px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
                                         #{o.readableId || o.id.slice(0, 8)}
                                       </span>
@@ -2637,10 +2707,38 @@ export function AdminDashboard({
                                         </span>
                                       )}
                                     </div>
+                                    <div className="mt-1 flex items-center gap-1">
+                                      {storeType === 'CAFE' ? (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30">
+                                          ☕ CAFE
+                                        </span>
+                                      ) : storeType === 'RESTAURANT' ? (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30">
+                                          🍽️ RESTAURANT
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
+                                          🛒 GROCERY
+                                        </span>
+                                      )}
+                                    </div>
                                     <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
-                                      ID: {o.id.slice(0, 12)}...
+                                      ID: {o.id.slice(0, 10)}...
                                     </div>
                                   </td>
+
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    {isPickup ? (
+                                      <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs animate-pulse inline-flex items-center gap-1">
+                                        🛍️ SELF PICKUP
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px] inline-flex items-center gap-1">
+                                        🛵 DELIVERY
+                                      </span>
+                                    )}
+                                  </td>
+
                                   <td 
                                     className="py-3 px-3 cursor-pointer group/cell"
                                     onClick={() => handleOpenOrderModal(o)}
@@ -2655,23 +2753,34 @@ export function AdminDashboard({
                                     )}
                                   </td>
                                   <td className="py-3 px-3 text-[11px]">
-                                    <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                                    <div className="mt-1 flex items-center gap-1.5">
-                                      <span className="font-mono text-[9px] text-text-muted">
-                                        [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
-                                      </span>
-                                      {o.deliveryLat && o.deliveryLng && (
-                                        <a
-                                          href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
-                                          title="Open exact GPS coordinates on Google Maps"
-                                        >
-                                          📍
-                                        </a>
-                                      )}
-                                    </div>
+                                    {isPickup ? (
+                                      <div>
+                                        <div className="font-black text-[10px] text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                          🛍️ Customer Pickup at Counter
+                                        </div>
+                                        <div className="text-[9px] text-text-muted font-medium">Store pickup (No rider needed)</div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="line-clamp-2">{formatAddress(o.address)}</div>
+                                        <div className="mt-1 flex items-center gap-1.5">
+                                          <span className="font-mono text-[9px] text-text-muted">
+                                            [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
+                                          </span>
+                                          {o.deliveryLat && o.deliveryLng && (
+                                            <a
+                                              href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                                              title="Open exact GPS coordinates on Google Maps"
+                                            >
+                                              📍
+                                            </a>
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
                                   </td>
                                   <td className="py-3 px-3 font-black text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
                                   <td className="py-3 px-3 text-center">
@@ -2794,7 +2903,7 @@ export function AdminDashboard({
                     </div>
 
                     {/* History Process-Wise Tabs & Search */}
-                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-border/40 pb-3">
+                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-3 border-b border-border/40 pb-3">
                       <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
                         {[
                           { key: 'ALL_HISTORY', label: '📋 All History', status: 'ALL' },
@@ -2833,12 +2942,63 @@ export function AdminDashboard({
                       </div>
                     </div>
 
+                    {/* Store Type & Fulfillment Method Filter Pills */}
+                    <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4 p-2 bg-muted/20 border border-border/40 rounded-2xl">
+                      {/* Store Category Pills */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] font-black uppercase text-text-muted px-1">Category:</span>
+                        {[
+                          { key: 'ALL', label: '🏪 All Stores' },
+                          { key: 'GROCERY', label: '🛒 Grocery' },
+                          { key: 'CAFE', label: '☕ Cafe' },
+                          { key: 'RESTAURANT', label: '🍽️ Restaurant' },
+                        ].map((s) => (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => setOrderShopFilter(s.key as any)}
+                            className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                              orderShopFilter === s.key
+                                ? 'bg-primary text-white border-primary shadow-2xs'
+                                : 'bg-card border-border hover:bg-muted text-text-secondary'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Fulfillment Method Pills */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] font-black uppercase text-text-muted px-1">Type:</span>
+                        {[
+                          { key: 'ALL', label: '📦 All Types' },
+                          { key: 'DELIVERY', label: '🛵 Delivery' },
+                          { key: 'SELF_PICKUP', label: '🛍️ Self Pickup' },
+                        ].map((m) => (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => setOrderMethodFilter(m.key as any)}
+                            className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                              orderMethodFilter === m.key
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                                : 'bg-card border-border hover:bg-muted text-text-secondary'
+                            }`}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* History Orders Table */}
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
-                            <th className="py-2.5 px-3">Order ID</th>
+                            <th className="py-2.5 px-3">Order ID &amp; Store</th>
+                            <th className="py-2.5 px-3">Type</th>
                             <th className="py-2.5 px-3">Customer</th>
                             <th className="py-2.5 px-3">Address</th>
                             <th className="py-2.5 px-3">Total</th>
@@ -2849,64 +3009,105 @@ export function AdminDashboard({
                         <tbody className="divide-y divide-border/40 font-semibold text-xs opacity-90">
                           {filteredHistoryOrders.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="text-center py-6 text-text-secondary text-[11px] font-bold">
+                              <td colSpan={7} className="text-center py-6 text-text-secondary text-[11px] font-bold">
                                 No history orders in this status.
                               </td>
                             </tr>
                           ) : (
-                            filteredHistoryOrders.map((o) => (
-                              <tr key={o.id} className="hover:bg-muted/30 transition-colors">
-                                <td 
-                                  className="py-3 px-3 cursor-pointer group/cell"
-                                  onClick={() => handleOpenOrderModal(o)}
-                                  title="Click to view full order items & details"
-                                >
-                                  <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
-                                    #{o.readableId || o.id.slice(0, 8)}
-                                  </span>
-                                  <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
-                                    ID: {o.id.slice(0, 12)}...
-                                  </div>
-                                </td>
-                                <td 
-                                  className="py-3 px-3 cursor-pointer group/cell"
-                                  onClick={() => handleOpenOrderModal(o)}
-                                  title="Click to view full order items & details"
-                                >
-                                  <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || 'No Name'}</div>
-                                  <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
-                                </td>
-                                <td className="py-3 px-3 text-[11px]">
-                                  <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                                </td>
-                                <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
-                                <td className="py-3 px-3 text-center">
-                                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                                    o.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                                  }`}>
-                                    {o.status}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-3 text-center">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenOrderModal(o)}
-                                      className="px-2 py-1 bg-muted hover:bg-muted/80 text-text-primary border border-border text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
-                                    >
-                                      👁️ Details
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => printCustomerInvoice(o)}
-                                      className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
-                                    >
-                                      📄 Invoice
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
+                            filteredHistoryOrders.map((o) => {
+                              const isPickup = isOrderPickup(o)
+                              const storeType = getOrderStoreType(o)
+
+                              return (
+                                <tr key={o.id} className="hover:bg-muted/30 transition-colors">
+                                  <td 
+                                    className="py-3 px-3 cursor-pointer group/cell"
+                                    onClick={() => handleOpenOrderModal(o)}
+                                    title="Click to view full order items & details"
+                                  >
+                                    <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
+                                      #{o.readableId || o.id.slice(0, 8)}
+                                    </span>
+                                    <div className="mt-1 flex items-center gap-1">
+                                      {storeType === 'CAFE' ? (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30">
+                                          ☕ CAFE
+                                        </span>
+                                      ) : storeType === 'RESTAURANT' ? (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30">
+                                          🍽️ RESTAURANT
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
+                                          🛒 GROCERY
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
+                                      ID: {o.id.slice(0, 10)}...
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    {isPickup ? (
+                                      <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs">
+                                        🛍️ SELF PICKUP
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
+                                        🛵 DELIVERY
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  <td 
+                                    className="py-3 px-3 cursor-pointer group/cell"
+                                    onClick={() => handleOpenOrderModal(o)}
+                                    title="Click to view full order items & details"
+                                  >
+                                    <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || 'No Name'}</div>
+                                    <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
+                                  </td>
+                                  <td className="py-3 px-3 text-[11px]">
+                                    {isPickup ? (
+                                      <div>
+                                        <div className="font-bold text-[10px] text-purple-600 dark:text-purple-400">
+                                          🛍️ Customer Store Pickup
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="line-clamp-2">{formatAddress(o.address)}</div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
+                                  <td className="py-3 px-3 text-center">
+                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                                      o.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                                    }`}>
+                                      {o.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenOrderModal(o)}
+                                        className="px-2 py-1 bg-muted hover:bg-muted/80 text-text-primary border border-border text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        👁️ Details
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => printCustomerInvoice(o)}
+                                        className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        📄 Invoice
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            })
                           )}
                         </tbody>
                       </table>
@@ -6640,7 +6841,7 @@ export function AdminDashboard({
             {/* Header */}
             <div className="p-5 bg-muted/40 border-b border-border flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-extrabold text-base text-text-primary">
                     Order #{selectedOrderForTracking.readableId || selectedOrderForTracking.id.slice(0, 8)}
                   </h3>
@@ -6654,6 +6855,32 @@ export function AdminDashboard({
                   }`}>
                     {selectedOrderForTracking.status}
                   </span>
+
+                  {/* Store Type Badge */}
+                  {selectedOrderForTracking.shopName === 'FastKirana Cafe Kitchen' ? (
+                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      ☕ CAFE KITCHEN
+                    </span>
+                  ) : selectedOrderForTracking.shopName === 'FastKirana Restaurant Kitchen' ? (
+                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                      🍽️ RESTAURANT KITCHEN
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      🛒 GROCERY STORE
+                    </span>
+                  )}
+
+                  {/* Fulfillment Method Badge */}
+                  {((selectedOrderForTracking.deliveryMethod || '').toUpperCase() === 'SELF_PICKUP' || (selectedOrderForTracking.deliveryMethod || '').toUpperCase() === 'PICKUP' || selectedOrderForTracking.isSelfPickup) ? (
+                    <span className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-purple-600 text-white shadow-xs animate-pulse">
+                      🛍️ SELF PICKUP
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                      🛵 HOME DELIVERY
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-text-muted mt-0.5 font-mono">
                   Placed on {new Date(selectedOrderForTracking.createdAt).toLocaleString()}
