@@ -19,24 +19,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid lat/lng values' }, { status: 400 })
     }
 
-    // Fetch store coordinates from settings
+    // Fetch store coordinates & radius settings
     let storeLat = DEFAULT_STORE_LAT
     let storeLng = DEFAULT_STORE_LNG
+    let maxRadiusKm = 5.0
+    let surgeFee = 0
 
     try {
       const settings = await prisma.storeSetting.findMany({
-        where: { key: { in: ['store_lat', 'store_lng'] } },
+        where: { key: { in: ['store_lat', 'store_lng', 'max_delivery_radius', 'surge_charge'] } },
       })
       for (const s of settings) {
         if (s.key === 'store_lat' && s.value) storeLat = parseFloat(s.value)
         if (s.key === 'store_lng' && s.value) storeLng = parseFloat(s.value)
+        if (s.key === 'max_delivery_radius' && s.value) maxRadiusKm = parseFloat(s.value)
+        if (s.key === 'surge_charge' && s.value) surgeFee = parseFloat(s.value)
       }
     } catch {
       // Use defaults if DB fails
     }
 
     const distanceKm = getDistanceKm(storeLat, storeLng, customerLat, customerLng)
-    const rules = getDeliveryRules(distanceKm)
+    const rules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
 
     return NextResponse.json(rules)
   } catch (error) {

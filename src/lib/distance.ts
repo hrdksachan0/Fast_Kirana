@@ -26,8 +26,7 @@ export function getDistanceKm(
 }
 
 /**
- * Distance-based delivery rules.
- * Returns minimum order, delivery fee, and serviceability for a given distance.
+ * Distance-based delivery rules interface.
  */
 export interface DeliveryRules {
   distanceKm: number
@@ -36,36 +35,92 @@ export interface DeliveryRules {
   freeDeliveryThreshold: number
   isServiceable: boolean
   zoneName: string
+  surgeFee: number
+  maxRadiusKm: number
 }
 
-export function getDeliveryRules(distanceKm: number): DeliveryRules {
-  if (distanceKm <= 2) {
+interface DeliveryRuleOptions {
+  maxRadiusKm?: number
+  surgeFee?: number
+  isRainMode?: boolean
+}
+
+/**
+ * Advanced distance-based delivery rules with dynamic radius & surge fee calculation.
+ */
+export function getDeliveryRules(
+  distanceKm: number,
+  options: DeliveryRuleOptions = {}
+): DeliveryRules {
+  const maxRadiusKm = options.maxRadiusKm ?? 5.0 // Default 5 km delivery radius
+  const surgeFee = options.surgeFee ?? 0
+
+  // Check if distance exceeds max allowed radius
+  if (distanceKm > maxRadiusKm) {
     return {
       distanceKm,
       minOrder: 20,
-      deliveryFee: 25,
+      deliveryFee: 0,
+      freeDeliveryThreshold: 499,
+      isServiceable: false,
+      zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
+      surgeFee,
+      maxRadiusKm,
+    }
+  }
+
+  // Zone 1: 0 - 2.0 km
+  if (distanceKm <= 2.0) {
+    return {
+      distanceKm,
+      minOrder: 20,
+      deliveryFee: 25 + surgeFee,
       freeDeliveryThreshold: 199,
       isServiceable: true,
-      zoneName: '0-2 km',
+      zoneName: '0-2 km (Express Zone)',
+      surgeFee,
+      maxRadiusKm,
     }
   }
-  if (distanceKm <= 3) {
+
+  // Zone 2: 2.0 - 4.0 km
+  if (distanceKm <= 4.0) {
     return {
       distanceKm,
       minOrder: 20,
-      deliveryFee: 35,
+      deliveryFee: 35 + surgeFee,
       freeDeliveryThreshold: 249,
       isServiceable: true,
-      zoneName: '2-3 km',
+      zoneName: '2-4 km (Standard Zone)',
+      surgeFee,
+      maxRadiusKm,
     }
   }
+
+  // Zone 3: 4.0 - 6.0 km
+  if (distanceKm <= 6.0) {
+    return {
+      distanceKm,
+      minOrder: 50,
+      deliveryFee: 50 + surgeFee,
+      freeDeliveryThreshold: 349,
+      isServiceable: true,
+      zoneName: '4-6 km (Extended Zone)',
+      surgeFee,
+      maxRadiusKm,
+    }
+  }
+
+  // Zone 4: 6.0+ km (if maxRadiusKm allows)
   return {
     distanceKm,
-    minOrder: 20,
-    deliveryFee: 0,
-    freeDeliveryThreshold: 249,
-    isServiceable: false,
-    zoneName: '3+ km (out of range)',
+    minOrder: 100,
+    deliveryFee: 70 + surgeFee,
+    freeDeliveryThreshold: 499,
+    isServiceable: true,
+    zoneName: '6+ km (Outer Zone)',
+    surgeFee,
+    maxRadiusKm,
   }
 }
 

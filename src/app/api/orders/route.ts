@@ -119,18 +119,22 @@ export async function POST(request: NextRequest) {
 
       // Calculate distance if address has GPS coordinates
       if (address.lat && address.lng) {
-        // Fetch store coordinates from settings (will be fetched below with other settings)
         const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
         const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
+        const maxRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'max_delivery_radius' } })
+        const surgeFeeSetting = await prisma.storeSetting.findUnique({ where: { key: 'surge_charge' } })
+
         const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
         const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
+        const maxRadiusKm = maxRadiusSetting?.value ? parseFloat(maxRadiusSetting.value) : 5.0
+        const surgeFee = surgeFeeSetting?.value ? parseFloat(surgeFeeSetting.value) : 0
 
         const distanceKm = getDistanceKm(storeLat, storeLng, address.lat, address.lng)
-        deliveryRules = getDeliveryRules(distanceKm)
+        deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
 
         if (!deliveryRules.isServiceable) {
           return NextResponse.json({
-            error: `Your address is ${distanceKm.toFixed(1)} km away. We deliver only within 4 km of our store.`
+            error: `Your address is ${distanceKm.toFixed(1)} km away. Delivery is available only up to ${maxRadiusKm.toFixed(1)} km.`
           }, { status: 400 })
         }
       }

@@ -540,8 +540,10 @@ export default function CheckoutPage() {
 
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
+      const maxRadiusKm = parseFloat(storeSettingsMap['max_delivery_radius'] || '5.0')
+      const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || '0')
       distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
-      deliveryRules = getDeliveryRules(distanceKm)
+      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
     }
   }
 
