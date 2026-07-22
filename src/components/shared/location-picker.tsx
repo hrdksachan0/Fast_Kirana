@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Navigation, Search, X, Loader2, Maximize2, Check, AlertCircle } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
+import { FreeMapPicker } from '@/components/shared/free-map-picker'
 import { toast } from 'sonner'
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -421,7 +422,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                   Select Delivery Location
                 </h2>
                 <p className="text-xs font-semibold text-slate-400 dark:text-zinc-400 mt-0.5">
-                  Dark Store Delivery Validation
+                  100% Free Interactive Map & GPS Validation
                 </p>
               </div>
               <button
@@ -493,14 +494,22 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                 {/* Canvas Ref for Google Maps */}
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* Fallback pattern map view if Google Maps script not loaded */}
+                {/* Fallback 100% Free OpenStreetMap interactive Leaflet view if Google Maps API key not set */}
                 {!isMapLoaded && (
-                  <div className="absolute inset-0 bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:20px_20px]" />
-                    <div className="relative text-center p-4">
-                      <Loader2 size={24} className="animate-spin text-[#E91E63] mx-auto mb-2" />
-                      <span className="text-xs font-bold text-slate-600 dark:text-zinc-300">Loading Google Maps API...</span>
-                    </div>
+                  <div className="absolute inset-0 z-30 bg-background overflow-hidden">
+                    <FreeMapPicker
+                      initialLat={currentLat}
+                      initialLng={currentLng}
+                      storeLat={storeLat}
+                      storeLng={storeLng}
+                      deliveryRadiusKm={deliveryRadius}
+                      onLocationSelect={(data) => {
+                        setSelectedLocation(data.address)
+                        setUserCoords({ lat: data.lat, lng: data.lng })
+                        toast.success(`Delivery location set to ${data.address.split(',')[0]}`, { icon: '📍' })
+                        onClose()
+                      }}
+                    />
                   </div>
                 )}
 
