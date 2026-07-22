@@ -567,29 +567,31 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   // Live rider distance and ETA
   const trackingMetrics = useMemo(() => {
     if (order.deliveryMethod === 'PICKUP') return null
+    if (order.status !== 'SHIPPED') return null
+
     const destLat = order.address?.lat || storeLat + 0.004
     const destLng = order.address?.lng || storeLng + 0.005
     
-    // Default coordinates
     let riderLat = order.deliveryLat
     let riderLng = order.deliveryLng
     
-    // Fallback if SHIPPED but riderCoordinates are not set
-    if (order.status === 'SHIPPED' && !riderLat) {
+    if (!riderLat || !riderLng) {
       riderLat = storeLat
       riderLng = storeLng
     }
     
-    if (!riderLat || !riderLng) return null
-    
     const distanceKm = calculateDistance(riderLat, riderLng, destLat, destLng)
-    const etaMins = Math.max(2, Math.round(distanceKm * 3.5)) // Average 3.5 mins per km
+    const etaMins = Math.max(2, Math.round(distanceKm * 3.5))
+
+    const isArrived = distanceKm <= 0.25
     
     return {
       distance: distanceKm.toFixed(1),
-      eta: etaMins
+      distanceNum: distanceKm,
+      eta: etaMins,
+      isArrived
     }
-  }, [order.status, order.deliveryLat, order.deliveryLng, order.address?.lat, order.address?.lng, storeLat, storeLng])
+  }, [order.status, order.deliveryLat, order.deliveryLng, order.address?.lat, order.address?.lng, storeLat, storeLng, order.deliveryMethod])
 
   const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
   const isScheduled = order.estimatedDelivery && order.createdAt && 
@@ -647,11 +649,27 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'Order Ready for Pickup!' 
                 : isScheduled 
                 ? 'Arriving at Scheduled Time' 
-                : 'Arriving Soon'}
+                : order.status === 'SHIPPED'
+                ? (trackingMetrics?.isArrived ? 'Rider Has Arrived!' : 'Rider On The Way')
+                : order.status === 'PACKED'
+                ? 'Order Packed & Ready'
+                : order.status === 'CONFIRMED'
+                ? 'Order Confirmed & Preparing'
+                : 'Order Placed'}
             </h1>
-            {trackingMetrics && order.status === 'SHIPPED' && (
+            {order.status === 'SHIPPED' && trackingMetrics ? (
               <p className="text-xs font-bold text-accent mt-1 animate-pulse flex items-center gap-1">
-                🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span>
+                {trackingMetrics.isArrived ? (
+                  <span>📍 Rider has reached near your doorstep!</span>
+                ) : trackingMetrics.distanceNum >= 0.3 ? (
+                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span></span>
+                ) : (
+                  <span>🚴 Rider is heading to your address • Arriving in <span className="underline">~{trackingMetrics.eta} mins</span></span>
+                )}
+              </p>
+            ) : (order.status === 'CONFIRMED' || order.status === 'PENDING' || order.status === 'PACKED') && (
+              <p className="text-xs font-semibold text-text-secondary mt-1">
+                ⏱️ Estimated Delivery: <span className="font-bold text-emerald-600 dark:text-emerald-400">~12 - 18 mins</span>
               </p>
             )}
           </div>
