@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Clean surrounding quotes and whitespace
+    apiKey = apiKey.trim().replace(/^["']|["']$/g, '')
+
     if (!apiKey) {
       return NextResponse.json({ error: 'Google Maps API Key not configured in env or settings' }, { status: 404 })
     }

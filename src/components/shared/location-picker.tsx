@@ -106,12 +106,17 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   // Fetch Google Maps API Key
   useEffect(() => {
     if (!open) return
-    fetch('/api/geocode/key')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.apiKey) setApiKey(data.apiKey)
-      })
-      .catch(() => {})
+    const envKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (envKey) {
+      setApiKey(envKey.trim().replace(/^["']|["']$/g, ''))
+    } else {
+      fetch('/api/geocode/key')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.apiKey) setApiKey(data.apiKey.trim().replace(/^["']|["']$/g, ''))
+        })
+        .catch(() => {})
+    }
   }, [open])
 
   // Load Google Maps Script
