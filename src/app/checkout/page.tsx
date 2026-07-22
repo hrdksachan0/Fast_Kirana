@@ -147,6 +147,7 @@ export default function CheckoutPage() {
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
   const [restaurantOpen, setRestaurantOpen] = useState(true)
+  const [storeSettingsMap, setStoreSettingsMap] = useState<Record<string, string>>({})
   const [isSettingsLoading, setIsSettingsLoading] = useState(true)
   const [groceryThreshold, setGroceryThreshold] = useState(GROCERY_FREE_DELIVERY_THRESHOLD)
   const [cafeThreshold, setCafeThreshold] = useState(CAFE_FREE_DELIVERY_THRESHOLD)
@@ -160,6 +161,9 @@ export default function CheckoutPage() {
     fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
+        if (data && typeof data === 'object') {
+          setStoreSettingsMap(data)
+        }
         if (data.grocery_mart_open !== undefined) {
           setGroceryMartOpen(data.grocery_mart_open === 'true')
         }
