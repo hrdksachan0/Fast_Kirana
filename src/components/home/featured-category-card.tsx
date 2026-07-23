@@ -5,6 +5,7 @@ import { ChevronRight, Heart } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
+import { isProductStoreClosed } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -18,7 +19,7 @@ interface FeaturedCategoryCardProps {
   bannerEmojis: string[];
   theme?: 'cafe' | 'restaurant' | 'monsoon';
   categories: Category[];
-  products: any[];
+  products?: any[];
   onSeeAll?: () => void;
 }
 
@@ -71,6 +72,10 @@ export default function FeaturedCategoryCard({
 }: FeaturedCategoryCardProps) {
   const { addItem, getItemQuantity, updateQuantity } = useCart();
   const settings = useUIStore((s) => s.settings) || {};
+  const groceryMartOpen = useUIStore((s) => s.groceryMartOpen);
+  const cafeOpen = useUIStore((s) => s.cafeOpen);
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen);
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {};
 
   const [liveProducts, setLiveProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,33 +143,31 @@ export default function FeaturedCategoryCard({
     const slug = product.category?.slug || product.categorySlug || '';
     const tags = product.tags || [];
     
-    return tags.some((t: string) => 
-      isTagMatch(t, section.tag) || section.matchTags?.some((mt: string) => isTagMatch(t, mt))
-    ) || isTagMatch(slug, section.tag);
+    if (slug && isTagMatch(slug, section.tag)) return true;
+    
+    return tags.some((t: string) => isTagMatch(t, section.tag));
   };
 
-  // Parse menu sections dynamically from database store settings
-  const parsedSections = useMemo(() => {
-    if (theme !== 'cafe' && theme !== 'restaurant') return [];
-    let sections = theme === 'cafe' ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS;
-    try {
-      const raw = theme === 'restaurant'
-        ? (settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS)
-        : (settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS);
-      if (raw) {
-        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          sections = parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse dynamic sections in FeaturedCategoryCard', e);
-    }
-    // Filter out disabled sections
-    return sections.filter((s: any) => !s.disabled);
-  }, [theme, settings]);
+  // Determine available categories and section mapping based on theme
+  const customSectionsStr = theme === 'restaurant'
+    ? (settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS)
+    : (settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS);
 
-  // Derive categories list dynamically from active database products
+  const parsedSections = useMemo(() => {
+    if (customSectionsStr) {
+      try {
+        const sections = typeof customSectionsStr === 'string' ? JSON.parse(customSectionsStr) : customSectionsStr;
+        if (Array.isArray(sections) && sections.length > 0) {
+          return sections.filter((s: any) => !s.disabled);
+        }
+      } catch (e) {
+        console.error('Error parsing menu sections in FeaturedCategoryCard:', e);
+      }
+    }
+    const defaults = theme === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS;
+    return defaults.filter((s: any) => !s.disabled);
+  }, [customSectionsStr, theme]);
+
   const activeCategories = useMemo(() => {
     if (theme !== 'cafe' && theme !== 'restaurant') return [];
     
@@ -228,17 +231,17 @@ export default function FeaturedCategoryCard({
   }, [finalActiveCategory]);
 
   const filteredProducts = useMemo(() => {
-    const productsSource = liveProducts.length > 0 ? liveProducts : products;
+    const productsSource = (liveProducts.length > 0 ? liveProducts : products) || [];
     if (!finalActiveCategory) return [];
 
     if (activeCategories.length > 0) {
       const section = parsedSections.find(s => s.tag === finalActiveCategory);
       if (section) {
-        return productsSource.filter(p => isProductInSection(p, section));
+        return productsSource.filter((p: any) => isProductInSection(p, section));
       }
     }
     // Fallback to static category matching
-    return productsSource.filter(p => p.category === finalActiveCategory);
+    return productsSource.filter((p: any) => p.category === finalActiveCategory);
   }, [liveProducts, products, finalActiveCategory, activeCategories, parsedSections]);
 
   const isLiked = (id: string) => {
@@ -339,6 +342,11 @@ export default function FeaturedCategoryCard({
               const discountVal = mrpVal - p.price;
               const hasDiscount = mrpVal > p.price;
               const categoryLabel = p.categoryObj?.name || (typeof p.category === 'object' ? p.category?.name : p.category) || 'Food';
+              const isStoreClosed = isProductStoreClosed(
+                p,
+                { groceryMartOpen, cafeOpen, restaurantOpen },
+                categoryStatus
+              );
 
               return (
                 <div key={p.id} className="pcard">
@@ -369,15 +377,22 @@ export default function FeaturedCategoryCard({
                     <div className="pcard-add-wrap">
                       <button 
                         className="pcard-add"
-                        style={{ display: qty > 0 ? 'none' : 'flex' }}
-                        onClick={() => handleAddClick(p)}
+                        style={{
+                          display: qty > 0 ? 'none' : 'flex',
+                          opacity: isStoreClosed ? 0.6 : 1,
+                          cursor: isStoreClosed ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={isStoreClosed}
+                        onClick={() => {
+                          if (!isStoreClosed) handleAddClick(p);
+                        }}
                       >
-                        ADD
+                        {isStoreClosed ? 'Closed' : 'ADD'}
                       </button>
                       <div className={`pcard-qty ${qty > 0 ? 'on' : ''}`}>
                         <button onClick={() => handleRemoveClick(p)}>−</button>
                         <span>{qty}</span>
-                        <button onClick={() => handleAddClick(p)}>+</button>
+                        <button disabled={isStoreClosed} onClick={() => { if (!isStoreClosed) handleAddClick(p); }}>+</button>
                       </div>
                     </div>
                   </div>

@@ -25,7 +25,11 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(banners)
+    return NextResponse.json(banners, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      }
+    })
   } catch (error: any) {
     console.error('Error fetching promo banners:', error)
     return NextResponse.json({ error: 'Failed to fetch banners' }, { status: 500 })

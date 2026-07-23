@@ -44,25 +44,26 @@ const getCafeSectionImage = (tag: string) => {
 const getShortTitle = (tag: string, fullTitle: string) => {
   const customMapping: Record<string, string> = {
     'hot-beverage': 'Brews',
-    'hot-bite': 'Quick Bites & Snacks',
+    'hot-bite': 'Quick Bites',
     'sandwiches': 'Sandwiches',
-    'frankie-rolls': 'Frankie & Rolls',
-    'chinese': 'Chinese Cuisine',
+    'frankie-rolls': 'Rolls & Wraps',
+    'chinese': 'Chinese',
     'italian-pasta': 'Pasta & Italian',
-    'bombay-bites': 'Bombay',
+    'bombay-bites': 'Bombay Bites',
     'rice-dishes': 'Rice',
     'shakes': 'Shakes',
     'mocktails': 'Mocktails',
-    'cold-coffee': 'Coffee',
-    'south-indian': 'South Indian Fastfood',
+    'cold-coffee': 'Cold Coffee',
+    'south-indian': 'South Indian',
     'bakery': 'Bakery',
     'chilled': 'Cold Drinks',
-    'pizza': 'Pizzas & Sides',
-    'burgers': 'Gourmet Burgers',
+    'pizza': 'Pizzas',
+    'burgers': 'Burgers',
     'garlic-bread': 'Garlic Bread',
-    'desserts': 'Desserts & Sweets',
+    'desserts': 'Desserts',
     'north-indian': 'North Indian',
-    'biryani-rice': 'Biryani & Rice',
+    'biryani-rice': 'Biryani',
+    'roti-naan-kulcha': 'Roti & Naan',
   }
   return customMapping[tag] || fullTitle
 }
@@ -670,7 +671,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                         </div>
                       </div>
                       {/* Title */}
-                      <span className="text-[9px] min-[375px]:text-[9.5px] md:text-xs font-bold leading-tight truncate max-w-full">
+                      <span className="text-[9px] min-[375px]:text-[9.5px] md:text-xs font-bold leading-[1.15] text-center md:text-left line-clamp-2 break-words max-w-full w-full">
                         {cat.title}
                       </span>
                     </Link>

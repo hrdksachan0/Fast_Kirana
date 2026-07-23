@@ -5,7 +5,7 @@ import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
 import { useUIStore } from '@/stores/ui-store'
-import { isCafeProduct, getProductLimit } from '@/lib/utils'
+import { isCafeProduct, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { triggerHaptic } from '@/lib/haptic'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
@@ -25,14 +25,16 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const quantity = getItemQuantity(product.id)
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
+  const isStoreClosed = isProductStoreClosed(
+    product,
+    { groceryMartOpen, cafeOpen, restaurantOpen },
+    categoryStatus
+  )
+
   const isCafe = isCafeProduct(product)
-  const categorySlug = product.category?.slug || ''
-  const isCategoryOpen = categoryStatus[categorySlug] !== false
-  const isStoreClosed = isCafe 
-    ? (!cafeOpen || !isCategoryOpen) 
-    : (!groceryMartOpen || !isCategoryOpen)
 
   const liveState = useLiveStock(product.id)
   const resolvedStock = liveState !== null ? liveState.stock : product.stock

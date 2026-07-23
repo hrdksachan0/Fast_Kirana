@@ -8,7 +8,7 @@ import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ProductImage } from '@/components/product/product-image'
-import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRouter } from 'next/navigation'
@@ -187,14 +187,13 @@ export function CartDrawer() {
     const limit = getProductLimit(item.product)
     return item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > limit
   })
+  
   const isItemClosed = (product: any) => {
-    const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
-    const isRestaurant = product.category?.slug === 'restaurant' || product.tags?.includes('restaurant')
-    const categorySlug = product.category?.slug || ''
-    const isCatOpen = categoryStatus[categorySlug] !== false
-    if (isCafe) return !cafeOpen || !isCatOpen
-    if (isRestaurant) return !restaurantOpen || !isCatOpen
-    return !groceryMartOpen || !isCatOpen
+    return isProductStoreClosed(
+      product,
+      { groceryMartOpen, cafeOpen, restaurantOpen },
+      categoryStatus
+    )
   }
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))

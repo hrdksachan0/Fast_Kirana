@@ -114,11 +114,36 @@ export function getProductPrice(p: { price: number; variants?: any }): number {
 
 export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' {
   if (!p) return 'GROCERY'
-  const slug = p.category?.slug || p.categorySlug || ''
-  const tags = p.tags || []
-  if (slug === 'restaurant' || tags.includes('restaurant')) return 'RESTAURANT'
-  if (slug === 'ice-cream' || slug === 'beverages' || tags.includes('ice-cream') || tags.includes('beverages')) return 'BYPASS'
-  if (slug === 'cafe' || tags.includes('cafe')) return 'CAFE'
+  const slug = (p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '') || '').toLowerCase()
+  const tags = (p.tags || []).map((t: any) => (typeof t === 'string' ? t.toLowerCase().trim() : ''))
+
+  if (
+    slug === 'restaurant' ||
+    slug.includes('restaurant') ||
+    tags.includes('restaurant') ||
+    tags.some((t: string) => t.includes('restaurant'))
+  ) {
+    return 'RESTAURANT'
+  }
+
+  if (
+    slug === 'ice-cream' ||
+    slug === 'beverages' ||
+    tags.includes('ice-cream') ||
+    tags.includes('beverages')
+  ) {
+    return 'BYPASS'
+  }
+
+  if (
+    slug === 'cafe' ||
+    slug.includes('cafe') ||
+    tags.includes('cafe') ||
+    tags.some((t: string) => t.includes('cafe'))
+  ) {
+    return 'CAFE'
+  }
+
   return 'GROCERY'
 }
 
@@ -131,12 +156,18 @@ export function getProductLimit(p: any): number {
 
 export function isProductStoreClosed(
   p: any,
-  status: { groceryMartOpen: boolean; cafeOpen: boolean; restaurantOpen: boolean }
+  status: { groceryMartOpen: boolean; cafeOpen: boolean; restaurantOpen: boolean },
+  categoryStatus?: Record<string, boolean>
 ): boolean {
+  if (!p) return !status.groceryMartOpen
+  const categorySlug = p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '')
+  const isCatOpen = categoryStatus && categorySlug ? categoryStatus[categorySlug] !== false : true
+  if (!isCatOpen) return true
+
   const type = getProductType(p)
   if (type === 'RESTAURANT') return !status.restaurantOpen
   if (type === 'CAFE') return !status.cafeOpen
-  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen // Open if either is open
+  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen
   return !status.groceryMartOpen
 }
 export function getDeliveryPin(orderId: string): string {

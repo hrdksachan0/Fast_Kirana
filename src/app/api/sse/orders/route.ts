@@ -1,7 +1,7 @@
 import { sseEmitter } from '@/lib/sse-emitter'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 45
+export const maxDuration = 25
 
 export async function GET(request: Request) {
   const responseHeaders = new Headers({
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         } catch (err) {
           clearInterval(heartbeatInterval)
         }
-      }, 15000)
+      }, 25000)
 
       // Clean up when client disconnects
       request.signal.addEventListener('abort', () => {

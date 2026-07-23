@@ -9,6 +9,8 @@ import { ShoppingBag, Search, X, ChevronRight } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 
+import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
+
 interface Subcategory {
   id: string
   name: string
@@ -16,26 +18,96 @@ interface Subcategory {
   filterFn: (p: Product) => boolean
 }
 
+const formatMenuTag = (tag: string): { name: string; emoji: string } => {
+  const t = tag.toLowerCase().trim()
+  const map: Record<string, { name: string; emoji: string }> = {
+    'restaurant': { name: 'Restaurant Specials', emoji: '👨‍🍳' },
+    'cafe': { name: 'Cafe Specials', emoji: '☕' },
+    'roti-naan-kulcha': { name: 'Roti, Naan & Breads', emoji: '🫓' },
+    'roti': { name: 'Roti & Breads', emoji: '🫓' },
+    'naan': { name: 'Naan & Breads', emoji: '🫓' },
+    'breads': { name: 'Roti & Breads', emoji: '🫓' },
+    'burger': { name: 'Burgers', emoji: '🍔' },
+    'burgers': { name: 'Burgers', emoji: '🍔' },
+    'pizza': { name: 'Pizzas', emoji: '🍕' },
+    'pizzas': { name: 'Pizzas', emoji: '🍕' },
+    'north-indian': { name: 'North Indian', emoji: '🥘' },
+    'south-indian': { name: 'South Indian', emoji: '🍛' },
+    'biryani-rice': { name: 'Biryani & Rice', emoji: '🍚' },
+    'biryani': { name: 'Biryani & Rice', emoji: '🍚' },
+    'rice-dishes': { name: 'Rice Dishes', emoji: '🍚' },
+    'chinese': { name: 'Chinese Wok', emoji: '🥡' },
+    'noodles': { name: 'Noodles', emoji: '🍜' },
+    'sandwiches': { name: 'Sandwiches', emoji: '🥪' },
+    'sandwich': { name: 'Sandwiches', emoji: '🥪' },
+    'frankie-rolls': { name: 'Rolls & Wraps', emoji: '🌯' },
+    'rolls': { name: 'Rolls & Wraps', emoji: '🌯' },
+    'hot-beverage': { name: 'Brews & Tea', emoji: '☕' },
+    'hot-bite': { name: 'Hot Snacks', emoji: '🥟' },
+    'starter': { name: 'Starters', emoji: '🥟' },
+    'starters': { name: 'Starters', emoji: '🥟' },
+    'main-course': { name: 'Main Course', emoji: '🍲' },
+    'italian-pasta': { name: 'Pasta & Italian', emoji: '🍝' },
+    'pasta': { name: 'Pasta & Italian', emoji: '🍝' },
+    'bombay-bites': { name: 'Bombay Bites', emoji: '🥪' },
+    'shakes': { name: 'Shakes & Coolers', emoji: '🥤' },
+    'mocktails': { name: 'Mocktails', emoji: '🍹' },
+    'cold-coffee': { name: 'Cold Coffee', emoji: '🧋' },
+    'chilled': { name: 'Cold Drinks', emoji: '🥤' },
+    'desserts': { name: 'Ice Cream & Sweets', emoji: '🍨' },
+    'dessert': { name: 'Desserts', emoji: '🍨' },
+    'bakery': { name: 'Bakery Treats', emoji: '🥐' },
+    'thali': { name: 'Thali & Combo', emoji: '🍱' },
+    'beverages': { name: 'Beverages', emoji: '🥤' },
+    'snacks': { name: 'Snacks', emoji: '🍿' },
+  }
+
+  if (map[t]) return map[t]
+
+  const formatted = t
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+
+  let emoji = '🍽️'
+  if (/drink|sip|beverage|tea|coffee|soda/i.test(t)) emoji = '🥤'
+  else if (/sweet|ice|dessert|cake|pastry/i.test(t)) emoji = '🍨'
+  else if (/bread|roti|naan|paratha/i.test(t)) emoji = '🫓'
+  else if (/rice|biryani|pulav/i.test(t)) emoji = '🍚'
+  else if (/chicken|meat|egg|nonveg/i.test(t)) emoji = '🍗'
+  else if (/snack|fry|bite|starter/i.test(t)) emoji = '🥟'
+  else if (/burger/i.test(t)) emoji = '🍔'
+  else if (/pizza/i.test(t)) emoji = '🍕'
+  else if (/roll|wrap/i.test(t)) emoji = '🌯'
+  else if (/noodle|pasta|spaghetti/i.test(t)) emoji = '🍝'
+
+  return { name: formatted, emoji }
+}
+
 const getSubcategories = (categorySlug: string, products: Product[]): Subcategory[] => {
   let allEmoji = '🛒' // Default shopping cart
   if (categorySlug === 'fruits-vegetables') {
-    allEmoji = '🥗' // Salad
+    allEmoji = '🥗'
   } else if (categorySlug === 'dairy-breakfast') {
-    allEmoji = '🥣' // Cereal bowl
+    allEmoji = '🥣'
   } else if (categorySlug === 'snacks-munchies') {
-    allEmoji = '🍿' // Popcorn
+    allEmoji = '🍿'
   } else if (categorySlug === 'beverages') {
-    allEmoji = '🥤' // Soda cup
+    allEmoji = '🥤'
   } else if (categorySlug === 'personal-care') {
-    allEmoji = '🧴' // Lotion bottle
+    allEmoji = '🧴'
   } else if (categorySlug === 'household') {
-    allEmoji = '🧹' // Broom
+    allEmoji = '🧹'
   } else if (categorySlug === 'bakery-biscuits') {
-    allEmoji = '🥐' // Croissant
+    allEmoji = '🥐'
   } else if (categorySlug === 'atta-rice-dal') {
-    allEmoji = '🍲' // Pot of food
+    allEmoji = '🍲'
   } else if (categorySlug === 'ice-cream') {
-    allEmoji = '🍦' // Ice cream cone
+    allEmoji = '🍦'
+  } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
+    allEmoji = '👨‍🍳'
+  } else if (categorySlug === 'cafe' || categorySlug.includes('cafe')) {
+    allEmoji = '☕'
   }
 
   const list: Subcategory[] = [{ id: 'all', name: 'All', emoji: allEmoji, filterFn: () => true }]
@@ -236,18 +308,50 @@ const getSubcategories = (categorySlug: string, products: Product[]): Subcategor
         filterFn: (p) => /tub|brick|pack|family/i.test(p.name)
       }
     )
+  } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
+    DEFAULT_RESTAURANT_MENU_SECTIONS.forEach((sec) => {
+      list.push({
+        id: sec.tag,
+        name: sec.title,
+        emoji: sec.emoji,
+        filterFn: (p) => {
+          const tags = (p.tags || []).map((t) => t.toLowerCase())
+          return (
+            tags.includes(sec.tag.toLowerCase()) ||
+            (sec.matchTags ? sec.matchTags.some((mt) => tags.includes(mt.toLowerCase())) : false) ||
+            p.name.toLowerCase().includes(sec.tag.toLowerCase())
+          )
+        }
+      })
+    })
+  } else if (categorySlug === 'cafe' || categorySlug.includes('cafe')) {
+    DEFAULT_CAFE_MENU_SECTIONS.forEach((sec) => {
+      list.push({
+        id: sec.tag,
+        name: sec.title,
+        emoji: sec.emoji,
+        filterFn: (p) => {
+          const tags = (p.tags || []).map((t) => t.toLowerCase())
+          return (
+            tags.includes(sec.tag.toLowerCase()) ||
+            (sec.matchTags ? sec.matchTags.some((mt) => tags.includes(mt.toLowerCase())) : false) ||
+            p.name.toLowerCase().includes(sec.tag.toLowerCase())
+          )
+        }
+      })
+    })
   } else {
     const uniqueTags = Array.from(
       new Set(products.flatMap((p) => p.tags || []))
-    ).filter((t) => !['cafe', 'popular', 'essential', 'daily'].includes(t.toLowerCase()))
+    ).filter((t) => !['popular', 'essential', 'daily'].includes(t.toLowerCase()))
 
-    uniqueTags.slice(0, 4).forEach((tag) => {
-      const name = tag.charAt(0).toUpperCase() + tag.slice(1)
+    uniqueTags.forEach((tag) => {
+      const meta = formatMenuTag(tag)
       list.push({
         id: tag.toLowerCase(),
-        name,
-        emoji: '📦',
-        filterFn: (p) => p.tags?.map(t => t.toLowerCase()).includes(tag.toLowerCase()) || false
+        name: meta.name,
+        emoji: meta.emoji,
+        filterFn: (p) => p.tags?.map((t) => t.toLowerCase()).includes(tag.toLowerCase()) || false
       })
     })
   }

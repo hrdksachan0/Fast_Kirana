@@ -11,7 +11,7 @@ import { Trash2, Plus, Minus, ArrowRight, Ticket, Loader2, ShoppingBag, Chevrons
 import { ProductImage } from '@/components/product/product-image'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
-import { cn, isCafeProduct } from '@/lib/utils'
+import { cn, isCafeProduct, isProductStoreClosed } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { useCartStore } from '@/stores/cart-store'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -204,19 +204,15 @@ export default function CartPage() {
     )
   }
 
-
-
   const hasInventoryIssues = items.some(
     (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
   )
   const isItemClosed = (product: any) => {
-    const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
-    const isRestaurant = product.category?.slug === 'restaurant' || product.tags?.includes('restaurant')
-    const categorySlug = product.category?.slug || ''
-    const isCatOpen = categoryStatus[categorySlug] !== false
-    if (isCafe) return !cafeOpen || !isCatOpen
-    if (isRestaurant) return !restaurantOpen || !isCatOpen
-    return !groceryMartOpen || !isCatOpen
+    return isProductStoreClosed(
+      product,
+      { groceryMartOpen, cafeOpen, restaurantOpen },
+      categoryStatus
+    )
   }
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))

@@ -377,7 +377,11 @@ export async function GET(request: NextRequest) {
       setCachedSearch(cacheKey, responseData)
     }
 
-    return NextResponse.json(responseData)
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+      }
+    })
   } catch (error: any) {
     console.error('Products API Error:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })

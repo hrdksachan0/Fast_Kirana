@@ -5,7 +5,7 @@ import { useCart } from '@/hooks/use-cart'
 import { X, Plus, Minus, ShieldCheck, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMemo, useEffect } from 'react'
-import { cn, formatPrice, isCafeProduct, getProductLimit } from '@/lib/utils'
+import { cn, formatPrice, isCafeProduct, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { Product } from '@/types'
@@ -15,9 +15,10 @@ interface VariantRowProps {
   product: Product
   cafeOpen: boolean
   groceryMartOpen: boolean
+  restaurantOpen: boolean
 }
 
-function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowProps) {
+function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpen }: VariantRowProps) {
   const { getItemQuantity, addItem, updateQuantity } = useCart()
   const resolvedId = `${product.id}_${variant.name}`
   const quantity = getItemQuantity(resolvedId)
@@ -34,12 +35,11 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen }: VariantRowP
     : 0
 
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
-  const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
-  const categorySlug = product.category?.slug || ''
-  const isCategoryOpen = categoryStatus[categorySlug] !== false
-  const isStoreClosed = isCafe 
-    ? (!cafeOpen || !isCategoryOpen) 
-    : (!groceryMartOpen || !isCategoryOpen)
+  const isStoreClosed = isProductStoreClosed(
+    product,
+    { groceryMartOpen, cafeOpen, restaurantOpen },
+    categoryStatus
+  )
 
   const cartProduct = useMemo(() => ({
     id: resolvedId,
@@ -144,6 +144,7 @@ export function VariantSelectorDrawer() {
   const setActiveProduct = useUIStore((s) => s.setActiveVariantProduct)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
 
   const isOpen = activeProduct !== null
 
@@ -235,6 +236,7 @@ export function VariantSelectorDrawer() {
                     product={activeProduct}
                     cafeOpen={cafeOpen}
                     groceryMartOpen={groceryMartOpen}
+                    restaurantOpen={restaurantOpen}
                   />
                 ))}
               </div>

@@ -18,7 +18,7 @@ interface ProductCardProps {
   isCompact?: boolean
 }
 
-import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 
 export function ProductCard({ product, isCompact = false }: ProductCardProps) {
@@ -104,15 +104,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     })
   }, [isNotifySubscribed, product.id, product.name, subscribe])
 
-  const isCafe = product.category?.slug === 'cafe' || product.tags?.includes('cafe')
-  const isRestaurant = product.category?.slug === 'restaurant' || product.tags?.includes('restaurant')
-  const categorySlug = product.category?.slug || ''
+  const productType = getProductType(product)
+  const isCafe = productType === 'CAFE'
+  const isRestaurant = productType === 'RESTAURANT'
+  const categorySlug = product.category?.slug || (product as any).categorySlug || ''
   const isCategoryOpen = categoryStatus[categorySlug] !== false
-  const isStoreClosed = isCafe 
-    ? (!cafeOpen || !isCategoryOpen) 
-    : isRestaurant
-      ? (!restaurantOpen || !isCategoryOpen)
-      : (!groceryMartOpen || !isCategoryOpen)
+  const isStoreClosed = isProductStoreClosed(
+    product,
+    { groceryMartOpen, cafeOpen, restaurantOpen },
+    categoryStatus
+  )
 
   // Map of category slug to emoji representation
   const emojiMap: Record<string, string> = {

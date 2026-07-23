@@ -7,7 +7,7 @@ import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff } fro
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { ProductImage } from '@/components/product/product-image'
-import { isCafeProduct, cn, getProductLimit } from '@/lib/utils'
+import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { Product } from '@/types'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
@@ -139,6 +139,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
@@ -356,12 +357,11 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                     <div className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm glass">
                       {suggestions.map((product) => {
                         const quantity = getItemQuantity(product.id)
-                        const isCafe = isCafeProduct(product)
-                        const categorySlug = product.category?.slug || ''
-                        const isCategoryOpen = categoryStatus[categorySlug] !== false
-                        const isStoreClosed = isCafe 
-                          ? (!cafeOpen || !isCategoryOpen) 
-                          : (!groceryMartOpen || !isCategoryOpen)
+                        const isStoreClosed = isProductStoreClosed(
+                          product,
+                          { groceryMartOpen, cafeOpen, restaurantOpen },
+                          categoryStatus
+                        )
 
                         return (
                           <div

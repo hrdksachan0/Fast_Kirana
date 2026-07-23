@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Minus, History } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
-import { formatPrice, isCafeProduct, cn, getProductLimit } from '@/lib/utils'
+import { formatPrice, isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { triggerHaptic } from '@/lib/haptic'
@@ -30,6 +30,7 @@ export function BuyAgainSection() {
   // Select store closure settings
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const { getItemQuantity, addItem, updateQuantity } = useCart()
@@ -163,11 +164,12 @@ export function BuyAgainSection() {
         >
           {items.map((item) => {
             const quantity = getItemQuantity(item.id)
+            const isStoreClosed = isProductStoreClosed(
+              item,
+              { groceryMartOpen, cafeOpen, restaurantOpen },
+              categoryStatus
+            )
             const isCafe = item.categorySlug === 'cafe'
-            const isCatOpen = categoryStatus[item.categorySlug] !== false
-            const isStoreClosed = isCafe 
-              ? (!cafeOpen || !isCatOpen) 
-              : (!groceryMartOpen || !isCatOpen)
               
             const stock = item.stock ?? 50
             const isLowStock = !isCafe && stock > 0 && stock <= 10

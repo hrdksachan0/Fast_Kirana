@@ -185,6 +185,16 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               emoji: category.emoji || '🍽️'
             }
 
+            const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
+            let formattedLabel = rawLabel
+            if (category.slug === 'household' || category.slug?.includes('household') || category.name?.toLowerCase().includes('household')) {
+              formattedLabel = 'Home Care'
+            } else if (category.slug === 'restaurant' || category.slug?.includes('restaurant') || category.name?.toLowerCase().includes('restaurant')) {
+              formattedLabel = 'Restaurant'
+            } else if (category.slug === 'cafe' || category.slug?.includes('cafe') || category.name?.toLowerCase().includes('cafe')) {
+              formattedLabel = 'Cafe'
+            }
+
             const isCafe = category.slug === 'cafe' || category.isCafeSection
             const isCatOpen = categoryStatus[category.slug] !== false
             const isClosed = isCafe ? (!cafeOpen || !isCatOpen) : (!groceryMartOpen || !isCatOpen)
@@ -193,7 +203,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <motion.div
                 key={category.id}
                 whileTap={{ scale: 0.93, rotate: -1.5 }}
-                className="w-[70px] shrink-0 snap-start"
+                className="w-[74px] shrink-0 snap-start"
               >
                 <Link
                   href={category.slug === 'cafe' ? '/?mode=cafe' : category.isCafeSection ? `/?mode=cafe&section=${category.slug}` : `/category/${category.slug}`}
@@ -206,7 +216,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                       <Image
                         src={category.imageUrl}
-                        alt={config.label}
+                        alt={formattedLabel}
                         fill
                         sizes="100px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -214,7 +224,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     ) : categoryPhotos[category.slug] ? (
                       <Image
                         src={categoryPhotos[category.slug]}
-                        alt={config.label}
+                        alt={formattedLabel}
                         fill
                         sizes="100px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -234,9 +244,11 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     )}
                   </div>
                   {/* Category Label */}
-                  <span className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 mt-2 leading-tight tracking-tight line-clamp-1">
-                    {config.label}
-                  </span>
+                  <div className="min-h-[26px] flex items-center justify-center mt-1.5 w-full">
+                    <span className="text-[10px] sm:text-[10.5px] font-black text-zinc-800 dark:text-zinc-200 leading-[1.15] tracking-tight line-clamp-2 text-center break-words max-w-full">
+                      {formattedLabel}
+                    </span>
+                  </div>
                 </Link>
               </motion.div>
             )

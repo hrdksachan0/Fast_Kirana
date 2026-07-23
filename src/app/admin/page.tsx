@@ -75,8 +75,26 @@ export default async function AdminPage() {
     CANCELLED: 0
   }
 
+  let todayOrdersCount = 0
+  let todayRevenue = 0
+
   try {
-    const results = await retryQuery(() => Promise.all([
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const [todayOrders, todayRevAgg, ...results] = await retryQuery(() => Promise.all([
+      prisma.order.count({
+        where: {
+          createdAt: { gte: startOfToday },
+        },
+      }),
+      prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfToday },
+          status: { not: 'CANCELLED' },
+        },
+        _sum: { total: true },
+      }),
       prisma.user.count(),
       prisma.product.count({
         where: {
@@ -109,6 +127,8 @@ export default async function AdminPage() {
       }),
     ]))
 
+    todayOrdersCount = todayOrders as number
+    todayRevenue = (todayRevAgg as any)._sum?.total || 0
     userCount = results[0] as number
     lowStockCount = results[1] as number
     const groupStats = results[2] as any[]
@@ -346,12 +366,9 @@ export default async function AdminPage() {
   }))
 
   const statsList = [
-    { label: 'Total Revenue', value: formatPrice(revenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
-    { label: 'Total Orders', value: totalOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
     { label: 'Active Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
-    { label: 'Delivered Orders', value: deliveredOrdersCount.toString(), icon: CheckCircle, color: 'text-[#00b140] bg-[#00b140]/10' },
-    { label: 'Registered Users', value: userCount.toString(), icon: Users, color: 'text-blue-500 bg-blue-500/10' },
-    { label: 'Low Stock Alert', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-discount bg-discount/10' },
+    { label: 'Today Revenue', value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
+    { label: 'Today Orders', value: todayOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
   ]
 
   return (
@@ -365,27 +382,27 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {/* Grid of Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      {/* Grid of Stats Cards (Only Active Orders, Today Revenue, Today Orders) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {statsList.map((card) => {
           const CardIcon = card.icon
           return (
             <div 
               key={card.label} 
-              className="relative overflow-hidden bg-card border border-border hover:border-primary/20 p-3.5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center gap-3 group"
+              className="relative overflow-hidden bg-card border border-border hover:border-primary/20 p-4 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center gap-3.5 group"
             >
               {/* Subtle background glow effect on hover */}
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-16 h-16 bg-current opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 rounded-full blur-md" />
               
-              <div className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 ${card.color}`}>
-                <CardIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 ${card.color}`}>
+                <CardIcon className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
               </div>
               
               <div className="min-w-0 flex-1">
-                <span className="text-[9px] font-black text-text-secondary uppercase tracking-wider block leading-none">
+                <span className="text-[10px] font-black text-text-secondary uppercase tracking-wider block leading-none">
                   {card.label}
                 </span>
-                <span className="text-sm sm:text-base font-black text-text-primary mt-1 block truncate leading-none">
+                <span className="text-base sm:text-lg font-black text-text-primary mt-1 block truncate leading-none">
                   {card.value}
                 </span>
               </div>
