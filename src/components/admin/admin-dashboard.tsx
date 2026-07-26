@@ -651,7 +651,7 @@ export function AdminDashboard({
         tags: currentTags.join(', ')
       }))
     } else if (type === 'restaurant') {
-      const restaurantId = restaurantCategory?.id || ''
+      const restaurantId = restaurantCategory?.id || 'cmrkghpcc0007lwidl816nhtv'
       let currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
       if (!currentTags.map(t => t.toLowerCase()).includes('restaurant')) {
         currentTags.push('restaurant')
@@ -1625,7 +1625,9 @@ export function AdminDashboard({
     if (!editingProduct) return
 
     const requiresBasePrice = !hasVariantsEdit
-    if (!productEditForm.name || !productEditForm.categoryId || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
+    const isSpecialProduct = isEditProductCafe || isEditProductRestaurant
+    const hasCategory = productEditForm.categoryId || isSpecialProduct
+    if (!productEditForm.name || !hasCategory || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -1716,7 +1718,9 @@ export function AdminDashboard({
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsNew
-    if (!newProduct.name || !newProduct.categoryId || (requiresBasePrice && (!newProduct.price || !newProduct.mrp))) {
+    const isSpecialProduct = isNewProductCafe || isNewProductRestaurant
+    const hasCategory = newProduct.categoryId || isSpecialProduct
+    if (!newProduct.name || !hasCategory || (requiresBasePrice && (!newProduct.price || !newProduct.mrp))) {
       toast.error('Please fill in all required fields')
       return
     }

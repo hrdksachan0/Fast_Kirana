@@ -301,6 +301,7 @@ interface CafeStorefrontProps {
 
 export function CafeStorefront({ initialProducts, customSections }: CafeStorefrontProps) {
   const cafeOpen = useUIStore((s) => s.cafeOpen)
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const { items } = useCart()
   const hasCartItems = items.length > 0
   // Swiggy dynamic navigation states
@@ -386,7 +387,7 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     ])
 
     const rawCategories = customSections || DEFAULT_CAFE_MENU_SECTIONS
-    const PREDEFINED_CATEGORIES = rawCategories.filter(cat => !cat.disabled)
+    const PREDEFINED_CATEGORIES = rawCategories.filter(cat => !cat.disabled && (cat.disabled as any) !== 'true' && categoryStatus[cat.tag] !== false)
 
     const sectionsMap = new Map<string, any>()
     PREDEFINED_CATEGORIES.forEach(cat => {

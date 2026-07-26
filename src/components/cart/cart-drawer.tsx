@@ -250,7 +250,7 @@ export function CartDrawer() {
             
             {/* Product details */}
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 truncate leading-snug">{item.product.name}</h4>
+              <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 line-clamp-2 leading-snug break-words">{item.product.name}</h4>
               <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{item.product.unit}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
@@ -498,7 +498,7 @@ export function CartDrawer() {
                             />
                           </div>
                           <div className="flex-1 min-w-0 text-left">
-                            <p className="text-[10px] font-black text-zinc-800 dark:text-zinc-250 truncate leading-tight">
+                            <p className="text-[10px] font-black text-zinc-800 dark:text-zinc-250 line-clamp-2 leading-[1.15] break-words">
                               {prod.name}
                             </p>
                             <p className="text-[9px] text-zinc-500 font-bold mt-0.5">{prod.unit}</p>

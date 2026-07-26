@@ -23,6 +23,7 @@ export function CartStickyBar() {
 
   const toggleCart = useUIStore((s) => s.toggleCart)
   const isCartOpen = useUIStore((s) => s.isCartOpen)
+  const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
   const [isBouncing, setIsBouncing] = useState(false)
 
   const router = useRouter()
@@ -70,8 +71,16 @@ export function CartStickyBar() {
         toggleCart()
       }}
       whileTap={{ scale: 0.98 }}
+      initial={false}
+      animate={{
+        bottom: isTabBarVisible ? '90px' : '18px',
+      }}
+      transition={{
+        duration: 0.28,
+        ease: [0.16, 1, 0.3, 1], // Smooth 60 FPS cubic-bezier transition
+      }}
       className={cn(
-        "gpu-accelerated fixed bottom-[90px] left-3.5 right-3.5 z-40 bg-[#097925] text-white rounded-[20px] shadow-[0_8px_25px_rgba(9,121,37,0.2)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
+        "gpu-accelerated fixed left-3.5 right-3.5 z-40 bg-[#097925] text-white rounded-[20px] shadow-[0_8px_25px_rgba(9,121,37,0.2)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >

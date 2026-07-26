@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const includeAll = searchParams.get('admin') === 'true' || searchParams.get('all') === 'true'
+
     const categories = await prisma.category.findMany({
-      where: {
+      where: includeAll ? {} : {
         slug: { notIn: ['cafe', 'restaurant'] },
       },
       orderBy: {

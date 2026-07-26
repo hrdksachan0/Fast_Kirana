@@ -11,6 +11,7 @@ interface UIState {
   isMobileMenuOpen: boolean
   isSearchOpen: boolean
   isLocationPickerOpen: boolean
+  isTabBarVisible: boolean
   activeVariantProduct: Product | null
   pendingConflictProduct: any | null
   selectedLocation: string
@@ -28,6 +29,7 @@ interface UIState {
   setMobileMenuOpen: (open: boolean) => void
   setSearchOpen: (open: boolean) => void
   setLocationPickerOpen: (open: boolean) => void
+  setTabBarVisible: (visible: boolean) => void
   setActiveVariantProduct: (product: Product | null) => void
   setPendingConflictProduct: (product: any | null) => void
   setSelectedLocation: (location: string) => void
@@ -43,6 +45,7 @@ export const useUIStore = create<UIState>((set) => ({
   isMobileMenuOpen: false,
   isSearchOpen: false,
   isLocationPickerOpen: false,
+  isTabBarVisible: true,
   activeVariantProduct: null,
   pendingConflictProduct: null,
   selectedLocation: 'Select Location',
@@ -61,6 +64,7 @@ export const useUIStore = create<UIState>((set) => ({
   setMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
   setSearchOpen: (open) => set({ isSearchOpen: open }),
   setLocationPickerOpen: (open) => set({ isLocationPickerOpen: open }),
+  setTabBarVisible: (visible) => set({ isTabBarVisible: visible }),
   setActiveVariantProduct: (product) => set({ activeVariantProduct: product }),
   setPendingConflictProduct: (product) => set({ pendingConflictProduct: product }),
   setSelectedLocation: (location) => {

@@ -381,10 +381,13 @@ export async function POST(request: Request) {
 
     const ordersToCreate: any[] = []
 
+    const groceryChargedMisc = groceryItems.length > 0 && deliveryMethod !== 'PICKUP'
+    const groceryMiscFee = groceryChargedMisc ? serverMiscFee : 0
+
     if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
-      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + serverMiscFee
+      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + groceryMiscFee
 
       ordersToCreate.push({
         type: 'GROCERY',
@@ -392,7 +395,7 @@ export async function POST(request: Request) {
         discount: groceryDiscount,
         deliveryFee: groceryDeliveryFee,
         taxes: groceryTaxes,
-        miscFee: serverMiscFee,
+        miscFee: groceryMiscFee,
         total: groceryTotal,
         items: groceryItems,
       })
@@ -401,7 +404,6 @@ export async function POST(request: Request) {
     if (cafeItems.length > 0) {
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
       const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
-      const groceryChargedMisc = groceryItems.length > 0
       const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
       const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + appliedMiscFee
 

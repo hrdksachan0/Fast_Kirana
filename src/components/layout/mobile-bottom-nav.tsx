@@ -1,13 +1,73 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Search, CircleUser, LayoutGrid } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useUIStore } from '@/stores/ui-store'
 import { cn } from '@/lib/utils'
 
 export function MobileBottomNav() {
   const pathname = usePathname()
+  const isVisible = useUIStore((s) => s.isTabBarVisible)
+  const setTabBarVisible = useUIStore((s) => s.setTabBarVisible)
+  const lastScrollY = useRef(0)
+  const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop
+      const diff = currentScrollY - lastScrollY.current
+
+      // Clear any existing idle timeout
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+      }
+
+      // Always show near the top of the page
+      if (currentScrollY <= 60) {
+        setTabBarVisible(true)
+      } else {
+        // Scroll DOWN -> hide bottom nav
+        if (diff > 8) {
+          setTabBarVisible(false)
+        } 
+        // Scroll UP -> show bottom nav
+        else if (diff < -8) {
+          setTabBarVisible(true)
+        }
+      }
+
+      lastScrollY.current = currentScrollY
+
+      // Show bottom nav after 300ms of no scrolling (idle)
+      idleTimerRef.current = setTimeout(() => {
+        setTabBarVisible(true)
+      }, 300)
+    }
+
+    // Tap anywhere on the screen -> show bottom nav immediately
+    const handleTouchOrTap = () => {
+      setTabBarVisible(true)
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('touchstart', handleTouchOrTap, { passive: true })
+    window.addEventListener('pointerdown', handleTouchOrTap, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('touchstart', handleTouchOrTap)
+      window.removeEventListener('pointerdown', handleTouchOrTap)
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+      }
+    }
+  }, [setTabBarVisible])
 
   // Suppress bottom navigation on checkout, cart, order tracking, admin, and worker screens
   if (
@@ -50,7 +110,22 @@ export function MobileBottomNav() {
   ]
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-[480px] sm:w-[86%] sm:max-w-[580px] z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border border-zinc-200/40 dark:border-zinc-800/40 h-[66px] rounded-full flex items-center justify-around px-4 shadow-[0_10px_35px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.3)] md:hidden">
+    <motion.div
+      initial={false}
+      animate={{
+        y: isVisible ? 0 : 96,
+        opacity: isVisible ? 1 : 0,
+        scale: isVisible ? 1 : 0.96,
+      }}
+      transition={{
+        duration: 0.28,
+        ease: [0.16, 1, 0.3, 1], // Smooth 60 FPS cubic-bezier
+      }}
+      style={{
+        pointerEvents: isVisible ? 'auto' : 'none',
+      }}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-[480px] sm:w-[86%] sm:max-w-[580px] z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border border-zinc-200/40 dark:border-zinc-800/40 h-[66px] rounded-full flex items-center justify-around px-4 shadow-[0_10px_35px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.3)] md:hidden"
+    >
       {navItems.map((item, idx) => {
         const Icon = item.icon
         const isActive = item.active
@@ -107,6 +182,6 @@ export function MobileBottomNav() {
           </Link>
         )
       })}
-    </div>
+    </motion.div>
   )
 }

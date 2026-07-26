@@ -486,10 +486,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const groceryChargedMisc = groceryItems.length > 0 && deliveryMethod !== 'PICKUP'
+    const groceryMiscFee = groceryChargedMisc ? serverMiscFee : 0
+
     if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
-      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + serverMiscFee
+      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + groceryMiscFee
 
       ordersToCreate.push({
         type: 'GROCERY',
@@ -497,7 +500,7 @@ export async function POST(request: NextRequest) {
         discount: groceryDiscount,
         deliveryFee: groceryDeliveryFee,
         taxes: groceryTaxes,
-        miscFee: serverMiscFee,
+        miscFee: groceryMiscFee,
         total: groceryTotal,
         items: groceryItems,
       })
@@ -506,7 +509,6 @@ export async function POST(request: NextRequest) {
     if (cafeItems.length > 0) {
       const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
       const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
-      const groceryChargedMisc = groceryItems.length > 0
       const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
       const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + appliedMiscFee
 
@@ -525,7 +527,6 @@ export async function POST(request: NextRequest) {
     if (restaurantItems.length > 0) {
       const restaurantDiscount = combinedSubtotal > 0 ? (restaurantSubtotal / combinedSubtotal) * combinedDiscount : 0
       const restaurantTaxes = (restaurantSubtotal - restaurantDiscount) * serverTaxRate
-      const groceryChargedMisc = groceryItems.length > 0
       const cafeChargedMisc = cafeItems.length > 0
       const appliedMiscFee = (groceryChargedMisc || cafeChargedMisc) ? 0 : serverMiscFee
       const restaurantTotal = restaurantSubtotal - restaurantDiscount + restaurantDeliveryFee + restaurantTaxes + appliedMiscFee

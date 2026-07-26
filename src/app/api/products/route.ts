@@ -458,7 +458,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
 
-    if (!name || !categoryId || mrp === undefined || price === undefined) {
+    let finalCategoryId = categoryId
+    const tagsList = Array.isArray(tags) 
+      ? tags.map((t: any) => String(t).toLowerCase()) 
+      : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim().toLowerCase()) : [])
+
+    if (!finalCategoryId || finalCategoryId === '') {
+      if (tagsList.includes('restaurant')) {
+        let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
+        if (!restCat) {
+          restCat = await prisma.category.create({
+            data: { name: 'FastKirana Restaurant', slug: 'restaurant', imageUrl: '🍽️', sortOrder: 10 }
+          })
+        }
+        finalCategoryId = restCat.id
+      } else if (tagsList.includes('cafe')) {
+        let cafeCat = await prisma.category.findFirst({ where: { slug: { in: ['cafe', 'fastkirana-cafe'] } } })
+        if (!cafeCat) {
+          cafeCat = await prisma.category.create({
+            data: { name: 'FastKirana Cafe', slug: 'cafe', imageUrl: '☕', sortOrder: 11 }
+          })
+        }
+        finalCategoryId = cafeCat.id
+      }
+    }
+
+    if (!name || !finalCategoryId || mrp === undefined || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -510,7 +535,7 @@ export async function POST(request: NextRequest) {
         slug: finalSlug,
         description,
         imageUrl: imageUrl || '📦',
-        categoryId,
+        categoryId: finalCategoryId,
         mrp: finalMrp,
         price: finalPrice,
         discount: calculatedDiscount,

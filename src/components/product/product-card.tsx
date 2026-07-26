@@ -351,7 +351,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                     "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
                     isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
                     isStoreClosed && resolvedStock > 0
-                      ? "border-zinc-300 bg-zinc-50 text-zinc-400 cursor-not-allowed"
+                      ? "border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
                       : resolvedStock <= 0 || !resolvedIsAvailable
                       ? "border-amber-500 bg-amber-500/5 text-amber-600"
                       : isCafe

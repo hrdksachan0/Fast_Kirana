@@ -566,13 +566,19 @@ export default function CheckoutPage() {
     }
   }
 
-  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + (groceryCartItems.length > 0 ? miscFee : 0)
-  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + (groceryCartItems.length === 0 ? miscFee : 0)
+  const groceryChargedMisc = groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP'
+  const effectiveGroceryMiscFee = groceryChargedMisc ? miscFee : 0
+  const cafeChargedMisc = cafeCartItems.length > 0 && !groceryChargedMisc
+  const effectiveCafeMiscFee = cafeChargedMisc ? miscFee : 0
+  const effectiveMiscFee = effectiveGroceryMiscFee + effectiveCafeMiscFee
+
+  const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + effectiveGroceryMiscFee
+  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + effectiveCafeMiscFee
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
   const taxes = Math.max(0, adjustedSubtotal - couponDiscount) * taxRate
-  const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + miscFee
+  const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + effectiveMiscFee
 
   // Fetch Saved Addresses
   useEffect(() => {
@@ -1794,10 +1800,10 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {miscFee > 0 && (
+            {effectiveMiscFee > 0 && (
               <div className="flex justify-between text-text-secondary">
                 <span>{miscFeeLabel}</span>
-                <span>₹{miscFee.toFixed(0)}</span>
+                <span>₹{effectiveMiscFee.toFixed(0)}</span>
               </div>
             )}
 

@@ -8,6 +8,7 @@ import { cn, isProductInStock, getProductPrice } from '@/lib/utils'
 import { ShoppingBag, Search, X, ChevronRight } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useUIStore } from '@/stores/ui-store'
 
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 
@@ -84,39 +85,26 @@ const formatMenuTag = (tag: string): { name: string; emoji: string } => {
   return { name: formatted, emoji }
 }
 
-const getSubcategories = (categorySlug: string, products: Product[]): Subcategory[] => {
-  let allEmoji = '🛒' // Default shopping cart
-  if (categorySlug === 'fruits-vegetables') {
-    allEmoji = '🥗'
-  } else if (categorySlug === 'dairy-breakfast') {
-    allEmoji = '🥣'
-  } else if (categorySlug === 'snacks-munchies') {
-    allEmoji = '🍿'
-  } else if (categorySlug === 'beverages') {
-    allEmoji = '🥤'
-  } else if (categorySlug === 'personal-care') {
-    allEmoji = '🧴'
-  } else if (categorySlug === 'household') {
-    allEmoji = '🧹'
-  } else if (categorySlug === 'bakery-biscuits') {
-    allEmoji = '🥐'
-  } else if (categorySlug === 'atta-rice-dal') {
-    allEmoji = '🍲'
-  } else if (categorySlug === 'ice-cream') {
-    allEmoji = '🍦'
-  } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
-    allEmoji = '👨‍🍳'
-  } else if (categorySlug === 'cafe' || categorySlug.includes('cafe')) {
-    allEmoji = '☕'
-  }
-
-  const list: Subcategory[] = [{ id: 'all', name: 'All', emoji: allEmoji, filterFn: () => true }]
+function getSubcategories(
+  categorySlug: string,
+  products: Product[],
+  settings: Record<string, any> = {},
+  categoryStatus: Record<string, boolean> = {}
+): Subcategory[] {
+  const list: Subcategory[] = [
+    {
+      id: 'all',
+      name: 'All Items',
+      emoji: '✨',
+      filterFn: () => true
+    }
+  ]
 
   if (categorySlug === 'fruits-vegetables') {
     list.push(
       {
         id: 'vegetables',
-        name: 'Fresh Vegetables',
+        name: 'Fresh Veggies',
         emoji: '🥦',
         filterFn: (p) => {
           const name = p.name.toLowerCase()
@@ -158,115 +146,124 @@ const getSubcategories = (categorySlug: string, products: Product[]): Subcategor
         id: 'milk',
         name: 'Milk & Curd',
         emoji: '🥛',
-        filterFn: (p) => /milk|curd|taaza/i.test(p.name)
+        filterFn: (p) => /milk|dahi|curd|paneer|butter|cream|lassi/i.test(p.name)
       },
       {
-        id: 'cheese-butter',
-        name: 'Cheese & Butter',
-        emoji: '🧀',
-        filterFn: (p) => /cheese|butter|paneer/i.test(p.name)
+        id: 'bread-bakery',
+        name: 'Bread & Pav',
+        emoji: '🍞',
+        filterFn: (p) => /bread|pav|bun|toast|rusk/i.test(p.name)
       },
       {
-        id: 'breakfast',
-        name: 'Breakfast',
+        id: 'cereal-oats',
+        name: 'Cereal & Oats',
         emoji: '🥣',
-        filterFn: (p) => {
-          const tags = p.tags?.map(t => t.toLowerCase()) || []
-          return tags.includes('breakfast') || tags.includes('cereal') || /bread|egg|flakes/i.test(p.name)
-        }
+        filterFn: (p) => /oats|cereal|cornflakes|muesli|poha/i.test(p.name)
+      },
+      {
+        id: 'eggs',
+        name: 'Eggs & Butter',
+        emoji: '🥚',
+        filterFn: (p) => /egg|butter|cheese/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'snacks-munchies') {
+  } else if (categorySlug === 'munchies') {
     list.push(
       {
         id: 'chips',
         name: 'Chips & Crisps',
-        emoji: '🍟',
-        filterFn: (p) => /chips|pringles|lays|kurkure|puff/i.test(p.name)
-      },
-      {
-        id: 'biscuits',
-        name: 'Biscuits',
-        emoji: '🍪',
-        filterFn: (p) => /biscuit|cookie|oreo|fantasy/i.test(p.name)
-      },
-      {
-        id: 'chocolates',
-        name: 'Chocolates',
-        emoji: '🍫',
-        filterFn: (p) => /chocolate|dairy milk|5 star|kitkat/i.test(p.name)
+        emoji: '🥔',
+        filterFn: (p) => /chips|crisps|wafer|kurkure|lays|bingo/i.test(p.name)
       },
       {
         id: 'namkeen',
-        name: 'Namkeen',
+        name: 'Namkeen & Bhujia',
         emoji: '🥨',
-        filterFn: (p) => /bhujia|namkeen|mixture/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'beverages') {
-    list.push(
-      {
-        id: 'cold-drinks',
-        name: 'Soft Drinks',
-        emoji: '🥤',
-        filterFn: (p) => /coca-cola|sprite|thumbs up|coke|soda|fanta|limca/i.test(p.name)
+        filterFn: (p) => /namkeen|bhujia|sev|mixture|gathiya|bikaji|haldiram/i.test(p.name)
       },
-      {
-        id: 'juices',
-        name: 'Juices & Drinks',
-        emoji: '🧃',
-        filterFn: (p) => /juice|frooti|paper boat|real/i.test(p.name)
-      },
-      {
-        id: 'tea-coffee',
-        name: 'Tea & Coffee',
-        emoji: '☕',
-        filterFn: (p) => /tea|coffee|nescafe|tata/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'personal-care') {
-    list.push(
-      {
-        id: 'bath',
-        name: 'Bath & Soap',
-        emoji: '🧼',
-        filterFn: (p) => /soap|dove|dettol|handwash|shower/i.test(p.name)
-      },
-      {
-        id: 'hair',
-        name: 'Hair Care',
-        emoji: '💇',
-        filterFn: (p) => /shampoo|oil|hair|parachute/i.test(p.name)
-      },
-      {
-        id: 'skin',
-        name: 'Skin Care',
-        emoji: '🧴',
-        filterFn: (p) => /lotion|face wash|cream|nivea|vaseline|himalaya/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'bakery-biscuits') {
-    list.push(
       {
         id: 'biscuits',
         name: 'Biscuits & Cookies',
         emoji: '🍪',
-        filterFn: (p) => /biscuit|cookie|oreo|bourbon|marie|monaco|krackjack|parle|bakery/i.test(p.name)
+        filterFn: (p) => /biscuit|cookie|parle|good day|oreo|dark fantasy/i.test(p.name)
       },
       {
-        id: 'breads',
-        name: 'Bread & Pav',
-        emoji: '🍞',
-        filterFn: (p) => /bread|pav|bun|rusk/i.test(p.name)
-      },
-      {
-        id: 'cakes',
-        name: 'Cakes & Muffins',
-        emoji: '🍰',
-        filterFn: (p) => /cake|muffin|choco pie|brownie/i.test(p.name)
+        id: 'chocolates',
+        name: 'Chocolates & Sweets',
+        emoji: '🍫',
+        filterFn: (p) => /chocolate|cadbury|dairy milk|kitkat|munch|5 star|snickers|mithai|sweets/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'atta-rice-dal') {
+  } else if (categorySlug === 'cold-drinks-juices') {
+    list.push(
+      {
+        id: 'soft-drinks',
+        name: 'Soft Drinks',
+        emoji: '🥤',
+        filterFn: (p) => /coke|pepsi|thums up|sprite|7up|limca|fanta|mirinda|soda/i.test(p.name)
+      },
+      {
+        id: 'juices',
+        name: 'Fruit Juices',
+        emoji: '🧃',
+        filterFn: (p) => /juice|real|tropicana|frooti|maaza|slice|appfy|paper boat/i.test(p.name)
+      },
+      {
+        id: 'energy-drinks',
+        name: 'Energy Drinks',
+        emoji: '⚡',
+        filterFn: (p) => /red bull|monster|sting|hell|charged/i.test(p.name)
+      },
+      {
+        id: 'water',
+        name: 'Water & Soda',
+        emoji: '💧',
+        filterFn: (p) => /water|bisleri|kinley|aquafina|soda/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'instant-food') {
+    list.push(
+      {
+        id: 'noodles',
+        name: 'Noodles & Pasta',
+        emoji: '🍜',
+        filterFn: (p) => /maggi|yippee|top ramen|noodles|pasta|macaroni/i.test(p.name)
+      },
+      {
+        id: 'sauces-spreads',
+        name: 'Sauces & Spreads',
+        emoji: '🥫',
+        filterFn: (p) => /ketchup|sauce|mayo|mayonnaise|jam|peanut butter|nutella/i.test(p.name)
+      },
+      {
+        id: 'ready-to-eat',
+        name: 'Ready to Eat',
+        emoji: '🍲',
+        filterFn: (p) => /soup|upma|halwa|poha|instant/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'tea-coffee') {
+    list.push(
+      {
+        id: 'tea',
+        name: 'Tea & Chai',
+        emoji: '☕',
+        filterFn: (p) => /tea|chai|tata|taj mahal|red label|wagh bakri|green tea/i.test(p.name)
+      },
+      {
+        id: 'coffee',
+        name: 'Coffee & Mixes',
+        emoji: '☕',
+        filterFn: (p) => /coffee|nescafe|bru|sunrise|continental|cold coffee/i.test(p.name)
+      },
+      {
+        id: 'health-drinks',
+        name: 'Health Drinks',
+        emoji: '🥛',
+        filterFn: (p) => /horlicks|complan|bournvita|boost|pediasure/i.test(p.name)
+      }
+    )
+  } else if (categorySlug === 'attas-rice') {
     list.push(
       {
         id: 'atta',
@@ -299,47 +296,67 @@ const getSubcategories = (categorySlug: string, products: Product[]): Subcategor
         id: 'cones-cups',
         name: 'Cones & Cups',
         emoji: '🍦',
-        filterFn: (p) => /cone|cup|kulfi|chocobar|stick/i.test(p.name)
+        filterFn: (p) => /cone|cup|cornetto|matka/i.test(p.name)
       },
       {
-        id: 'tubs-bricks',
-        name: 'Family Tubs & Bricks',
+        id: 'tubs-packs',
+        name: 'Family Tubs',
         emoji: '🍨',
         filterFn: (p) => /tub|brick|pack|family/i.test(p.name)
       }
     )
   } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
-    DEFAULT_RESTAURANT_MENU_SECTIONS.forEach((sec) => {
-      list.push({
-        id: sec.tag,
-        name: sec.title,
-        emoji: sec.emoji,
-        filterFn: (p) => {
-          const tags = (p.tags || []).map((t) => t.toLowerCase())
-          return (
-            tags.includes(sec.tag.toLowerCase()) ||
-            (sec.matchTags ? sec.matchTags.some((mt) => tags.includes(mt.toLowerCase())) : false) ||
-            p.name.toLowerCase().includes(sec.tag.toLowerCase())
-          )
-        }
+    let rawSecs = DEFAULT_RESTAURANT_MENU_SECTIONS
+    const customSecsStr = settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS
+    if (customSecsStr) {
+      try {
+        const parsed = typeof customSecsStr === 'string' ? JSON.parse(customSecsStr) : customSecsStr
+        if (Array.isArray(parsed) && parsed.length > 0) rawSecs = parsed
+      } catch (e) {}
+    }
+    rawSecs
+      .filter((sec: any) => !sec.disabled && (sec.disabled as any) !== 'true' && categoryStatus[sec.tag] !== false && categoryStatus[sec.id] !== false)
+      .forEach((sec: any) => {
+        list.push({
+          id: sec.tag,
+          name: sec.title,
+          emoji: sec.emoji,
+          filterFn: (p) => {
+            const tags = (p.tags || []).map((t) => t.toLowerCase())
+            return (
+              tags.includes(sec.tag.toLowerCase()) ||
+              (sec.matchTags ? sec.matchTags.some((mt: string) => tags.includes(mt.toLowerCase())) : false) ||
+              p.name.toLowerCase().includes(sec.tag.toLowerCase())
+            )
+          }
+        })
       })
-    })
   } else if (categorySlug === 'cafe' || categorySlug.includes('cafe')) {
-    DEFAULT_CAFE_MENU_SECTIONS.forEach((sec) => {
-      list.push({
-        id: sec.tag,
-        name: sec.title,
-        emoji: sec.emoji,
-        filterFn: (p) => {
-          const tags = (p.tags || []).map((t) => t.toLowerCase())
-          return (
-            tags.includes(sec.tag.toLowerCase()) ||
-            (sec.matchTags ? sec.matchTags.some((mt) => tags.includes(mt.toLowerCase())) : false) ||
-            p.name.toLowerCase().includes(sec.tag.toLowerCase())
-          )
-        }
+    let rawSecs = DEFAULT_CAFE_MENU_SECTIONS
+    const customSecsStr = settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS
+    if (customSecsStr) {
+      try {
+        const parsed = typeof customSecsStr === 'string' ? JSON.parse(customSecsStr) : customSecsStr
+        if (Array.isArray(parsed) && parsed.length > 0) rawSecs = parsed
+      } catch (e) {}
+    }
+    rawSecs
+      .filter((sec: any) => !sec.disabled && (sec.disabled as any) !== 'true' && categoryStatus[sec.tag] !== false && categoryStatus[sec.id] !== false)
+      .forEach((sec: any) => {
+        list.push({
+          id: sec.tag,
+          name: sec.title,
+          emoji: sec.emoji,
+          filterFn: (p) => {
+            const tags = (p.tags || []).map((t) => t.toLowerCase())
+            return (
+              tags.includes(sec.tag.toLowerCase()) ||
+              (sec.matchTags ? sec.matchTags.some((mt: string) => tags.includes(mt.toLowerCase())) : false) ||
+              p.name.toLowerCase().includes(sec.tag.toLowerCase())
+            )
+          }
+        })
       })
-    })
   } else {
     const uniqueTags = Array.from(
       new Set(products.flatMap((p) => p.tags || []))
@@ -452,6 +469,8 @@ export function CategoryPageClient({
   activeCategory,
   countsMap,
 }: CategoryPageClientProps) {
+  const settings = useUIStore((s) => s.settings) || {}
+  const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const searchParams = useSearchParams()
   const subcatParam = searchParams.get('subcat')
   const theme = useMemo(() => CATEGORY_THEMES[activeCategory.slug] || DEFAULT_THEME, [activeCategory.slug])
@@ -550,8 +569,8 @@ export function CategoryPageClient({
   ]
 
   const subcategories = useMemo(() => {
-    return getSubcategories(activeCategory.slug, initialProducts)
-  }, [activeCategory.slug, initialProducts])
+    return getSubcategories(activeCategory.slug, initialProducts, settings, categoryStatus)
+  }, [activeCategory.slug, initialProducts, settings, categoryStatus])
 
   // Filter and sort products in memory
   const processedProducts = useMemo(() => {

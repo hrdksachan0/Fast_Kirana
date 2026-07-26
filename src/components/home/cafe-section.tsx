@@ -168,7 +168,12 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         }
 
         const rawCategories = parsedSections || ((experienceMode as string) === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS)
-        const PREDEFINED_CATEGORIES = rawCategories.filter(cat => !cat.disabled)
+        const PREDEFINED_CATEGORIES = rawCategories.filter(cat => {
+          if (cat.disabled === true || (cat.disabled as any) === 'true') return false
+          if (categoryStatus[cat.tag] === false) return false
+          if (categoryStatus[cat.id] === false) return false
+          return true
+        })
 
         const sectionsMap = new Map<string, any>()
         PREDEFINED_CATEGORIES.forEach(cat => {
@@ -199,12 +204,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         dbProducts.forEach((product: any) => {
           for (const cat of PREDEFINED_CATEGORIES) {
             const hasMatch = product.tags?.some((t: string) => 
-              cat.matchTags?.some((mt: string) => isTagMatch(t, mt))
-            ) || 
-            (product.category?.slug && cat.matchTags?.some((mt: string) => isTagMatch(product.category.slug, mt))) ||
-            (cat.tag === 'bakery' && ['croissant-butter', 'muffin-chocolate']?.includes(product.slug)) ||
-            (cat.tag === 'chilled' && product.category?.slug === 'beverages') ||
-            (cat.tag === 'desserts' && product.category?.slug === 'ice-cream')
+              isTagMatch(t, cat.tag) || (cat.matchTags && cat.matchTags.some((mt: string) => isTagMatch(t, mt)))
+            ) || (product.category?.slug && isTagMatch(product.category.slug, cat.tag))
 
             if (hasMatch) {
               const sec = sectionsMap.get(cat.tag)
@@ -217,61 +218,37 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           }
         })
 
-        const excludeTags = new Set([
-          'cafe', 'restaurant', 'popular', 'veg', 'paneer', 'cheese', 'spicy', 'protein', 
-          'essential', 'cooking', 'staple', 'premium', 'garnish', 'salad', 
-          'seasonal', 'daily', 'snack', 'cereal', 'traditional', 'chips', 'namkeen', 
-          'chocolate', 'instant', 'biscuit', 'juice', 'desi', 'summer', 'water', 'energy', 
-          'soap', 'toothpaste', 'shampoo', 'hygiene', 'skincare', 'deo', 'personal', 
-          'shaving', 'men', 'herbal', 'hair', 'oil', 'cleaning', 'detergent', 'toilet', 
-          'floor', 'mosquito', 'freshener', 'glass', 'wrapping', 'cookies', 'light', 
-          'rusk', 'tea-time', 'bread', 'atta', 'rice', 'dal', 'spice', 'healthy', 'salt'
-        ])
+        // Track unmatched tags dynamically
+        const dynamicTagsMap = new Map<string, { tag: string; title: string; emoji: string; image: string | null; productsCount: number }>()
 
-        // Identify tags belonging to disabled predefined categories to prevent them from showing up as dynamic sections
-        const disabledMatchTags = new Set<string>()
-        rawCategories.forEach(cat => {
-          if (cat.disabled) {
-            disabledMatchTags.add(cat.tag.toLowerCase())
-            cat.matchTags?.forEach((t: string) => disabledMatchTags.add(t.toLowerCase()))
-          }
-        })
-
-        const dynamicTagsMap = new Map<string, number>()
         dbProducts.forEach((product: any) => {
-          if (assignedProductIds.has(product.id)) return
+          if (!assignedProductIds.has(product.id) && product.tags && Array.isArray(product.tags)) {
+            product.tags.forEach((tag: string) => {
+              const lowerTag = tag.toLowerCase().trim()
+              const isExcludedTag = [
+                'popular', 'essential', 'daily', 'fresh', 'hot', 'cold', 'veg', 'nonveg', 'non-veg',
+                'cafe', 'restaurant', 'fastkirana', 'cooking', 'spicy', 'sweet', 'crispy'
+              ].includes(lowerTag)
 
-          product.tags?.forEach((t: string) => {
-            const lowerTag = t.toLowerCase()
-            if (excludeTags.has(lowerTag)) return
-
-            // Skip if the tag matches any disabled category's tag or matchTags
-            const isAnyDisabledMatch = Array.from(disabledMatchTags).some(dt => isTagMatch(lowerTag, dt))
-            if (isAnyDisabledMatch) return
-
-            dynamicTagsMap.set(lowerTag, (dynamicTagsMap.get(lowerTag) || 0) + 1)
-          })
-        })
-
-        const dynamicSections: any[] = []
-        dynamicTagsMap.forEach((count, tag) => {
-          if (count > 0) {
-            const title = tag
-              .split(/[-_ ]+/)
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ')
-
-            dynamicSections.push({
-              tag,
-              title: getShortTitle(tag, title),
-              emoji: '✨',
-              image: getCafeSectionImage(tag),
-              productsCount: count
+              if (!isExcludedTag) {
+                if (!dynamicTagsMap.has(lowerTag)) {
+                  dynamicTagsMap.set(lowerTag, {
+                    tag: lowerTag,
+                    title: getShortTitle(lowerTag, tag.charAt(0).toUpperCase() + tag.slice(1)),
+                    emoji: '🍽️',
+                    image: getCafeSectionImage(lowerTag),
+                    productsCount: 1
+                  })
+                } else {
+                  dynamicTagsMap.get(lowerTag)!.productsCount++
+                }
+              }
             })
           }
         })
 
-        const finalCategories: any[] = []
+        const finalCategories: Array<{ tag: string; title: string; emoji: string; image: string | null; products: any[] }> = []
+
         PREDEFINED_CATEGORIES.forEach(cat => {
           const sec = sectionsMap.get(cat.tag)
           if (sec && sec.productsCount > 0) {
@@ -287,7 +264,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         })
 
         // Also add dynamically discovered categories for unmatched product tags
-        dynamicSections
+        Array.from(dynamicTagsMap.values())
+          .filter(ds => categoryStatus[ds.tag] !== false)
           .sort((a, b) => b.productsCount - a.productsCount)
           .forEach(ds => {
             const matchedProducts = dbProducts.filter((p: any) =>
@@ -315,7 +293,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       .finally(() => {
         setIsLoading(false)
       })
-  }, [settings, experienceMode])
+  }, [settings, experienceMode, categoryStatus])
 
   const isClickingTabRef = useRef(false)
 

@@ -37,6 +37,7 @@ export default async function AccountPage() {
         SELECT o.id, o.status::text as status, o.total, o."createdAt"
         FROM orders o WHERE o."userId" = ${user.id}
         ORDER BY o."createdAt" DESC
+        LIMIT 30
       `
 
       // Fetch order items for each order

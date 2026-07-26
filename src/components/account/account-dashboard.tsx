@@ -33,6 +33,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [orders, setOrders] = useState(initialOrders)
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('orders')
+  const [orderSubTab, setOrderSubTab] = useState<'LIVE' | 'HISTORY'>('LIVE')
   const [editingAddress, setEditingAddress] = useState<any | null>(null)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({
@@ -424,17 +425,77 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
         {/* Tab Content: Orders */}
         <TabsContent value="orders" className="space-y-4 animate-fade-in focus-visible:outline-none">
-          {orders.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-border bg-card rounded-2xl p-6">
-              <span className="text-4xl mb-2 block">📦</span>
-              <h3 className="text-sm font-bold text-text-primary">No orders placed yet</h3>
-              <p className="text-xs text-text-secondary mt-1">Start shopping and place your first instant order today!</p>
-              <Link href="/" className="mt-4 inline-block bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl">
-                Start Shopping
-              </Link>
-            </div>
-          ) : (
-            orders.map((ord) => (
+          {/* Sub-Tabs Bar for Live Orders vs Order History */}
+          <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light')
+                setOrderSubTab('LIVE')
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                orderSubTab === 'LIVE'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-muted/50 text-text-secondary hover:bg-muted'
+              }`}
+            >
+              <span>🔥 Live Active Orders</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                orderSubTab === 'LIVE' ? 'bg-white/20 text-white' : 'bg-muted text-text-secondary font-bold'
+              }`}>
+                {orders.filter((o) => !['DELIVERED', 'CANCELLED'].includes(o.status)).length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light')
+                setOrderSubTab('HISTORY')
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                orderSubTab === 'HISTORY'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-muted/50 text-text-secondary hover:bg-muted'
+              }`}
+            >
+              <span>📜 Order History</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                orderSubTab === 'HISTORY' ? 'bg-white/20 text-white' : 'bg-muted text-text-secondary font-bold'
+              }`}>
+                {orders.filter((o) => ['DELIVERED', 'CANCELLED'].includes(o.status)).length}
+              </span>
+            </button>
+          </div>
+
+          {/* Render Orders Based on Sub-Tab */}
+          {(() => {
+            const filteredOrders = orders.filter((ord) =>
+              orderSubTab === 'LIVE'
+                ? !['DELIVERED', 'CANCELLED'].includes(ord.status)
+                : ['DELIVERED', 'CANCELLED'].includes(ord.status)
+            )
+
+            if (filteredOrders.length === 0) {
+              return (
+                <div className="text-center py-12 border border-dashed border-border bg-card rounded-2xl p-6">
+                  <span className="text-4xl mb-2 block">{orderSubTab === 'LIVE' ? '🚀' : '📦'}</span>
+                  <h3 className="text-sm font-bold text-text-primary">
+                    {orderSubTab === 'LIVE' ? 'No live active orders right now' : 'No past order history found'}
+                  </h3>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {orderSubTab === 'LIVE'
+                      ? 'Place an order now to track your delivery live in real-time!'
+                      : 'Your completed & past orders will appear here.'}
+                  </p>
+                  <Link href="/" className="mt-4 inline-block bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl">
+                    Start Shopping
+                  </Link>
+                </div>
+              )
+            }
+
+            return filteredOrders.map((ord) => (
               <div key={ord.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-3">
                   <div>
@@ -471,7 +532,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                 </div>
               </div>
             ))
-          )}
+          })()}
 
           {/* One-tap Reorder Buy Again Section */}
           <BuyAgainSection />

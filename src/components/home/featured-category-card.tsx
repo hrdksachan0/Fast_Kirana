@@ -158,15 +158,15 @@ export default function FeaturedCategoryCard({
       try {
         const sections = typeof customSectionsStr === 'string' ? JSON.parse(customSectionsStr) : customSectionsStr;
         if (Array.isArray(sections) && sections.length > 0) {
-          return sections.filter((s: any) => !s.disabled);
+          return sections.filter((s: any) => !s.disabled && (s.disabled as any) !== 'true' && categoryStatus[s.tag] !== false && categoryStatus[s.id] !== false);
         }
       } catch (e) {
         console.error('Error parsing menu sections in FeaturedCategoryCard:', e);
       }
     }
     const defaults = theme === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS;
-    return defaults.filter((s: any) => !s.disabled);
-  }, [customSectionsStr, theme]);
+    return defaults.filter((s: any) => !s.disabled && (s.disabled as any) !== 'true' && categoryStatus[s.tag] !== false && categoryStatus[s.id] !== false);
+  }, [customSectionsStr, theme, categoryStatus]);
 
   const activeCategories = useMemo(() => {
     if (theme !== 'cafe' && theme !== 'restaurant') return [];
@@ -376,10 +376,9 @@ export default function FeaturedCategoryCard({
                     <span className="pcard-size">{p.unit || p.packSize || '1 unit'}</span>
                     <div className="pcard-add-wrap">
                       <button 
-                        className="pcard-add"
+                        className={`pcard-add ${isStoreClosed ? 'closed' : ''}`}
                         style={{
                           display: qty > 0 ? 'none' : 'flex',
-                          opacity: isStoreClosed ? 0.6 : 1,
                           cursor: isStoreClosed ? 'not-allowed' : 'pointer'
                         }}
                         disabled={isStoreClosed}
