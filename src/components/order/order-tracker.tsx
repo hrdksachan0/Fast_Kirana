@@ -675,19 +675,32 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
       
-      {/* Visual Delivery Status Card */}
-      <div className="bg-card border border-border p-4 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-5 md:space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-4">
+      {/* Premium Visual Delivery Status Card */}
+      <div className="bg-card border border-border/80 p-5 md:p-7 rounded-3xl shadow-lg space-y-6 overflow-hidden relative">
+        {/* Background Decorative Gradient Glow */}
+        <div className="absolute -top-24 -right-24 w-60 h-60 bg-gradient-to-br from-accent/15 via-primary/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-5 relative z-10">
           <div>
-            <span className={cn(
-              "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full",
-              combinedStatus === 'CANCELLED'
-                ? "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950/40"
-                : "text-accent bg-accent/10"
-            )}>
-              {combinedStatus === 'CANCELLED' ? 'Order Cancelled' : 'Live Tracking Active'}
-            </span>
-            <h1 className="text-xl font-black text-text-primary tracking-tight mt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn(
+                "text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider shadow-2xs flex items-center gap-1",
+                combinedStatus === 'CANCELLED'
+                  ? "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950/40 border border-red-500/20"
+                  : combinedStatus === 'DELIVERED'
+                  ? "text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 border border-emerald-500/20"
+                  : "text-accent bg-accent/10 border border-accent/20 animate-pulse"
+              )}>
+                {combinedStatus === 'CANCELLED' ? '❌ Order Cancelled' : combinedStatus === 'DELIVERED' ? '✅ Delivered' : '📡 Live Tracking Active'}
+              </span>
+              {(order as any).restaurantName || order.shopName ? (
+                <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                  🏪 {(order as any).restaurantName || order.shopName}
+                </span>
+              ) : null}
+            </div>
+
+            <h1 className="text-2xl font-black text-text-primary tracking-tight mt-2">
               {combinedStatus === 'CANCELLED'
                 ? 'Order Cancelled'
                 : combinedStatus === 'DELIVERED' 
@@ -704,31 +717,64 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'Order Confirmed & Preparing'
                 : 'Order Placed'}
             </h1>
+
             {order.status === 'SHIPPED' && trackingMetrics ? (
               <p className="text-xs font-bold text-accent mt-1 animate-pulse flex items-center gap-1">
                 {trackingMetrics.isArrived ? (
                   <span>📍 Rider has reached near your doorstep!</span>
                 ) : trackingMetrics.distanceNum >= 0.3 ? (
-                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away</span>
+                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away (ETA: ~{trackingMetrics.eta} mins)</span>
                 ) : (
                   <span>🚴 Rider is heading to your address</span>
                 )}
               </p>
             ) : null}
           </div>
+
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted px-3 py-1.5 rounded-xl border">
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted/60 px-3.5 py-2 rounded-xl border border-border/50 shadow-2xs">
               <Clock className="h-4 w-4 text-primary" />
               <span>Placed at: {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             {combinedStatus === 'PENDING' && (
               <button
                 onClick={handleOpenCustomerEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-xs transition-all shadow-xs cursor-pointer border border-primary/20 active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer border border-primary/20 active:scale-95"
               >
                 <Edit className="h-3.5 w-3.5" /> Modify Items
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Live Step Progress Bar */}
+        <div className="space-y-2 relative z-10">
+          <div className="flex justify-between items-center text-[11px] font-bold text-text-secondary">
+            <span>Overall Order Progress</span>
+            <span className="text-primary font-black">
+              {combinedStatus === 'CANCELLED' ? '0%' :
+               combinedStatus === 'DELIVERED' ? '100%' :
+               order.status === 'SHIPPED' ? '80%' :
+               order.status === 'PACKED' ? '60%' :
+               order.status === 'CONFIRMED' ? '40%' : '20%'}
+            </span>
+          </div>
+          <div className="w-full bg-muted/60 rounded-full h-3 overflow-hidden p-0.5 border border-border/40">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-700 ease-out shadow-sm",
+                combinedStatus === 'CANCELLED' ? 'bg-red-500' :
+                combinedStatus === 'DELIVERED' ? 'bg-emerald-500' :
+                'bg-gradient-to-r from-accent via-primary to-orange-500 animate-pulse'
+              )}
+              style={{
+                width: combinedStatus === 'CANCELLED' ? '100%' :
+                       combinedStatus === 'DELIVERED' ? '100%' :
+                       order.status === 'SHIPPED' ? '80%' :
+                       order.status === 'PACKED' ? '60%' :
+                       order.status === 'CONFIRMED' ? '40%' : '20%'
+              }}
+            />
           </div>
         </div>
 

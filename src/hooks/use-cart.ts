@@ -84,9 +84,19 @@ export function useCart() {
     }
 
     const newType = getProductType(product)
+    const newRestaurantId = (product as any).restaurantId || null
+
     const incompatibleItem = storeState.items.find((item) => {
       const existType = getProductType(item.product)
-      return !areTypesCompatible(newType, existType)
+      const existRestaurantId = (item.product as any).restaurantId || null
+
+      // Type-level incompatibility (e.g., RESTAURANT vs GROCERY)
+      if (!areTypesCompatible(newType, existType)) return true
+
+      // Per-restaurant isolation: different restaurants can't mix
+      if (newRestaurantId && existRestaurantId && newRestaurantId !== existRestaurantId) return true
+
+      return false
     })
 
     if (incompatibleItem) {

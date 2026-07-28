@@ -267,6 +267,23 @@ export function CafeOrdersConsole() {
     audioContextBlockedRef.current = audioContextBlocked
   }, [audioContextBlocked])
 
+  // Continuous alarm chime while unaccepted PENDING orders exist
+  useEffect(() => {
+    if (!soundEnabled) return
+
+    const hasPendingOrders = orders.some(o => o.status === 'PENDING')
+    if (!hasPendingOrders) return
+
+    // Immediately play once when pending order detected
+    playKitchenAlarmChime()
+
+    const alarmInterval = setInterval(() => {
+      playKitchenAlarmChime()
+    }, 3500)
+
+    return () => clearInterval(alarmInterval)
+  }, [orders, soundEnabled])
+
   const aggregatedPrepItems = useMemo(() => {
     const counts: Record<string, { name: string; quantity: number; image?: string }> = {}
     
@@ -1144,8 +1161,11 @@ export function CafeOrdersConsole() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-xs font-mono font-bold text-text-primary">#{order.readableId || order.id.slice(0, 8)}</p>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 border border-orange-500/20 flex items-center gap-1 shrink-0">
+                          ☕ {(order as any).restaurantName || (order as any).restaurant?.name || order.shopName || 'Cafe'}
+                        </span>
                         {fifoRank && (
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
                             fifoRank === 1 

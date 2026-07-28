@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Coffee, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee } from 'lucide-react'
-import { AdminCafeConsole } from '@/components/admin/admin-cafe-console'
+import { Coffee, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee, SlidersHorizontal, Layers } from 'lucide-react'
 import { CafeOrdersConsole } from '@/components/admin/cafe-orders-console'
 import { CafeSalesConsole } from '@/components/admin/cafe-sales-console'
 import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
+import { RestaurantSettingsTab } from '@/components/admin/restaurant-settings-tab'
+import { RestaurantCatalogManager } from '@/components/admin/restaurant-catalog-manager'
+import { RestaurantMenuSectionsEditor } from '@/components/admin/restaurant-menu-sections-editor'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function CafeKitchenPage() {
@@ -15,7 +17,8 @@ export default function CafeKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { cafeOpen } = useUIStore()
-  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'payouts'>('orders')
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'sections' | 'payouts' | 'settings'>('orders')
+  const [restaurantName, setRestaurantName] = useState('FastKirana Cafe Console')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -23,12 +26,37 @@ export default function CafeKitchenPage() {
   }, [])
 
   useEffect(() => {
+    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+    if (assignedRestaurantId) {
+      fetch(`/api/restaurants/${assignedRestaurantId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.name) {
+            setRestaurantName(`${data.name} Console`)
+            
+            // Auto-redirect if they belong to a standard Restaurant and are not an ADMIN
+            if (session?.user?.role !== 'ADMIN') {
+              const isAssignedCafe = data.slug?.includes('cafe') || data.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
+              if (!isAssignedCafe) {
+                router.push('/restaurant-kitchen')
+              }
+            }
+          }
+        })
+        .catch(err => console.error(err))
+    } else {
+      setRestaurantName('FastKirana Cafe Console')
+    }
+  }, [session, router])
+
+  useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/cafe-login?callbackUrl=/cafe-kitchen')
     } else if (status === 'authenticated') {
       const role = session?.user?.role
       const email = session?.user?.email || ''
-      const isAllowed = role === 'ADMIN' || (role === 'CHEF' && !email.toLowerCase().startsWith('restaurant'))
+      const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+      const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || (role === 'CHEF' && !email.toLowerCase().startsWith('restaurant')) || !!assignedRestaurantId
       if (!isAllowed) {
         router.push('/')
       }
@@ -58,7 +86,7 @@ export default function CafeKitchenPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight font-sans">FastKirana Cafe Console</h1>
+                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight font-sans">{restaurantName}</h1>
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                   cafeOpen
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
@@ -92,10 +120,10 @@ export default function CafeKitchenPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1">
+        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'orders' 
                 ? 'border-orange-600 text-orange-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -106,7 +134,7 @@ export default function CafeKitchenPage() {
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'analytics' 
                 ? 'border-orange-600 text-orange-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -117,7 +145,7 @@ export default function CafeKitchenPage() {
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'catalog' 
                 ? 'border-orange-600 text-orange-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -127,8 +155,19 @@ export default function CafeKitchenPage() {
             Menu Catalog
           </button>
           <button
+            onClick={() => setActiveTab('sections')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'sections' 
+                ? 'border-orange-600 text-orange-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            Menu Categories
+          </button>
+          <button
             onClick={() => setActiveTab('payouts')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'payouts' 
                 ? 'border-orange-600 text-orange-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -137,14 +176,32 @@ export default function CafeKitchenPage() {
             <IndianRupee className="h-4 w-4" />
             Payout Ledger
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings' 
+                ? 'border-orange-600 text-orange-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Outlet Settings
+          </button>
         </div>
 
         {/* Console Container */}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
           {activeTab === 'orders' && <CafeOrdersConsole />}
           {activeTab === 'analytics' && <CafeSalesConsole />}
-          {activeTab === 'catalog' && <AdminCafeConsole isAdmin={false} />}
+          {activeTab === 'catalog' && <RestaurantCatalogManager />}
+          {activeTab === 'sections' && (
+            <RestaurantMenuSectionsEditor 
+              assignedRestaurantId={(session?.user as any)?.assignedRestaurantId || ''} 
+              isCafe={true} 
+            />
+          )}
           {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} type="CAFE" />}
+          {activeTab === 'settings' && <RestaurantSettingsTab />}
         </div>
 
       </div>

@@ -41,11 +41,11 @@ export async function GET(
     const order = orders[0]
 
     // Check ownership
-    if (order.userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'DELIVERY' && session.user.role !== 'PICKER' && session.user.role !== 'CHEF') {
+    if (order.userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'DELIVERY' && session.user.role !== 'PICKER' && session.user.role !== 'CHEF' && session.user.role !== 'RESTAURANT_OWNER') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isWorker = session.user.role === 'ADMIN' || session.user.role === 'DELIVERY' || session.user.role === 'PICKER' || session.user.role === 'CHEF'
+    const isWorker = session.user.role === 'ADMIN' || session.user.role === 'DELIVERY' || session.user.role === 'PICKER' || session.user.role === 'CHEF' || session.user.role === 'RESTAURANT_OWNER'
 
     // Fetch address
     const address = await prisma.address.findUnique({
@@ -57,12 +57,16 @@ export async function GET(
     const deliveryUserIdToFetch = order.deliveryUserId
     if (deliveryUserIdToFetch) {
       const riders: any[] = await prisma.$queryRaw`
-        SELECT id, name, phone FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
+        SELECT id, name, phone, "liveLat", "liveLng" FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
       `
       if (riders.length > 0) {
         deliveryUser = {
           name: riders[0].name,
           phone: riders[0].phone
+        }
+        if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
+          order.deliveryLat = riders[0].liveLat
+          order.deliveryLng = riders[0].liveLng
         }
       }
     }
@@ -93,12 +97,16 @@ export async function GET(
         const assignedOrder = combinedOrders.find(o => o.deliveryUserId)
         if (assignedOrder) {
           const riders: any[] = await prisma.$queryRaw`
-            SELECT id, name, phone FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
+            SELECT id, name, phone, "liveLat", "liveLng" FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
           `
           if (riders.length > 0) {
             deliveryUser = {
               name: riders[0].name,
               phone: riders[0].phone
+            }
+            if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
+              order.deliveryLat = riders[0].liveLat
+              order.deliveryLng = riders[0].liveLng
             }
           }
         }
@@ -205,7 +213,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName" FROM orders WHERE id = ${id} LIMIT 1
+      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId" FROM orders WHERE id = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -213,10 +221,27 @@ export async function PATCH(
     }
 
     const existingOrder = existingOrders[0]
+    const userRole = session.user.role
+    const assignedRestaurantId = (session.user as any)?.assignedRestaurantId
 
-    // Riders and admins can edit order status. Customers can only view or cancel.
-    if (existingOrder.userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'DELIVERY' && session.user.role !== 'PICKER' && session.user.role !== 'CHEF') {
+    // Authorization: Admin, Delivery, Picker have full access.
+    // CHEF and RESTAURANT_OWNER can only update orders belonging to their assigned restaurant.
+    // Customers can only cancel their own orders.
+    const isAdmin = userRole === 'ADMIN'
+    const isDelivery = userRole === 'DELIVERY'
+    const isPicker = userRole === 'PICKER'
+    const isRestaurantStaff = (userRole === 'CHEF' || userRole === 'RESTAURANT_OWNER')
+    const isOwner = existingOrder.userId === session.user.id
+
+    if (!isOwner && !isAdmin && !isDelivery && !isPicker && !isRestaurantStaff) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Restaurant staff can only modify their own restaurant's orders
+    if (isRestaurantStaff && !isAdmin) {
+      if (!assignedRestaurantId || existingOrder.restaurantId !== assignedRestaurantId) {
+        return NextResponse.json({ error: 'You can only manage orders for your assigned restaurant' }, { status: 403 })
+      }
     }
 
     // Claim checks / locking mechanisms

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 }
 
 // Revalidate home page every 24 hours (on-demand revalidation handles updates)
-export const revalidate = 86400
+export const revalidate = 3600 // 1 hour; on-demand revalidateStorefront() catches the common case faster
 
 const productSelect = {
   id: true,

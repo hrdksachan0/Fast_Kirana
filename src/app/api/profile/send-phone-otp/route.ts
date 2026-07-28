@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
 
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
-    console.log(`[OTP Generated] For ${normalizedPhone}: ${otp}`)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[OTP Generated] For ${normalizedPhone}: ${otp}`)
+    }
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
     // Clear existing OTP tokens for this phone verification
@@ -55,7 +57,9 @@ export async function POST(request: NextRequest) {
     // Send WhatsApp OTP
     let isSent = await sendWhatsAppOtp(normalizedPhone, otp)
     if (!isSent) {
-      console.log(`[WhatsApp Dev Fallback] WhatsApp send failed (token might be expired). Continuing with logged OTP: ${otp}`)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[WhatsApp Dev Fallback] WhatsApp send failed. Continuing with logged OTP: ${otp}`)
+      }
       isSent = true
     }
 

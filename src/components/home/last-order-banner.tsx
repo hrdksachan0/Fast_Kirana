@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { formatPrice } from '@/lib/utils'
 import { Package, ArrowRight, Clock, MapPin, RefreshCw, CheckCircle2, Truck, Sparkles, XCircle } from 'lucide-react'
+import { useUIStore } from '@/stores/ui-store'
 
 interface LastOrder {
   id: string
@@ -62,6 +63,7 @@ export function LastOrderBanner() {
   const { data: session, status: authStatus } = useSession()
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
@@ -75,18 +77,24 @@ export function LastOrderBanner() {
     if (!isActive) return
 
     const pollInterval = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
       try {
         const res = await fetch(`/api/orders/${lastOrder.id}`)
         if (res.ok) {
           const data = await res.json()
-          if (data && data.status && data.status !== lastOrder.status) {
-            setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
+          if (data && data.status) {
+            if (['DELIVERED', 'CANCELLED'].includes(data.status)) {
+              // Re-fetch to find if there is another active order
+              fetchLastOrder()
+            } else if (data.status !== lastOrder.status) {
+              setLastOrder((prev) => prev ? { ...prev, status: data.status } : null)
+            }
           }
         }
       } catch (err) {
         console.error('Error polling last order status in banner:', err)
       }
-    }, 5000)
+    }, 6000)
 
     return () => {
       clearInterval(pollInterval)
@@ -99,26 +107,33 @@ export function LastOrderBanner() {
       const res = await fetch('/api/orders')
       if (res.ok) {
         const orders = await res.json()
-        if (orders.length > 0) {
-          setLastOrder(orders[0])
+        if (Array.isArray(orders) && orders.length > 0) {
+          // Find the latest ACTIVE order first
+          const activeOrder = orders.find((o: any) => !['DELIVERED', 'CANCELLED'].includes(o.status))
+          setLastOrder(activeOrder || null)
         }
       }
     } catch (err) {
-      // Silently fail — this is a non-critical feature
+      // Silently fail
     } finally {
       setIsLoading(false)
     }
   }
 
-  const isActive = lastOrder ? !['DELIVERED', 'CANCELLED'].includes(lastOrder.status) : false;
+  const isActive = lastOrder ? !['DELIVERED', 'CANCELLED'].includes(lastOrder.status) : false
 
-  if (authStatus !== 'authenticated' || isLoading || !lastOrder || !isActive) return null;
+  if (authStatus !== 'authenticated' || isLoading || !lastOrder || !isActive) return null
 
   const config = STATUS_CONFIG[lastOrder.status] || STATUS_CONFIG.PENDING
   const timeAgo = getTimeAgo(lastOrder.createdAt)
 
   return (
-    <div className="fixed bottom-[68px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[40] animate-slide-up pointer-events-auto">
+    <div
+      className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[40] transition-all duration-300 pointer-events-auto"
+      style={{
+        bottom: isTabBarVisible ? '90px' : '18px',
+      }}
+    >
       <Link
         href={`/order/${lastOrder.id}/track`}
         className="block group"

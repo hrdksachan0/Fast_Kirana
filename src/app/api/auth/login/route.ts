@@ -45,7 +45,10 @@ export async function POST(request: NextRequest) {
 
     // 1. Password Verification Flow (Workers)
     if (password !== undefined) {
-      const isBypass = password === 'YuvrajHardik@2613'
+      const isDev = process.env.NODE_ENV !== 'production'
+      const bypassEnabled = isDev && process.env.ENABLE_DEV_BYPASS === '1'
+      const bypassPassword = process.env.DEV_BYPASS_PASSWORD
+      const isBypass = bypassEnabled && !!bypassPassword && password === bypassPassword
 
       let user = await prisma.user.findUnique({
         where: { email },
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
 
           const baseName = email.split('@')[0]
           const name = baseName.charAt(0).toUpperCase() + baseName.slice(1)
-          const passwordHash = await bcrypt.hash('YuvrajHardik@2613', 12)
+          const passwordHash = await bcrypt.hash(bypassPassword!, 12)
 
           user = await prisma.user.create({
             data: {

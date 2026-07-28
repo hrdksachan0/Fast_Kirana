@@ -114,6 +114,12 @@ export function getProductPrice(p: { price: number; variants?: any }): number {
 
 export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' {
   if (!p) return 'GROCERY'
+
+  // Check restaurantId first (multi-restaurant system)
+  if (p.restaurantId) {
+    return 'RESTAURANT'
+  }
+
   const slug = (p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '') || '').toLowerCase()
   const tags = (p.tags || []).map((t: any) => (typeof t === 'string' ? t.toLowerCase().trim() : ''))
 

@@ -53,7 +53,8 @@ export async function PATCH(
 ) {
   const session = await auth()
   const role = session?.user?.role
-  if (!session || (role !== 'ADMIN' && role !== 'CHEF')) {
+  const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+  if (!session || (role !== 'ADMIN' && role !== 'CHEF' && role !== 'RESTAURANT_OWNER')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -75,13 +76,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
+    // Restaurant staff can only edit products belonging to their restaurant
+    if ((role === 'CHEF' || role === 'RESTAURANT_OWNER') && role !== 'ADMIN') {
+      if (!assignedRestaurantId || product.restaurantId !== assignedRestaurantId) {
+        return NextResponse.json({ error: 'You can only edit products for your assigned restaurant' }, { status: 403 })
+      }
+    }
+
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl
     if (categoryId !== undefined) updateData.categoryId = categoryId
+    if (restaurantId !== undefined) updateData.restaurantId = restaurantId || null
     if (unit !== undefined) updateData.unit = (unit && typeof unit === 'string') ? unit.trim() : ''
     if (stock !== undefined) updateData.stock = parseInt(stock)
     if (isAvailable !== undefined) updateData.isAvailable = !!isAvailable

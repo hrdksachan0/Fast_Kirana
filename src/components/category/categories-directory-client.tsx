@@ -385,7 +385,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
             }
             const itemCount = c._count?.products ?? 0
             const isCafe = c.slug === 'cafe'
-            const destinationHref = isCafe ? '/?mode=cafe' : `/category/${c.slug}`
+            const destinationHref = isCafe ? '/food/as-cafe' : `/category/${c.slug}`
 
             return (
               <motion.div

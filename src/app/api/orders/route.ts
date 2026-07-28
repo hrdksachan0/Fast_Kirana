@@ -121,16 +121,15 @@ export async function POST(request: NextRequest) {
       const targetLat = address.lat ?? ((address as any).latitude ? parseFloat((address as any).latitude) : null)
       const targetLng = address.lng ?? ((address as any).longitude ? parseFloat((address as any).longitude) : null)
 
-      const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
-      const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
-      const delRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'delivery_radius' } })
-      const maxRadiusSetting = await prisma.storeSetting.findUnique({ where: { key: 'max_delivery_radius' } })
-      const surgeFeeSetting = await prisma.storeSetting.findUnique({ where: { key: 'surge_charge' } })
+      const geoSettings = await prisma.storeSetting.findMany({
+        where: { key: { in: ['store_lat', 'store_lng', 'delivery_radius', 'max_delivery_radius', 'surge_charge'] } }
+      })
+      const geoSettingMap = new Map(geoSettings.map(s => [s.key, s.value]))
 
-      const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
-      const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
-      const maxRadiusKm = delRadiusSetting?.value ? parseFloat(delRadiusSetting.value) : (maxRadiusSetting?.value ? parseFloat(maxRadiusSetting.value) : 2.0)
-      const surgeFee = surgeFeeSetting?.value ? parseFloat(surgeFeeSetting.value) : 0
+      const storeLat = geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT
+      const storeLng = geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG
+      const maxRadiusKm = geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 2.0)
+      const surgeFee = geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0
 
       let resolvedLat = targetLat
       let resolvedLng = targetLng
@@ -140,17 +139,25 @@ export async function POST(request: NextRequest) {
           const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || 'Ghatampur'}, ${address.pincode || '209206'}`
           const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           if (apiKey) {
-            const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressQuery)}&key=${apiKey.trim()}`)
-            if (geoRes.ok) {
-              const geoData = await geoRes.json()
-              if (geoData.results && geoData.results[0]?.geometry?.location) {
-                resolvedLat = geoData.results[0].geometry.location.lat
-                resolvedLng = geoData.results[0].geometry.location.lng
+            const geoController = new AbortController()
+            const geoTimeout = setTimeout(() => geoController.abort(), 2000)
+            try {
+              const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressQuery)}&key=${apiKey.trim()}`, { signal: geoController.signal })
+              clearTimeout(geoTimeout)
+              if (geoRes.ok) {
+                const geoData = await geoRes.json()
+                if (geoData.results && geoData.results[0]?.geometry?.location) {
+                  resolvedLat = geoData.results[0].geometry.location.lat
+                  resolvedLng = geoData.results[0].geometry.location.lng
+                }
               }
+            } catch (err) {
+              clearTimeout(geoTimeout)
+              console.error('Server-side geocode error or timeout:', err)
             }
           }
         } catch (err) {
-          console.error('Server-side geocode error:', err)
+          console.error('Server-side geocode setup error:', err)
         }
       }
 
@@ -213,8 +220,6 @@ export async function POST(request: NextRequest) {
     }
 
     const groceryMartOpen = getStoreStatus('grocery')
-    const cafeOpen = getStoreStatus('cafe')
-    const restaurantOpen = getStoreStatus('restaurant')
 
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])
@@ -228,22 +233,13 @@ export async function POST(request: NextRequest) {
         ]
       },
       include: {
-        category: true
+        category: true,
+        restaurant: true
       }
     })
 
-    // Define helper to check if a product is a Cafe/Restaurant product
-    const isCafeProduct = (p: any) => {
-      if (!p) return false
-      const slug = p.category?.slug
-      if (slug === 'cafe' || slug === 'restaurant') return true
-      if (p.tags?.includes('cafe') || p.tags?.includes('restaurant')) return true
-      return false
-    }
-
-    const cafeItems: any[] = []
-    const restaurantItems: any[] = []
     const groceryItems: any[] = []
+    const restaurantGroups: Record<string, { restaurant: any; items: any[] }> = {}
 
     for (const item of items) {
       const isVariant = item.product.id.includes('_')
@@ -266,7 +262,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (isCafeProduct(dbProduct)) {
+      const isRestaurantItem = !!dbProduct.restaurantId
+
+      if (isRestaurantItem) {
         dbStock = 999999
       }
 
@@ -284,13 +282,15 @@ export async function POST(request: NextRequest) {
         dbProduct
       }
 
-      const isCafe = dbProduct.category?.slug === 'cafe' || dbProduct.tags?.includes('cafe')
-      const isRestaurant = dbProduct.category?.slug === 'restaurant' || dbProduct.tags?.includes('restaurant')
-
-      if (isCafe) {
-        cafeItems.push(itemWithDb)
-      } else if (isRestaurant) {
-        restaurantItems.push(itemWithDb)
+      if (isRestaurantItem) {
+        const rId = dbProduct.restaurantId as string
+        if (!restaurantGroups[rId]) {
+          restaurantGroups[rId] = {
+            restaurant: dbProduct.restaurant,
+            items: []
+          }
+        }
+        restaurantGroups[rId].items.push(itemWithDb)
       } else {
         groceryItems.push(itemWithDb)
       }
@@ -299,11 +299,12 @@ export async function POST(request: NextRequest) {
     if (groceryItems.length > 0 && !groceryMartOpen) {
       return NextResponse.json({ error: 'Grocery Mart is temporarily closed.' }, { status: 400 })
     }
-    if (cafeItems.length > 0 && !cafeOpen) {
-      return NextResponse.json({ error: 'FastKirana Cafe is temporarily closed.' }, { status: 400 })
-    }
-    if (restaurantItems.length > 0 && !restaurantOpen) {
-      return NextResponse.json({ error: 'Wedson Restaurant is temporarily closed.' }, { status: 400 })
+    
+    for (const rId in restaurantGroups) {
+      const r = restaurantGroups[rId].restaurant
+      if (!r || !r.isOpen || !r.isActive) {
+        return NextResponse.json({ error: `${r?.name || 'Restaurant'} is temporarily closed.` }, { status: 400 })
+      }
     }
 
     const combinedSubtotal = items.reduce((sum: number, item: any) => {
@@ -387,6 +388,29 @@ export async function POST(request: NextRequest) {
                 meetsMinOrder = false
               }
               eligibleSubtotal = categorySubtotal
+            } else if (coupon.restaurantId) {
+              const restaurantItems = items.filter((item: any) => {
+                const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                return dbProduct && dbProduct.restaurantId === coupon.restaurantId
+              })
+              const restaurantSubtotal = restaurantItems.reduce((sum: number, item: any) => {
+                const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                let itemPrice = dbProduct ? dbProduct.price : 0
+                const isVariant = item.product.id.includes('_')
+                if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                  const [_, variantName] = item.product.id.split('_')
+                  const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+                  if (variant) {
+                    itemPrice = variant.price
+                  }
+                }
+                return sum + itemPrice * item.quantity
+              }, 0)
+
+              if (restaurantSubtotal === 0 || restaurantSubtotal < coupon.minOrder) {
+                meetsMinOrder = false
+              }
+              eligibleSubtotal = restaurantSubtotal
             } else {
               if (combinedSubtotal < coupon.minOrder) {
                 meetsMinOrder = false
@@ -418,8 +442,8 @@ export async function POST(request: NextRequest) {
     // Calculate details for each order to create
     const ordersToCreate: any[] = []
 
-    // Calculate subtotals first
-    const grocerySubtotal = groceryItems.reduce((sum, item) => {
+    // Helper to calculate subtotal
+    const getSubtotal = (itemList: any[]) => itemList.reduce((sum, item) => {
       const isVariant = item.product.id.includes('_')
       const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
       let itemPrice = item.dbProduct.price
@@ -432,37 +456,17 @@ export async function POST(request: NextRequest) {
       return sum + itemPrice * item.quantity
     }, 0)
 
-    const cafeSubtotal = cafeItems.reduce((sum, item) => {
-      const isVariant = item.product.id.includes('_')
-      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-      let itemPrice = item.dbProduct.price
-      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-        if (variant) {
-          itemPrice = variant.price
-        }
-      }
-      return sum + itemPrice * item.quantity
-    }, 0)
-
-    const restaurantSubtotal = restaurantItems.reduce((sum, item) => {
-      const isVariant = item.product.id.includes('_')
-      const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
-      let itemPrice = item.dbProduct.price
-      if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-        const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
-        if (variant) {
-          itemPrice = variant.price
-        }
-      }
-      return sum + itemPrice * item.quantity
-    }, 0)
+    const grocerySubtotal = getSubtotal(groceryItems)
+    
+    const restaurantData = Object.keys(restaurantGroups).map(rId => {
+      const group = restaurantGroups[rId]
+      const sub = getSubtotal(group.items)
+      return { rId, restaurant: group.restaurant, items: group.items, subtotal: sub, deliveryFee: 0 }
+    })
 
     const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
 
     let groceryDeliveryFee = 0
-    let cafeDeliveryFee = 0
-    let restaurantDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (deliveryRules && !deliveryRules.isServiceable) {
@@ -478,21 +482,22 @@ export async function POST(request: NextRequest) {
         const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
         if (groceryItems.length > 0) {
           groceryDeliveryFee = feeToCharge
-        } else if (cafeItems.length > 0) {
-          cafeDeliveryFee = feeToCharge
-        } else if (restaurantItems.length > 0) {
-          restaurantDeliveryFee = feeToCharge
+        } else if (restaurantData.length > 0) {
+          restaurantData[0].deliveryFee = feeToCharge
         }
       }
     }
 
-    const groceryChargedMisc = groceryItems.length > 0 && deliveryMethod !== 'PICKUP'
-    const groceryMiscFee = groceryChargedMisc ? serverMiscFee : 0
+    let hasChargedMiscFee = false
 
     if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
-      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + groceryMiscFee
+      
+      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0
+      if (appliedMiscFee > 0) hasChargedMiscFee = true
+
+      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee
 
       ordersToCreate.push({
         type: 'GROCERY',
@@ -500,46 +505,32 @@ export async function POST(request: NextRequest) {
         discount: groceryDiscount,
         deliveryFee: groceryDeliveryFee,
         taxes: groceryTaxes,
-        miscFee: groceryMiscFee,
+        miscFee: appliedMiscFee,
         total: groceryTotal,
         items: groceryItems,
       })
     }
 
-    if (cafeItems.length > 0) {
-      const cafeDiscount = combinedSubtotal > 0 ? (cafeSubtotal / combinedSubtotal) * combinedDiscount : 0
-      const cafeTaxes = (cafeSubtotal - cafeDiscount) * serverTaxRate
-      const appliedMiscFee = groceryChargedMisc ? 0 : serverMiscFee
-      const cafeTotal = cafeSubtotal - cafeDiscount + cafeDeliveryFee + cafeTaxes + appliedMiscFee
+    for (const rData of restaurantData) {
+      const rDiscount = combinedSubtotal > 0 ? (rData.subtotal / combinedSubtotal) * combinedDiscount : 0
+      const rTaxes = (rData.subtotal - rDiscount) * serverTaxRate
+      
+      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0
+      if (appliedMiscFee > 0) hasChargedMiscFee = true
 
-      ordersToCreate.push({
-        type: 'CAFE',
-        subtotal: cafeSubtotal,
-        discount: cafeDiscount,
-        deliveryFee: cafeDeliveryFee,
-        taxes: cafeTaxes,
-        miscFee: appliedMiscFee,
-        total: cafeTotal,
-        items: cafeItems,
-      })
-    }
-
-    if (restaurantItems.length > 0) {
-      const restaurantDiscount = combinedSubtotal > 0 ? (restaurantSubtotal / combinedSubtotal) * combinedDiscount : 0
-      const restaurantTaxes = (restaurantSubtotal - restaurantDiscount) * serverTaxRate
-      const cafeChargedMisc = cafeItems.length > 0
-      const appliedMiscFee = (groceryChargedMisc || cafeChargedMisc) ? 0 : serverMiscFee
-      const restaurantTotal = restaurantSubtotal - restaurantDiscount + restaurantDeliveryFee + restaurantTaxes + appliedMiscFee
+      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee
 
       ordersToCreate.push({
         type: 'RESTAURANT',
-        subtotal: restaurantSubtotal,
-        discount: restaurantDiscount,
-        deliveryFee: restaurantDeliveryFee,
-        taxes: restaurantTaxes,
+        restaurantId: rData.rId,
+        restaurant: rData.restaurant,
+        subtotal: rData.subtotal,
+        discount: rDiscount,
+        deliveryFee: rData.deliveryFee,
+        taxes: rTaxes,
         miscFee: appliedMiscFee,
-        total: restaurantTotal,
-        items: restaurantItems,
+        total: rTotal,
+        items: rData.items,
       })
     }
 
@@ -586,8 +577,16 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Calculate estimated delivery time for this order (30 mins for Cafe/Restaurant, 10 mins for Grocery)
-        let estimatedDelivery = new Date(Date.now() + (orderInfo.type === 'CAFE' || orderInfo.type === 'RESTAURANT' ? 30 : 10) * 60 * 1000)
+        // Calculate estimated delivery time for this order
+        let estMins = 10
+        if (orderInfo.type === 'RESTAURANT') {
+          estMins = 30
+          if (orderInfo.restaurant?.deliveryTime) {
+             const match = orderInfo.restaurant.deliveryTime.match(/(\d+)/)
+             if (match) estMins = parseInt(match[1], 10)
+          }
+        }
+        let estimatedDelivery = new Date(Date.now() + estMins * 60 * 1000)
 
         if (scheduledSlot && scheduledSlot !== 'INSTANT') {
           let startHour = 0
@@ -616,13 +615,9 @@ export async function POST(request: NextRequest) {
           let phone = defaultSupportPhone
 
           if (orderInfo.type === 'RESTAURANT') {
-            label = 'STORE_PICKUP_RESTAURANT'
-            defaultPickupAddress = settingsMap['restaurant_pickup_address'] || 'A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206'
-            phone = settingsMap['contact_phone'] || '+91 81128 49854'
-          } else if (orderInfo.type === 'CAFE') {
-            label = 'STORE_PICKUP_CAFE'
-            defaultPickupAddress = settingsMap['cafe_pickup_address'] || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
-            phone = settingsMap['contact_phone'] || '+91 70544 70303'
+            label = `STORE_PICKUP_${orderInfo.restaurantId}`
+            defaultPickupAddress = orderInfo.restaurant?.address ? `${orderInfo.restaurant.address}, ${orderInfo.restaurant.city || 'Ghatampur'}` : (settingsMap['restaurant_pickup_address'] || 'A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206')
+            phone = orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854'
           } else {
             label = 'STORE_PICKUP'
             defaultPickupAddress = settingsMap['grocery_pickup_address'] || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
@@ -695,16 +690,13 @@ export async function POST(request: NextRequest) {
             isB2B,
             storeId,
             couponCode: couponCode ? couponCode.toUpperCase() : null,
-            shopName: orderInfo.type === 'CAFE' 
-              ? 'FastKirana Cafe Kitchen' 
-              : orderInfo.type === 'RESTAURANT'
-              ? 'FastKirana Restaurant Kitchen'
+            shopName: orderInfo.type === 'RESTAURANT'
+              ? (orderInfo.restaurant?.name || 'Restaurant')
               : shopName,
-            shopPhone: orderInfo.type === 'CAFE' 
-              ? (settingsMap['contact_phone'] || '+91 70544 70303') 
-              : orderInfo.type === 'RESTAURANT'
-              ? (settingsMap['contact_phone'] || '+91 81128 49854')
+            shopPhone: orderInfo.type === 'RESTAURANT'
+              ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
               : shopPhone,
+            restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
             deliveryLat: address.lat,
             deliveryLng: address.lng,
             items: {
@@ -737,7 +729,7 @@ export async function POST(request: NextRequest) {
             include: { category: true }
           })
 
-          if (dbProd && (dbProd.category?.slug === 'cafe' || dbProd.category?.slug === 'restaurant' || dbProd.tags?.includes('cafe') || dbProd.tags?.includes('restaurant'))) {
+          if (dbProd && dbProd.restaurantId) {
             continue
           }
 
@@ -886,17 +878,9 @@ export async function POST(request: NextRequest) {
 
         for (const order of createdOrders) {
           const displayId = order.readableId || order.id.slice(-6).toUpperCase()
-          const orderType = order.shopName === 'FastKirana Cafe Kitchen'
-            ? 'Cafe'
-            : order.shopName === 'FastKirana Restaurant Kitchen'
-            ? 'Restaurant'
-            : 'Grocery'
-
-          const notificationTitle = order.shopName === 'FastKirana Cafe Kitchen'
-            ? 'New Cafe Order ☕'
-            : order.shopName === 'FastKirana Restaurant Kitchen'
-            ? 'New Restaurant Order 🍲'
-            : 'New Grocery Order 📦'
+          const isRestaurant = !!order.restaurantId
+          const orderType = isRestaurant ? 'Restaurant' : 'Grocery'
+          const notificationTitle = isRestaurant ? `New Order for ${order.shopName} 🍲` : 'New Grocery Order 📦'
 
           sseEmitter.emit('order', {
             type: 'new-order',
@@ -906,6 +890,7 @@ export async function POST(request: NextRequest) {
             status: order.status,
             total: order.total,
             createdAt: order.createdAt,
+            restaurantId: order.restaurantId,
           })
 
           // Send push notifications to all workers for any new order
@@ -944,7 +929,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const mainOrder = createdOrders.find((o) => o.shopName !== 'FastKirana Cafe Kitchen') || createdOrders[0]
+    const mainOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
     return NextResponse.json(mainOrder)
   } catch (error: any) {
     console.error('Order creation error:', error)
@@ -978,7 +963,7 @@ export async function GET(request: NextRequest) {
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
-               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
                u.name as "userName", u.email as "userEmail"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
@@ -994,7 +979,7 @@ export async function GET(request: NextRequest) {
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
-               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
                o."combinedId"
         FROM orders o WHERE o."userId" = ${userId}
         ORDER BY o."createdAt" DESC
@@ -1049,13 +1034,14 @@ export async function GET(request: NextRequest) {
     })
 
     combinedGroups.forEach((groupOrders, combinedId) => {
-      const mainOrder = groupOrders.find(o => o.shopName !== 'FastKirana Cafe Kitchen') || groupOrders[0]
+      const mainOrder = groupOrders.find(o => !o.restaurantId) || groupOrders[0]
       const statuses = groupOrders.map(o => o.status)
       const combinedStatus = getCombinedStatus(statuses)
 
       const subOrders = groupOrders.map(o => ({
         id: o.id,
-        type: o.shopName === 'FastKirana Cafe Kitchen' ? 'CAFE' : 'GROCERY',
+        type: o.restaurantId ? 'RESTAURANT' : 'GROCERY',
+        restaurantId: o.restaurantId,
         status: o.status,
         total: o.total,
         itemsCount: o.items?.length || 0

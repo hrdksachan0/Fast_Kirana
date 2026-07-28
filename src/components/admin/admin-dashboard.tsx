@@ -84,7 +84,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'cafe-console' | 'restaurant-console'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
 
 const PRODUCT_TEMPLATES = [
   {
@@ -424,28 +424,39 @@ export function AdminDashboard({
       }, 1000)
     }
 
-    const sse = new EventSource('/api/sse/orders')
+    let sse: EventSource | null = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    let isUnmounted = false
 
-    sse.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'new-order') {
-          console.log('SSE: New order received:', data.orderId)
-          toast.success(`🛎️ New Order Received: #${data.orderId.slice(0, 8)}`)
-          playNewOrderChime()
-          debouncedRefresh()
-        } else if (data.type === 'status-change') {
-          console.log('SSE: Order status changed:', data.orderId, data.status)
-          debouncedRefresh()
+    const connectSSE = () => {
+      if (isUnmounted) return
+      sse = new EventSource('/api/sse/orders')
+
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order') {
+            toast.success(`🛎️ New Order Received: #${data.orderId.slice(0, 8)}`)
+            playNewOrderChime()
+            debouncedRefresh()
+          } else if (data.type === 'status-change') {
+            debouncedRefresh()
+          }
+        } catch (err) {
+          console.error('Failed to parse SSE message:', err)
         }
-      } catch (err) {
-        console.error('Failed to parse SSE message:', err)
+      }
+
+      sse.onerror = () => {
+        sse?.close()
+        sse = null
+        if (!isUnmounted) {
+          reconnectTimer = setTimeout(connectSSE, 5000)
+        }
       }
     }
 
-    sse.onerror = (err) => {
-      console.error('SSE connection error. Retrying...', err)
-    }
+    connectSSE()
 
     // Fallback polling every 30 seconds
     const interval = setInterval(fetchLiveOrdersList, 30000)
@@ -454,7 +465,9 @@ export function AdminDashboard({
     fetchLiveOrdersList()
 
     return () => {
-      sse.close()
+      isUnmounted = true
+      sse?.close()
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       clearInterval(interval)
       if (updateTimeout) clearTimeout(updateTimeout)
     }
@@ -1956,6 +1969,7 @@ export function AdminDashboard({
           reviewId: editingReview.id,
           rating: reviewEditForm.rating,
           comment: reviewEditForm.comment,
+          type: editingReview.type,
         }),
       })
 
@@ -1976,12 +1990,13 @@ export function AdminDashboard({
 
   const handleDeleteReview = async (reviewId: string) => {
     if (!confirm('Delete this customer review? This action cannot be undone.')) return
+    const reviewType = (reviews as any[]).find(r => r.id === reviewId)?.type
     setDeletingReviewId(reviewId)
     try {
       const res = await fetch('/api/admin/reviews', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewId }),
+        body: JSON.stringify({ reviewId, type: reviewType }),
       })
       if (res.ok) {
         setReviews(reviews.filter((r: any) => r.id !== reviewId))
@@ -2212,8 +2227,6 @@ export function AdminDashboard({
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
-    { key: 'cafe-console', label: '☕ Cafe Console', icon: Coffee },
-    { key: 'restaurant-console', label: '🍳 Restaurant Console', icon: Utensils },
   ]
 
   return (
@@ -4231,43 +4244,7 @@ export function AdminDashboard({
       {/* ---------------------------------------------------- */}
       {activeTab === 'categories' && (
         <div className="space-y-6 animate-fade-in">
-          
-          {/* Sub-view toggle buttons */}
-          <div className="flex gap-2 border-b border-border/40 pb-3">
-            <button
-              onClick={() => setCategorySubView('grocery')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                categorySubView === 'grocery'
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-card border-border hover:bg-muted text-text-secondary'
-              }`}
-            >
-              📦 Grocery Categories
-            </button>
-            <button
-              onClick={() => setCategorySubView('cafe')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                categorySubView === 'cafe'
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-card border-border hover:bg-muted text-text-secondary'
-              }`}
-            >
-              ☕ Café Menu Sections
-            </button>
-            <button
-              onClick={() => setCategorySubView('restaurant')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                categorySubView === 'restaurant'
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-card border-border hover:bg-muted text-text-secondary'
-              }`}
-            >
-              🍳 Restaurant Menu Sections
-            </button>
-          </div>
-
-          {categorySubView === 'grocery' ? (
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Controls header */}
               <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border shadow-sm">
                 <div>
@@ -4435,7 +4412,9 @@ export function AdminDashboard({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-                      {categories.map((c) => (
+                      {categories
+                        .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
+                        .map((c) => (
                         <tr key={c.id} className="hover:bg-muted/30">
                           <td className="py-3 px-4">
                             <span className="h-8 w-8 bg-muted/50 border flex items-center justify-center rounded-lg overflow-hidden">
@@ -4484,12 +4463,6 @@ export function AdminDashboard({
                 </div>
               </div>
             </div>
-          ) : categorySubView === 'cafe' ? (
-            <AdminCafeSections onSectionsSaved={fetchSettings} type="cafe" />
-          ) : (
-            <AdminCafeSections onSectionsSaved={fetchSettings} type="restaurant" />
-          )}
-
         </div>
       )}
 
@@ -4611,45 +4584,41 @@ export function AdminDashboard({
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {u.role !== 'USER' ? (
-                        settingPasswordUserId === u.id ? (
-                          <div className="flex items-center gap-1.5 justify-center">
-                            <input
-                              type="password"
-                              placeholder="Min 6 chars"
-                              value={passwordInput}
-                              onChange={(e) => setPasswordInput(e.target.value)}
-                              className="w-24 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleSetPassword(u.id)}
-                              disabled={savingPasswordId === u.id}
-                              className="p-1 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
-                            >
-                              {savingPasswordId === u.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Check className="h-3 w-3" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => { setSettingPasswordUserId(null); setPasswordInput('') }}
-                              className="p-1 bg-muted text-text-secondary rounded-md hover:bg-muted/80 transition-colors"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ) : (
+                      {settingPasswordUserId === u.id ? (
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <input
+                            type="password"
+                            placeholder="Min 6 chars"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            className="w-24 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
+                            autoFocus
+                          />
                           <button
-                            onClick={() => { setSettingPasswordUserId(u.id); setPasswordInput('') }}
-                            className="px-2.5 py-1 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                            onClick={() => handleSetPassword(u.id)}
+                            disabled={savingPasswordId === u.id}
+                            className="p-1 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
                           >
-                            Set Password
+                            {savingPasswordId === u.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
                           </button>
-                        )
+                          <button
+                            onClick={() => { setSettingPasswordUserId(null); setPasswordInput('') }}
+                            className="p-1 bg-muted text-text-secondary rounded-md hover:bg-muted/80 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
                       ) : (
-                        <span className="text-[10px] text-text-muted">OTP only</span>
+                        <button
+                          onClick={() => { setSettingPasswordUserId(u.id); setPasswordInput('') }}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                        >
+                          🔑 {u.passwordHash ? 'Change Password' : 'Set Password'}
+                        </button>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -5548,17 +5517,6 @@ export function AdminDashboard({
         </div>
       )}
 
-      {activeTab === 'cafe-console' && (
-        <div className="animate-fade-in">
-          <AdminCafeConsole isAdmin={true} />
-        </div>
-      )}
-
-      {activeTab === 'restaurant-console' && (
-        <div className="animate-fade-in">
-          <AdminRestaurantConsole isAdmin={true} />
-        </div>
-      )}
         </motion.div>
       </AnimatePresence>
 

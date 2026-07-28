@@ -186,3 +186,6 @@ export const apiReadLimiter = rateLimit({ interval: 60_000, limit: 60 })
 
 /** For mutations (create/update/delete): 20 requests per minute */
 export const apiWriteLimiter = rateLimit({ interval: 60_000, limit: 20 })
+
+/** For coupon validation: 15 requests per minute (prevent brute-force enumeration) */
+export const couponLimiter = rateLimit({ interval: 60_000, limit: 15 })

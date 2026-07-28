@@ -37,6 +37,7 @@ export const authConfig = {
         token.role = (user as any).role
         token.id = user.id
         token.phone = (user as any).phone
+        token.assignedRestaurantId = (user as any).assignedRestaurantId
         
         // If it's a virtual email from WhatsApp login, clean it and set it as the email token field
         if (user.email && user.email.startsWith('wa-') && user.email.includes('@fastkirana.com')) {
@@ -66,6 +67,7 @@ export const authConfig = {
         session.user.id = token.id as string
         session.user.role = token.role as any
         session.user.phone = token.phone as string
+        session.user.assignedRestaurantId = token.assignedRestaurantId as string
         if (token.email) {
           session.user.email = token.email as string
         }

@@ -1,3 +1,35 @@
+export interface Restaurant {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  logoUrl: string | null
+  bannerUrl: string | null
+  address: string | null
+  city: string | null
+  cuisineTags: string[]
+  rating: number
+  reviewCount: number
+  deliveryTime: string
+  distance: string | null
+  isVeg: boolean
+  isPureVeg: boolean
+  isOpen: boolean
+  openTime: string | null
+  closeTime: string | null
+  sortOrder: number
+  discountOffer: string | null
+  discountBadge: string | null
+  commissionRate: number
+  ownerPhone: string | null
+  ownerEmail: string | null
+  isActive: boolean
+  menuSections: any | null
+  createdAt: string
+  updatedAt: string
+  _count?: { products: number; orders: number }
+}
+
 export interface Product {
   id: string
   name: string
@@ -5,6 +37,7 @@ export interface Product {
   description: string | null
   imageUrl: string | null
   categoryId: string
+  restaurantId?: string | null
   mrp: number
   price: number
   discount: number
@@ -15,6 +48,7 @@ export interface Product {
   variants?: any[] | null
   minStock?: number
   category?: Category
+  restaurant?: Restaurant | null
   images?: ProductImage[]
   reviews?: Review[]
   isBestSeller?: boolean

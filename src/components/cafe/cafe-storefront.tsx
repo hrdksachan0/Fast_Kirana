@@ -471,11 +471,21 @@ export function CafeStorefront({ initialProducts, customSections }: CafeStorefro
     finalSections.forEach(sec => sec.products.forEach((p: any) => allGroupedIds.add(p.id)))
     const moreItems = mappedProducts.filter(p => !allGroupedIds.has(p.id))
 
+    if (moreItems.length > 0) {
+      finalSections.push({
+        tag: 'more-delights',
+        title: 'More Delights',
+        emoji: '✨',
+        description: 'Delightful menu items prepared fresh for you',
+        products: moreItems
+      })
+    }
+
     return {
       sections: finalSections,
       moreItems
     }
-  }, [mappedProducts])
+  }, [mappedProducts, customSections, categoryStatus])
 
   // Filtered categories and products based on user search query
   const filteredCategorySections = useMemo(() => {

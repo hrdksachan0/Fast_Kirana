@@ -15,6 +15,7 @@ import { cn, isCafeProduct, isProductStoreClosed } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { useCartStore } from '@/stores/cart-store'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CartConflictDialog } from '@/components/cart/cart-conflict-dialog'
 
 export default function CartPage() {
   const { data: session } = useSession()
@@ -42,7 +43,7 @@ export default function CartPage() {
       .then(res => res.json())
       .then(data => {
         if (data.tax_rate !== undefined) {
-          setTaxRate(0.00)
+          setTaxRate(data.tax_rate)
         }
         if (data.misc_fee !== undefined) {
           setMiscFee(parseFloat(data.misc_fee))
@@ -334,6 +335,7 @@ export default function CartPage() {
 
   return (
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl">
+      <CartConflictDialog />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-6">
         <h1 className="text-lg min-[375px]:text-xl md:text-2xl font-black text-text-primary">Review Cart Items</h1>
         {hasInventoryIssues && (

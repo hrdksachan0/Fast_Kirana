@@ -452,10 +452,14 @@ export default function DeliveryDashboard() {
   }, [status, fetchOrders])
 
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds. Capturing the interval handle directly
+  // (rather than reading from a ref) makes the cleanup deterministic even if
+  // the effect re-runs before the unmount path is hit.
   useEffect(() => {
     if (status !== 'authenticated') return
+    let isCancelled = false
     const id = setInterval(() => {
+      if (isCancelled) return
       setAutoRefreshCountdown((prev) => {
         if (prev <= 1) {
           fetchOrders(true)
@@ -464,7 +468,10 @@ export default function DeliveryDashboard() {
         return prev - 1
       })
     }, 1000)
-    return () => clearInterval(id)
+    return () => {
+      isCancelled = true
+      clearInterval(id)
+    }
   }, [status, fetchOrders])
 
   const prevPendingCountRef = useRef<number | null>(null)
@@ -599,6 +606,40 @@ export default function DeliveryDashboard() {
   const outForDeliveryOrders = useMemo(() => optimizeRoute(rawOutForDelivery), [rawOutForDelivery])
   const pendingOrders = orders.filter((o) => o.status === 'PACKED')
   const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED')
+
+  // Active coordinate tracking for shipped orders
+  useEffect(() => {
+    if (rawOutForDelivery.length === 0) return
+
+    let watchId: number | null = null
+
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          try {
+            await fetch('/api/delivery/location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              }),
+            })
+          } catch (err) {
+            console.error('Error posting live location:', err)
+          }
+        },
+        (err) => console.warn('Geolocation watch error:', err),
+        { enableHighAccuracy: true, timeout: 5000 }
+      )
+    }
+
+    return () => {
+      if (watchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
+  }, [rawOutForDelivery.length])
 
   // Stats
   const todayDeliveries = deliveredOrders.length

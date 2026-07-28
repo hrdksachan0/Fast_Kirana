@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { couponLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  // Prevent coupon-code enumeration via brute force.
+  // Coupon codes are short and guessable; without this, an attacker can
+  // POST every 3-letter combination to find valid codes.
+  const limited = await couponLimiter.check(request as any)
+  if (limited) return limited
+
   try {
     const { code, subtotal, items } = await request.json()
 
@@ -68,6 +75,33 @@ export async function POST(request: Request) {
         )
       }
       eligibleSubtotal = categorySubtotal
+    } else if (coupon.restaurantId) {
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return NextResponse.json({ error: 'This coupon is restricted to a restaurant. Cart items are required.' }, { status: 400 })
+      }
+
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: coupon.restaurantId },
+        select: { name: true }
+      })
+
+      const restaurantItems = items.filter((item: any) => {
+        const itemRestaurantId = item.restaurantId || item.product?.restaurantId
+        return itemRestaurantId === coupon.restaurantId
+      })
+      const restaurantSubtotal = restaurantItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+
+      if (restaurantSubtotal === 0) {
+        return NextResponse.json({ error: `This coupon is only valid for items from ${restaurant?.name || 'the restricted restaurant'}.` }, { status: 400 })
+      }
+
+      if (restaurantSubtotal < coupon.minOrder) {
+        return NextResponse.json(
+          { error: `Minimum order of ₹${coupon.minOrder} from ${restaurant?.name || 'the restaurant'} is required.` },
+          { status: 400 }
+        )
+      }
+      eligibleSubtotal = restaurantSubtotal
     } else {
       // Check minimum order value against overall subtotal
       if (subtotal < coupon.minOrder) {

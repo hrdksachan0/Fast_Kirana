@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.status::text = ${status}
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     } else if (status && status !== 'ALL') {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         WHERE o.status::text = ${status}
         ORDER BY o."createdAt" DESC
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.id ILIKE ${searchLike}
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     } else {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         ORDER BY o."createdAt" DESC
         LIMIT ${limit} OFFSET ${skip}
@@ -93,8 +93,9 @@ export async function GET(request: Request) {
     const orderIds = ordersRaw.map(o => o.id)
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
+    const restaurantIds = [...new Set(ordersRaw.map(o => o.restaurantId))].filter(Boolean)
 
-    const [allUsers, allAddresses, allOrderItems, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
+    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -105,6 +106,9 @@ export async function GET(request: Request) {
         : [],
       orderIds.length > 0
         ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
+        : [],
+      restaurantIds.length > 0
+        ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds } }, select: { id: true, name: true, address: true, logoUrl: true } })
         : [],
       prisma.order.count({ where }),
       prisma.order.count({ where: whereForCounts }),
@@ -119,6 +123,7 @@ export async function GET(request: Request) {
     const orders = ordersRaw.map((o) => {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
       const address = allAddresses.find(a => a.id === o.addressId) || null
+      const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null
       const items = allOrderItems.filter(item => item.orderId === o.id).map(item => ({
         id: item.id,
         name: item.name,
@@ -141,6 +146,9 @@ export async function GET(request: Request) {
         isB2B: o.isB2B,
         deliveryMethod: o.deliveryMethod,
         shopName: o.shopName,
+        restaurantId: o.restaurantId,
+        restaurantName: restaurant?.name || o.shopName,
+        restaurant,
         shopPhone: o.shopPhone,
         items,
         address: address ? {

@@ -1,8 +1,8 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/keep-alive",
-      "schedule": "*/4 * * * *"
+  "functions": {
+    "src/app/api/**/*": {
+      "memory": 256,
+      "maxDuration": 15
     }
-  ]
+  }
 }

@@ -9,6 +9,11 @@ const globalForEmitter = global as unknown as {
 
 export const sseEmitter = globalForEmitter.sseEmitter ?? new SSEEmitter()
 
+// Prevent unhandled 'error' events from crashing the process.
+sseEmitter.on('error', () => {
+  // Drain stale listeners on the next tick
+})
+
 if (process.env.NODE_ENV !== 'production') {
   globalForEmitter.sseEmitter = sseEmitter
 }

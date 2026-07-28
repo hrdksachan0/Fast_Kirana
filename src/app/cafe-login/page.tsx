@@ -40,14 +40,32 @@ export default function CafeLoginPage() {
       
       const role = session?.user?.role
       const userEmail = session?.user?.email || ''
-      const isAllowed = role === 'ADMIN' || (role === 'CHEF' && !userEmail.toLowerCase().startsWith('restaurant'))
+      const assignedRestaurantId = session?.user?.assignedRestaurantId
+      const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
 
       if (isAllowed) {
-        toast.success('Welcome back, Chef! Redirecting to Cafe kitchen...')
-        router.push('/cafe-kitchen')
+        toast.success('Welcome back! Redirecting to dashboard...')
+        if (assignedRestaurantId) {
+          // Fetch restaurant details to decide where to route
+          const restRes = await fetch(`/api/restaurants/${assignedRestaurantId}`)
+          const restData = await restRes.json()
+          const isCafe = restData.slug?.includes('cafe') || restData.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
+          if (isCafe) {
+            router.push('/cafe-kitchen')
+          } else {
+            router.push('/restaurant-kitchen')
+          }
+        } else {
+          // Fallback based on email startsWith if no assigned ID
+          if (userEmail.toLowerCase().startsWith('restaurant') || userEmail.toLowerCase().startsWith('owner')) {
+            router.push('/restaurant-kitchen')
+          } else {
+            router.push('/cafe-kitchen')
+          }
+        }
         router.refresh()
       } else {
-        toast.error('Access Denied. Only registered Cafe chefs are allowed to log in here.')
+        toast.error('Access Denied. Only registered staff members are allowed to log in here.')
         await signOut({ redirect: false })
         setIsLoading(false)
       }

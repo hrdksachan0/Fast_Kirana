@@ -805,7 +805,7 @@ export function DealsCurationHub({
                       
                       {/* Interactive See All link */}
                       <Link
-                        href={group.categorySlug === 'cafe' ? '/?mode=cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
+                        href={group.categorySlug === 'cafe' ? '/food/as-cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
                         className="group/btn inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#FF2E55] hover:text-[#e02447] transition-colors select-none"
                       >
                         See All
@@ -830,7 +830,7 @@ export function DealsCurationHub({
                       ))}
                       {group.products.length > 10 && (
                         <Link
-                          href={group.categorySlug === 'cafe' ? '/?mode=cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
+                          href={group.categorySlug === 'cafe' ? '/food/as-cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
                           className="w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-xl border border-border/60 dark:border-zinc-800/60 bg-gradient-to-b from-primary/[0.02] to-primary/[0.06] dark:from-primary/[0.005] dark:to-primary/[0.02] p-4 text-center cursor-pointer transition-all duration-300 shadow-card hover:shadow-[0_8px_30px_rgba(226,10,34,0.12),0_2px_8px_rgba(0,0,0,0.06)] hover:border-primary/25 h-[210px] min-[375px]:h-[230px] sm:h-[250px] md:h-[290px] group"
                         >
                           <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-[1.03]">

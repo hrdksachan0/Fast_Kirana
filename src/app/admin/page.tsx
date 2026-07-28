@@ -375,11 +375,17 @@ export default async function AdminPage() {
     <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8 bg-background animate-fade-in">
       
       {/* Title Header */}
-      <div className="flex justify-between items-center border-b border-border/60 pb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
           <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Manage store status, pricing, inventory and customers.</p>
         </div>
+        <a 
+          href="/admin/restaurants" 
+          className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          Manage Restaurants 🍽️
+        </a>
       </div>
 
       {/* Grid of Stats Cards (Only Active Orders, Today Revenue, Today Orders) */}

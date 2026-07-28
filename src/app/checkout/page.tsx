@@ -155,6 +155,16 @@ export default function CheckoutPage() {
   const [deliveryFeeVal, setDeliveryFeeVal] = useState(DELIVERY_FEE)
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
   const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
+  const [restaurantsList, setRestaurantsList] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/restaurants')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setRestaurantsList(data)
+      })
+      .catch(() => {})
+  }, [])
 
 
   useEffect(() => {
@@ -1341,21 +1351,41 @@ export default function CheckoutPage() {
                         )}
 
                         {hasCafe && (
-                          <div className="border-l-2 border-orange-500/30 pl-3">
-                            <span className="text-[10px] uppercase font-black text-orange-600">Cafe Pickup</span>
-                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
-                              {cafePickupAddress || contactAddress}
-                            </p>
-                          </div>
+                          (() => {
+                            const cafeItem = items.find((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
+                            const restaurantId = (cafeItem?.product as any)?.restaurantId || (cafeItem?.product as any)?.restaurant?.id
+                            const specificCafe = restaurantsList.find(r => r.id === restaurantId || r.slug?.includes('cafe')) || (cafeItem?.product as any)?.restaurant
+
+                            return (
+                              <div className="border-l-2 border-orange-500/30 pl-3">
+                                <span className="text-[10px] uppercase font-black text-orange-600">
+                                  ☕ {specificCafe ? specificCafe.name : 'Cafe'} Pickup
+                                </span>
+                                <p className="text-xs text-text-secondary leading-relaxed mt-0.5 font-bold">
+                                  {specificCafe?.address || cafePickupAddress || contactAddress}
+                                </p>
+                              </div>
+                            )
+                          })()
                         )}
 
                         {hasRestaurant && (
-                          <div className="border-l-2 border-rose-500/30 pl-3">
-                            <span className="text-[10px] uppercase font-black text-rose-600">Wedson Restaurant Pickup</span>
-                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
-                              {restaurantPickupAddress || contactAddress}
-                            </p>
-                          </div>
+                          (() => {
+                            const restaurantItem = items.find((item) => (item.product as any).restaurantId || (item.product as any).restaurant)
+                            const restaurantId = (restaurantItem?.product as any)?.restaurantId || (restaurantItem?.product as any)?.restaurant?.id
+                            const specificRestaurant = restaurantsList.find(r => r.id === restaurantId) || (restaurantItem?.product as any)?.restaurant || restaurantsList[0]
+
+                            return (
+                              <div className="border-l-2 border-rose-500/30 pl-3">
+                                <span className="text-[10px] uppercase font-black text-rose-600">
+                                  📍 {specificRestaurant ? specificRestaurant.name : 'Restaurant'} Pickup
+                                </span>
+                                <p className="text-xs text-text-secondary leading-relaxed mt-0.5 font-bold">
+                                  {specificRestaurant?.address || restaurantPickupAddress || contactAddress}
+                                </p>
+                              </div>
+                            )
+                          })()
                         )}
 
                         <p className="text-xs text-text-secondary pt-1 border-t border-border/20">

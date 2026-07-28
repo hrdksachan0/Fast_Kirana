@@ -1,10 +1,11 @@
 type SearchResult = {
   products: any[]
   pagination: {
-    total: number
+    total: number | null
     page: number
     limit: number
-    totalPages: number
+    totalPages: number | null
+    nextCursor?: string | null
   }
 }
 

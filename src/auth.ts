@@ -24,17 +24,20 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
   secret: cleanSecret || undefined,
   adapter: PrismaAdapter(prisma),
-  debug: true,
+  debug: process.env.NODE_ENV !== 'production',
   logger: {
     error: (error: any) => {
+      if (process.env.NODE_ENV === 'production') return
       console.error('--- NEXTAUTH ERROR ---')
       console.error(JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
     },
     warn: (code) => {
+      if (process.env.NODE_ENV === 'production') return
       console.warn('--- NEXTAUTH WARN ---')
       console.warn('Code:', code)
     },
     debug: (code, metadata) => {
+      if (process.env.NODE_ENV === 'production') return
       console.log('--- NEXTAUTH DEBUG ---')
       console.log('Code:', code)
       console.log('Metadata:', JSON.stringify(metadata, null, 2))
@@ -86,14 +89,37 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const email = (credentials.email as string).toLowerCase().trim()
+        const input = (credentials.email as string).trim()
         const password = credentials.password as string
 
-        const isBypass = password === 'YuvrajHardik@2613'
+        const isDev = process.env.NODE_ENV !== 'production'
+        const bypassEnabled = isDev && process.env.ENABLE_DEV_BYPASS === '1'
+        const bypassPassword = process.env.DEV_BYPASS_PASSWORD
+        const isBypass = bypassEnabled && !!bypassPassword && password === bypassPassword
 
-        let user = await prisma.user.findUnique({
-          where: { email },
-        })
+        // Check if input is a phone number or email
+        const cleanPhoneDigits = input.replace(/\D/g, '')
+        const isPhone = cleanPhoneDigits.length >= 10 && cleanPhoneDigits.length <= 12
+
+        let user = null
+        if (isPhone) {
+          const normPhone = cleanPhoneDigits.length === 10 ? `+91${cleanPhoneDigits}` : `+${cleanPhoneDigits}`
+          const rawDigits = cleanPhoneDigits.length === 10 ? cleanPhoneDigits : cleanPhoneDigits.slice(2)
+          user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { phone: normPhone },
+                { phone: rawDigits },
+                { phone: `+91${rawDigits}` },
+                { email: input.toLowerCase() }
+              ]
+            }
+          })
+        } else {
+          user = await prisma.user.findUnique({
+            where: { email: input.toLowerCase() },
+          })
+        }
 
         if (user && user.isBlocked) {
           throw new Error(`Your account has been blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`)
@@ -102,26 +128,27 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         if (isBypass) {
           if (!user) {
             // Auto-detect role based on email prefix for developer convenience
-            let role: 'USER' | 'ADMIN' | 'CHEF' | 'PICKER' | 'DELIVERY' = 'USER'
-            if (email.startsWith('admin')) role = 'ADMIN'
-            else if (email.startsWith('chef') || email.startsWith('restaurant')) role = 'CHEF'
-            else if (email.startsWith('picker')) role = 'PICKER'
-            else if (email.startsWith('delivery')) role = 'DELIVERY'
+            let role: 'USER' | 'ADMIN' | 'CHEF' | 'RESTAURANT_OWNER' | 'PICKER' | 'DELIVERY' = 'USER'
+            if (input.startsWith('admin')) role = 'ADMIN'
+            else if (input.startsWith('chef')) role = 'CHEF'
+            else if (input.startsWith('restaurant') || input.startsWith('owner')) role = 'RESTAURANT_OWNER'
+            else if (input.startsWith('picker')) role = 'PICKER'
+            else if (input.startsWith('delivery')) role = 'DELIVERY'
 
             // Extract name from email prefix
-            const baseName = email.split('@')[0]
+            const baseName = input.split('@')[0]
             const name = baseName.charAt(0).toUpperCase() + baseName.slice(1)
 
             // Auto-create password hash for consistency
-            const passwordHash = await bcrypt.hash('YuvrajHardik@2613', 12)
+            const passwordHash = await bcrypt.hash(bypassPassword!, 12)
 
             user = await prisma.user.create({
               data: {
-                email,
+                email: isPhone ? `user-${cleanPhoneDigits}@fastkirana.com` : input.toLowerCase(),
                 name,
                 role,
                 passwordHash,
-                phone: '+919999999999',
+                phone: isPhone ? `+91${cleanPhoneDigits.slice(-10)}` : '+919999999999',
               }
             })
           }
@@ -133,6 +160,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             role: user.role,
             phone: user.phone,
             image: user.image,
+            assignedRestaurantId: user.assignedRestaurantId,
           }
         }
 
@@ -149,6 +177,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           role: user.role,
           phone: user.phone,
           image: user.image,
+          assignedRestaurantId: user.assignedRestaurantId,
         }
       },
     }),

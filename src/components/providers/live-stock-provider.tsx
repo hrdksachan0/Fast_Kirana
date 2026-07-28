@@ -21,12 +21,16 @@ const LiveStockContext = createContext<LiveStockContextType | null>(null)
 export function LiveStockProvider({ children }: { children: React.ReactNode }) {
   const [liveStock, setLiveStock] = useState<Record<string, LiveProductState>>({})
   const registryRef = useRef<Record<string, number>>({})
+  const lastFetchedRef = useRef<Record<string, number>>({})
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const triggerBatchFetch = useCallback(() => {
+  const triggerBatchFetch = useCallback((force = false) => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
 
     fetchTimeoutRef.current = setTimeout(async () => {
+      const now = Date.now()
+      const CACHE_TTL = 180000 // 180 seconds client cache TTL — reduced background polling frequency
+
       const onScreenIds = Object.entries(registryRef.current)
         .filter(([_, count]) => count > 0)
         .map(([id]) => id)
@@ -39,11 +43,26 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
 
       if (activeIds.length === 0) return
 
+      // Filter IDs that were not fetched within the last CACHE_TTL ms (unless forced)
+      const idsToFetch = force
+        ? activeIds
+        : activeIds.filter((id) => {
+            const lastTime = lastFetchedRef.current[id] || 0
+            return now - lastTime > CACHE_TTL
+          })
+
+      if (idsToFetch.length === 0) return
+
+      // Update timestamp cache for IDs being requested
+      idsToFetch.forEach((id) => {
+        lastFetchedRef.current[id] = now
+      })
+
       try {
         const res = await fetch('/api/products/live-stock', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: activeIds }),
+          body: JSON.stringify({ ids: idsToFetch }),
         })
         if (res.ok) {
           const data = await res.json()
@@ -69,7 +88,7 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Failed to fetch live stock:', err)
       }
-    }, 150) // 150ms debounce window to batch mount calls
+    }, 400) // 400ms batch window to aggregate product mounts
   }, [])
 
   const registerProduct = useCallback((id: string) => {
@@ -89,18 +108,17 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Background polling effect (every 30 seconds)
+  // Background polling effect (every 90 seconds for active items)
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        triggerBatchFetch()
+        triggerBatchFetch(true)
       }
-    }, 30000)
-
+    }, 90000) // poll interval matches cache TTL to avoid redundant fetches
 
     // Also fetch on window focus to ensure freshness
     const handleFocus = () => {
-      triggerBatchFetch()
+      triggerBatchFetch(true)
     }
     window.addEventListener('focus', handleFocus)
 

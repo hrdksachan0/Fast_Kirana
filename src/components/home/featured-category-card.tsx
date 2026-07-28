@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronRight, Heart } from 'lucide-react';
+import Image from 'next/image';
 import { useCart } from '@/hooks/use-cart';
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
@@ -353,7 +354,7 @@ export default function FeaturedCategoryCard({
                   {/* Image Area */}
                   <div className="pcard-img" style={{ background: p.bgColor || '#f8fafc' }}>
                     {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.name} className="pcard-image-el" />
+                      <Image src={p.imageUrl} alt={p.name} width={300} height={300} className="pcard-image-el" />
                     ) : (
                       <span className="pcard-emoji">{p.emoji || '🍽️'}</span>
                     )}

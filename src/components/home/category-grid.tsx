@@ -206,7 +206,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="w-[74px] shrink-0 snap-start"
               >
                 <Link
-                  href={category.slug === 'cafe' ? '/?mode=cafe' : category.isCafeSection ? `/?mode=cafe&section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' || category.isCafeSection ? '/food/as-cafe' : category.slug === 'restaurant' ? '/food' : `/category/${category.slug}`}
                   className="group flex flex-col items-center text-center cursor-pointer"
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
@@ -218,7 +218,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         src={category.imageUrl}
                         alt={formattedLabel}
                         fill
-                        sizes="100px"
+                        sizes="(max-width: 640px) 66px, 80px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : categoryPhotos[category.slug] ? (
@@ -226,7 +226,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         src={categoryPhotos[category.slug]}
                         alt={formattedLabel}
                         fill
-                        sizes="100px"
+                        sizes="(max-width: 640px) 66px, 80px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : category.imageUrl && category.imageUrl.length < 5 ? (
@@ -283,7 +283,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 className="p-3 rounded-2xl border border-transparent hover:border-zinc-200/50 dark:hover:border-zinc-800/40 hover:bg-white/70 dark:hover:bg-zinc-900/30 shadow-2xs hover:shadow-sm transition-all duration-300 group"
               >
                 <Link
-                  href={category.slug === 'cafe' ? '/?mode=cafe' : category.isCafeSection ? `/?mode=cafe&section=${category.slug}` : `/category/${category.slug}`}
+                  href={category.slug === 'cafe' || category.isCafeSection ? '/food/as-cafe' : category.slug === 'restaurant' ? '/food' : `/category/${category.slug}`}
                   className="flex flex-col items-center text-center"
                 >
                   <div
@@ -294,7 +294,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         src={category.imageUrl}
                         alt={category.name}
                         fill
-                        sizes="80px"
+                        sizes="(max-width: 768px) 80px, 100px"
                         className="object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                     ) : categoryPhotos[category.slug] ? (
@@ -302,7 +302,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         src={categoryPhotos[category.slug]}
                         alt={category.name}
                         fill
-                        sizes="80px"
+                        sizes="(max-width: 768px) 80px, 100px"
                         className="object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                     ) : category.imageUrl && category.imageUrl.length < 5 ? (

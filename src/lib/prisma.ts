@@ -15,7 +15,10 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  let connectionString = process.env.DATABASE_URL || ''
+  // Use DIRECT_URL in local development to avoid Neon pooler connection issues/timeouts
+  let connectionString = (process.env.NODE_ENV !== 'production' && process.env.DIRECT_URL)
+    ? process.env.DIRECT_URL
+    : (process.env.DATABASE_URL || '')
   
   if (connectionString) {
     connectionString = connectionString.replace(/\r/g, '').trim()
@@ -34,7 +37,7 @@ function createPrismaClient() {
 
   const pool = new Pool({
     connectionString,
-    max: 3, // Restrict connection pool size per worker to prevent database connection exhaustion during Next.js parallel builds
+    max: process.env.NODE_ENV !== 'production' ? 20 : 3, // Allow larger pool in dev for parallel compilation/queries, restrict in prod to prevent Neon limits exhaust
     idleTimeoutMillis: 10000, // close idle connections quickly
     connectionTimeoutMillis: 15000 // wait up to 15 seconds to establish connection
   })

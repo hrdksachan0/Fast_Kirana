@@ -37,18 +37,32 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '100') // default to larger limit for admin viewing
-    const skip = (page - 1) * limit
-    const includeUnavailable = searchParams.get('admin') === 'true'
+    // Cursor-based pagination: client passes the last row's createdAt:id as "cursor" instead of a page number.
+    // Falls back to standard offset on page 1 for backwards compatibility.
+    const cursor = searchParams.get('cursor') as string | null
+    const isNextPage = cursor !== null
+    const page1 = !isNextPage && page <= 1
+
+    const [cursorCreatedAt, cursorId] = cursor ? cursor.split(':') : [null, null]
+
+    const hasCursor = Boolean(cursorCreatedAt && cursorId)
     const trending = searchParams.get('trending') === 'true'
     const storeId = searchParams.get('storeId')
+    const restaurantId = searchParams.get('restaurantId')
+    const restaurantSlug = searchParams.get('restaurantSlug')
 
     const session = await auth()
     const role = session?.user?.role
     const isWorker = role === 'ADMIN' || role === 'CHEF'
 
+    // Normalize the search query so "Maggi", " maggi ", and "MAGGI" share the
+    // same cache entry (and same Levenshtein comparison). Trim + lowercase +
+    // collapse internal whitespace.
+    const normalizedSearch = search ? search.trim().toLowerCase().replace(/\s+/g, ' ') : ''
+
     // Cache check for typo-tolerant searches
-    const cacheKey = `search:${search || ''}:${category || ''}:${sort || ''}:${page}:${limit}:${isWorker}`
-    if (search) {
+    const cacheKey = `search:${normalizedSearch}:${category || ''}:${sort || ''}:${page}:${limit}:${isWorker}:${restaurantId || ''}:${restaurantSlug || ''}`
+    if (normalizedSearch) {
       const cached = getCachedSearch(cacheKey)
       if (cached) {
         return NextResponse.json(cached)
@@ -57,18 +71,42 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.ProductWhereInput = {}
 
-    // Only filter available products for regular users
-    if (!isWorker) {
+    // Only filter available products for regular users unless includeUnavailable is requested
+    const includeUnavailable = searchParams.get('admin') === 'true' || searchParams.get('includeUnavailable') === 'true'
+    if (!isWorker && !includeUnavailable) {
       where.isAvailable = true
+    }
+
+    // Filter by restaurant
+    if (restaurantId) {
+      where.restaurantId = restaurantId
+    } else if (restaurantSlug) {
+      where.restaurant = { slug: restaurantSlug }
     }
 
     if (category) {
       const slugs = category.split(',')
-      const expandedSlugs = slugs.flatMap(s => s === 'cafe' ? ['cafe', 'fastkirana-cafe'] : [s])
-      where.category = {
-        slug: {
-          in: expandedSlugs,
-        },
+      const isCafeQuery = slugs.some(s => s === 'cafe' || s === 'fastkirana-cafe' || s === 'beverages' || s === 'ice-cream')
+      const isRestaurantQuery = slugs.some(s => s === 'restaurant' || s === 'wedson-restaurant')
+
+      if (isCafeQuery) {
+        where.OR = [
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'hot-beverages', 'cold-beverages', 'beverages', 'drinks', 'shakes', 'mocktails', 'sandwiches', 'burgers', 'pizza', 'rolls', 'chinese', 'pasta', 'snacks', 'desserts', 'bakery', 'south-indian', 'fast-food', 'ice-cream', 'ice_cream', 'food', 'quick-bites', 'coffee', 'tea'] } } },
+          { tags: { hasSome: ['cafe', 'fastkirana-cafe', 'hot-beverage', 'hot-bite', 'sandwiches', 'frankie-rolls', 'chinese', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'south-indian', 'chilled', 'beverages', 'drinks', 'bakery', 'pizza', 'burgers', 'garlic-bread', 'desserts', 'ice-cream', 'tea', 'coffee', 'snack', 'food'] } },
+          { restaurantId: null },
+        ]
+      } else if (isRestaurantQuery) {
+        where.OR = [
+          { restaurantId: { not: null } },
+          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry'] } } },
+          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice'] } },
+        ]
+      } else {
+        where.category = {
+          slug: {
+            in: slugs,
+          },
+        }
       }
     }
 
@@ -149,6 +187,7 @@ export async function GET(request: NextRequest) {
       sortOrder: true,
       createdAt: true,
       updatedAt: true,
+      restaurantId: true,
       category: {
         select: {
           id: true,
@@ -157,6 +196,17 @@ export async function GET(request: NextRequest) {
           imageUrl: true,
           parentId: true,
           sortOrder: true,
+        }
+      },
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logoUrl: true,
+          bannerUrl: true,
+          rating: true,
+          deliveryTime: true,
         }
       }
     }
@@ -247,9 +297,10 @@ export async function GET(request: NextRequest) {
 
     let products: any[] = []
     let total = 0
-    if (search) {
+    let nextCursor: string | null = null
+    if (normalizedSearch) {
       // 1. Split query into tokens, expand with synonyms, and build an intersection query
-      const searchWords = search.trim().toLowerCase().split(/\s+/)
+      const searchWords = normalizedSearch.split(/\s+/)
       const wordClauses = searchWords.map(w => {
         const syns = SYNONYM_DICTIONARY[w] || []
         const wordOptions = [w, ...syns]
@@ -285,7 +336,7 @@ export async function GET(request: NextRequest) {
             category: where.category,
             isAvailable: where.isAvailable,
           },
-          take: 1000,
+          take: 500,
         }
         if (isWorker) {
           fallbackOptions.include = { category: true }
@@ -297,9 +348,9 @@ export async function GET(request: NextRequest) {
 
       // 2. Score each product using the fuzzy text matcher
       const scoredProducts = matchedProducts.map((p) => {
-        const nameScore = getFuzzyScore(search, p.name)
-        const tagScore = p.tags.some((t: string) => getFuzzyScore(search, t) > 60) ? 85 : 0
-        const descScore = p.description ? getFuzzyScore(search, p.description) * 0.5 : 0
+        const nameScore = getFuzzyScore(normalizedSearch, p.name)
+        const tagScore = p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
+        const descScore = p.description ? getFuzzyScore(normalizedSearch, p.description) * 0.5 : 0
         const score = Math.max(nameScore, tagScore, descScore)
         return { product: p, score }
       })
@@ -321,27 +372,59 @@ export async function GET(request: NextRequest) {
       }
 
       // 4. Paginate in memory
-      products = matches.slice(skip, skip + limit).map((m) => m.product)
+      const memorySkip = (page - 1) * limit
+      products = matches.slice(memorySkip, memorySkip + limit).map((m) => m.product)
     } else {
-      // Standard database query for normal non-search listings
+      // Standard database query for normal non-search listings.
+      // For page 1, we still skip/limit for client compatibility; deeper pages
+      // should pass `cursor=createdAt:id` of the last row, which keeps the query
+      // O(limit) regardless of dataset size.
+      const stableOrderBy = Array.isArray(orderBy)
+        ? [...orderBy, { createdAt: 'desc' }, { id: 'desc' }]
+        : [orderBy, { createdAt: 'desc' }, { id: 'desc' }]
+
       const queryOptions: any = {
         where,
-        orderBy,
-        skip,
-        take: limit,
+        orderBy: stableOrderBy,
+        take: limit + 1,
       }
+
+      // Cursor pagination takes precedence over skip when supplied.
+      if (hasCursor) {
+        queryOptions.cursor = { id: cursorId }
+        queryOptions.skip = 1 // skip the cursor row itself
+        queryOptions.where = {
+          ...where,
+          OR: [
+            { createdAt: { lt: new Date(cursorCreatedAt!) } },
+            {
+              createdAt: new Date(cursorCreatedAt!),
+              id: { lt: cursorId! },
+            },
+          ],
+        }
+      } else if (page1) {
+        queryOptions.skip = 0
+      } else {
+        // Backwards-compat: legacy callers passing ?page=N keep offset behavior.
+        queryOptions.skip = (page - 1) * limit
+      }
+
       if (isWorker) {
         queryOptions.include = { category: true }
       } else {
         queryOptions.select = productSelect
       }
 
-      const [dbProducts, dbTotal] = await Promise.all([
-        prisma.product.findMany(queryOptions),
-        prisma.product.count({ where }),
-      ])
-      products = dbProducts
-      total = dbTotal
+      const dbProducts = await prisma.product.findMany(queryOptions)
+      const hasMore = dbProducts.length > limit
+      products = hasMore ? dbProducts.slice(0, limit) : dbProducts
+      // Cursor mode avoids a count(*) over the full table.
+      total = hasCursor ? -1 : await prisma.product.count({ where })
+      if (hasCursor && hasMore) {
+        const last = products[products.length - 1]
+        nextCursor = `${(last as any).createdAt.toISOString()}:${last.id}`
+      }
     }
 
     // Override stock and availability with localized dark store inventory
@@ -366,14 +449,15 @@ export async function GET(request: NextRequest) {
     const responseData = {
       products,
       pagination: {
-        total,
+        total: total === -1 ? null : total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: total === -1 ? null : Math.ceil(total / limit),
+        nextCursor,
       },
     }
 
-    if (search) {
+    if (normalizedSearch) {
       setCachedSearch(cacheKey, responseData)
     }
 
@@ -456,7 +540,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, imageUrl, categoryId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
 
     let finalCategoryId = categoryId
     const tagsList = Array.isArray(tags) 
@@ -536,6 +620,7 @@ export async function POST(request: NextRequest) {
         description,
         imageUrl: imageUrl || '📦',
         categoryId: finalCategoryId,
+        restaurantId: restaurantId || null,
         mrp: finalMrp,
         price: finalPrice,
         discount: calculatedDiscount,

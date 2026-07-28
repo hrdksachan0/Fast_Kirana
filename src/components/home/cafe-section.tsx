@@ -283,6 +283,18 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             }
           })
 
+        // Fallback: Group any remaining unassigned products into "More Delights" section
+        const unassignedProducts = dbProducts.filter((p: any) => !assignedProductIds.has(p.id))
+        if (unassignedProducts.length > 0) {
+          finalCategories.push({
+            tag: 'more-delights',
+            title: 'More Delights',
+            emoji: '✨',
+            image: null,
+            products: unassignedProducts
+          })
+        }
+
         // Show configured/predefined + dynamic categories that have products in the database
         setCategories([
           { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png', products: dbProducts },

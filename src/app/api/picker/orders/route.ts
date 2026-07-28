@@ -4,15 +4,17 @@ import { auth } from '@/auth'
 
 export async function GET(request: Request) {
   const session = await auth()
-  if (!session || (session.user.role !== 'PICKER' && session.user.role !== 'ADMIN' && session.user.role !== 'CHEF')) {
+  const role = session.user.role
+  if (role !== 'PICKER' && role !== 'ADMIN' && role !== 'CHEF' && role !== 'RESTAURANT_OWNER') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') // 'cafe', 'restaurant' or 'grocery'
+  const assignedRestaurantId = (session.user as any).assignedRestaurantId
 
-  if (session.user.role === 'CHEF') {
-    const isRestaurantChef = session.user.email?.toLowerCase().startsWith('restaurant')
+  if (role === 'CHEF' || role === 'RESTAURANT_OWNER') {
+    const isRestaurantChef = session.user.email?.toLowerCase().startsWith('restaurant') || role === 'RESTAURANT_OWNER'
     if (isRestaurantChef && type !== 'restaurant') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
-  if (session.user.role === 'PICKER' && (type === 'cafe' || type === 'restaurant')) {
+  if (role === 'PICKER' && (type === 'cafe' || type === 'restaurant')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -29,35 +31,69 @@ export async function GET(request: Request) {
     let orders: any[] = []
     
     if (type === 'cafe') {
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId",
-               o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-               o."paymentMethod"::text as "paymentMethod",
-               o."paymentStatus"::text as "paymentStatus",
-               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
-        FROM orders o
-        WHERE o.status IN ('PENDING', 'CONFIRMED')
-          AND o."shopName" = 'FastKirana Cafe Kitchen'
-        ORDER BY o."createdAt" ASC
-      `
+      if (assignedRestaurantId) {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."restaurantId" = ${assignedRestaurantId}
+          ORDER BY o."createdAt" ASC
+        `
+      } else {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."shopName" = 'FastKirana Cafe Kitchen'
+          ORDER BY o."createdAt" ASC
+        `
+      }
     } else if (type === 'restaurant') {
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId",
-               o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-               o."paymentMethod"::text as "paymentMethod",
-               o."paymentStatus"::text as "paymentStatus",
-               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
-        FROM orders o
-        WHERE o.status IN ('PENDING', 'CONFIRMED')
-          AND o."shopName" = 'FastKirana Restaurant Kitchen'
-        ORDER BY o."createdAt" ASC
-      `
+      if (assignedRestaurantId) {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."restaurantId" = ${assignedRestaurantId}
+          ORDER BY o."createdAt" ASC
+        `
+      } else {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."shopName" = 'FastKirana Restaurant Kitchen'
+          ORDER BY o."createdAt" ASC
+        `
+      }
     } else {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
@@ -67,7 +103,7 @@ export async function GET(request: Request) {
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."deliveryMethod",
                o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt"
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
           AND (o."shopName" IS NULL OR (o."shopName" != 'FastKirana Cafe Kitchen' AND o."shopName" != 'FastKirana Restaurant Kitchen'))
@@ -106,26 +142,35 @@ export async function GET(request: Request) {
       }
     }
 
-    const [allItems, allUsers, allAddresses] = await Promise.all([
+    const restaurantIds = [...new Set(orders.map(o => o.restaurantId).filter(Boolean))]
+
+    const [allItems, allUsers, allAddresses, allRestaurants] = await Promise.all([
       orderIds.length > 0
         ? prisma.orderItem.findMany({
             where: { orderId: { in: orderIds } },
             include: {
               product: {
                 include: {
-                  category: true
+                  category: true,
+                  restaurant: true,
                 }
               }
             }
           })
         : [],
       userIds.length > 0
-        ? prisma.$queryRaw`
+        ? (prisma.$queryRaw`
             SELECT id, name, phone FROM users WHERE id = ANY(${userIds})
-          ` as Promise<any[]>
+          ` as Promise<any[]>)
         : [],
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds } } })
+        : [],
+      restaurantIds.length > 0
+        ? prisma.restaurant.findMany({
+            where: { id: { in: restaurantIds } },
+            select: { id: true, name: true, address: true, logoUrl: true, ownerPhone: true }
+          })
         : [],
     ])
 
@@ -135,6 +180,7 @@ export async function GET(request: Request) {
       const assignedPicker = o.assignedPickerId ? allUsers.find(u => u.id === o.assignedPickerId) : null
       const assignedChef = o.assignedChefId ? allUsers.find(u => u.id === o.assignedChefId) : null
       const address = allAddresses.find(a => a.id === o.addressId)
+      const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null
 
       // Find companion order from pre-fetched list
       const fiveSecondsAgo = new Date(new Date(o.createdAt).getTime() - 5000).getTime()
@@ -154,6 +200,8 @@ export async function GET(request: Request) {
         assignedPicker,
         assignedChef,
         address,
+        restaurant,
+        restaurantName: restaurant?.name || o.shopName,
         companionOrder: companion
           ? {
               id: companion.id,

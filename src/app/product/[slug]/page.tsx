@@ -29,8 +29,8 @@ export const revalidate = 60
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
 
-  // 1. Fetch the active product
-  const productRaw = await prisma.product.findUnique({
+const [productRaw, relatedRaw] = await Promise.all([
+  prisma.product.findUnique({
     where: { slug },
     include: {
       category: true,
@@ -49,24 +49,30 @@ export default async function ProductPage({ params }: ProductPageProps) {
         },
       },
     },
-  }).catch(() => null)
+  }).catch(() => null),
+  (async () => {
+    const p = await prisma.product.findUnique({
+      where: { slug },
+      select: { categoryId: true, id: true }
+    })
+    if (!p) return []
+    return prisma.product.findMany({
+      where: {
+        categoryId: p.categoryId,
+        id: { not: p.id },
+        isAvailable: true,
+      },
+      take: 8,
+      include: {
+        category: true,
+      },
+    }).catch(() => [])
+  })()
+])
 
   if (!productRaw) {
     notFound()
   }
-
-  // 2. Fetch related products in the same category
-  const relatedRaw = await prisma.product.findMany({
-    where: {
-      categoryId: productRaw.categoryId,
-      id: { not: productRaw.id },
-      isAvailable: true,
-    },
-    take: 8,
-    include: {
-      category: true,
-    },
-  }).catch(() => [])
 
   // Map to UI types
   const mapProduct = (p: any): Product => ({
@@ -115,7 +121,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {product.category && (
           <>
             <Link 
-              href={product.category.slug === 'cafe' ? '/?mode=cafe' : `/category/${product.category.slug}`} 
+              href={product.category.slug === 'cafe' ? '/food/as-cafe' : `/category/${product.category.slug}`} 
               className="hover:text-primary transition-colors"
             >
               {product.category.name}

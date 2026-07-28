@@ -11,6 +11,7 @@ enum Role {
   USER
   PICKER
   CHEF
+  RESTAURANT_OWNER
   DELIVERY
   ADMIN
 }
@@ -92,9 +93,12 @@ model User {
   passwordHash  String?
   role          Role      @default(USER)
   assignedStoreId String?
+  assignedRestaurantId String?
   isBlocked     Boolean   @default(false)
   blockReason   String?
   blockedAt     DateTime?
+  liveLat       Float?
+  liveLng       Float?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -104,12 +108,17 @@ model User {
   cart      Cart?
   orders    Order[]
   reviews   Review[]
+  restaurantReviews RestaurantReview[]
   deliveryOrders Order[]   @relation("DeliveryOrders")
   pickerOrders   Order[]   @relation("PickerOrders")
   chefOrders     Order[]   @relation("ChefOrders")
   pushSubscriptions PushSubscription[]
   assignedStore  DarkStore? @relation("StoreStaff", fields: [assignedStoreId], references: [id])
+  assignedRestaurant Restaurant? @relation("RestaurantStaff", fields: [assignedRestaurantId], references: [id])
 
+  @@index([email])
+  @@index([role])
+  @@index([assignedRestaurantId])
   @@map("users")
 }
 
@@ -147,6 +156,8 @@ model Category {
   products Product[]
   coupons  Coupon[]
 
+@@index([sortOrder])
+  @@index([parentId])
   @@map("categories")
 }
 
@@ -158,6 +169,7 @@ model Product {
   description String?   @db.Text
   imageUrl    String?
   categoryId  String
+  restaurantId String?
   mrp         Float
   price       Float
   discount    Float     @default(0)
@@ -179,6 +191,7 @@ model Product {
   barcode      String?   @unique
 
   category     Category       @relation(fields: [categoryId], references: [id])
+  restaurant   Restaurant?    @relation(fields: [restaurantId], references: [id])
   images       ProductImage[]
   cartItems    CartItem[]
   orderItems   OrderItem[]
@@ -190,6 +203,7 @@ model Product {
   stockLogs    StockLog[]
 
   @@index([categoryId])
+  @@index([restaurantId])
   @@index([name])
   @@index([slug])
   @@index([isAvailable])
@@ -197,6 +211,7 @@ model Product {
   @@index([isBestSeller])
   @@index([isTopPick])
   @@index([createdAt])
+  @@index([categoryId, isAvailable, sortOrder, createdAt, id])
   @@map("products")
 }
 
@@ -244,6 +259,7 @@ model Order {
   userId            String
   addressId         String
   combinedId        String?
+  restaurantId      String?
 
   status            OrderStatus   @default(PENDING)
   subtotal          Float
@@ -276,6 +292,7 @@ model Order {
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[]
   store   DarkStore?  @relation(fields: [storeId], references: [id])
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
   
   deliveryUserId String?
   deliveryUser   User?      @relation("DeliveryOrders", fields: [deliveryUserId], references: [id])
@@ -290,7 +307,9 @@ model Order {
   @@index([assignedPickerId])
   @@index([assignedChefId])
   @@index([storeId])
+  @@index([restaurantId])
   @@index([combinedId])
+  @@index([shopName, createdAt])
   @@index([createdAt])
   @@map("orders")
 }
@@ -327,9 +346,11 @@ model Coupon {
   expiresAt       DateTime?
   createdAt       DateTime     @default(now())
   categoryId      String?
+  restaurantId    String?
   oncePerCustomer Boolean      @default(false)
 
   category        Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  restaurant      Restaurant?  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@map("coupons")
 }
@@ -348,6 +369,21 @@ model Review {
   @@unique([userId, productId])
   @@index([productId])
   @@map("reviews")
+}
+
+model RestaurantReview {
+  id           String     @id @default(cuid())
+  userId       String
+  restaurantId String
+  rating       Int        // 1 to 5
+  comment      String?    @db.Text
+  createdAt    DateTime   @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@map("restaurant_reviews")
 }
 
 model StockAlert {
@@ -499,9 +535,52 @@ model StoreInventory {
   @@map("store_inventories")
 }
 
+model Restaurant {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String?   @db.Text
+  logoUrl         String?
+  bannerUrl       String?
+  address         String?
+  city            String?
+  cuisineTags     String[]
+  rating          Float     @default(4.0)
+  reviewCount     Int       @default(0)
+  deliveryTime    String    @default("30-40 mins")
+  distance        String?
+  lat             Float?
+  lng             Float?
+  isVeg           Boolean   @default(false)
+  isPureVeg       Boolean   @default(false)
+  isOpen          Boolean   @default(true)
+  openTime        String?
+  closeTime       String?
+  sortOrder       Int       @default(0)
+  discountOffer   String?
+  discountBadge   String?
+  commissionRate  Float     @default(0.15)
+  ownerPhone      String?
+  ownerEmail      String?
+  isActive        Boolean   @default(true)
+  menuSections    Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  products        Product[]
+  orders          Order[]
+  staff           User[]    @relation("RestaurantStaff")
+  payouts         RestaurantPayout[]
+  reviews         RestaurantReview[]
+  coupons         Coupon[]
+
+  @@map("restaurants")
+}
+
 model RestaurantPayout {
   id              String   @id @default(cuid())
   type            String   @default("RESTAURANT") // RESTAURANT, CAFE
+  restaurantId    String?
   startDate       DateTime
   endDate         DateTime
   amount          Float
@@ -512,6 +591,9 @@ model RestaurantPayout {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  restaurant      Restaurant? @relation(fields: [restaurantId], references: [id])
+
+  @@index([restaurantId])
   @@map("restaurant_payouts")
 }
 

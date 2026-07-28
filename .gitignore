@@ -45,3 +45,11 @@ next-env.d.ts
 /fastkirana-app
 /fastkirana-rn
 /fastkirana-android
+
+# dev scratch scripts
+scratch/
+scratch-db-test.ts
+restaurant-card.html
+
+# scripts run once during development
+scripts/

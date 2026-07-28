@@ -9,20 +9,52 @@ export async function GET() {
   }
 
   try {
-    const reviews = await prisma.review.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        product: { select: { id: true, name: true, slug: true, imageUrl: true } },
-      },
-    })
+    const [reviews, restaurantReviews] = await Promise.all([
+      prisma.review.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          product: { select: { id: true, name: true, slug: true, imageUrl: true } },
+        },
+      }),
+      prisma.restaurantReview.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          restaurant: { select: { id: true, name: true, slug: true, logoUrl: true } },
+        },
+      })
+    ])
 
-    const serialized = reviews.map((review) => ({
+    const serializedProducts = reviews.map((review) => ({
       ...review,
+      type: 'PRODUCT',
       createdAt: review.createdAt.toISOString(),
     }))
 
-    return NextResponse.json(serialized)
+    const serializedRestaurants = restaurantReviews.map((review) => ({
+      id: review.id,
+      userId: review.userId,
+      rating: review.rating,
+      comment: review.comment,
+      createdAt: review.createdAt.toISOString(),
+      user: review.user,
+      type: 'RESTAURANT',
+      // Format as product so frontend renders nicely without breaking
+      product: {
+        id: review.restaurant.id,
+        name: `Restaurant: ${review.restaurant.name}`,
+        slug: `food/${review.restaurant.slug}`,
+        imageUrl: review.restaurant.logoUrl || null,
+      }
+    }))
+
+    // Merge both
+    const allReviews = [...serializedProducts, ...serializedRestaurants].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+
+    return NextResponse.json(allReviews)
   } catch (error: any) {
     console.error('Failed to fetch reviews:', error)
     return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 })
@@ -36,7 +68,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const { reviewId, rating, comment } = await request.json()
+    const { reviewId, rating, comment, type } = await request.json()
 
     if (!reviewId) {
       return NextResponse.json({ error: 'Missing review ID' }, { status: 400 })
@@ -46,10 +78,18 @@ export async function PATCH(request: Request) {
     if (rating !== undefined) updateData.rating = parseInt(rating)
     if (comment !== undefined) updateData.comment = comment
 
-    const updated = await prisma.review.update({
-      where: { id: reviewId },
-      data: updateData,
-    })
+    let updated
+    if (type === 'RESTAURANT') {
+      updated = await prisma.restaurantReview.update({
+        where: { id: reviewId },
+        data: updateData,
+      })
+    } else {
+      updated = await prisma.review.update({
+        where: { id: reviewId },
+        data: updateData,
+      })
+    }
 
     return NextResponse.json(updated)
   } catch (error: any) {
@@ -65,13 +105,17 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const { reviewId } = await request.json()
+    const { reviewId, type } = await request.json()
 
     if (!reviewId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    await prisma.review.delete({ where: { id: reviewId } })
+    if (type === 'RESTAURANT') {
+      await prisma.restaurantReview.delete({ where: { id: reviewId } })
+    } else {
+      await prisma.review.delete({ where: { id: reviewId } })
+    }
 
     return NextResponse.json({ success: true, message: 'Review deleted successfully' })
   } catch (error: any) {

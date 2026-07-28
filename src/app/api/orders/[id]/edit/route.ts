@@ -13,6 +13,15 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const userRole = session.user.role
+  const assignedRestaurantId = (session.user as any)?.assignedRestaurantId
+
+  // Only ADMIN, CHEF, PICKER, and RESTAURANT_OWNER can edit orders
+  const allowedRoles = ['ADMIN', 'CHEF', 'PICKER', 'RESTAURANT_OWNER']
+  if (!allowedRoles.includes(userRole as string)) {
+    return NextResponse.json({ error: 'Unauthorized: insufficient role' }, { status: 403 })
+  }
+
   try {
     const { id } = await params
     const { updatedItems, outOfStockProductIds } = await request.json()
@@ -29,6 +38,13 @@ export async function POST(
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Restaurant staff can only edit orders for their assigned restaurant
+    if ((userRole === 'CHEF' || userRole === 'RESTAURANT_OWNER') && userRole !== 'ADMIN') {
+      if (!assignedRestaurantId || order.restaurantId !== assignedRestaurantId) {
+        return NextResponse.json({ error: 'You can only edit orders for your assigned restaurant' }, { status: 403 })
+      }
     }
 
     // Strict constraint: Can only edit before confirmation (status must be PENDING)

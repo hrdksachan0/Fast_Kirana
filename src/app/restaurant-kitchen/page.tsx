@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee } from 'lucide-react'
-import { AdminRestaurantConsole } from '@/components/admin/admin-restaurant-console'
+import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee, SlidersHorizontal, Layers } from 'lucide-react'
 import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
 import { RestaurantSalesConsole } from '@/components/admin/restaurant-sales-console'
 import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
+import { RestaurantSettingsTab } from '@/components/admin/restaurant-settings-tab'
+import { RestaurantCatalogManager } from '@/components/admin/restaurant-catalog-manager'
+import { RestaurantMenuSectionsEditor } from '@/components/admin/restaurant-menu-sections-editor'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function RestaurantKitchenPage() {
@@ -15,7 +17,8 @@ export default function RestaurantKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { restaurantOpen } = useUIStore()
-  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'payouts'>('orders')
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'sections' | 'payouts' | 'settings'>('orders')
+  const [restaurantName, setRestaurantName] = useState('Restaurant Console')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -23,12 +26,37 @@ export default function RestaurantKitchenPage() {
   }, [])
 
   useEffect(() => {
+    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+    if (assignedRestaurantId) {
+      fetch(`/api/restaurants/${assignedRestaurantId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.name) {
+            setRestaurantName(`${data.name} Console`)
+            
+            // Auto-redirect if they belong to a Café and are not an ADMIN
+            if (session?.user?.role !== 'ADMIN') {
+              const isAssignedCafe = data.slug?.includes('cafe') || data.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
+              if (isAssignedCafe) {
+                router.push('/cafe-kitchen')
+              }
+            }
+          }
+        })
+        .catch(err => console.error(err))
+    } else {
+      setRestaurantName('Restaurant Console')
+    }
+  }, [session, router])
+
+  useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/restaurant-login?callbackUrl=/restaurant-kitchen')
     } else if (status === 'authenticated') {
       const role = session?.user?.role
       const email = session?.user?.email || ''
-      const isAllowed = role === 'ADMIN' || (role === 'CHEF' && email.toLowerCase().startsWith('restaurant'))
+      const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+      const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || (role === 'CHEF' && email.toLowerCase().startsWith('restaurant')) || !!assignedRestaurantId
       if (!isAllowed) {
         router.push('/')
       }
@@ -58,7 +86,7 @@ export default function RestaurantKitchenPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight">Wedson Restaurant Console</h1>
+                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight">{restaurantName}</h1>
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                   restaurantOpen
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
@@ -92,10 +120,10 @@ export default function RestaurantKitchenPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1">
+        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'orders' 
                 ? 'border-red-650 text-red-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -106,7 +134,7 @@ export default function RestaurantKitchenPage() {
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'analytics' 
                 ? 'border-red-650 text-red-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -117,7 +145,7 @@ export default function RestaurantKitchenPage() {
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'catalog' 
                 ? 'border-red-650 text-red-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -127,8 +155,19 @@ export default function RestaurantKitchenPage() {
             Menu Catalog
           </button>
           <button
+            onClick={() => setActiveTab('sections')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'sections' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            Menu Categories
+          </button>
+          <button
             onClick={() => setActiveTab('payouts')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'payouts' 
                 ? 'border-red-650 text-red-600' 
                 : 'border-transparent text-text-secondary hover:text-text-primary'
@@ -137,14 +176,32 @@ export default function RestaurantKitchenPage() {
             <IndianRupee className="h-4 w-4" />
             Payout Ledger
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings' 
+                ? 'border-red-650 text-red-600' 
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Outlet Settings
+          </button>
         </div>
 
         {/* Console Container */}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
           {activeTab === 'orders' && <RestaurantOrdersConsole />}
           {activeTab === 'analytics' && <RestaurantSalesConsole />}
-          {activeTab === 'catalog' && <AdminRestaurantConsole isAdmin={false} />}
+          {activeTab === 'catalog' && <RestaurantCatalogManager />}
+          {activeTab === 'sections' && (
+            <RestaurantMenuSectionsEditor 
+              assignedRestaurantId={(session?.user as any)?.assignedRestaurantId || ''} 
+              isCafe={false} 
+            />
+          )}
           {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} />}
+          {activeTab === 'settings' && <RestaurantSettingsTab />}
         </div>
 
       </div>
