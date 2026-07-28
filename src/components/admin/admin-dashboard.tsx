@@ -2474,8 +2474,11 @@ export function AdminDashboard({
             }
 
             const getOrderStoreType = (o: any) => {
-              if (o.shopName === 'FastKirana Cafe Kitchen') return 'CAFE'
-              if (o.shopName === 'FastKirana Restaurant Kitchen') return 'RESTAURANT'
+              if (o.restaurantId || (o.shopName && o.shopName !== 'FastKirana Grocery' && o.shopName !== 'Grocery Mart')) {
+                const name = ((o.restaurantName || o.shopName) || '').toLowerCase()
+                if (name.includes('cafe') || name.includes('a.s') || name.includes('as-')) return 'CAFE'
+                return 'RESTAURANT'
+              }
               return 'GROCERY'
             }
 
@@ -2725,19 +2728,30 @@ export function AdminDashboard({
                                       )}
                                     </div>
                                     <div className="mt-1 flex items-center gap-1">
-                                      {storeType === 'CAFE' ? (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30">
-                                          ☕ CAFE
-                                        </span>
-                                      ) : storeType === 'RESTAURANT' ? (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30">
-                                          🍽️ RESTAURANT
-                                        </span>
-                                      ) : (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
-                                          🛒 GROCERY
-                                        </span>
-                                      )}
+                                      {(() => {
+                                        const displayName = ((o as any).restaurantName || o.shopName || '').trim()
+                                        const isGenericGrocery = !displayName || displayName === 'FastKirana Grocery' || displayName === 'Grocery Mart'
+
+                                        if (storeType === 'CAFE') {
+                                          return (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
+                                              ☕ {isGenericGrocery ? 'CAFE' : displayName.toUpperCase()}
+                                            </span>
+                                          )
+                                        }
+                                        if (storeType === 'RESTAURANT') {
+                                          return (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
+                                              🥘 {isGenericGrocery ? 'RESTAURANT' : displayName.toUpperCase()}
+                                            </span>
+                                          )
+                                        }
+                                        return (
+                                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
+                                            🛒 GROCERY
+                                          </span>
+                                        )
+                                      })()}
                                     </div>
                                     <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                                       ID: {o.id.slice(0, 10)}...
@@ -3046,19 +3060,30 @@ export function AdminDashboard({
                                       #{o.readableId || o.id.slice(0, 8)}
                                     </span>
                                     <div className="mt-1 flex items-center gap-1">
-                                      {storeType === 'CAFE' ? (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30">
-                                          ☕ CAFE
-                                        </span>
-                                      ) : storeType === 'RESTAURANT' ? (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30">
-                                          🍽️ RESTAURANT
-                                        </span>
-                                      ) : (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
-                                          🛒 GROCERY
-                                        </span>
-                                      )}
+                                      {(() => {
+                                        const displayName = ((o as any).restaurantName || o.shopName || '').trim()
+                                        const isGenericGrocery = !displayName || displayName === 'FastKirana Grocery' || displayName === 'Grocery Mart'
+
+                                        if (storeType === 'CAFE') {
+                                          return (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
+                                              ☕ {isGenericGrocery ? 'CAFE' : displayName.toUpperCase()}
+                                            </span>
+                                          )
+                                        }
+                                        if (storeType === 'RESTAURANT') {
+                                          return (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
+                                              🥘 {isGenericGrocery ? 'RESTAURANT' : displayName.toUpperCase()}
+                                            </span>
+                                          )
+                                        }
+                                        return (
+                                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
+                                            🛒 GROCERY
+                                          </span>
+                                        )
+                                      })()}
                                     </div>
                                     <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                                       ID: {o.id.slice(0, 10)}...

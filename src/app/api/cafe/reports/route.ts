@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
 
     const role = session.user.role
     const email = session.user.email || ''
-    const isAllowed = role === 'ADMIN' || (role === 'CHEF' && !email.toLowerCase().startsWith('restaurant'))
+    const assignedRestId = (session.user as any).assignedRestaurantId
+    const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
     
     if (!isAllowed) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,55 +41,83 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Fetch delivered orders for Cafe Kitchen within range
-    const orders = await prisma.$queryRaw<
-      Array<{
-        id: string
-        total: number
-        subtotal: number
-        discount: number
-        deliveryFee: number
-        taxes: number
-        miscFee: number
-        createdAt: Date
-      }>
-    >`
-      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
-      FROM orders
-      WHERE status::text = 'DELIVERED'
-        AND "shopName" = 'FastKirana Cafe Kitchen'
-        AND "createdAt" >= ${start}
-        AND "createdAt" <= ${end}
-      ORDER BY "createdAt" ASC
-    `
+    type OrderRow = {
+      id: string
+      total: number
+      subtotal: number
+      discount: number
+      deliveryFee: number
+      taxes: number
+      miscFee: number
+      createdAt: Date
+    }
 
-    // 2. Fetch all order items inside delivered cafe orders with cost price
-    const orderItems = await prisma.$queryRaw<
-      Array<{
-        orderId: string
-        productId: string
-        price: number
-        quantity: number
-        name: string
-        costPrice: number
-        categoryName: string
-        variants: any
-        selectedVariant: string | null
-      }>
-    >`
-      SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
-             COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-             c.name as "categoryName",
-             COALESCE(oi.variants, p.variants) as "variants", 
-             oi."selectedVariant"
-      FROM order_items oi
-      JOIN products p ON oi."productId" = p.id
-      JOIN categories c ON p."categoryId" = c.id
-      JOIN orders o ON oi."orderId" = o.id
-      WHERE o.status::text = 'DELIVERED'
-        AND o."shopName" = 'FastKirana Cafe Kitchen'
-        AND o."createdAt" >= ${start}
-        AND o."createdAt" <= ${end}
-    `
+    type ItemRow = {
+      orderId: string
+      productId: string
+      price: number
+      quantity: number
+      name: string
+      costPrice: number
+      categoryName: string
+      variants: any
+      selectedVariant: string | null
+    }
+
+    let orders: OrderRow[] = []
+    let orderItems: ItemRow[] = []
+
+    if (assignedRestId) {
+      orders = await prisma.$queryRaw<OrderRow[]>`
+        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
+        FROM orders
+        WHERE status::text = 'DELIVERED'
+          AND ("restaurantId" = ${assignedRestId} OR "shopName" ILIKE '%cafe%' OR "shopName" ILIKE '%a.s%')
+          AND "createdAt" >= ${start}
+          AND "createdAt" <= ${end}
+        ORDER BY "createdAt" ASC
+      `
+      orderItems = await prisma.$queryRaw<ItemRow[]>`
+        SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
+               COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+               c.name as "categoryName",
+               COALESCE(oi.variants, p.variants) as "variants", 
+               oi."selectedVariant"
+        FROM order_items oi
+        JOIN products p ON oi."productId" = p.id
+        JOIN categories c ON p."categoryId" = c.id
+        JOIN orders o ON oi."orderId" = o.id
+        WHERE o.status::text = 'DELIVERED'
+          AND (o."restaurantId" = ${assignedRestId} OR o."shopName" ILIKE '%cafe%' OR o."shopName" ILIKE '%a.s%')
+          AND o."createdAt" >= ${start}
+          AND o."createdAt" <= ${end}
+      `
+    } else {
+      orders = await prisma.$queryRaw<OrderRow[]>`
+        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
+        FROM orders
+        WHERE status::text = 'DELIVERED'
+          AND ("shopName" ILIKE '%cafe%' OR "shopName" ILIKE '%a.s%' OR "shopName" = 'FastKirana Cafe Kitchen')
+          AND "createdAt" >= ${start}
+          AND "createdAt" <= ${end}
+        ORDER BY "createdAt" ASC
+      `
+      orderItems = await prisma.$queryRaw<ItemRow[]>`
+        SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
+               COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+               c.name as "categoryName",
+               COALESCE(oi.variants, p.variants) as "variants", 
+               oi."selectedVariant"
+        FROM order_items oi
+        JOIN products p ON oi."productId" = p.id
+        JOIN categories c ON p."categoryId" = c.id
+        JOIN orders o ON oi."orderId" = o.id
+        WHERE o.status::text = 'DELIVERED'
+          AND (o."shopName" ILIKE '%cafe%' OR o."shopName" ILIKE '%a.s%' OR o."shopName" = 'FastKirana Cafe Kitchen')
+          AND o."createdAt" >= ${start}
+          AND o."createdAt" <= ${end}
+      `
+    }
 
     // Map order items by order ID for easier processing
     const itemsByOrder: Record<string, typeof orderItems> = {}

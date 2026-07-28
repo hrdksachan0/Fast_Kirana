@@ -24,7 +24,8 @@ import {
   History,
   Tag,
   AlertCircle,
-  Camera
+  Camera,
+  X
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -42,6 +43,7 @@ interface Product {
   categoryName: string
   categorySlug: string
   costPrice: number
+  variants?: any
 }
 
 interface CartItem {
@@ -436,6 +438,7 @@ export function AdminInventoryCenter() {
   const [posPricingMode, setPosPricingMode] = useState<'mrp' | 'website'>('mrp')
   const [posPaymentMethod, setPosPaymentMethod] = useState<'COD' | 'UPI'>('COD')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [posVariantProduct, setPosVariantProduct] = useState<Product | null>(null)
   const posBarcodeRef = useRef<HTMLInputElement>(null)
 
   // Focus scanner when POS tab loads
@@ -455,22 +458,42 @@ export function AdminInventoryCenter() {
     ).slice(0, 10)
   }, [posSearchQuery, products])
 
-  const handleAddProductToCart = (product: Product) => {
-    setPosCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id)
-      const price = posPricingMode === 'mrp' ? product.mrp : product.price
+  const handleAddProductToCart = (product: Product, selectedVariant?: any) => {
+    let variantsList: any[] = []
+    if (Array.isArray(product.variants)) {
+      variantsList = product.variants
+    } else if (typeof product.variants === 'string') {
+      try {
+        const parsed = JSON.parse(product.variants)
+        if (Array.isArray(parsed)) variantsList = parsed
+      } catch {}
+    }
 
+    if (!selectedVariant && variantsList.length > 0) {
+      setPosVariantProduct({ ...product, variants: variantsList })
+      return
+    }
+
+    const variantName = selectedVariant ? selectedVariant.name : null
+    const cartItemId = variantName ? `${product.id}_${variantName}` : product.id
+    const itemPrice = selectedVariant 
+      ? (posPricingMode === 'mrp' ? (selectedVariant.mrp ?? selectedVariant.price) : selectedVariant.price)
+      : (posPricingMode === 'mrp' ? product.mrp : product.price)
+
+    setPosCart(prev => {
+      const existing = prev.find(item => (item as any).cartItemId === cartItemId || (!variantName && item.product.id === product.id))
       if (existing) {
         return prev.map(item => 
-          item.product.id === product.id 
+          ((item as any).cartItemId === cartItemId || (!variantName && item.product.id === product.id))
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
       } else {
-        return [...prev, { product, quantity: 1, price }]
+        return [...prev, { product, quantity: 1, price: itemPrice, selectedVariant: variantName, cartItemId } as any]
       }
     })
-    toast.success(`🛒 Added ${product.name} to retail cart`, { duration: 1000 })
+    setPosVariantProduct(null)
+    toast.success(`🛒 Added ${product.name} ${variantName ? `(${variantName})` : ''} to retail cart`, { duration: 1000 })
   }
 
   // Scan or search product into Retail POS cart
@@ -519,9 +542,10 @@ export function AdminInventoryCenter() {
   }, [cartMrpTotal, cartSubtotal])
 
   // Update POS Cart item quantity or price manually
-  const updateCartItem = (prodId: string, updates: Partial<CartItem>) => {
+  const updateCartItem = (cartKey: string, updates: Partial<CartItem>) => {
     setPosCart(prev => prev.map(item => {
-      if (item.product.id === prodId) {
+      const key = (item as any).cartItemId || item.product.id
+      if (key === cartKey) {
         return { ...item, ...updates }
       }
       return item
@@ -1385,6 +1409,43 @@ export function AdminInventoryCenter() {
                   )}
                 </div>
               </div>
+
+              {/* POS Variant Selector Modal */}
+              {posVariantProduct && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+                  <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl animate-scale-in">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <div>
+                        <h4 className="font-black text-sm text-text-primary">Select Variant</h4>
+                        <p className="text-xs text-text-secondary font-medium">{posVariantProduct.name}</p>
+                      </div>
+                      <button onClick={() => setPosVariantProduct(null)} className="text-text-muted hover:text-text-primary p-1">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {((typeof posVariantProduct.variants === 'string' ? JSON.parse(posVariantProduct.variants) : posVariantProduct.variants) || []).map((v: any) => (
+                        <button
+                          key={v.name}
+                          onClick={() => handleAddProductToCart(posVariantProduct, v)}
+                          className="w-full flex items-center justify-between p-3 border border-border bg-muted/20 hover:border-accent hover:bg-accent/5 rounded-xl text-xs font-bold text-left transition-all group"
+                        >
+                          <div>
+                            <span className="font-extrabold text-text-primary block">{v.name}</span>
+                            {v.stock !== undefined && (
+                              <span className="text-[10px] text-text-muted font-semibold">Stock: {v.stock}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-accent font-black text-sm">₹{v.price}</span>
+                            <Plus className="h-4 w-4 text-accent group-hover:scale-110 transition-transform" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </motion.div>
           )}

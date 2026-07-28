@@ -25,13 +25,19 @@ export async function GET(request: NextRequest) {
       where.restaurantId = restaurantId
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      include: { category: true, images: true },
-      orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
-    })
+    const [products, restaurant] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: true, images: true },
+        orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
+      }),
+      restaurantId ? prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { id: true, name: true, slug: true, menuSections: true, cuisineTags: true }
+      }) : null
+    ])
 
-    return NextResponse.json({ products })
+    return NextResponse.json({ products, restaurant })
   } catch (error) {
     console.error('Restaurant dashboard products GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

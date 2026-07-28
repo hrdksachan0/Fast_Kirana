@@ -456,21 +456,29 @@ export function CartDrawer() {
                 </div>
               )}
 
-              {/* Cafe Items Section */}
+              {/* Outlet / Cafe / Restaurant Items Section */}
               {cafeItems.length > 0 && (
-                <div className="flex flex-col pt-4 border-t border-zinc-100 dark:border-zinc-900">
-                  <div className="flex flex-col px-1 mb-3">
-                    <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
-                      ☕ FastKirana Cafe
-                    </span>
-                    <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
-                      Freshly prepared in Cafe Kitchen
-                    </span>
-                  </div>
-                  <AnimatePresence initial={false}>
-                    {cafeItems.map(renderItemRow)}
-                  </AnimatePresence>
-                </div>
+                (() => {
+                  const cafeProductItem = cafeItems.find(i => (i.product as any).restaurant?.name || (i.product as any).restaurantName)
+                  const outletName = (cafeProductItem?.product as any)?.restaurant?.name || (cafeProductItem?.product as any)?.restaurantName || 'A.S Restaurant'
+                  const isWedson = outletName.toLowerCase().includes('wedson')
+
+                  return (
+                    <div className="flex flex-col pt-4 border-t border-zinc-100 dark:border-zinc-900">
+                      <div className="flex flex-col px-1 mb-3">
+                        <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
+                          {isWedson ? '🥘' : '☕'} {outletName}
+                        </span>
+                        <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
+                          Freshly prepared at outlet kitchen
+                        </span>
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {cafeItems.map(renderItemRow)}
+                      </AnimatePresence>
+                    </div>
+                  )
+                })()
               )}
 
               {/* Smart Add-on Suggestions */}

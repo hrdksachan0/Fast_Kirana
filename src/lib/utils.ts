@@ -22,9 +22,11 @@ export function format12h(timeStr: string | null | undefined): string {
 
 export function isCafeProduct(p: any): boolean {
   if (!p) return false
-  const categorySlug = p.category?.slug || p.categorySlug
-  if (categorySlug === 'cafe' || categorySlug === 'restaurant' || categorySlug === 'ice-cream' || categorySlug === 'beverages') return true
-  if (p.tags?.includes('cafe') || p.tags?.includes('restaurant') || p.tags?.includes('ice-cream') || p.tags?.includes('beverages')) return true
+  if (p.restaurantId || p.restaurant || p.restaurantName) return true
+  const categorySlug = (p.category?.slug || p.categorySlug || '').toLowerCase()
+  const categoryName = (p.category?.name || '').toLowerCase()
+  if (categorySlug === 'cafe' || categorySlug === 'restaurant' || categorySlug.includes('cafe') || categorySlug.includes('restaurant')) return true
+  if (Array.isArray(p.tags) && p.tags.some((t: string) => ['cafe', 'restaurant', 'wedson', 'as-restaurant', 'food', 'shakes', 'beverage', 'beverages', 'pizza', 'burger', 'dessert', 'starters', 'main-course'].includes(t.toLowerCase()))) return true
   return false
 }
 

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2, ListCollapse } from 'lucide-react'
+import { Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2, ListCollapse, Upload } from 'lucide-react'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 import Image from 'next/image'
 
@@ -50,6 +50,32 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
   const [secDescription, setSecDescription] = useState('')
   const [secMatchTags, setSecMatchTags] = useState('')
   const [secImageUrl, setSecImageUrl] = useState('')
+  const [uploadingSecImage, setUploadingSecImage] = useState(false)
+  const secFileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleSecImageUpload = async (file: File) => {
+    if (!file) return
+    setUploadingSecImage(true)
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const json = await res.json()
+      if (json.url) {
+        setSecImageUrl(json.url)
+        toast.success('Category icon uploaded successfully!')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to upload category image')
+    } finally {
+      setUploadingSecImage(false)
+    }
+  }
 
   const [loading, setLoading] = useState(true)
   const [savingSections, setSavingSections] = useState(false)
@@ -288,14 +314,44 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Image URL (Optional)</label>
-              <input
-                type="url"
-                placeholder="Paste category icon image URL"
-                value={secImageUrl}
-                onChange={(e) => setSecImageUrl(e.target.value)}
-                className="w-full text-xs font-bold bg-background border border-border rounded-lg h-9 px-3 outline-none focus:border-primary"
-              />
+              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Category Icon Image</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="url"
+                  placeholder="Paste URL or upload image ->"
+                  value={secImageUrl}
+                  onChange={(e) => setSecImageUrl(e.target.value)}
+                  className="w-full text-xs font-bold bg-background border border-border rounded-lg h-9 px-3 outline-none focus:border-primary"
+                />
+                <input
+                  type="file"
+                  ref={secFileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleSecImageUpload(file)
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingSecImage}
+                  onClick={() => secFileInputRef.current?.click()}
+                  className="px-3 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-bold text-xs rounded-lg border border-orange-500/30 flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                >
+                  {uploadingSecImage ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Upload</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="sm:col-span-2 space-y-1">

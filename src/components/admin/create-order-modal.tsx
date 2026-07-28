@@ -249,9 +249,18 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   }
 
   const handleSelectProduct = (product: Product) => {
-    const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-    if (hasVariants) {
-      setVariantProduct(product)
+    let variantsList: any[] = []
+    if (Array.isArray(product.variants)) {
+      variantsList = product.variants
+    } else if (typeof product.variants === 'string') {
+      try {
+        const parsed = JSON.parse(product.variants)
+        if (Array.isArray(parsed)) variantsList = parsed
+      } catch {}
+    }
+
+    if (variantsList.length > 0) {
+      setVariantProduct({ ...product, variants: variantsList })
     } else {
       addProductToCart(product, null)
     }
@@ -261,18 +270,27 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
   const addProductToCart = (product: Product, variantName: string | null) => {
     const cartId = variantName ? `${product.id}_${variantName}` : product.id
-    
-    // Resolve price, mrp and stock
+
+    let variantsList: any[] = []
+    if (Array.isArray(product.variants)) {
+      variantsList = product.variants
+    } else if (typeof product.variants === 'string') {
+      try {
+        const parsed = JSON.parse(product.variants)
+        if (Array.isArray(parsed)) variantsList = parsed
+      } catch {}
+    }
+
     let price = product.price
     let mrp = product.mrp
     let stock = product.stock
-    
-    if (variantName && product.variants && Array.isArray(product.variants)) {
-      const v = product.variants.find((variant: any) => variant.name === variantName)
+
+    if (variantName && variantsList.length > 0) {
+      const v = variantsList.find((variant: any) => variant.name === variantName)
       if (v) {
-        price = v.price
-        mrp = v.mrp
-        stock = v.stock
+        price = v.price !== undefined ? v.price : price
+        mrp = v.mrp !== undefined ? v.mrp : mrp
+        stock = v.stock !== undefined ? v.stock : stock
       }
     }
 

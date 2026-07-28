@@ -907,9 +907,10 @@ export async function POST(request: NextRequest) {
           if (adminPhones.length > 0) {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
             const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+            const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Grocery')
             const customerName = order.user?.name || 'Customer'
-            const customerPhone = order.address?.phone || 'N/A'
-            const adminText = `New ${orderType} Order #${displayId} of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+            const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
+            const adminText = `New Order #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
             
             for (const adminPhone of adminPhones) {
               whatsappPromises.push(

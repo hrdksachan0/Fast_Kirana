@@ -395,26 +395,32 @@ export default function CartPage() {
             </div>
           )}
 
-          {/* Cafe Section */}
+          {/* Outlet / Cafe / Restaurant Section */}
           {cafeItems.length > 0 && (
-            <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
-              <div className="flex flex-col border-b border-border/40 pb-3">
-                <h2 className="text-base font-black text-rose-600 flex items-center gap-1.5">
-                  ☕ FastKirana Cafe
-                </h2>
-                <p className="text-xs text-rose-500/80 mt-1 font-bold">
-                  Fresh & piping hot snacks and brews prepared in Cafe Kitchen
-                </p>
-              </div>
+            (() => {
+              const cafeProductItem = cafeItems.find(i => (i.product as any).restaurant?.name || (i.product as any).restaurantName)
+              const outletName = (cafeProductItem?.product as any)?.restaurant?.name || (cafeProductItem?.product as any)?.restaurantName || 'A.S Restaurant'
+              const isWedson = outletName.toLowerCase().includes('wedson')
 
-              {/* Cafe items list container */}
+              return (
+                <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
+                  <div className="flex flex-col border-b border-border/40 pb-3">
+                    <h2 className="text-base font-black text-rose-600 flex items-center gap-1.5">
+                      {isWedson ? '🥘' : '☕'} {outletName}
+                    </h2>
+                    <p className="text-xs text-rose-500/80 mt-1 font-bold">
+                      Fresh & piping hot items prepared at outlet kitchen
+                    </p>
+                  </div>
 
-              <div className="flex flex-col">
-                <AnimatePresence initial={false}>
-                  {cafeItems.map(renderItemRow)}
-                </AnimatePresence>
-              </div>
-            </div>
+                  <div className="flex flex-col">
+                    <AnimatePresence initial={false}>
+                      {cafeItems.map(renderItemRow)}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )
+            })()
           )}
         </div>
 

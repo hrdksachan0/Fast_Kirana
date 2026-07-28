@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
+import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 
 interface Product {
   id: string
@@ -53,6 +54,8 @@ export function RestaurantCatalogManager() {
   const { data: session } = useSession()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [menuSections, setMenuSections] = useState<any[]>([])
+  const [selectedSectionTag, setSelectedSectionTag] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -117,9 +120,19 @@ export function RestaurantCatalogManager() {
       const prodData = await prodRes.json()
       setProducts(prodData.products || [])
 
+      if (prodData.restaurant) {
+        const rawSecs = prodData.restaurant.menuSections
+          ? (typeof prodData.restaurant.menuSections === 'string' ? JSON.parse(prodData.restaurant.menuSections) : prodData.restaurant.menuSections)
+          : null
+        const isCafe = prodData.restaurant.slug?.includes('cafe') || prodData.restaurant.slug?.includes('as-')
+        const secs = rawSecs && Array.isArray(rawSecs) && rawSecs.length > 0
+          ? rawSecs
+          : (isCafe ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS)
+        setMenuSections(secs.filter((s: any) => !s.disabled))
+      }
+
       if (catRes.ok) {
         const catData = await catRes.json()
-        // Filter categories: keep food-related categories
         const foodCategories = (catData.categories || catData || []).filter((c: any) => {
           const s = c.slug.toLowerCase()
           return s.includes('food') || s.includes('cafe') || s.includes('beverage') || 
@@ -128,7 +141,6 @@ export function RestaurantCatalogManager() {
                  s.includes('south-indian') || s.includes('sweet') || s.includes('roll')
         })
         
-        // Fallback to all categories if filter resulted in empty list
         setCategories(foodCategories.length > 0 ? foodCategories : (catData.categories || catData || []))
       }
     } catch (err) {
@@ -151,6 +163,7 @@ export function RestaurantCatalogManager() {
     setMrp('')
     setUnit('Serving')
     setCategoryId(categories[0]?.id || '')
+    setSelectedSectionTag(menuSections[0]?.tag || '')
     setDescription('')
     setImageUrl('')
     setStock('999')
@@ -166,6 +179,10 @@ export function RestaurantCatalogManager() {
     setMrp(product.mrp.toString())
     setUnit(product.unit)
     setCategoryId(product.categoryId)
+    const matchSec = menuSections.find(s => 
+      product.tags.includes(s.tag) || (s.matchTags && product.tags.some(t => s.matchTags.includes(t)))
+    )
+    setSelectedSectionTag(matchSec?.tag || menuSections[0]?.tag || '')
     setDescription(product.description || '')
     setImageUrl(product.imageUrl || '')
     setStock(product.stock.toString())
@@ -176,7 +193,7 @@ export function RestaurantCatalogManager() {
   // Handle Form Submit (Add or Edit)
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !price || !unit || !categoryId) {
+    if (!name.trim() || !price || !unit) {
       toast.error('Please fill all required fields')
       return
     }
@@ -185,7 +202,13 @@ export function RestaurantCatalogManager() {
     const priceVal = parseFloat(price)
     const mrpVal = mrp ? parseFloat(mrp) : priceVal
     const stockVal = parseInt(stock) || 999
-    const tags = isVeg ? ['veg'] : ['non-veg']
+    const selectedSec = menuSections.find(s => s.tag === selectedSectionTag)
+    const tags = [
+      selectedSectionTag || 'all',
+      ...(selectedSec?.matchTags || []),
+      isVeg ? 'veg' : 'non-veg',
+      'restaurant'
+    ]
 
     // Add general restaurant tag for convenience
     tags.push('restaurant')
@@ -618,23 +641,42 @@ export function RestaurantCatalogManager() {
                   />
                 </div>
 
-                {/* Category selection */}
+                {/* Category / Menu Section selection */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                     <Layers className="h-3.5 w-3.5" />
                     Menu Section *
                   </label>
-                  <select
-                    value={categoryId}
-                    onChange={e => setCategoryId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
-                    required
-                  >
-                    <option value="" disabled>Select Menu Section</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                  {menuSections.length > 0 ? (
+                    <select
+                      value={selectedSectionTag}
+                      onChange={e => {
+                        setSelectedSectionTag(e.target.value)
+                        if (categories[0]?.id) setCategoryId(categories[0].id)
+                      }}
+                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
+                      required
+                    >
+                      <option value="" disabled>Select Menu Section</option>
+                      {menuSections.map(sec => (
+                        <option key={sec.tag} value={sec.tag}>
+                          {sec.emoji ? `${sec.emoji} ` : ''}{sec.title}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      value={categoryId}
+                      onChange={e => setCategoryId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
+                      required
+                    >
+                      <option value="" disabled>Select Menu Section</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 

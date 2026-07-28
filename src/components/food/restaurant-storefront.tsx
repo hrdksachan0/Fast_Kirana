@@ -782,32 +782,6 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
           </div>
         </div>
       )}
-
-      {/* Floating Cart Bar */}
-      <AnimatePresence>
-        {totalItems > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="fixed bottom-20 left-0 right-0 z-50 px-4"
-          >
-            <Link href="/cart" className="block">
-              <div className={cn("bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgba(249,115,22,0.35)] active:scale-[0.98] transition-transform mx-auto", isCafe ? "max-w-4xl" : "max-w-3xl")}>
-                <div className="flex items-center gap-2">
-                  <ShoppingBag size={18} className="text-white" />
-                  <span className="text-sm font-black text-white">{totalItems} item{totalItems > 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-white">₹{subtotal.toFixed(0)}</span>
-                  <span className="text-[10px] font-bold text-white/80 uppercase">View Cart →</span>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
