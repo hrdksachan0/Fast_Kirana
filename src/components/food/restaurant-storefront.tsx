@@ -130,7 +130,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     sections = sections.filter((s: any) => !s.disabled)
 
     // Filter products
-    let filteredProducts = [...products]
+    let filteredProducts = products.map((p: any) => ({
+      ...p,
+      restaurantId: p.restaurantId || restaurant.id,
+      restaurant: p.restaurant || { id: restaurant.id, name: restaurant.name, slug: restaurant.slug, address: restaurant.address, ownerPhone: restaurant.ownerPhone }
+    }))
     if (isVegOnly) {
       filteredProducts = filteredProducts.filter(p =>
         p.tags?.some((t: string) => ['veg', 'pure-veg', 'vegetarian'].includes(t.toLowerCase()))

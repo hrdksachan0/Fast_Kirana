@@ -1372,8 +1372,9 @@ export default function CheckoutPage() {
                         {hasRestaurant && (
                           (() => {
                             const restaurantItem = items.find((item) => (item.product as any).restaurantId || (item.product as any).restaurant)
-                            const restaurantId = (restaurantItem?.product as any)?.restaurantId || (restaurantItem?.product as any)?.restaurant?.id
-                            const specificRestaurant = restaurantsList.find(r => r.id === restaurantId) || (restaurantItem?.product as any)?.restaurant || restaurantsList[0]
+                            const prodRest = (restaurantItem?.product as any)?.restaurant
+                            const restaurantId = (restaurantItem?.product as any)?.restaurantId || prodRest?.id
+                            const specificRestaurant = prodRest || restaurantsList.find(r => r.id === restaurantId || (prodRest?.slug && r.slug === prodRest.slug)) || restaurantsList.find(r => r.slug?.includes('wedson')) || restaurantsList[0]
 
                             return (
                               <div className="border-l-2 border-rose-500/30 pl-3">

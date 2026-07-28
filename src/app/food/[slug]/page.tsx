@@ -40,6 +40,7 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     include: {
       category: true,
       images: true,
+      restaurant: true,
     },
     orderBy: [
       { sortOrder: 'desc' },

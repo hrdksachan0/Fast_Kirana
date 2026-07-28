@@ -69,6 +69,7 @@ export function RestaurantCatalogManager() {
   const [unit, setUnit] = useState('Serving')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
   const [stock, setStock] = useState('999')
   const [isVeg, setIsVeg] = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)

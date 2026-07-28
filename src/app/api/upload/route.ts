@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     // Try Cloudinary if configured in Settings
     try {
-      const settings = await prisma.setting.findMany({
+      const settings = await prisma.storeSetting.findMany({
         where: { key: { in: ['cloudinary_cloud_name', 'cloudinary_upload_preset'] } }
       })
       const map = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {} as Record<string, string>)
