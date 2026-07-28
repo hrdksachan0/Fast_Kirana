@@ -65,7 +65,7 @@ export default async function AccountPage() {
     name: activeUser.name,
     email: activeUser.email,
     phone: activeUser.phone,
-    role: activeUser.role as 'USER' | 'PICKER' | 'CHEF' | 'DELIVERY' | 'ADMIN',
+    role: activeUser.role as 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN',
   }
 
   const serializedAddresses = addresses.map((addr) => ({

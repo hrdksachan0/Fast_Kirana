@@ -79,6 +79,7 @@ export function Navbar() {
     const email = session.user.email || ''
     switch (role) {
       case 'ADMIN': return '/admin'
+      case 'RESTAURANT_OWNER': return '/restaurant-kitchen'
       case 'CHEF':
         if (email.toLowerCase().startsWith('restaurant')) return '/restaurant-kitchen'
         return '/cafe-kitchen'

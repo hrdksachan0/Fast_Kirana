@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
             role: user.role,
             phone: user.phone,
             image: user.image,
+            assignedRestaurantId: user.assignedRestaurantId,
           }
         })
       }
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
           role: user.role,
           phone: user.phone,
           image: user.image,
+          assignedRestaurantId: user.assignedRestaurantId,
         }
       })
     }

@@ -47,6 +47,16 @@ export async function GET(request: NextRequest) {
         { createdAt: 'desc' }
       ],
       include: {
+        staff: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            assignedRestaurantId: true,
+          }
+        },
         _count: {
           select: { products: true }
         }

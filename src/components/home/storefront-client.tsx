@@ -115,8 +115,8 @@ export function StorefrontClient({
       </AnimatePresence>
 
       {/* Premium Grocery / Food Slider */}
-      <div className="flex justify-center mt-3.5 sm:mt-5 mb-5 sm:mb-6 px-4">
-        <div className="relative flex items-center w-full max-w-[420px] h-[62px] sm:h-[68px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70">
+      <div className="flex justify-center my-3 sm:my-4 px-4">
+        <div className="relative flex items-center w-full max-w-[420px] h-[60px] sm:h-[66px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70">
           <motion.button
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
@@ -181,17 +181,17 @@ export function StorefrontClient({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.35, ease: 'easeInOut' }}
-            className="container mx-auto px-4 pt-4 flex flex-col gap-1.5 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
+            className="container mx-auto px-4 pt-1 flex flex-col gap-1.5 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
             <FloatingEmojis type="grocery" />
-            {/* 1. Trending Categories */}
-            <div>
-              <CategoryGrid categories={categories} />
-            </div>
-
-            {/* 2. Hero Banners */}
+            {/* 1. Hero Banners */}
             <div>
               <HeroArea initialBanners={promoBanners} />
+            </div>
+
+            {/* 2. Trending Categories */}
+            <div>
+              <CategoryGrid categories={categories} />
             </div>
 
             {/* 3. Speed Strip */}

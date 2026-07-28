@@ -124,7 +124,7 @@ export async function PATCH(
       delete updateData.isActive
     }
 
-    const updatedRestaurant = await prisma.restaurant.update({
+    await prisma.restaurant.update({
       where: { id: restaurant.id },
       data: updateData
     })
@@ -140,9 +140,28 @@ export async function PATCH(
       }).catch(err => console.error('Failed to update owner user assignment:', err))
     }
 
+    const finalUpdatedRestaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurant.id },
+      include: {
+        staff: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            assignedRestaurantId: true,
+          }
+        },
+        _count: {
+          select: { products: true }
+        }
+      }
+    })
+
     revalidateStorefront('restaurants')
 
-    return NextResponse.json(updatedRestaurant)
+    return NextResponse.json(finalUpdatedRestaurant)
   } catch (error: any) {
     console.error('Failed to update restaurant:', error)
     return NextResponse.json({ error: 'Failed to update restaurant' }, { status: 500 })

@@ -126,6 +126,9 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       ? (typeof restaurant.menuSections === 'string' ? JSON.parse(restaurant.menuSections) : restaurant.menuSections)
       : getDefaultSections()
 
+    // Filter out disabled sections (owner can toggle sections off)
+    sections = sections.filter((s: any) => !s.disabled)
+
     // Filter products
     let filteredProducts = [...products]
     if (isVegOnly) {
@@ -164,7 +167,10 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       const categoryGroups: Record<string, { title: string; products: any[] }> = {}
 
       unassigned.forEach((p: any) => {
-        const groupTitle = p.category?.name || 'Chef Specials'
+        let groupTitle = p.category?.name || 'Chef Specials'
+        if (groupTitle.toLowerCase().includes('fastkirana') || groupTitle.toLowerCase().includes('restaurant') || groupTitle.toLowerCase().includes('cafe')) {
+          groupTitle = 'Chef Specials'
+        }
         if (!categoryGroups[groupTitle]) {
           categoryGroups[groupTitle] = { title: groupTitle, products: [] }
         }

@@ -148,17 +148,22 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     const query = modifySearchQuery.toLowerCase().trim()
     return allProducts.filter(p => {
       if (isModifyCafeOrder) {
-        const isCafe = p.category?.slug === 'cafe' || p.tags?.includes('cafe')
+        const isCafe = p.category?.slug === 'cafe' || (Array.isArray(p.tags) && p.tags.includes('cafe'))
         if (!isCafe) return false
       } else if (isModifyRestaurantOrder) {
-        const isRest = p.category?.slug === 'restaurant' || p.tags?.includes('restaurant')
+        const isRest = p.category?.slug === 'restaurant' || (Array.isArray(p.tags) && p.tags.includes('restaurant'))
         if (!isRest) return false
       } else {
-        const isKitchen = p.category?.slug === 'cafe' || p.category?.slug === 'restaurant' || p.tags?.includes('cafe') || p.tags?.includes('restaurant')
+        const isKitchen = p.category?.slug === 'cafe' || p.category?.slug === 'restaurant' || (Array.isArray(p.tags) && (p.tags.includes('cafe') || p.tags.includes('restaurant')))
         if (isKitchen) return false
       }
-      return p.name.toLowerCase().includes(query) || (p.tags && p.tags.toLowerCase().includes(query))
-    }).slice(0, 8)
+      
+      const tagMatch = Array.isArray(p.tags)
+        ? p.tags.some((t: string) => typeof t === 'string' && t.toLowerCase().includes(query))
+        : (typeof p.tags === 'string' ? (p.tags as string).toLowerCase().includes(query) : false)
+
+      return (p.name && p.name.toLowerCase().includes(query)) || tagMatch
+    }).slice(0, 10)
   }, [allProducts, modifySearchQuery, isModifyCafeOrder, isModifyRestaurantOrder])
 
   const handleAddProductToOrder = (prod: any) => {
@@ -273,7 +278,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       } else {
         toast.success('Order items updated successfully!')
         setIsEditing(false)
-        window.location.reload()
+        router.refresh()
       }
     } catch (err) {
       toast.error('Error modifying order')

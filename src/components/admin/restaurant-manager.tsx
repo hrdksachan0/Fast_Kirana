@@ -231,7 +231,7 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       {editingRestaurant && (
         <div className="fixed inset-0 z-50 bg-background sm:bg-black/75 sm:backdrop-blur-md flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-card sm:border sm:border-border rounded-none sm:rounded-3xl p-3.5 sm:p-6 max-w-4xl w-full h-full sm:h-auto sm:max-h-[90vh] shadow-2xl relative animate-in fade-in zoom-in-95 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between pb-3 mb-2 border-b border-border sticky top-0 bg-card z-20 shrink-0">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-border relative z-20 shrink-0">
               <div>
                 <h2 className="text-base sm:text-xl font-black text-text-primary">Edit {editingRestaurant.name}</h2>
                 <p className="text-[10px] sm:text-xs text-text-secondary">Update outlet profile, operating hours & outlet head</p>

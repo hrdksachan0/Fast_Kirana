@@ -22,7 +22,7 @@ interface AccountDashboardProps {
     name: string | null
     email: string
     phone: string | null
-    role: 'USER' | 'PICKER' | 'CHEF' | 'DELIVERY' | 'ADMIN'
+    role: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
   }
   addresses: any[]
   orders: any[]
@@ -378,6 +378,13 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
             <Link href="/picker">
               <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 rounded-xl text-xs h-10 px-4 font-bold">
                 Picker Console
+              </Button>
+            </Link>
+          )}
+          {user.role === 'RESTAURANT_OWNER' && (
+            <Link href="/restaurant-kitchen">
+              <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/5 rounded-xl text-xs h-10 px-4 font-bold">
+                🏪 Outlet Console
               </Button>
             </Link>
           )}

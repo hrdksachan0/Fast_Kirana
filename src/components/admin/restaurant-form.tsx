@@ -99,7 +99,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     lng: restaurant?.lng?.toString() || '',
   })
 
-  // Fetch assignable users if isAdmin
+  // Fetch assignable users if isAdmin & sync ownerUserId
   useEffect(() => {
     if (isAdmin) {
       setLoadingUsers(true)
@@ -108,12 +108,19 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         .then(data => {
           if (Array.isArray(data)) {
             setAssignableUsers(data)
+            // Smart fall-back: If ownerUserId is not set, find user assigned to this restaurant
+            if (restaurant?.id) {
+              const assignedUser = data.find((u: any) => u.assignedRestaurantId === restaurant.id)
+              if (assignedUser) {
+                setOwnerUserId(assignedUser.id)
+              }
+            }
           }
         })
         .catch(console.error)
         .finally(() => setLoadingUsers(false))
     }
-  }, [isAdmin])
+  }, [isAdmin, restaurant?.id])
 
   // Cuisine tag input
   const [tagInput, setTagInput] = useState('')
@@ -300,8 +307,8 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         </div>
       )}
 
-      {/* Mobile Sticky Quick-Nav Section Strip */}
-      <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md py-2 -mx-2 px-2 sm:mx-0 sm:px-0 border-b border-border/60 overflow-x-auto scrollbar-none flex items-center gap-1.5">
+      {/* Mobile Quick-Nav Section Strip */}
+      <div className="relative z-10 bg-card py-2 -mx-2 px-2 sm:mx-0 sm:px-0 border-b border-border/60 overflow-x-auto scrollbar-none flex items-center gap-1.5 mb-2">
         {[
           { id: 'sec-head', label: '👑 Outlet Head' },
           { id: 'sec-status', label: '⚡ Status' },
@@ -1189,10 +1196,8 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       </SectionCard>
       </div>
 
-      {/* ============================== */}
-      {/* STICKY SAVE BAR               */}
-      {/* ============================== */}
-      <div className="sticky bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border border-border/80 shadow-2xl rounded-2xl p-3 sm:p-4 mt-6">
+      {/* SAVE ACTION BAR */}
+      <div className="relative bg-card border border-border/80 shadow-lg rounded-2xl p-3.5 sm:p-4 mt-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="hidden sm:flex items-center gap-3">
             {formData.logoUrl && (
