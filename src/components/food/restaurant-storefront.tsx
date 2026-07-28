@@ -112,8 +112,21 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
   }
 
   const isCafe = useMemo(() => {
-    return restaurant.slug?.includes('cafe') || restaurant.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
-  }, [restaurant.slug, restaurant.cuisineTags])
+    const slug = (restaurant.slug || '').toLowerCase()
+    const name = (restaurant.name || '').toLowerCase()
+    let tags: string[] = []
+    if (Array.isArray(restaurant.cuisineTags)) {
+      tags = restaurant.cuisineTags.map((t: string) => t.toLowerCase())
+    } else if (typeof restaurant.cuisineTags === 'string') {
+      try {
+        tags = (JSON.parse(restaurant.cuisineTags) as string[]).map(t => t.toLowerCase())
+      } catch {
+        tags = [restaurant.cuisineTags.toLowerCase()]
+      }
+    }
+
+    return slug.includes('cafe') || slug.includes('as-') || name.includes('cafe') || name.includes('a.s') || tags.some(t => t.includes('cafe'))
+  }, [restaurant.slug, restaurant.name, restaurant.cuisineTags])
 
   // Determine menu sections based on restaurant type
   const getDefaultSections = () => {
