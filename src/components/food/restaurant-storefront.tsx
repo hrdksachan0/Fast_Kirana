@@ -221,6 +221,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     })
   }
 
+  const [isScrolledPastHero, setIsScrolledPastHero] = useState(false)
+
   // ScrollSpy for active category
   useEffect(() => {
     if (categories.length === 0) return
@@ -229,6 +231,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     const handleScroll = () => {
       cancelAnimationFrame(rafId)
       rafId = requestAnimationFrame(() => {
+        setIsScrolledPastHero(window.scrollY > 150)
         if (isClickingTabRef.current) return
 
         const sectionEls = categories
@@ -314,17 +317,20 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-32 relative">
       <FloatingEmojis type={isCafe ? 'cafe' : 'food'} />
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60">
-        <div className={cn("mx-auto px-4 h-14 flex items-center justify-between", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+      <div className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60">
+        <div className={cn("mx-auto px-4 h-12 sm:h-14 flex items-center justify-between", isCafe ? "max-w-4xl" : "max-w-3xl")}>
           <button
             onClick={() => router.back()}
             className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span className="text-sm font-bold hidden sm:inline">Back</span>
+            <span className="text-xs font-bold hidden sm:inline">Back</span>
           </button>
 
-          <h1 className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate max-w-[200px]">
+          <h1 className={cn(
+            "text-sm font-black text-zinc-900 dark:text-zinc-100 truncate max-w-[200px] transition-opacity duration-300",
+            isScrolledPastHero ? "opacity-100" : "opacity-0"
+          )}>
             {restaurant.name}
           </h1>
 
@@ -354,7 +360,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     placeholder={`Search in ${restaurant.name}...`}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    className="w-full pl-9 pr-9 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                     autoFocus
                   />
                   {searchQuery && (
@@ -367,31 +373,6 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Category Tabs */}
-        {activeSubTab === 'menu' && !isCafe && (
-          <div
-            ref={categoryTabsRef}
-            className="flex gap-1 px-4 py-2 overflow-x-auto scrollbar-hide max-w-3xl mx-auto"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {categories.map(cat => (
-              <button
-                key={cat.tag}
-                data-tag={cat.tag}
-                onClick={() => scrollToSection(cat.tag)}
-                className={cn(
-                  "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 whitespace-nowrap",
-                  activeCategoryTag === cat.tag
-                    ? "bg-orange-500 text-white shadow-md shadow-orange-500/25"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                )}
-              >
-                {cat.emoji} {cat.title} ({cat.products.length})
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Restaurant Hero Banner */}
@@ -488,6 +469,33 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
           Reviews ({reviews.length})
         </button>
       </div>
+
+      {/* Category Tabs (Sticky) */}
+      {activeSubTab === 'menu' && !isCafe && (
+        <div className="sticky top-12 sm:top-14 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/60 py-2 shadow-2xs">
+          <div
+            ref={categoryTabsRef}
+            className="flex gap-1.5 px-4 overflow-x-auto scrollbar-hide max-w-3xl mx-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {categories.map(cat => (
+              <button
+                key={cat.tag}
+                data-tag={cat.tag}
+                onClick={() => scrollToSection(cat.tag)}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 whitespace-nowrap",
+                  activeCategoryTag === cat.tag
+                    ? "bg-orange-500 text-white shadow-md shadow-orange-500/25"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                )}
+              >
+                {cat.emoji} {cat.title} ({cat.products.length})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeSubTab === 'menu' ? (
         <>
