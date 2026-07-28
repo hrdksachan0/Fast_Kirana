@@ -448,7 +448,7 @@ export default function PickerDashboard() {
             }, 1000)
             
             // Urgent sound if new grocery order
-            if (data.type === 'new-order' && (data.shopName === null || data.shopName !== 'FastKirana Cafe Kitchen')) {
+            if (data.type === 'new-order' && !data.restaurantId && data.orderType !== 'RESTAURANT') {
               playNotificationChime()
               triggerHaptic()
             }

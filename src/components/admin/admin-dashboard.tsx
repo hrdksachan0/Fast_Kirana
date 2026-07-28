@@ -478,10 +478,10 @@ export function AdminDashboard({
     if (isChimeMuted) return
 
     const delayedOrdersCount = liveOrders.filter((order) => {
+      const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
       if (order.status === 'PENDING') {
-        const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
         const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-        return diffMs > (isCafe ? 30 : 10) * 60 * 1000
+        return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
       }
       if (order.status === 'PACKED') {
         const baseTime = order.updatedAt || order.createdAt
@@ -489,11 +489,10 @@ export function AdminDashboard({
         return diffMs > 10 * 60 * 1000
       }
       if (order.status === 'CONFIRMED') {
-        const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
         const baseTime = order.updatedAt || order.createdAt
         const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-        if (isCafe) {
-          return diffMs > 30 * 60 * 1000 // Cafe Chef delay (30 mins after accept)
+        if (isRestaurant) {
+          return diffMs > 30 * 60 * 1000 // Kitchen Chef delay (30 mins after accept)
         } else {
           return diffMs > 10 * 60 * 1000 // Grocery Picker delay (10 mins after accept)
         }
@@ -513,10 +512,10 @@ export function AdminDashboard({
 
   // Filter delayed orders
   const delayedOrders = liveOrders.filter((order) => {
+    const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
     if (order.status === 'PENDING') {
-      const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
       const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-      return diffMs > (isCafe ? 30 : 10) * 60 * 1000
+      return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
     }
     if (order.status === 'PACKED') {
       const baseTime = order.updatedAt || order.createdAt
@@ -524,10 +523,9 @@ export function AdminDashboard({
       return diffMs > 10 * 60 * 1000
     }
     if (order.status === 'CONFIRMED') {
-      const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
       const baseTime = order.updatedAt || order.createdAt
       const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-      if (isCafe) {
+      if (isRestaurant) {
         return diffMs > 30 * 60 * 1000
       } else {
         return diffMs > 10 * 60 * 1000
@@ -538,12 +536,10 @@ export function AdminDashboard({
 
   // Count types of delays
   const pickerDelays = delayedOrders.filter(o => 
-    (o.status === 'PENDING' && o.shopName !== 'FastKirana Cafe Kitchen') ||
-    (o.status === 'CONFIRMED' && o.shopName !== 'FastKirana Cafe Kitchen')
+    !o.restaurantId && o.orderType !== 'RESTAURANT' && (o.status === 'PENDING' || o.status === 'CONFIRMED')
   )
   const chefDelays = delayedOrders.filter(o => 
-    (o.status === 'PENDING' && o.shopName === 'FastKirana Cafe Kitchen') ||
-    (o.status === 'CONFIRMED' && o.shopName === 'FastKirana Cafe Kitchen')
+    (!!o.restaurantId || o.orderType === 'RESTAURANT') && (o.status === 'PENDING' || o.status === 'CONFIRMED')
   )
   const riderDelays = delayedOrders.filter(o => o.status === 'PACKED')
 
@@ -2315,7 +2311,7 @@ export function AdminDashboard({
           <div className="mt-4 border-t border-rose-500/10 pt-3">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1 scrollbar-none">
               {delayedOrders.map((order) => {
-                const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
+                const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
                 const isPacked = order.status === 'PACKED'
                 const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
                 const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
@@ -2325,8 +2321,8 @@ export function AdminDashboard({
                 if (isPacked) {
                   delayType = 'Rider Delivery'
                   delayColor = 'border-rose-500/20 bg-rose-500/5 text-rose-700 dark:text-rose-400'
-                } else if (isCafe) {
-                  delayType = 'Cafe Chef'
+                } else if (isRestaurant) {
+                  delayType = 'Kitchen Chef'
                   delayColor = 'border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400'
                 }
 
@@ -2889,9 +2885,8 @@ export function AdminDashboard({
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
-                                              const isRest = o.shopName === 'FastKirana Restaurant Kitchen'
-                                              printKOTReceipt(o, isCafe ? 'CAFE' : isRest ? 'RESTAURANT' : 'STORE')
+                                              const isRest = !!o.restaurantId || o.orderType === 'RESTAURANT'
+                                              printKOTReceipt(o, isRest ? 'RESTAURANT' : 'STORE')
                                             }}
                                             className="flex-1 py-1 px-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
                                             title="Print Thermal Kitchen Order Ticket (KOT)"
@@ -5205,8 +5200,8 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'liveops' && (() => {
-        const pickTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && o.shopName !== 'FastKirana Cafe Kitchen')
-        const prepTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && o.shopName === 'FastKirana Cafe Kitchen')
+        const pickTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && !o.restaurantId && o.orderType !== 'RESTAURANT')
+        const prepTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && (!!o.restaurantId || o.orderType === 'RESTAURANT'))
         const deliveryTimeOrders = liveOrders.filter(o => o.shippedAt && o.deliveredAt)
 
         const avgPickTime = pickTimeOrders.length > 0 
@@ -5283,11 +5278,11 @@ export function AdminDashboard({
             <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
               <h4 className="font-extrabold text-sm text-text-primary mb-3">SLA Alert Stream</h4>
               {delayedOrders.length === 0 ? (
-                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within their SLA (10m Grocery / 30m Cafe).</p>
+                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within their SLA (10m Grocery / 30m Restaurant).</p>
               ) : (
                 <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                   {delayedOrders.map(order => {
-                    const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
+                    const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
                     const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
                     const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
                     
@@ -6844,13 +6839,9 @@ export function AdminDashboard({
                   </span>
 
                   {/* Store Type Badge */}
-                  {selectedOrderForTracking.shopName === 'FastKirana Cafe Kitchen' ? (
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                      ☕ CAFE KITCHEN
-                    </span>
-                  ) : selectedOrderForTracking.shopName === 'FastKirana Restaurant Kitchen' ? (
+                  {selectedOrderForTracking.restaurantId || selectedOrderForTracking.orderType === 'RESTAURANT' ? (
                     <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
-                      🍽️ RESTAURANT KITCHEN
+                      🍽️ {selectedOrderForTracking.shopName || 'RESTAURANT KITCHEN'}
                     </span>
                   ) : (
                     <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">

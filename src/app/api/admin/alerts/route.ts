@@ -127,9 +127,9 @@ export async function GET() {
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
 
     const packingDelays = confirmedOrdersRaw.filter((o) => {
-      const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
+      const isRestaurant = !!o.restaurantId || o.orderType === 'RESTAURANT'
       const updatedTime = new Date(o.updatedAt).getTime()
-      if (isCafe) {
+      if (isRestaurant) {
         return updatedTime < thirtyMinutesAgo.getTime()
       } else {
         return updatedTime < tenMinutesAgo.getTime()
@@ -137,11 +137,11 @@ export async function GET() {
     })
 
     const packingDelayAlerts = packingDelays.map((o) => {
-      const isCafe = o.shopName === 'FastKirana Cafe Kitchen'
+      const isRestaurant = !!o.restaurantId || o.orderType === 'RESTAURANT'
       const delayMin = Math.floor((now.getTime() - new Date(o.updatedAt).getTime()) / 60000)
       return {
         id: o.id,
-        name: `${isCafe ? 'Cafe Order' : 'Grocery Order'} #${o.readableId || o.id.slice(0, 8)} accepted but not packed yet`,
+        name: `${isRestaurant ? 'Food Order' : 'Grocery Order'} #${o.readableId || o.id.slice(0, 8)} accepted but not packed yet`,
         slug: `order-${o.id}`,
         imageUrl: null,
         stock: 0,

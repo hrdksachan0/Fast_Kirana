@@ -1280,7 +1280,7 @@ export default function DeliveryDashboard() {
               </motion.div>
             ) : (
               pendingOrders.map((order, idx) => {
-                const isCafe = order.shopName === 'FastKirana Cafe Kitchen'
+                const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
                 return (
                   <motion.div
                     key={order.id}
@@ -1290,14 +1290,14 @@ export default function DeliveryDashboard() {
                     exit="exit"
                     layout
                     className={`relative bg-card border rounded-2xl shadow-sm overflow-hidden transition-all ${
-                      isCafe
+                      isRestaurant
                         ? 'border-rose-200/80 dark:border-rose-500/20'
                         : 'border-blue-200/60 dark:border-blue-500/15'
                     }`}
                   >
                     {/* Subtle left accent */}
                     <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-l-2xl ${
-                      isCafe
+                      isRestaurant
                         ? 'bg-gradient-to-b from-rose-400 to-pink-500'
                         : 'bg-gradient-to-b from-blue-400 to-indigo-500'
                     }`} />
@@ -1308,9 +1308,9 @@ export default function DeliveryDashboard() {
                         <div>
                           <span className="text-[9px] font-bold text-text-muted flex items-center gap-1.5">
                             Order ID
-                            {isCafe && (
+                            {isRestaurant && (
                               <span className="bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider">
-                                ☕ cafe
+                                🥘 food
                               </span>
                             )}
                           </span>
@@ -1329,14 +1329,14 @@ export default function DeliveryDashboard() {
                       <div className="space-y-2 text-[11px] text-text-secondary font-semibold bg-gradient-to-b from-muted/10 to-transparent p-3 rounded-xl border border-border/30">
                         <div className="flex items-start gap-2">
                           <div className={`h-5 w-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-black text-white ${
-                            isCafe ? 'bg-gradient-to-br from-rose-400 to-pink-500' : 'bg-gradient-to-br from-blue-400 to-indigo-500'
+                            isRestaurant ? 'bg-gradient-to-br from-rose-400 to-pink-500' : 'bg-gradient-to-br from-blue-400 to-indigo-500'
                           }`}>
                             P
                           </div>
                           <div>
                             <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">Pickup</span>
                             <span className="text-text-primary font-bold">
-                              {isCafe ? '☕ FastKirana Cafe Kitchen' : '🏪 FastKirana Central Hub'}
+                              {isRestaurant ? `🥘 ${order.shopName || 'Restaurant'}` : '🏪 FastKirana Central Hub'}
                             </span>
                           </div>
                         </div>
@@ -1380,7 +1380,7 @@ export default function DeliveryDashboard() {
                           onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
                           disabled={updatingId === order.id}
                           className={`flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-60 ${
-                            isCafe
+                            isRestaurant
                               ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 shadow-rose-500/15'
                               : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/15'
                           }`}

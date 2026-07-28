@@ -522,10 +522,23 @@ export function AdminInventoryCenter() {
 
   // Recalculate cart prices when pricing mode (MRP vs Website Price) changes
   useEffect(() => {
-    setPosCart(prev => prev.map(item => ({
-      ...item,
-      price: posPricingMode === 'mrp' ? item.product.mrp : item.product.price
-    })))
+    setPosCart(prev => prev.map(item => {
+      const variantName = (item as any).selectedVariant
+      if (variantName) {
+        // Find the matching variant to get its specific price
+        let variantsList: any[] = []
+        if (Array.isArray(item.product.variants)) {
+          variantsList = item.product.variants
+        } else if (typeof item.product.variants === 'string') {
+          try { variantsList = JSON.parse(item.product.variants) } catch {}
+        }
+        const matched = variantsList.find((v: any) => v.name === variantName)
+        if (matched) {
+          return { ...item, price: posPricingMode === 'mrp' ? (matched.mrp ?? matched.price) : matched.price }
+        }
+      }
+      return { ...item, price: posPricingMode === 'mrp' ? item.product.mrp : item.product.price }
+    }))
   }, [posPricingMode])
 
   // Cart Calculations
@@ -1265,12 +1278,17 @@ export function AdminInventoryCenter() {
                       </div>
                     ) : (
                       <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden">
-                        {posCart.map(item => (
-                          <div key={item.product.id} className="p-4 flex items-center justify-between gap-4 text-xs font-semibold hover:bg-muted/10 transition-colors">
+                        {posCart.map(item => {
+                          const cartKey = (item as any).cartItemId || item.product.id
+                          const variantLabel = (item as any).selectedVariant
+                          return (
+                          <div key={cartKey} className="p-4 flex items-center justify-between gap-4 text-xs font-semibold hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 min-w-0">
                               <span className="text-xl shrink-0">{item.product.imageUrl ? <img src={item.product.imageUrl} className="w-8 h-8 rounded-lg object-cover" /> : '📦'}</span>
                               <div className="min-w-0">
-                                <span className="font-extrabold text-text-primary block truncate">{item.product.name}</span>
+                                <span className="font-extrabold text-text-primary block truncate">
+                                  {item.product.name}{variantLabel ? ` (${variantLabel})` : ''}
+                                </span>
                                 <span className="text-[9px] text-text-muted block mt-0.5">
                                   MRP: {formatPrice(item.product.mrp)} | Stock: {item.product.stock}
                                 </span>
@@ -1282,14 +1300,14 @@ export function AdminInventoryCenter() {
                               {/* Quantity Counter */}
                               <div className="flex items-center gap-1.5 border border-border rounded-lg bg-muted/20 px-1 py-0.5">
                                 <button
-                                  onClick={() => updateCartItem(item.product.id, { quantity: item.quantity - 1 })}
+                                  onClick={() => updateCartItem(cartKey, { quantity: item.quantity - 1 })}
                                   className="h-5 w-5 hover:bg-card hover:text-accent rounded flex items-center justify-center cursor-pointer font-bold"
                                 >
                                   -
                                 </button>
                                 <span className="w-6 text-center font-bold text-xs">{item.quantity}</span>
                                 <button
-                                  onClick={() => updateCartItem(item.product.id, { quantity: item.quantity + 1 })}
+                                  onClick={() => updateCartItem(cartKey, { quantity: item.quantity + 1 })}
                                   className="h-5 w-5 hover:bg-card hover:text-accent rounded flex items-center justify-center cursor-pointer font-bold"
                                 >
                                   +
@@ -1302,7 +1320,7 @@ export function AdminInventoryCenter() {
                                 <input
                                   type="number"
                                   value={item.price}
-                                  onChange={(e) => updateCartItem(item.product.id, { price: parseFloat(e.target.value) || 0 })}
+                                  onChange={(e) => updateCartItem(cartKey, { price: parseFloat(e.target.value) || 0 })}
                                   className="w-16 border border-border rounded px-1.5 py-0.5 text-center font-bold focus:outline-none focus:border-accent text-accent"
                                 />
                               </div>
@@ -1314,14 +1332,15 @@ export function AdminInventoryCenter() {
 
                               {/* Remove */}
                               <button
-                                onClick={() => updateCartItem(item.product.id, { quantity: 0 })}
+                                onClick={() => updateCartItem(cartKey, { quantity: 0 })}
                                 className="text-text-muted hover:text-danger cursor-pointer transition-colors p-1"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>

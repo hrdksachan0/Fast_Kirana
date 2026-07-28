@@ -459,25 +459,43 @@ export function CartDrawer() {
               {/* Outlet / Cafe / Restaurant Items Section */}
               {cafeItems.length > 0 && (
                 (() => {
-                  const cafeProductItem = cafeItems.find(i => (i.product as any).restaurant?.name || (i.product as any).restaurantName)
-                  const outletName = (cafeProductItem?.product as any)?.restaurant?.name || (cafeProductItem?.product as any)?.restaurantName || 'A.S Restaurant'
-                  const isWedson = outletName.toLowerCase().includes('wedson')
+                  const groups: Record<string, typeof cafeItems> = {}
+                  for (const item of cafeItems) {
+                    const p = item.product as any
+                    let outlet = 'A.S Restaurant'
 
-                  return (
-                    <div className="flex flex-col pt-4 border-t border-zinc-100 dark:border-zinc-900">
-                      <div className="flex flex-col px-1 mb-3">
-                        <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
-                          {isWedson ? '🥘' : '☕'} {outletName}
-                        </span>
-                        <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
-                          Freshly prepared at outlet kitchen
-                        </span>
+                    if (p.restaurant?.name) {
+                      outlet = p.restaurant.name
+                    } else if (p.restaurantName) {
+                      outlet = p.restaurantName
+                    } else if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || p.tags?.includes('wedson') || p.tags?.includes('restaurant-kitchen')) {
+                      outlet = 'Wedson Restaurant'
+                    } else if (p.restaurantId === 'cms2p1lap0000n0id8alldboy' || p.tags?.includes('as-restaurant') || p.tags?.includes('cafe')) {
+                      outlet = 'A.S Restaurant'
+                    }
+
+                    if (!groups[outlet]) groups[outlet] = []
+                    groups[outlet].push(item)
+                  }
+
+                  return Object.entries(groups).map(([outletName, items]) => {
+                    const isWedson = outletName.toLowerCase().includes('wedson')
+                    return (
+                      <div key={outletName} className="flex flex-col pt-4 border-t border-zinc-100 dark:border-zinc-900">
+                        <div className="flex flex-col px-1 mb-3">
+                          <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
+                            {isWedson ? '🥘' : '☕'} {outletName}
+                          </span>
+                          <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
+                            Freshly prepared at outlet kitchen
+                          </span>
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {items.map(renderItemRow)}
+                        </AnimatePresence>
                       </div>
-                      <AnimatePresence initial={false}>
-                        {cafeItems.map(renderItemRow)}
-                      </AnimatePresence>
-                    </div>
-                  )
+                    )
+                  })
                 })()
               )}
 

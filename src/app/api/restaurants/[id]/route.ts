@@ -107,7 +107,7 @@ export async function PATCH(
       'cuisineTags', 'deliveryTime', 'distance', 'lat', 'lng', 'isVeg',
       'isPureVeg', 'isOpen', 'openTime', 'closeTime', 'sortOrder',
       'discountOffer', 'discountBadge', 'commissionRate', 'ownerPhone',
-      'ownerEmail', 'isActive', 'rating'
+      'ownerEmail', 'isActive', 'rating', 'menuSections'
     ]
 
     const updateData: any = {}

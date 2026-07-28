@@ -58,7 +58,7 @@ export async function GET(request: Request) {
                  o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
           FROM orders o
           WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND o."shopName" = 'FastKirana Cafe Kitchen'
+            AND (o."restaurantId" IS NOT NULL OR o."orderType"::text = 'RESTAURANT')
           ORDER BY o."createdAt" ASC
         `
       }
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
                  o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
           FROM orders o
           WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND o."shopName" = 'FastKirana Restaurant Kitchen'
+            AND (o."restaurantId" IS NOT NULL OR o."orderType"::text = 'RESTAURANT')
           ORDER BY o."createdAt" ASC
         `
       }
@@ -106,7 +106,8 @@ export async function GET(request: Request) {
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
-          AND (o."shopName" IS NULL OR (o."shopName" != 'FastKirana Cafe Kitchen' AND o."shopName" != 'FastKirana Restaurant Kitchen'))
+          AND o."restaurantId" IS NULL
+          AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
         ORDER BY o."createdAt" ASC
       `
     }

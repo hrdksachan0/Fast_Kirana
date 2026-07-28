@@ -179,7 +179,7 @@ export function RestaurantOrdersConsole() {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [audioContextBlocked, setAudioContextBlocked] = useState(false)
   const [prepModalOrder, setPrepModalOrder] = useState<Order | null>(null)
-  const [selectedPrepTime, setSelectedPrepTime] = useState<number>(15)
+  const [selectedPrepTime, setSelectedPrepTime] = useState<number>(30)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [editItems, setEditItems] = useState<any[]>([])
   const [outOfStockIds, setOutOfStockIds] = useState<string[]>([])
@@ -410,7 +410,7 @@ export function RestaurantOrdersConsole() {
               fetchOrders(true)
             }, 1000)
             
-            if (data.type === 'new-order' && data.shopName === 'FastKirana Restaurant Kitchen') {
+            if (data.type === 'new-order' && (data.restaurantId || data.orderType === 'RESTAURANT')) {
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
                 playKitchenAlarmChime()
               }
@@ -528,11 +528,11 @@ export function RestaurantOrdersConsole() {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
+        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 30 }),
       })
 
       if (res.ok) {
-        toast.success(`Accepted restaurant order! Timer set to 15 mins.`)
+        toast.success(`Accepted restaurant order! Timer set to 30 mins.`)
         setActiveOrder(order)
         const initialPicked: Record<string, number> = {}
         order.items.forEach(item => {
@@ -1061,34 +1061,34 @@ export function RestaurantOrdersConsole() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-card border border-border/50 p-4 rounded-3xl text-center space-y-1 shadow-sm">
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Orders in Queue</p>
-          <h4 className="text-2xl font-black text-text-primary">{orders.length}</h4>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-card border border-border/50 p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl text-center space-y-0.5 sm:space-y-1 shadow-xs">
+          <p className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-text-secondary truncate">In Queue</p>
+          <h4 className="text-lg sm:text-2xl font-black text-text-primary">{orders.length}</h4>
         </div>
-        <div className="bg-card border border-border/50 p-4 rounded-3xl text-center space-y-1 shadow-sm">
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Items to Cook</p>
-          <h4 className="text-2xl font-black text-text-primary">{totalItemsToPrepare}</h4>
+        <div className="bg-card border border-border/50 p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl text-center space-y-0.5 sm:space-y-1 shadow-xs">
+          <p className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-text-secondary truncate">To Cook</p>
+          <h4 className="text-lg sm:text-2xl font-black text-text-primary">{totalItemsToPrepare}</h4>
         </div>
-        <div className="bg-card border border-border/50 p-4 rounded-3xl text-center space-y-1 shadow-sm">
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Prepared Today</p>
-          <h4 className="text-2xl font-black text-emerald-600">+{preparedToday}</h4>
+        <div className="bg-card border border-border/50 p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl text-center space-y-0.5 sm:space-y-1 shadow-xs">
+          <p className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-text-secondary truncate">Prepared</p>
+          <h4 className="text-lg sm:text-2xl font-black text-emerald-600">+{preparedToday}</h4>
         </div>
       </div>
 
       {orders.length === 0 ? (
-        <div className="bg-card border border-border/55 p-12 rounded-3xl text-center space-y-3">
+        <div className="bg-card border border-border/55 p-8 sm:p-12 rounded-2xl sm:rounded-3xl text-center space-y-2">
           <p className="text-xs text-text-secondary font-bold">No active restaurant orders in queue right now.</p>
           <p className="text-[10px] text-text-muted">New orders will sound an alarm alert automatically.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <h3 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5">
             <ShoppingBag className="h-4 w-4 text-red-500" />
             Live Orders List ({orders.length})
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {orders.map((order) => {
               const totalItems = order.items.reduce((s, i) => s + i.quantity, 0)
               const isClaimedByMe = order.assignedChefId === session?.user?.id
@@ -1102,7 +1102,7 @@ export function RestaurantOrdersConsole() {
               return (
                 <div 
                   key={order.id} 
-                  className={`bg-card border ${getOrderCardSlaBorder(order.createdAt, order.status)} rounded-3xl p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-300`}
+                  className={`bg-card border ${getOrderCardSlaBorder(order.createdAt, order.status)} rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-3 sm:space-y-4 transition-all duration-300`}
                 >
                   <div className="flex justify-between items-start">
                     <div>

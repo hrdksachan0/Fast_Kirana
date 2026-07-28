@@ -675,6 +675,7 @@ export async function POST(request: NextRequest) {
             readableId: nextReadableId,
             addressId: orderAddressId,
             combinedId: combinedId,
+            orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
             status: OrderStatus.PENDING,
 
             subtotal: orderInfo.subtotal,

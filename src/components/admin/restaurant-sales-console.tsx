@@ -195,58 +195,58 @@ export function RestaurantSalesConsole() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
           <RefreshCw className="h-8 w-8 text-red-600 animate-spin" />
-          <p className="text-xs text-text-secondary font-bold">Generating Wedson Sales Reports...</p>
+          <p className="text-xs text-text-secondary font-bold">Generating Sales Reports...</p>
         </div>
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Sales Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Net Sales</span>
-                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
-                   <IndianRupee className="h-4 w-4" />
+            <div className="bg-card border border-border/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
+               <div className="flex justify-between items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-text-secondary truncate">Net Sales</span>
+                 <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                   <IndianRupee className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                  </div>
                </div>
-               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.totalSales)}</h3>
-              <p className="text-[9px] font-bold text-emerald-500">Net Sales</p>
+               <h3 className="text-base sm:text-2xl font-black text-text-primary truncate">{formatPrice(summary.totalSales)}</h3>
+              <p className="text-[8px] sm:text-[9px] font-bold text-emerald-500">Net Sales</p>
              </div>
  
              {/* Restaurant Margin Card */}
-             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Margin ({100 - (summary.commissionRate || 10)}%)</span>
-                 <div className="h-8 w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shadow-inner">
-                   <Percent className="h-4 w-4" />
+             <div className="bg-card border border-border/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
+               <div className="flex justify-between items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-text-secondary truncate">Margin ({100 - (summary.commissionRate || 10)}%)</span>
+                 <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                   <Percent className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                  </div>
                </div>
-               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.restaurantProfit)}</h3>
-               <p className="text-[9px] font-bold text-red-500">Restaurant Net Share</p>
+               <h3 className="text-base sm:text-2xl font-black text-text-primary truncate">{formatPrice(summary.restaurantProfit)}</h3>
+               <p className="text-[8px] sm:text-[9px] font-bold text-red-500">Net Share</p>
              </div>
  
              {/* Admin Commission Card */}
-             <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">FastKirana Margin ({summary.commissionRate || 10}%)</span>
-                 <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shadow-inner">
-                   <TrendingUp className="h-4 w-4" />
+             <div className="bg-card border border-border/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
+               <div className="flex justify-between items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-text-secondary truncate">Commission ({summary.commissionRate || 10}%)</span>
+                 <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                   <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                  </div>
                </div>
-               <h3 className="text-lg sm:text-2xl font-black text-text-primary">{formatPrice(summary.adminProfit)}</h3>
-               <p className="text-[9px] font-bold text-blue-500">FastKirana Commission</p>
+               <h3 className="text-base sm:text-2xl font-black text-text-primary truncate">{formatPrice(summary.adminProfit)}</h3>
+               <p className="text-[8px] sm:text-[9px] font-bold text-blue-500">FastKirana Share</p>
              </div>
-
+ 
             {/* Orders Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Total Orders</span>
-                <div className="h-8 w-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shadow-inner">
-                  <ShoppingBag className="h-4 w-4" />
+            <div className="bg-card border border-border/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
+              <div className="flex justify-between items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-text-secondary truncate">Orders</span>
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                  <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-2xl font-black text-text-primary">{summary.ordersCount}</h3>
-              <p className="text-[9px] font-bold text-purple-500">Completed Orders</p>
+              <h3 className="text-base sm:text-2xl font-black text-text-primary truncate">{summary.ordersCount}</h3>
+              <p className="text-[8px] sm:text-[9px] font-bold text-purple-500">Completed</p>
             </div>
           </div>
 

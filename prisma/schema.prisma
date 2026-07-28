@@ -39,6 +39,11 @@ enum PaymentMethod {
   WALLET
 }
 
+enum OrderType {
+  GROCERY
+  RESTAURANT
+}
+
 enum DiscountType {
   FLAT
   PERCENT
@@ -260,6 +265,7 @@ model Order {
   addressId         String
   combinedId        String?
   restaurantId      String?
+  orderType         OrderType     @default(GROCERY)
 
   status            OrderStatus   @default(PENDING)
   subtotal          Float

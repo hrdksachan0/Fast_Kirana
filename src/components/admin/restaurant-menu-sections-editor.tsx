@@ -245,14 +245,14 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
   }
 
   return (
-    <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-6">
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <div>
-          <h3 className="text-[16px] font-black text-text-primary flex items-center gap-2">
-            <ListCollapse className="h-5 w-5 text-primary" />
-            Menu Categories Editor
+    <div className="bg-card border border-border/70 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xs space-y-4 sm:space-y-6">
+      <div className="flex flex-row items-center justify-between gap-3 border-b border-border/50 pb-3 sm:pb-4">
+        <div className="min-w-0">
+          <h3 className="text-sm sm:text-base font-black text-text-primary flex items-center gap-2 truncate">
+            <ListCollapse className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <span className="truncate">Menu Categories Editor</span>
           </h3>
-          <p className="text-[11px] text-text-secondary mt-0.5">
+          <p className="hidden sm:block text-xs text-text-secondary mt-0.5">
             Create, edit, toggle and reorder your menu categories. Changes will be instantly shown on your storefront.
           </p>
         </div>

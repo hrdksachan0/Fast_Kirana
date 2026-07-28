@@ -74,19 +74,19 @@ export default function CafeKitchenPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950/20 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950/20 py-3 sm:py-6 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         
         {/* Header Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card border border-border rounded-3xl p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center shadow-inner border border-orange-500/20">
-              <Coffee className="h-6 w-6 animate-pulse-gentle" />
+        <div className="flex flex-row justify-between items-center gap-3 bg-card border border-border/70 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/20">
+              <Coffee className="h-5 w-5 sm:h-6 sm:w-6 animate-pulse-gentle" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-text-primary uppercase tracking-tight font-sans">{restaurantName}</h1>
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                <h1 className="text-xs sm:text-lg font-black text-text-primary uppercase tracking-tight truncate">{restaurantName}</h1>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shrink-0 ${
                   cafeOpen
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                     : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
@@ -95,14 +95,14 @@ export default function CafeKitchenPage() {
                   {cafeOpen ? 'OPEN' : 'CLOSED'}
                 </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-text-secondary mt-0.5 flex items-center gap-1 font-medium">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Logged in as: <span className="font-bold text-text-primary">{session?.user?.email}</span>
+              <p className="text-[9px] sm:text-xs text-text-secondary mt-0.5 flex items-center gap-1 font-medium truncate">
+                <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">{session?.user?.email}</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 rounded-xl border border-border/40 text-[11px] font-mono font-bold text-text-secondary select-none shadow-inner">
               <Clock className="h-3.5 w-3.5 text-text-muted" />
               <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -110,86 +110,86 @@ export default function CafeKitchenPage() {
 
             <button
               onClick={() => router.push('/')}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-orange-500/5 hover:bg-orange-500/10 text-orange-600 hover:text-orange-700 text-xs font-black rounded-xl transition-all cursor-pointer border border-orange-500/10 hover:border-orange-500/20 shadow-xs"
+              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 hover:text-amber-700 text-[11px] sm:text-xs font-black rounded-xl transition-all cursor-pointer border border-amber-500/10 hover:border-amber-500/20 shadow-xs active:scale-95 shrink-0"
             >
-              <Home className="h-4 w-4" />
-              Go Home
+              <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Home</span>
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-border/40 gap-4 overflow-x-auto pb-1 scrollbar-none">
+        {/* Tab Navigation Segmented Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-border/40">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'orders' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <ChefHat className="h-4 w-4" />
+            <ChefHat className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Live Orders
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'analytics' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <BarChart3 className="h-4 w-4" />
-            Sales Analytics
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Sales Report
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'catalog' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <Settings className="h-4 w-4" />
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Menu Catalog
           </button>
           <button
             onClick={() => setActiveTab('sections')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'sections' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <Layers className="h-4 w-4" />
-            Menu Categories
+            <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Categories
           </button>
           <button
             onClick={() => setActiveTab('payouts')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'payouts' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <IndianRupee className="h-4 w-4" />
-            Payout Ledger
+            <IndianRupee className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Payouts
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'settings' 
-                ? 'border-orange-600 text-orange-600' 
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
             }`}
           >
-            <SlidersHorizontal className="h-4 w-4" />
-            Outlet Settings
+            <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Settings
           </button>
         </div>
 
         {/* Console Container */}
-        <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+        <div className="bg-card border border-border/60 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xs">
           {activeTab === 'orders' && <CafeOrdersConsole />}
           {activeTab === 'analytics' && <CafeSalesConsole />}
           {activeTab === 'catalog' && <RestaurantCatalogManager />}
@@ -199,7 +199,7 @@ export default function CafeKitchenPage() {
               isCafe={true} 
             />
           )}
-          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} type="CAFE" />}
+          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} />}
           {activeTab === 'settings' && <RestaurantSettingsTab />}
         </div>
 

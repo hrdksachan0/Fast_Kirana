@@ -183,7 +183,7 @@ export function CafeOrdersConsole() {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [audioContextBlocked, setAudioContextBlocked] = useState(false)
   const [prepModalOrder, setPrepModalOrder] = useState<Order | null>(null)
-  const [selectedPrepTime, setSelectedPrepTime] = useState<number>(15)
+  const [selectedPrepTime, setSelectedPrepTime] = useState<number>(30)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [editItems, setEditItems] = useState<any[]>([])
   const [outOfStockIds, setOutOfStockIds] = useState<string[]>([])
@@ -426,7 +426,7 @@ export function CafeOrdersConsole() {
               fetchOrders(true)
             }, 1000)
             
-            if (data.type === 'new-order' && data.shopName === 'FastKirana Cafe Kitchen') {
+            if (data.type === 'new-order' && (data.restaurantId || data.orderType === 'RESTAURANT')) {
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
                 playKitchenAlarmChime()
               }
@@ -550,11 +550,11 @@ export function CafeOrdersConsole() {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
+        body: JSON.stringify({ status: 'CONFIRMED', prepTime: 30 }),
       })
 
       if (res.ok) {
-        toast.success(`Accepted cafe order! Timer set to 15 mins.`)
+        toast.success(`Accepted cafe order! Timer set to 30 mins.`)
         setActiveOrder(order)
         const initialPicked: Record<string, number> = {}
         order.items.forEach(item => {

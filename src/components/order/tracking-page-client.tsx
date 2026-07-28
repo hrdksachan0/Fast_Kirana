@@ -203,8 +203,8 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
     )
   }
 
-  const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
-  const isCompanionCafe = companionOrder?.shopName === 'FastKirana Cafe Kitchen'
+  const isCafeOrder = !!order.restaurantId || (order as any).orderType === 'RESTAURANT'
+  const isCompanionCafe = companionOrder ? (!!companionOrder.restaurantId || (companionOrder as any).orderType === 'RESTAURANT') : false
 
   return (
     <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6">

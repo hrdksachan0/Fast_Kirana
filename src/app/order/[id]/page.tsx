@@ -129,8 +129,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     console.warn('Database connection error: failed to fetch miscFeeLabel setting')
   }
 
-  const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
-  const isCompanionCafe = companionOrder?.shopName === 'FastKirana Cafe Kitchen'
+  const isCafeOrder = !!order.restaurantId || (order as any).orderType === 'RESTAURANT'
+  const isCompanionCafe = companionOrder ? (!!companionOrder.restaurantId || (companionOrder as any).orderType === 'RESTAURANT') : false
 
   const isScheduled = order.estimatedDelivery && order.createdAt && 
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)

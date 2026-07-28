@@ -14,6 +14,13 @@ export interface CartProduct {
   stock: number
   isAvailable?: boolean
   tags?: string[]
+  restaurantId?: string | null
+  restaurantName?: string | null
+  restaurant?: {
+    id: string
+    name: string
+    slug: string
+  } | null
   category?: {
     id: string
     name: string

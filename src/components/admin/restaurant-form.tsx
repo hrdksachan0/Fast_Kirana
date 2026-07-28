@@ -312,7 +312,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       {/* Mobile Quick-Nav Section Strip */}
       <div className="relative z-10 bg-card py-2 -mx-2 px-2 sm:mx-0 sm:px-0 border-b border-border/60 overflow-x-auto scrollbar-none flex items-center gap-1.5 mb-2">
         {[
-          { id: 'sec-head', label: '👑 Outlet Head' },
+          ...(isAdmin ? [{ id: 'sec-head', label: '👑 Outlet Head' }] : []),
           { id: 'sec-status', label: '⚡ Status' },
           { id: 'sec-profile', label: '🏪 Profile' },
           { id: 'sec-branding', label: '🖼️ Images' },
@@ -943,14 +943,28 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                   onClick={() => setFormData(prev => ({ ...prev, bannerUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80' }))}
                   className="px-2 py-0.5 text-[9px] font-bold bg-muted hover:bg-muted/80 rounded border border-border cursor-pointer"
                 >
-                  Food Feast Banner
+                  🥘 North Indian Feast
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, bannerUrl: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&w=1200&q=80' }))}
+                  className="px-2 py-0.5 text-[9px] font-bold bg-muted hover:bg-muted/80 rounded border border-border cursor-pointer"
+                >
+                  🍔 Street Food & Burgers
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, bannerUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80' }))}
                   className="px-2 py-0.5 text-[9px] font-bold bg-muted hover:bg-muted/80 rounded border border-border cursor-pointer"
                 >
-                  Coffee & Bakery
+                  ☕ Cafe & Coffee
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, bannerUrl: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1200&q=80' }))}
+                  className="px-2 py-0.5 text-[9px] font-bold bg-muted hover:bg-muted/80 rounded border border-border cursor-pointer"
+                >
+                  🍨 Desserts & Bakery
                 </button>
                 {formData.bannerUrl && (
                   <button
@@ -963,6 +977,75 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Live Interactive Banner & Storefront Preview */}
+        <div className="mt-6 pt-5 border-t border-border/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <span>📱 Live Storefront Banner Preview</span>
+              <span className="text-[9px] font-mono font-bold px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full">REALTIME</span>
+            </label>
+          </div>
+
+          <div className="relative w-full h-[180px] sm:h-[220px] rounded-3xl overflow-hidden border border-border shadow-md">
+            {formData.bannerUrl ? (
+              <img
+                src={formData.bannerUrl}
+                alt="Banner"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-orange-500 via-red-500 to-pink-500" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+
+            {/* Live Overlay Details */}
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="flex items-end gap-3">
+                {formData.logoUrl ? (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-white/40 overflow-hidden flex-shrink-0 bg-white shadow-md">
+                    <img src={formData.logoUrl} alt="Logo" className="object-cover w-full h-full" />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-white/40 overflow-hidden flex-shrink-0 bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-2xl font-black">
+                    🍽️
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base sm:text-lg font-black text-white drop-shadow-md truncate">
+                    {formData.name || 'Your Restaurant Name'}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    {formData.cuisineTags.length > 0 ? (
+                      formData.cuisineTags.slice(0, 3).map((tag: string) => (
+                        <span key={tag} className="text-[9px] font-bold uppercase tracking-wider text-white/90 bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-full">
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[9px] font-bold uppercase text-white/70 bg-white/10 px-2 py-0.5 rounded-full">
+                        Multi-Cuisine
+                      </span>
+                    )}
+                  </div>
+                  {formData.isPureVeg && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                        🌱 100% Pure Veg
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {formData.discountOffer && (
+              <div className="absolute top-3 right-3 bg-blue-600 text-white px-2.5 py-1 rounded-xl shadow-lg border border-blue-400/30">
+                <span className="text-[10px] font-black">{formData.discountOffer}</span>
+              </div>
+            )}
           </div>
         </div>
       </SectionCard>
@@ -1003,32 +1086,65 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
             />
           </InputField>
 
-          {/* Lat/Lng */}
-          <InputField label="Latitude" id="lat">
-            <input
-              id="lat"
-              name="lat"
-              type="number"
-              step="any"
-              value={formData.lat}
-              onChange={handleChange}
-              placeholder="e.g. 26.8467"
-              className={inputClass}
-            />
-          </InputField>
-
-          <InputField label="Longitude" id="lng">
-            <input
-              id="lng"
-              name="lng"
-              type="number"
-              step="any"
-              value={formData.lng}
-              onChange={handleChange}
-              placeholder="e.g. 80.9462"
-              className={inputClass}
-            />
-          </InputField>
+          {/* Lat/Lng & GPS Auto Fetch */}
+          <div className="md:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+                Map Coordinates (GPS)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (navigator.geolocation) {
+                    toast.loading('Fetching current GPS coordinates...')
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        toast.dismiss()
+                        setFormData(prev => ({
+                          ...prev,
+                          lat: pos.coords.latitude.toFixed(6),
+                          lng: pos.coords.longitude.toFixed(6)
+                        }))
+                        toast.success('GPS coordinates auto-filled! 📍')
+                      },
+                      (err) => {
+                        toast.dismiss()
+                        toast.error('Location permission denied or unavailable.')
+                      }
+                    )
+                  } else {
+                    toast.error('Geolocation is not supported by your browser')
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black hover:bg-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <MapPin className="h-3 w-3" />
+                Auto-fill GPS Location
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                id="lat"
+                name="lat"
+                type="number"
+                step="any"
+                value={formData.lat}
+                onChange={handleChange}
+                placeholder="Latitude e.g. 26.8467"
+                className={inputClass}
+              />
+              <input
+                id="lng"
+                name="lng"
+                type="number"
+                step="any"
+                value={formData.lng}
+                onChange={handleChange}
+                placeholder="Longitude e.g. 80.9462"
+                className={inputClass}
+              />
+            </div>
+          </div>
 
           {/* Map Preview */}
           <div className="md:col-span-2 space-y-2">
@@ -1143,9 +1259,35 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </InputField>
         </div>
 
+        {/* Operating Hours Presets */}
+        <div className="mt-4 pt-3 border-t border-border/40 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-bold text-text-secondary">Quick Timings:</span>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, openTime: '09:00', closeTime: '22:00' }))}
+            className="px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-lg text-[10px] font-bold border border-border cursor-pointer transition-all active:scale-95"
+          >
+            ☀️ 09:00 AM - 10:00 PM
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, openTime: '10:00', closeTime: '23:00' }))}
+            className="px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-lg text-[10px] font-bold border border-border cursor-pointer transition-all active:scale-95"
+          >
+            🌙 10:00 AM - 11:00 PM
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, openTime: '00:00', closeTime: '23:59' }))}
+            className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-[10px] font-bold border border-emerald-500/20 cursor-pointer transition-all active:scale-95"
+          >
+            ⚡ 24 Hours Open
+          </button>
+        </div>
+
         {/* Visual Operating Hours Bar */}
         {formData.openTime && formData.closeTime && (
-          <div className="mt-5 pt-5 border-t border-border/40">
+          <div className="mt-4 pt-4 border-t border-border/40">
             <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-3">Operating Hours Visual</p>
             <div className="relative h-8 bg-muted/30 rounded-full border border-border overflow-hidden">
               {(() => {
@@ -1258,47 +1400,50 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       </SectionCard>
       </div>
 
-      {/* SAVE ACTION BAR */}
-      <div className="relative bg-card border border-border/80 shadow-lg rounded-2xl p-3.5 sm:p-4 mt-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="hidden sm:flex items-center gap-3">
-            {formData.logoUrl && (
-              <img src={formData.logoUrl} alt="" className="h-8 w-8 rounded-xl object-cover border border-border" />
+      {/* STICKY FLOATING ACTION BAR */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[94%] bg-card/95 backdrop-blur-md border border-border/80 shadow-2xl rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition-all">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-9 w-9 rounded-xl overflow-hidden bg-muted border border-border/60 shrink-0 flex items-center justify-center font-bold text-xs">
+            {formData.logoUrl ? (
+              <img src={formData.logoUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span>🏪</span>
             )}
-            <div>
-              <p className="text-xs font-black text-text-primary">{formData.name || 'Untitled Outlet'}</p>
-              <p className="text-[10px] text-text-secondary font-medium truncate max-w-[200px]">
-                {formData.cuisineTags.length > 0 ? formData.cuisineTags.slice(0, 2).join(' · ') : 'No tags'}
-              </p>
-            </div>
           </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => onSaved ? onSaved(null) : router.push('/admin/restaurants')}
-              disabled={isSubmitting}
-              className="flex-1 sm:flex-none px-4 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer text-text-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 sm:flex-none flex items-center gap-2 px-6 py-2.5 bg-[#e20a22] hover:bg-[#c9081e] text-white rounded-xl text-xs font-black transition-all shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer justify-center"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  {isEditing ? 'Save Restaurant Profile' : 'Create Restaurant'}
-                </>
-              )}
-            </button>
+          <div className="min-w-0 hidden sm:block">
+            <p className="text-xs font-black text-text-primary truncate">{formData.name || 'Untitled Outlet'}</p>
+            <p className="text-[10px] text-text-secondary font-medium truncate">
+              {formData.isOpen ? '🟢 Store Live' : '🌙 Store Closed'}
+            </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={() => onSaved ? onSaved(null) : router.push('/admin/restaurants')}
+            disabled={isSubmitting}
+            className="px-3.5 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer text-text-secondary active:scale-95"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl text-xs font-black transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer active:scale-95"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>{isEditing ? 'Save Profile' : 'Create Outlet'}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </form>

@@ -398,28 +398,46 @@ export default function CartPage() {
           {/* Outlet / Cafe / Restaurant Section */}
           {cafeItems.length > 0 && (
             (() => {
-              const cafeProductItem = cafeItems.find(i => (i.product as any).restaurant?.name || (i.product as any).restaurantName)
-              const outletName = (cafeProductItem?.product as any)?.restaurant?.name || (cafeProductItem?.product as any)?.restaurantName || 'A.S Restaurant'
-              const isWedson = outletName.toLowerCase().includes('wedson')
+              const groups: Record<string, typeof cafeItems> = {}
+              for (const item of cafeItems) {
+                const p = item.product as any
+                let outlet = 'A.S Restaurant'
 
-              return (
-                <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
-                  <div className="flex flex-col border-b border-border/40 pb-3">
-                    <h2 className="text-base font-black text-rose-600 flex items-center gap-1.5">
-                      {isWedson ? '🥘' : '☕'} {outletName}
-                    </h2>
-                    <p className="text-xs text-rose-500/80 mt-1 font-bold">
-                      Fresh & piping hot items prepared at outlet kitchen
-                    </p>
-                  </div>
+                if (p.restaurant?.name) {
+                  outlet = p.restaurant.name
+                } else if (p.restaurantName) {
+                  outlet = p.restaurantName
+                } else if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || p.tags?.includes('wedson') || p.tags?.includes('restaurant-kitchen')) {
+                  outlet = 'Wedson Restaurant'
+                } else if (p.restaurantId === 'cms2p1lap0000n0id8alldboy' || p.tags?.includes('as-restaurant') || p.tags?.includes('cafe')) {
+                  outlet = 'A.S Restaurant'
+                }
 
-                  <div className="flex flex-col">
-                    <AnimatePresence initial={false}>
-                      {cafeItems.map(renderItemRow)}
-                    </AnimatePresence>
+                if (!groups[outlet]) groups[outlet] = []
+                groups[outlet].push(item)
+              }
+
+              return Object.entries(groups).map(([outletName, items]) => {
+                const isWedson = outletName.toLowerCase().includes('wedson')
+                return (
+                  <div key={outletName} className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
+                    <div className="flex flex-col border-b border-border/40 pb-3">
+                      <h2 className="text-base font-black text-rose-600 flex items-center gap-1.5">
+                        {isWedson ? '🥘' : '☕'} {outletName}
+                      </h2>
+                      <p className="text-xs text-rose-500/80 mt-1 font-bold">
+                        Fresh & piping hot items prepared at outlet kitchen
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <AnimatePresence initial={false}>
+                        {items.map(renderItemRow)}
+                      </AnimatePresence>
+                    </div>
                   </div>
-                </div>
-              )
+                )
+              })
             })()
           )}
         </div>

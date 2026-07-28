@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { startDate, endDate, notes, type = 'RESTAURANT' } = await request.json()
+    const { startDate, endDate, notes, type = 'RESTAURANT', restaurantId } = await request.json()
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Start date and End date are required' }, { status: 400 })
     }
@@ -46,14 +46,9 @@ export async function POST(request: NextRequest) {
     const end = new Date(endDate)
     end.setHours(23, 59, 59, 999)
 
-    // Set configuration based on Payout Type (RESTAURANT vs CAFE)
-    const isCafe = type === 'CAFE'
-    const shopName = isCafe ? 'FastKirana Cafe Kitchen' : 'FastKirana Restaurant Kitchen'
-    const shareKey = isCafe ? 'cafe_profit_share' : 'restaurant_profit_share'
-
     // Fetch dynamic profit share setting
     const shareSetting = await prisma.storeSetting.findUnique({
-      where: { key: shareKey }
+      where: { key: 'restaurant_profit_share' }
     })
     const profitShareRate = parseFloat(shareSetting?.value || '15') / 100
 
@@ -61,11 +56,11 @@ export async function POST(request: NextRequest) {
     const orders = await prisma.order.findMany({
       where: {
         status: 'DELIVERED',
-        shopName,
         createdAt: {
           gte: start,
           lte: end
-        }
+        },
+        ...(restaurantId ? { restaurantId } : { OR: [{ orderType: 'RESTAURANT' }, { restaurantId: { not: null } }] })
       }
     })
 

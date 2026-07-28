@@ -167,8 +167,7 @@ export default async function AdminPage() {
     }
     
     groupStats.forEach((group: any) => {
-      const isCafe = group.shopName === 'FastKirana Cafe Kitchen'
-      const isRestaurant = group.shopName === 'FastKirana Restaurant Kitchen'
+      const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT'
       
       const count = group._count?.id || 0
       const sum = group._sum?.total || 0
@@ -177,15 +176,7 @@ export default async function AdminPage() {
         statusCountsMap[group.status] += count
       }
 
-      if (isCafe) {
-        cafeTotalOrders += count
-        if (group.status === 'DELIVERED') {
-          cafeRevenue += sum
-          cafeDeliveredOrders += count
-        } else if (group.status !== 'CANCELLED') {
-          cafeActiveOrders += count
-        }
-      } else if (isRestaurant) {
+      if (isRestaurant) {
         restaurantTotalOrders += count
         if (group.status === 'DELIVERED') {
           restaurantRevenue += sum

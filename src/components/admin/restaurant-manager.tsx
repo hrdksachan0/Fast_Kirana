@@ -175,8 +175,8 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                   </div>
                   
                   <div className="flex items-center justify-between text-sm py-2 border-t border-border/50">
-                    <span className="flex items-center text-text-secondary gap-1.5"><Clock className="h-4 w-4" /> Delivery</span>
-                    <span className="font-bold">{restaurant.deliveryTime}</span>
+                    <span className="flex items-center text-text-secondary gap-1.5"><Clock className="h-4 w-4" /> Kitchen SLA</span>
+                    <span className="font-bold text-emerald-600">30 Mins</span>
                   </div>
                   
                   <div className="flex items-center justify-between py-2 border-t border-border/50">

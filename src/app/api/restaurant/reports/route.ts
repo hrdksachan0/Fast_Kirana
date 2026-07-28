@@ -68,11 +68,12 @@ export async function GET(request: NextRequest) {
     let orderItems: ItemRow[] = []
 
     if (assignedRestId) {
+      // Dynamic: query strictly by restaurantId — works for any restaurant, no hardcoded names
       orders = await prisma.$queryRaw<OrderRow[]>`
         SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
         FROM orders
         WHERE status::text = 'DELIVERED'
-          AND ("restaurantId" = ${assignedRestId} OR "shopName" ILIKE '%wedson%' OR "shopName" = 'FastKirana Restaurant Kitchen')
+          AND "restaurantId" = ${assignedRestId}
           AND "createdAt" >= ${start}
           AND "createdAt" <= ${end}
         ORDER BY "createdAt" ASC
@@ -88,17 +89,17 @@ export async function GET(request: NextRequest) {
         JOIN categories c ON p."categoryId" = c.id
         JOIN orders o ON oi."orderId" = o.id
         WHERE o.status::text = 'DELIVERED'
-          AND (o."restaurantId" = ${assignedRestId} OR o."shopName" ILIKE '%wedson%' OR o."shopName" = 'FastKirana Restaurant Kitchen')
+          AND o."restaurantId" = ${assignedRestId}
           AND o."createdAt" >= ${start}
           AND o."createdAt" <= ${end}
       `
     } else {
+      // Admin fallback: all restaurant orders (excludes grocery-only orders)
       orders = await prisma.$queryRaw<OrderRow[]>`
         SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
         FROM orders
         WHERE status::text = 'DELIVERED'
-          AND ("restaurantId" IS NOT NULL OR "shopName" ILIKE '%wedson%' OR "shopName" = 'FastKirana Restaurant Kitchen')
-          AND "shopName" NOT ILIKE '%cafe%' AND "shopName" NOT ILIKE '%a.s%'
+          AND "restaurantId" IS NOT NULL
           AND "createdAt" >= ${start}
           AND "createdAt" <= ${end}
         ORDER BY "createdAt" ASC
@@ -114,8 +115,7 @@ export async function GET(request: NextRequest) {
         JOIN categories c ON p."categoryId" = c.id
         JOIN orders o ON oi."orderId" = o.id
         WHERE o.status::text = 'DELIVERED'
-          AND (o."restaurantId" IS NOT NULL OR o."shopName" ILIKE '%wedson%' OR o."shopName" = 'FastKirana Restaurant Kitchen')
-          AND o."shopName" NOT ILIKE '%cafe%' AND o."shopName" NOT ILIKE '%a.s%'
+          AND o."restaurantId" IS NOT NULL
           AND o."createdAt" >= ${start}
           AND o."createdAt" <= ${end}
       `

@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
         variants: any
         selectedVariant: string | null
         shopName: string | null
+        restaurantId: string | null
+        orderType: string | null
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
@@ -72,7 +74,9 @@ export async function GET(request: NextRequest) {
              c.name as "categoryName",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
-             o."shopName" as "shopName"
+             o."shopName" as "shopName",
+             o."restaurantId" as "restaurantId",
+             o."orderType"::text as "orderType"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
       JOIN categories c ON p."categoryId" = c.id
@@ -110,7 +114,7 @@ export async function GET(request: NextRequest) {
       // Special Logic for partner Restaurant (Wedson) orders:
       // Admin profit is dynamic commission on item sales.
       // The remaining portion is the payout cost to the partner restaurant.
-      if (item.shopName === 'FastKirana Restaurant Kitchen') {
+      if (item.restaurantId || item.orderType === 'RESTAURANT') {
         const itemProfit = itemRevenue * dynamicCommissionRate
         const itemCost = itemRevenue * (1 - dynamicCommissionRate)
         return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
@@ -136,9 +140,7 @@ export async function GET(request: NextRequest) {
       const hasCostPrice = costPrice > 0
       let costPerUnit = costPrice
       if (!hasCostPrice) {
-        if (item.shopName === 'FastKirana Cafe Kitchen') {
-          costPerUnit = item.price * (1 - cafeDefaultMargin / 100)
-        } else if (item.shopName === 'FastKirana Restaurant Kitchen') {
+        if (item.restaurantId || item.orderType === 'RESTAURANT') {
           costPerUnit = item.price * (1 - restaurantDefaultMargin / 100)
         } else {
           costPerUnit = item.price * 0.75

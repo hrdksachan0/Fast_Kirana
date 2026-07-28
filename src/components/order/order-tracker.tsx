@@ -645,7 +645,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     }
   }, [order.status, order.deliveryLat, order.deliveryLng, order.address?.lat, order.address?.lng, storeLat, storeLng, order.deliveryMethod])
 
-  const isCafeOrder = order.shopName === 'FastKirana Cafe Kitchen'
+  const isCafeOrder = !!(order as any).restaurantId || (order as any).orderType === 'RESTAURANT' || order.shopName?.toLowerCase().includes('cafe')
   const isScheduled = order.estimatedDelivery && order.createdAt && 
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)
 
@@ -657,9 +657,9 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             ⚠️
           </div>
           <div>
-            <h2 className="text-sm font-bold text-amber-800 dark:text-amber-400">Cafe is currently Closed</h2>
+            <h2 className="text-sm font-bold text-amber-800 dark:text-amber-400">Kitchen is currently Closed</h2>
             <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5 leading-relaxed">
-              FastKirana Cafe Kitchen is closed. Active orders placed before closing are still processed and delivered. If you have any concerns or want to cancel/refund, please call support.
+              Kitchen is closed. Active orders placed before closing are still processed and delivered. If you have any concerns or want to cancel/refund, please call support.
             </p>
           </div>
         </div>

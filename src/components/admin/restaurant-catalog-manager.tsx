@@ -331,77 +331,77 @@ export function RestaurantCatalogManager() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       
       {/* Header controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-5">
-        <div className="space-y-1">
-          <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Menu Catalog</h3>
-          <p className="text-xs text-text-secondary">Add new dishes, edit pricing, manage availability, and set photos.</p>
+      <div className="flex flex-row justify-between items-center gap-3 border-b border-border/40 pb-3.5 sm:pb-5">
+        <div className="min-w-0">
+          <h3 className="text-sm sm:text-base font-black text-text-primary uppercase tracking-tight truncate">Menu Catalog</h3>
+          <p className="hidden sm:block text-xs text-text-secondary mt-0.5">Add new dishes, edit pricing, manage availability, and set photos.</p>
         </div>
 
         <button
           onClick={handleOpenAddForm}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-xs"
+          className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-[11px] sm:text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
         >
-          <Plus className="h-4 w-4" />
-          Add New Dish
+          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span>Add Dish</span>
         </button>
       </div>
 
       {/* Filters and search */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-stretch sm:items-center justify-between">
         
         {/* Search */}
-        <div className="relative w-full md:max-w-xs">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-text-muted" />
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search dish or category..."
-            className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
+            className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-muted/40 border border-border/70 rounded-xl sm:rounded-2xl text-xs focus:outline-none focus:border-orange-500/50 transition-all font-semibold"
           />
         </div>
 
         {/* Filter buttons */}
-        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none shrink-0">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95 ${
               filter === 'all'
                 ? 'bg-orange-500/10 border-orange-500/30 text-orange-600'
-                : 'bg-card border-border text-text-secondary'
+                : 'bg-card border-border/70 text-text-secondary hover:bg-muted'
             }`}
           >
             All Items
           </button>
           <button
             onClick={() => setFilter('veg')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95 ${
               filter === 'veg'
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'
-                : 'bg-card border-border text-text-secondary'
+                : 'bg-card border-border/70 text-text-secondary hover:bg-muted'
             }`}
           >
             Veg 🟢
           </button>
           <button
             onClick={() => setFilter('nonveg')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95 ${
               filter === 'nonveg'
                 ? 'bg-rose-500/10 border-rose-500/30 text-rose-600'
-                : 'bg-card border-border text-text-secondary'
+                : 'bg-card border-border/70 text-text-secondary hover:bg-muted'
             }`}
           >
             Non-Veg 🔴
           </button>
           <button
             onClick={() => setFilter('outofstock')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95 ${
               filter === 'outofstock'
                 ? 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600 dark:text-zinc-400'
-                : 'bg-card border-border text-text-secondary'
+                : 'bg-card border-border/70 text-text-secondary hover:bg-muted'
             }`}
           >
             Out of Stock
@@ -412,22 +412,22 @@ export function RestaurantCatalogManager() {
 
       {/* Grid listing */}
       {filteredProducts.length === 0 ? (
-        <div className="bg-card border border-border rounded-3xl p-12 text-center max-w-md mx-auto space-y-3">
-          <p className="text-sm font-bold text-text-secondary">No dishes found in your menu catalog.</p>
+        <div className="bg-card border border-border/70 rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center max-w-md mx-auto space-y-3">
+          <p className="text-xs sm:text-sm font-bold text-text-secondary">No dishes found in your menu catalog.</p>
           <button
             onClick={handleOpenAddForm}
-            className="text-xs font-black text-orange-600 uppercase tracking-wider hover:underline"
+            className="text-[11px] sm:text-xs font-black text-orange-600 uppercase tracking-wider hover:underline cursor-pointer"
           >
             Create your first menu item now
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {filteredProducts.map(product => (
             <div 
               key={product.id} 
-              className={`bg-card border rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between ${
-                !product.isAvailable ? 'border-dashed opacity-75' : 'border-border'
+              className={`bg-card border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${
+                !product.isAvailable ? 'border-dashed opacity-75 border-border/80' : 'border-border/70'
               }`}
             >
               
@@ -435,7 +435,7 @@ export function RestaurantCatalogManager() {
               <div>
                 
                 {/* Photo */}
-                <div className="h-40 bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
+                <div className="h-32 sm:h-44 bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
                   {product.imageUrl ? (
                     <img 
                       src={product.imageUrl} 
@@ -443,20 +443,20 @@ export function RestaurantCatalogManager() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-text-muted gap-2">
-                      <ImageIcon className="h-10 w-10 text-text-muted/40" />
-                      <span className="text-[10px] uppercase font-black tracking-widest text-text-muted/60">No Photo</span>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-text-muted gap-1.5 p-2">
+                      <ImageIcon className="h-7 w-7 sm:h-10 sm:w-10 text-text-muted/40" />
+                      <span className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-text-muted/60">No Photo</span>
                     </div>
                   )}
 
                   {/* Veg/Non-Veg flag */}
-                  <div className="absolute top-3 left-3">
-                    <span className={`inline-flex items-center justify-center p-1.5 rounded-lg border ${
+                  <div className="absolute top-2 left-2">
+                    <span className={`inline-flex items-center justify-center p-1 sm:p-1.5 rounded-lg border backdrop-blur-xs ${
                       product.tags.includes('non-veg') 
-                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
-                        : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                        ? 'bg-rose-500/20 border-rose-500/30 text-rose-500' 
+                        : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-500'
                     }`}>
-                      <span className={`h-2.5 w-2.5 rounded-full ${
+                      <span className={`h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ${
                         product.tags.includes('non-veg') ? 'bg-rose-500' : 'bg-emerald-500'
                       }`} />
                     </span>
@@ -464,8 +464,8 @@ export function RestaurantCatalogManager() {
 
                   {/* Status Banner if hidden */}
                   {!product.isAvailable && (
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
-                      <span className="bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">
+                    <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 text-center">
+                      <span className="bg-rose-600 text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-0.5 sm:py-1 rounded-full">
                         Hidden from Shop
                       </span>
                     </div>
@@ -473,25 +473,25 @@ export function RestaurantCatalogManager() {
                 </div>
 
                 {/* Body details */}
-                <div className="p-5 space-y-2">
-                  <div className="flex justify-between items-start gap-2">
-                    <h4 className="font-black text-text-primary text-sm sm:text-base tracking-tight leading-tight">{product.name}</h4>
-                    <span className="text-[10px] font-bold text-text-muted px-2 py-0.5 bg-muted rounded-md uppercase shrink-0">
+                <div className="p-2.5 sm:p-4 space-y-1 sm:space-y-2">
+                  <div className="flex justify-between items-start gap-1">
+                    <h4 className="font-black text-text-primary text-xs sm:text-base tracking-tight leading-tight line-clamp-1" title={product.name}>{product.name}</h4>
+                    <span className="text-[8px] sm:text-[10px] font-bold text-text-muted px-1.5 py-0.5 bg-muted rounded uppercase shrink-0">
                       {product.unit}
                     </span>
                   </div>
                   
-                  <p className="text-[11px] text-text-secondary leading-relaxed line-clamp-2">
+                  <p className="hidden sm:block text-[11px] text-text-secondary leading-relaxed line-clamp-2">
                     {product.description || 'No description provided.'}
                   </p>
 
-                  <div className="flex items-center gap-1.5 text-xs text-text-secondary font-bold pt-1.5">
-                    <span className="text-[10px] font-black uppercase text-orange-600 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">
+                  <div className="flex items-center gap-1 text-[9px] sm:text-xs text-text-secondary font-bold pt-0.5">
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase text-orange-600 bg-orange-500/10 px-1.5 py-0.5 rounded-md border border-orange-500/20 truncate">
                       {product.category?.name || 'Dish'}
                     </span>
                     
                     {product.stock <= 0 && (
-                      <span className="text-[10px] font-black uppercase text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                      <span className="text-[8px] sm:text-[10px] font-black uppercase text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 shrink-0">
                         Out of Stock
                       </span>
                     )}
@@ -501,29 +501,31 @@ export function RestaurantCatalogManager() {
               </div>
 
               {/* Action Footer */}
-              <div className="border-t border-border/40 p-4 bg-muted/10 flex items-center justify-between gap-3">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-text-muted font-bold line-through">
-                    {formatPrice(product.mrp)}
-                  </span>
-                  <span className="text-sm font-black text-text-primary flex items-center">
-                    <IndianRupee className="h-3.5 w-3.5" />
+              <div className="border-t border-border/40 p-2 sm:p-3.5 bg-muted/10 flex items-center justify-between gap-1.5">
+                <div className="flex flex-col min-w-0">
+                  {product.mrp && product.mrp > product.price && (
+                    <span className="text-[9px] text-text-muted font-bold line-through leading-none mb-0.5">
+                      {formatPrice(product.mrp)}
+                    </span>
+                  )}
+                  <span className="text-xs sm:text-sm font-black text-text-primary flex items-center leading-none">
+                    <IndianRupee className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
                     {product.price}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                   
                   {/* Toggle Visibility */}
                   <button
                     onClick={() => handleToggleAvailability(product)}
                     title={product.isAvailable ? 'Hide from storefront' : 'Show on storefront'}
-                    className="p-2 rounded-xl border border-border bg-card text-text-secondary hover:text-text-primary cursor-pointer hover:bg-muted"
+                    className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl border border-border/70 bg-card text-text-secondary hover:text-text-primary flex items-center justify-center hover:bg-muted cursor-pointer transition-all active:scale-95"
                   >
                     {product.isAvailable ? (
-                      <ToggleRight className="h-5 w-5 text-emerald-500" />
+                      <ToggleRight className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
                     ) : (
-                      <ToggleLeft className="h-5 w-5 text-text-muted" />
+                      <ToggleLeft className="h-4 w-4 sm:h-5 sm:w-5 text-text-muted" />
                     )}
                   </button>
 
@@ -531,18 +533,18 @@ export function RestaurantCatalogManager() {
                   <button
                     onClick={() => handleOpenEditForm(product)}
                     title="Edit dish details"
-                    className="p-2 rounded-xl border border-border bg-card text-text-secondary hover:text-orange-600 cursor-pointer hover:bg-muted"
+                    className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl border border-border/70 bg-card text-text-secondary hover:text-orange-600 flex items-center justify-center hover:bg-muted cursor-pointer transition-all active:scale-95"
                   >
-                    <Edit2 className="h-4.5 w-4.5" />
+                    <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
 
                   {/* Delete */}
                   <button
                     onClick={() => handleDeleteProduct(product)}
                     title="Delete dish"
-                    className="p-2 rounded-xl border border-border bg-card text-text-secondary hover:text-rose-600 cursor-pointer hover:bg-muted"
+                    className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl border border-border/70 bg-card text-text-secondary hover:text-rose-600 flex items-center justify-center hover:bg-muted cursor-pointer transition-all active:scale-95"
                   >
-                    <Trash2 className="h-4.5 w-4.5" />
+                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
 
                 </div>
@@ -555,8 +557,8 @@ export function RestaurantCatalogManager() {
 
       {/* Editor Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-in my-8 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-card border border-border/80 rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-in my-auto max-h-[92vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-5 border-b border-border/40 shrink-0">
