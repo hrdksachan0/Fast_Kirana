@@ -60,6 +60,24 @@ export const authConfig = {
         if (session.phone) token.phone = session.phone
         if (session.email) token.email = session.email
       }
+
+      // Always keep token role & assignedRestaurantId fresh from DB for role updates
+      if (token.id) {
+        try {
+          const { prisma } = require('@/lib/prisma')
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, assignedRestaurantId: true }
+          })
+          if (dbUser) {
+            token.role = dbUser.role
+            token.assignedRestaurantId = dbUser.assignedRestaurantId
+          }
+        } catch (e) {
+          // Suppress error outside DB context
+        }
+      }
+
       return token
     },
     async session({ session, token }) {

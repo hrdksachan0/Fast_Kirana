@@ -5,8 +5,21 @@ import Link from 'next/link'
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 import { formatPhone } from '@/lib/utils'
+import { usePathname } from 'next/navigation'
 
 export function Footer() {
+  const pathname = usePathname()
+
+  // Hide storefront footer on admin & kitchen/staff consoles
+  if (
+    pathname?.startsWith('/admin') ||
+    pathname?.startsWith('/restaurant-kitchen') ||
+    pathname?.startsWith('/cafe-kitchen') ||
+    pathname?.startsWith('/picker') ||
+    pathname?.startsWith('/delivery')
+  ) {
+    return null
+  }
   const settings = useUIStore((s) => s.settings) || {}
   const isLoaded = Object.keys(settings).length > 0
 

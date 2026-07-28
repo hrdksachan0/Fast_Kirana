@@ -34,10 +34,9 @@ export default function CafeKitchenPage() {
           if (data && data.name) {
             setRestaurantName(`${data.name} Console`)
             
-            // Auto-redirect if they belong to a standard Restaurant and are not an ADMIN
-            if (session?.user?.role !== 'ADMIN') {
-              const isAssignedCafe = data.slug?.includes('cafe') || data.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
-              if (!isAssignedCafe) {
+            // Auto-redirect if they belong strictly to a non-cafe Restaurant and are not an ADMIN/OWNER
+            if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'RESTAURANT_OWNER') {
+              if (data.slug !== 'fastkirana-cafe' && !data.slug?.includes('cafe')) {
                 router.push('/restaurant-kitchen')
               }
             }

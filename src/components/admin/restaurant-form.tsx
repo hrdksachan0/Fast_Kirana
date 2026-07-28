@@ -122,6 +122,39 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     }
   }, [isAdmin, restaurant?.id])
 
+  // Image File Upload states and refs
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
+  const bannerFileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
+
+  const handleFileUpload = async (file: File, type: 'logoUrl' | 'bannerUrl') => {
+    if (!file) return
+    if (type === 'logoUrl') setUploadingLogo(true)
+    else setUploadingBanner(true)
+
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const json = await res.json()
+      if (json.url) {
+        setFormData(prev => ({ ...prev, [type]: json.url }))
+        toast.success(`${type === 'logoUrl' ? 'Logo' : 'Banner'} uploaded successfully!`)
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to upload image')
+    } finally {
+      if (type === 'logoUrl') setUploadingLogo(false)
+      else setUploadingBanner(false)
+    }
+  }
+
   // Cuisine tag input
   const [tagInput, setTagInput] = useState('')
   const tagInputRef = useRef<HTMLInputElement>(null)
@@ -216,38 +249,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     }
   }
 
-  // Section card component
-  const SectionCard = ({ 
-    icon: Icon, title, subtitle, accentColor, children 
-  }: { 
-    icon: any; title: string; subtitle: string; accentColor: string; children: React.ReactNode 
-  }) => (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div className={`p-4 border-b border-border/60 bg-gradient-to-r ${accentColor} flex items-center gap-3`}>
-        <div className="h-9 w-9 rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-sm">
-          <Icon className="h-4.5 w-4.5 text-text-primary" />
-        </div>
-        <div>
-          <h2 className="font-black text-sm text-text-primary tracking-wide">{title}</h2>
-          <p className="text-[10px] text-text-secondary font-medium">{subtitle}</p>
-        </div>
-      </div>
-      <div className="p-6">
-        {children}
-      </div>
-    </div>
-  )
 
-  const InputField = ({ label, id, required, children }: { label: string; id: string; required?: boolean; children: React.ReactNode }) => (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
-        {label} {required && <span className="text-rose-500">*</span>}
-      </label>
-      {children}
-    </div>
-  )
-
-  const inputClass = "w-full px-3.5 py-2.5 text-sm font-semibold bg-background border border-border rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-secondary/40"
   
   const mapUrl = formData.lat && formData.lng 
     ? `https://maps.google.com/maps?q=${formData.lat},${formData.lng}&z=15&output=embed`
@@ -781,7 +783,20 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
               Restaurant Logo
             </label>
             <div className="flex items-start gap-4">
-              <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0 relative group">
+              <input
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileUpload(file, 'logoUrl')
+                }}
+              />
+              <div 
+                onClick={() => logoFileInputRef.current?.click()}
+                className="h-24 w-24 rounded-2xl border-2 border-dashed border-primary/40 hover:border-primary bg-muted/20 flex items-center justify-center overflow-hidden shrink-0 relative group cursor-pointer transition-all shadow-xs"
+              >
                 {formData.logoUrl ? (
                   <>
                     <img
@@ -790,24 +805,41 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Upload className="h-5 w-5 text-white" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                      <Upload className="h-5 w-5" />
+                      <span className="text-[8px] font-bold mt-1">CHANGE</span>
                     </div>
                   </>
                 ) : (
-                  <div className="text-center">
-                    <Upload className="h-6 w-6 text-text-secondary/40 mx-auto" />
-                    <span className="text-[8px] text-text-secondary/40 font-bold block mt-1">LOGO</span>
+                  <div className="text-center p-2">
+                    <Upload className="h-6 w-6 text-primary mx-auto" />
+                    <span className="text-[9px] text-primary font-black block mt-1">UPLOAD LOGO</span>
+                  </div>
+                )}
+                {uploadingLogo && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   </div>
                 )}
               </div>
               <div className="flex-1 space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="px-3.5 py-2 text-xs font-black bg-primary text-white hover:bg-primary/90 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {uploadingLogo ? 'Uploading...' : 'Upload Logo File'}
+                  </button>
+                </div>
                 <input
                   id="logoUrl"
                   name="logoUrl"
                   value={formData.logoUrl}
                   onChange={handleChange}
-                  placeholder="Paste logo image URL..."
+                  placeholder="Or paste logo image URL..."
                   className={inputClass}
                 />
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -846,7 +878,20 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
               Cover Banner
             </label>
             <div className="space-y-3">
-              <div className="h-32 w-full rounded-2xl border-2 border-dashed border-border bg-muted/20 flex items-center justify-center overflow-hidden relative group">
+              <input
+                ref={bannerFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileUpload(file, 'bannerUrl')
+                }}
+              />
+              <div 
+                onClick={() => bannerFileInputRef.current?.click()}
+                className="h-32 w-full rounded-2xl border-2 border-dashed border-primary/40 hover:border-primary bg-muted/20 flex items-center justify-center overflow-hidden relative group cursor-pointer transition-all shadow-xs"
+              >
                 {formData.bannerUrl ? (
                   <>
                     <img
@@ -855,23 +900,40 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Upload className="h-6 w-6 text-white" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                      <Upload className="h-6 w-6" />
+                      <span className="text-[9px] font-bold mt-1">CHANGE COVER BANNER</span>
                     </div>
                   </>
                 ) : (
-                  <div className="text-center">
-                    <ImageIcon className="h-8 w-8 text-text-secondary/30 mx-auto" />
-                    <span className="text-[9px] text-text-secondary/40 font-bold block mt-1">COVER BANNER</span>
+                  <div className="text-center p-3">
+                    <Upload className="h-7 w-7 text-primary mx-auto" />
+                    <span className="text-[10px] text-primary font-black block mt-1">UPLOAD COVER BANNER</span>
                   </div>
                 )}
+                {uploadingBanner && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => bannerFileInputRef.current?.click()}
+                  disabled={uploadingBanner}
+                  className="px-3.5 py-2 text-xs font-black bg-primary text-white hover:bg-primary/90 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {uploadingBanner ? 'Uploading...' : 'Upload Banner File'}
+                </button>
               </div>
               <input
                 id="bannerUrl"
                 name="bannerUrl"
                 value={formData.bannerUrl}
                 onChange={handleChange}
-                placeholder="Paste banner image URL..."
+                placeholder="Or paste banner image URL..."
                 className={inputClass}
               />
               <div className="flex flex-wrap items-center gap-1.5">

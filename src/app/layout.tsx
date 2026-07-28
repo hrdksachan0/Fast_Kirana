@@ -120,7 +120,7 @@ export default function RootLayout({
 
                   <div className="flex flex-col min-h-screen">
                     <Navbar />
-                    <main className="flex-grow pt-[96px] md:pt-[80px]">
+                    <main className="flex-grow min-h-[calc(100vh-80px)] pt-[96px] md:pt-[80px]">
                       {children}
                     </main>
                     <Footer />

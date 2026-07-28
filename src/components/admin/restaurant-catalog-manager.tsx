@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   Plus, 
@@ -17,7 +17,8 @@ import {
   ToggleRight, 
   Sparkles,
   Layers,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
@@ -68,9 +69,34 @@ export function RestaurantCatalogManager() {
   const [unit, setUnit] = useState('Serving')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
   const [stock, setStock] = useState('999')
   const [isVeg, setIsVeg] = useState(true)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDishImageUpload = async (file: File) => {
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const json = await res.json()
+      if (json.url) {
+        setImageUrl(json.url)
+        toast.success('Dish photo uploaded successfully!')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
 
@@ -654,19 +680,48 @@ export function RestaurantCatalogManager() {
                 </div>
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload / URL */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                  <ImageIcon className="h-4 w-4 text-text-muted" />
-                  Dish Photo Image URL
+                <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="h-4 w-4 text-text-muted" />
+                    Dish Photo Image
+                  </span>
+                  {uploadingImage && <span className="text-[10px] text-orange-600 font-bold animate-pulse">Uploading photo...</span>}
                 </label>
                 <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={e => setImageUrl(e.target.value)}
-                  placeholder="e.g. https://images.unsplash.com/photo-..."
-                  className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleDishImageUpload(file)
+                  }}
                 />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="px-3.5 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 border border-orange-500/30 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {uploadingImage ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                  <input
+                    type="text"
+                    value={imageUrl}
+                    onChange={e => setImageUrl(e.target.value)}
+                    placeholder="Or paste photo URL..."
+                    className="w-full px-4 py-2 bg-muted/40 border border-border rounded-xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
+                  />
+                </div>
+                {imageUrl && (
+                  <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-border mt-2 bg-muted">
+                    <img src={imageUrl} alt="Dish Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
 
               {/* Description */}

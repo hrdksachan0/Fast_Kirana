@@ -49,7 +49,7 @@ export default function RestaurantLoginPage() {
           // Fetch restaurant details to decide where to route
           const restRes = await fetch(`/api/restaurants/${assignedRestaurantId}`)
           const restData = await restRes.json()
-          const isCafe = restData.slug?.includes('cafe') || restData.cuisineTags?.some((t: string) => t.toLowerCase().includes('cafe'))
+          const isCafe = restData.slug === 'fastkirana-cafe' || restData.slug?.includes('cafe')
           if (isCafe) {
             router.push('/cafe-kitchen')
           } else {
