@@ -118,6 +118,12 @@ export async function PATCH(
     }
     updateData.slug = finalSlug
 
+    // Strictly enforce: Non-admin outlet heads CANNOT modify commissionRate or isActive status
+    if (role !== 'ADMIN') {
+      delete updateData.commissionRate
+      delete updateData.isActive
+    }
+
     const updatedRestaurant = await prisma.restaurant.update({
       where: { id: restaurant.id },
       data: updateData

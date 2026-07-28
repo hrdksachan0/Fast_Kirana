@@ -227,32 +227,36 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
         )}
       </div>
 
-      {/* Edit Restaurant Modal Overlay */}
+      {/* Edit Restaurant Modal Overlay (Full-screen native feel on mobile, smooth centered dialog on desktop) */}
       {editingRestaurant && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-card border border-border rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 my-auto">
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-border sticky top-0 bg-card z-10">
+        <div className="fixed inset-0 z-50 bg-background sm:bg-black/75 sm:backdrop-blur-md flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 overflow-hidden">
+          <div className="bg-card sm:border sm:border-border rounded-none sm:rounded-3xl p-3.5 sm:p-6 max-w-4xl w-full h-full sm:h-auto sm:max-h-[90vh] shadow-2xl relative animate-in fade-in zoom-in-95 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-border sticky top-0 bg-card z-20 shrink-0">
               <div>
-                <h2 className="text-xl font-black text-text-primary">Edit {editingRestaurant.name}</h2>
-                <p className="text-xs text-text-secondary">Update outlet profile, operating hours, and location</p>
+                <h2 className="text-base sm:text-xl font-black text-text-primary">Edit {editingRestaurant.name}</h2>
+                <p className="text-[10px] sm:text-xs text-text-secondary">Update outlet profile, operating hours & outlet head</p>
               </div>
               <button 
                 type="button"
                 onClick={() => setEditingRestaurant(null)}
-                className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-muted transition-colors"
+                className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-muted transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <RestaurantForm 
-              restaurant={editingRestaurant} 
-              onSaved={(updated) => {
-                setRestaurants(restaurants.map(r => r.id === updated.id ? { ...r, ...updated } : r))
-                setEditingRestaurant(null)
-                router.refresh()
-              }}
-            />
+            <div className="flex-1 overflow-y-auto px-1 scrollbar-thin">
+              <RestaurantForm 
+                restaurant={editingRestaurant} 
+                onSaved={(updated) => {
+                  if (updated) {
+                    setRestaurants(restaurants.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+                  }
+                  setEditingRestaurant(null)
+                  router.refresh()
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

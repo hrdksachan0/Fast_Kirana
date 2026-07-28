@@ -31,7 +31,10 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
 
   const products = await prisma.product.findMany({
     where: {
-      restaurantId: restaurant.id,
+      OR: [
+        { restaurantId: restaurant.id },
+        { restaurant: { slug: restaurant.slug } },
+      ],
       isAvailable: true,
     },
     include: {

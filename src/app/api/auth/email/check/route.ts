@@ -35,9 +35,17 @@ export async function POST(request: NextRequest) {
       isPhone = true
       normalizedPhone = getNormalizedPhone(trimmed)
       
-      // Check if user exists with this phone number
+      // Check if user exists with this phone number (matching both +91 and 10-digit formats)
+      const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
       const existingUser = await prisma.user.findFirst({
-        where: { phone: normalizedPhone },
+        where: {
+          OR: [
+            { phone: normalizedPhone },
+            { phone: phoneDigits },
+            { phone: `+91${phoneDigits}` },
+            { email: `wa-${phoneDigits}@fastkirana.com` }
+          ]
+        },
         select: { email: true, name: true, phone: true, role: true, passwordHash: true }
       })
 

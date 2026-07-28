@@ -121,10 +121,31 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12)
 
-    await prisma.user.update({
+    const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      data: { passwordHash },
+      select: { phone: true, email: true }
     })
+
+    if (targetUser?.phone) {
+      const digits = targetUser.phone.replace(/\D/g, '').replace(/^91/, '')
+      await prisma.user.updateMany({
+        where: {
+          OR: [
+            { id: userId },
+            { phone: targetUser.phone },
+            { phone: digits },
+            { phone: `+91${digits}` },
+            { email: `wa-${digits}@fastkirana.com` }
+          ]
+        },
+        data: { passwordHash },
+      })
+    } else {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      })
+    }
 
     return NextResponse.json({ success: true, message: 'Password updated successfully' })
   } catch (error: any) {

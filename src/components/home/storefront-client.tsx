@@ -115,7 +115,7 @@ export function StorefrontClient({
       </AnimatePresence>
 
       {/* Premium Grocery / Food Slider */}
-      <div className="flex justify-center mb-6 px-4">
+      <div className="flex justify-center mt-3.5 sm:mt-5 mb-5 sm:mb-6 px-4">
         <div className="relative flex items-center w-full max-w-[420px] h-[62px] sm:h-[68px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70">
           <motion.button
             onClick={() => handleTabChange('grocery')}

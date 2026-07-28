@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { 
   Save, Loader2, Image as ImageIcon, Store, MapPin, Clock, Tag, 
   Star, X, Plus, Phone, Mail, ExternalLink, Upload, Utensils,
   TrendingUp, Percent, ArrowLeft, Eye, EyeOff, Leaf,
-  UserCheck, UserPlus, ShieldCheck, User, Activity, Check
+  UserCheck, UserPlus, ShieldCheck, User, Activity, Check, Search
 } from 'lucide-react'
 
 interface RestaurantFormProps {
@@ -15,6 +15,40 @@ interface RestaurantFormProps {
   isAdmin?: boolean
   onSaved?: (updatedRestaurant: any) => void
 }
+
+// Helper SectionCard component outside parent to prevent re-creation on render
+const SectionCard = ({ 
+  icon: Icon, title, subtitle, accentColor, children 
+}: { 
+  icon: any; title: string; subtitle: string; accentColor: string; children: React.ReactNode 
+}) => (
+  <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+    <div className={`p-4 border-b border-border/60 bg-gradient-to-r ${accentColor} flex items-center gap-3`}>
+      <div className="h-9 w-9 rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-sm">
+        <Icon className="h-4.5 w-4.5 text-text-primary" />
+      </div>
+      <div>
+        <h2 className="font-black text-sm text-text-primary tracking-wide">{title}</h2>
+        <p className="text-[10px] text-text-secondary font-medium">{subtitle}</p>
+      </div>
+    </div>
+    <div className="p-6">
+      {children}
+    </div>
+  </div>
+)
+
+// Helper InputField component outside parent to prevent re-creation on render
+const InputField = ({ label, id, required, children }: { label: string; id: string; required?: boolean; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <label htmlFor={id} className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
+      {label} {required && <span className="text-rose-500">*</span>}
+    </label>
+    {children}
+  </div>
+)
+
+const inputClass = "w-full px-3.5 py-2.5 text-sm font-semibold bg-background border border-border rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-secondary/40"
 
 export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: RestaurantFormProps) {
   const router = useRouter()
@@ -24,6 +58,11 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
   // Assignable users for outlet head selection
   const [assignableUsers, setAssignableUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [userSearchQuery, setUserSearchQuery] = useState('')
+  const [showStaffOnly, setShowStaffOnly] = useState(true)
+  const [headPassword, setHeadPassword] = useState('')
+  const [showPasswordText, setShowPasswordText] = useState(true)
+
   const [ownerUserId, setOwnerUserId] = useState<string>(() => {
     if (restaurant?.staff && restaurant.staff.length > 0) {
       const owner = restaurant.staff.find((s: any) => s.role === 'RESTAURANT_OWNER') || restaurant.staff[0]
@@ -209,6 +248,30 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
 
   const currentOwner = assignableUsers.find(u => u.id === ownerUserId) || (restaurant?.staff ? restaurant.staff.find((s: any) => s.id === ownerUserId) : null)
 
+  const staffUsersCount = useMemo(() => {
+    return assignableUsers.filter((u: any) => u.role !== 'USER' || !!u.assignedRestaurantId || u.id === ownerUserId).length
+  }, [assignableUsers, ownerUserId])
+
+  const filteredAssignableUsers = useMemo(() => {
+    return assignableUsers.filter((u: any) => {
+      // Always retain the currently assigned outlet head so they are never filtered out during edit
+      if (u.id === ownerUserId) return true
+
+      if (showStaffOnly) {
+        const isStaffOrPartner = u.role !== 'USER' || !!u.assignedRestaurantId
+        if (!isStaffOrPartner) return false
+      }
+      if (userSearchQuery.trim()) {
+        const q = userSearchQuery.toLowerCase().trim()
+        const matchName = (u.name || '').toLowerCase().includes(q)
+        const matchEmail = (u.email || '').toLowerCase().includes(q)
+        const matchPhone = (u.phone || '').toLowerCase().includes(q)
+        return matchName || matchEmail || matchPhone
+      }
+      return true
+    })
+  }, [assignableUsers, showStaffOnly, userSearchQuery, ownerUserId])
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-24">
       
@@ -237,16 +300,44 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         </div>
       )}
 
+      {/* Mobile Sticky Quick-Nav Section Strip */}
+      <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md py-2 -mx-2 px-2 sm:mx-0 sm:px-0 border-b border-border/60 overflow-x-auto scrollbar-none flex items-center gap-1.5">
+        {[
+          { id: 'sec-head', label: '👑 Outlet Head' },
+          { id: 'sec-status', label: '⚡ Status' },
+          { id: 'sec-profile', label: '🏪 Profile' },
+          { id: 'sec-branding', label: '🖼️ Images' },
+          { id: 'sec-hours', label: '⏰ Hours' },
+          { id: 'sec-location', label: '📍 Location' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              const el = document.getElementById(tab.id)
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            }}
+            className="px-3 py-1.5 rounded-xl bg-muted/70 hover:bg-amber-500 hover:text-white text-[11px] font-black text-text-secondary shrink-0 transition-all cursor-pointer border border-border/40 active:scale-95 shadow-2xs"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* ======================================================== */}
       {/* 👑 OUTLET HEAD / OWNER ASSIGNMENT (Admin Mode Only)     */}
       {/* ======================================================== */}
       {isAdmin && (
-        <SectionCard
-          icon={UserCheck}
-          title="Outlet Head / Console Owner"
-          subtitle="Assign a registered customer account as the primary Head/Manager of this kitchen console"
-          accentColor="from-amber-500/10 via-amber-500/5 to-amber-500/0"
-        >
+        <div id="sec-head">
+          <SectionCard
+            icon={UserCheck}
+            title="Outlet Head / Console Owner"
+            subtitle="Assign a registered customer account as the primary Head/Manager of this kitchen console"
+            accentColor="from-amber-500/10 via-amber-500/5 to-amber-500/0"
+          >
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
               <div className="flex items-center gap-3">
@@ -281,10 +372,65 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
               )}
             </div>
 
+            {/* Staff Filter Toggle & Customer Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-2.5 justify-between items-stretch sm:items-center bg-muted/30 p-2 rounded-2xl border border-border/50">
+              {/* Staff vs All Customers Toggle */}
+              <div className="flex bg-background p-1 rounded-xl border border-border/50 shrink-0 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setShowStaffOnly(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    showStaffOnly
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  👔 Staff & Partners ({staffUsersCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStaffOnly(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    !showStaffOnly
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  👥 All Customers ({assignableUsers.length})
+                </button>
+              </div>
+
+              {/* Account Search Input */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search account by name, phone or email..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-1.5 text-xs font-semibold bg-background border border-border rounded-xl outline-none focus:border-amber-500 transition-all placeholder:text-text-secondary/40"
+                />
+                {userSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
-                Select Account to Assign as Outlet Head
-              </label>
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
+                  Select Account to Assign as Outlet Head
+                </label>
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  {filteredAssignableUsers.length} accounts found
+                </span>
+              </div>
               <div className="relative">
                 <select
                   value={ownerUserId}
@@ -304,7 +450,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                   disabled={loadingUsers}
                 >
                   <option value="">-- Select Customer / Partner User Account --</option>
-                  {assignableUsers.map((u: any) => (
+                  {filteredAssignableUsers.map((u: any) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.email || u.phone || 'No Contact'}) — Role: {u.role} {u.assignedRestaurantId ? ' (Assigned)' : ''}
                     </option>
@@ -321,26 +467,33 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
               </p>
             </div>
 
-            {/* Direct Password Management for Outlet Head */}
+            {/* Direct Controlled Password Management for Outlet Head */}
             {currentOwner && (
               <div className="pt-3 border-t border-amber-500/20 space-y-2">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                   🔑 Outlet Head Password (No OTP Required for Login)
                 </label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Set new password for this Head..."
-                    value={tagInputRef.current?.dataset.headPassword || ''}
-                    id="headPasswordInput"
-                    className="flex-1 px-3.5 py-2 text-xs font-mono font-semibold bg-background border border-amber-500/30 rounded-xl outline-none focus:border-amber-500"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type={showPasswordText ? "text" : "password"}
+                      placeholder="Set new password for this Head..."
+                      value={headPassword}
+                      onChange={(e) => setHeadPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-mono font-semibold bg-background border border-amber-500/30 rounded-xl outline-none focus:border-amber-500 pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordText(!showPasswordText)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5"
+                    >
+                      {showPasswordText ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={async () => {
-                      const inputEl = document.getElementById('headPasswordInput') as HTMLInputElement
-                      const newPass = inputEl?.value
-                      if (!newPass || newPass.length < 6) {
+                      if (!headPassword || headPassword.length < 6) {
                         toast.error('Password must be at least 6 characters')
                         return
                       }
@@ -348,16 +501,16 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                         const res = await fetch('/api/admin/users', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: currentOwner.id, password: newPass })
+                          body: JSON.stringify({ userId: currentOwner.id, password: headPassword })
                         })
                         if (!res.ok) throw new Error('Failed to update password')
                         toast.success(`Password set for ${currentOwner.name || 'Head'}! They can now login with Email/Phone & Password without OTP. 🎉`)
-                        if (inputEl) inputEl.value = ''
+                        setHeadPassword('')
                       } catch (err: any) {
                         toast.error(err.message || 'Error setting password')
                       }
                     }}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 shadow-sm"
+                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
                   >
                     Save Password
                   </button>
@@ -369,17 +522,19 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
             )}
           </div>
         </SectionCard>
+        </div>
       )}
 
       {/* ======================================================== */}
       {/* 🔴/🟢 STORE STATUS (OPEN / CLOSED TOGGLE)              */}
       {/* ======================================================== */}
-      <SectionCard
-        icon={Activity}
-        title="Store Live Status"
-        subtitle="Turn your store ON/OFF manually to accept or pause new customer orders"
-        accentColor={formData.isOpen ? "from-emerald-500/10 via-emerald-500/5 to-emerald-500/0" : "from-rose-500/10 via-rose-500/5 to-rose-500/0"}
-      >
+      <div id="sec-status">
+        <SectionCard
+          icon={Activity}
+          title="Store Live Status"
+          subtitle="Turn your store ON/OFF manually to accept or pause new customer orders"
+          accentColor={formData.isOpen ? "from-emerald-500/10 via-emerald-500/5 to-emerald-500/0" : "from-rose-500/10 via-rose-500/5 to-rose-500/0"}
+        >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border transition-all">
           <div className="flex items-center gap-3.5">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 ${
@@ -423,16 +578,18 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </button>
         </div>
       </SectionCard>
+      </div>
 
       {/* ============================== */}
       {/* 1. BASIC INFORMATION — Emerald */}
       {/* ============================== */}
-      <SectionCard
-        icon={Store}
-        title="Basic Information"
-        subtitle="Restaurant identity and core details"
-        accentColor="from-emerald-500/5 to-emerald-500/0"
-      >
+      <div id="sec-profile">
+        <SectionCard
+          icon={Store}
+          title="Basic Information"
+          subtitle="Restaurant identity and core details"
+          accentColor="from-emerald-500/5 to-emerald-500/0"
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <InputField label="Restaurant Name" id="name" required>
             <input
@@ -598,16 +755,18 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </div>
         </div>
       </SectionCard>
+      </div>
 
       {/* ============================== */}
       {/* 2. IMAGES — Violet            */}
       {/* ============================== */}
-      <SectionCard
-        icon={ImageIcon}
-        title="Images & Branding"
-        subtitle="Logo, banner and visual identity"
-        accentColor="from-violet-500/5 to-violet-500/0"
-      >
+      <div id="sec-branding">
+        <SectionCard
+          icon={ImageIcon}
+          title="Images & Branding"
+          subtitle="Logo, banner and visual identity"
+          accentColor="from-violet-500/5 to-violet-500/0"
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Logo */}
           <div className="space-y-3">
@@ -738,16 +897,18 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </div>
         </div>
       </SectionCard>
+      </div>
 
       {/* ============================== */}
       {/* 3. LOCATION & MAP — Blue       */}
       {/* ============================== */}
-      <SectionCard
-        icon={MapPin}
-        title="Location & Contact"
-        subtitle="Address, map coordinates and owner details"
-        accentColor="from-blue-500/5 to-blue-500/0"
-      >
+      <div id="sec-location">
+        <SectionCard
+          icon={MapPin}
+          title="Location & Contact"
+          subtitle="Address, map coordinates and owner details"
+          accentColor="from-blue-500/5 to-blue-500/0"
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="md:col-span-2">
             <InputField label="Full Address" id="address">
@@ -876,16 +1037,18 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </div>
         </div>
       </SectionCard>
+      </div>
 
       {/* ============================== */}
       {/* 4. OPERATIONS & TIMING — Amber */}
       {/* ============================== */}
-      <SectionCard
-        icon={Clock}
-        title="Operations & Timings"
-        subtitle="Delivery schedule and operating hours"
-        accentColor="from-amber-500/5 to-amber-500/0"
-      >
+      <div id="sec-hours">
+        <SectionCard
+          icon={Clock}
+          title="Operations & Timings"
+          subtitle="Operating hours & schedule"
+          accentColor="from-amber-500/5 to-amber-500/0"
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
           <InputField label="Opens At" id="openTime">
@@ -981,22 +1144,33 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </InputField>
 
           <InputField label="Commission Rate" id="commissionRate">
-            <div className="relative">
-              <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/40" />
-              <input
-                id="commissionRate"
-                name="commissionRate"
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
-                value={formData.commissionRate}
-                onChange={handleChange}
-                placeholder="e.g. 0.15 for 15%"
-                className={`${inputClass} pl-10`}
-              />
-            </div>
-            <p className="text-[9px] text-text-secondary mt-1">Enter 0.15 for 15% commission</p>
+            {isAdmin ? (
+              <>
+                <div className="relative">
+                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/40" />
+                  <input
+                    id="commissionRate"
+                    name="commissionRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    value={formData.commissionRate}
+                    onChange={handleChange}
+                    placeholder="e.g. 0.15 for 15%"
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+                <p className="text-[9px] text-text-secondary mt-1">Managed strictly by Admin (Enter 0.15 for 15%)</p>
+              </>
+            ) : (
+              <div className="px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs font-black">
+                <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  🔒 {((parseFloat(formData.commissionRate) || 0.15) * 100).toFixed(0)}% Platform Commission
+                </span>
+                <span className="text-[10px] text-amber-600/80 font-semibold">Admin Managed</span>
+              </div>
+            )}
           </InputField>
 
           <InputField label="Sort Order (Listing Position)" id="sortOrder">
@@ -1013,37 +1187,37 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
           </InputField>
         </div>
       </SectionCard>
+      </div>
 
       {/* ============================== */}
       {/* STICKY SAVE BAR               */}
       {/* ============================== */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-t border-border shadow-2xl">
-        <div className="mx-auto max-w-5xl flex items-center justify-between px-6 py-3.5">
-          <div className="flex items-center gap-3">
+      <div className="sticky bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border border-border/80 shadow-2xl rounded-2xl p-3 sm:p-4 mt-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="hidden sm:flex items-center gap-3">
             {formData.logoUrl && (
-              <img src={formData.logoUrl} alt="" className="h-9 w-9 rounded-xl object-cover border border-border" />
+              <img src={formData.logoUrl} alt="" className="h-8 w-8 rounded-xl object-cover border border-border" />
             )}
             <div>
-              <p className="text-sm font-black text-text-primary">{formData.name || 'Untitled Restaurant'}</p>
-              <p className="text-[10px] text-text-secondary font-medium">
-                {formData.cuisineTags.length > 0 ? formData.cuisineTags.slice(0, 3).join(' · ') : 'No cuisine tags'}
-                {formData.cuisineTags.length > 3 && ` +${formData.cuisineTags.length - 3} more`}
+              <p className="text-xs font-black text-text-primary">{formData.name || 'Untitled Outlet'}</p>
+              <p className="text-[10px] text-text-secondary font-medium truncate max-w-[200px]">
+                {formData.cuisineTags.length > 0 ? formData.cuisineTags.slice(0, 2).join(' · ') : 'No tags'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => router.push('/admin/restaurants')}
+              onClick={() => onSaved ? onSaved(null) : router.push('/admin/restaurants')}
               disabled={isSubmitting}
-              className="px-5 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer text-text-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#e20a22] hover:bg-[#c9081e] text-white rounded-xl text-xs font-black transition-all shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer min-w-[160px] justify-center"
+              className="flex-1 sm:flex-none flex items-center gap-2 px-6 py-2.5 bg-[#e20a22] hover:bg-[#c9081e] text-white rounded-xl text-xs font-black transition-all shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer justify-center"
             >
               {isSubmitting ? (
                 <>
@@ -1053,7 +1227,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  {isEditing ? 'Update Restaurant' : 'Create Restaurant'}
+                  {isEditing ? 'Save Restaurant Profile' : 'Create Restaurant'}
                 </>
               )}
             </button>

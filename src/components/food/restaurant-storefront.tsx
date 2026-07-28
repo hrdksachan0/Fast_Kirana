@@ -148,8 +148,9 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       const secProducts = filteredProducts.filter((p: any) => {
         const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
         const pCatSlug = p.category?.slug || ''
+        const pCatName = (p.category?.name || '').toLowerCase()
         const matched = sec.matchTags?.some((tag: string) =>
-          pTags.includes(tag.toLowerCase()) || pCatSlug.includes(tag.toLowerCase())
+          pTags.includes(tag.toLowerCase()) || pCatSlug.includes(tag.toLowerCase()) || pCatName.includes(tag.toLowerCase())
         )
         if (matched) assignedIds.add(p.id)
         return matched
@@ -157,20 +158,33 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       return { ...sec, products: secProducts }
     }).filter((c: any) => c.products.length > 0)
 
-    // Unassigned products go to "More Items"
+    // Unassigned products smartly auto-grouped by category name
     const unassigned = filteredProducts.filter(p => !assignedIds.has(p.id))
     if (unassigned.length > 0) {
-      catsWithProducts.push({
-        tag: 'more-items',
-        title: 'More Items',
-        emoji: '✨',
-        description: 'More delicious items from our kitchen',
-        products: unassigned,
+      const categoryGroups: Record<string, { title: string; products: any[] }> = {}
+
+      unassigned.forEach((p: any) => {
+        const groupTitle = p.category?.name || 'Chef Specials'
+        if (!categoryGroups[groupTitle]) {
+          categoryGroups[groupTitle] = { title: groupTitle, products: [] }
+        }
+        categoryGroups[groupTitle].products.push(p)
+      })
+
+      Object.entries(categoryGroups).forEach(([title, grp]) => {
+        const tag = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        catsWithProducts.push({
+          tag: `custom-${tag}`,
+          title: grp.title,
+          emoji: '🍳',
+          description: `Delicious ${grp.title} from our kitchen`,
+          products: grp.products,
+        })
       })
     }
 
     return [
-      { tag: 'all', title: 'All', emoji: '🍽️', products: filteredProducts },
+      { tag: 'all', title: 'All Items', emoji: '🍽️', products: filteredProducts },
       ...catsWithProducts,
     ]
   }, [products, isVegOnly, searchQuery, restaurant.menuSections])
@@ -561,7 +575,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 {/* Right Side Products Container */}
                 <main className="flex-grow min-w-0 space-y-6">
                   {categories.filter(c => c.tag !== 'all').map(cat => {
-                    const isExpanded = expandedCategories.has(cat.tag) || searchQuery !== ''
+                    const isCollapsed = expandedCategories.has(cat.tag)
+                    const isExpanded = !isCollapsed || searchQuery !== ''
                     
                     return (
                       <div 
