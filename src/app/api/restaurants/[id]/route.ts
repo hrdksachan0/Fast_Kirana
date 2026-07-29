@@ -130,7 +130,7 @@ export async function PATCH(
     })
 
     // Revalidate storefront cache so menu section edits reflect instantly for customers
-    await revalidateStorefront().catch(e => console.error('Revalidate error:', e))
+    revalidateStorefront(null, restaurant.slug)
 
     // Update owner assignment if requested by ADMIN
     if (ownerUserId && role === 'ADMIN') {
