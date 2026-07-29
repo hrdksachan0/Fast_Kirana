@@ -5,6 +5,7 @@ import { QueryProvider } from '@/providers/query-provider'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { Navbar } from '@/components/layout/navbar'
+import { MainWrapper } from '@/components/layout/main-wrapper'
 import { Footer } from '@/components/layout/footer'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { CartStickyBar } from '@/components/cart/cart-sticky-bar'
@@ -120,9 +121,9 @@ export default function RootLayout({
 
                   <div className="flex flex-col min-h-screen">
                     <Navbar />
-                    <main className="flex-grow min-h-[calc(100vh-80px)] pt-[96px] md:pt-[80px]">
+                    <MainWrapper>
                       {children}
-                    </main>
+                    </MainWrapper>
                     <Footer />
                   </div>
                   <MobileBottomNav />

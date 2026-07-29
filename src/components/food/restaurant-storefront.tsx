@@ -165,13 +165,25 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     const assignedIds = new Set<string>()
 
     const catsWithProducts = sections.map((sec: any) => {
+      const secTagLower = (sec.tag || '').toLowerCase()
+      const secTitleLower = (sec.title || '').toLowerCase()
+
       const secProducts = filteredProducts.filter((p: any) => {
         const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
-        const pCatSlug = p.category?.slug || ''
+        const pCatSlug = (p.category?.slug || '').toLowerCase()
         const pCatName = (p.category?.name || '').toLowerCase()
-        const matched = sec.matchTags?.some((tag: string) =>
-          pTags.includes(tag.toLowerCase()) || pCatSlug.includes(tag.toLowerCase()) || pCatName.includes(tag.toLowerCase())
-        )
+        const pMenuSec = (p.menuSection || '').toLowerCase()
+
+        const matched = 
+          (sec.matchTags || []).some((tag: string) => {
+            const t = tag.toLowerCase()
+            return pTags.includes(t) || pCatSlug.includes(t) || pCatName.includes(t) || pMenuSec === t
+          }) || 
+          pTags.includes(secTagLower) || 
+          pCatSlug === secTagLower || 
+          pCatName === secTitleLower || 
+          (pMenuSec && pMenuSec === secTagLower)
+
         if (matched) assignedIds.add(p.id)
         return matched
       })
@@ -499,29 +511,27 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
       {activeSubTab === 'menu' ? (
         <>
-          {/* Veg Toggle + Info */}
-          <div className={cn("mx-auto px-4 py-3 flex items-center justify-between", isCafe ? "max-w-4xl" : "max-w-3xl")}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                {products.length} items
+          {/* Veg Toggle + Info Bar */}
+          <div className={cn("mx-auto px-4 py-2 flex items-center justify-between bg-zinc-100/60 dark:bg-zinc-900/60 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 my-2", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="px-2 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0">
+                {products.length} Items
               </span>
-              {restaurant.description && (
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate max-w-[200px]">
-                  • {restaurant.description}
-                </span>
-              )}
+              <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate">
+                {restaurant.description || 'Gourmet dishes & artisan meals'}
+              </span>
             </div>
             <button
               onClick={() => { setIsVegOnly(!isVegOnly); triggerHaptic('light') }}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all",
+                "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition-all shrink-0 cursor-pointer shadow-2xs active:scale-95",
                 isVegOnly
-                  ? "bg-green-500 text-white shadow-md shadow-green-500/25"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                  ? "bg-emerald-600 text-white shadow-emerald-500/20"
+                  : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
               )}
             >
-              <Leaf size={12} />
-              Veg Only
+              <Leaf size={12} className={isVegOnly ? "text-white" : "text-emerald-600"} />
+              <span>Veg Only</span>
             </button>
           </div>
 
@@ -556,7 +566,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag
-                    const image = cat.tag === 'all' ? '/cafe_all_menu_category.png' : (cat.image || getCafeSectionImage(cat.tag))
+                    const image = cat.tag === 'all' ? null : (cat.image || getCafeSectionImage(cat.tag))
 
                     return (
                       <button
@@ -567,17 +577,17 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                           scrollToSection(cat.tag)
                         }}
                         className={cn(
-                          "w-full flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all duration-205 text-center outline-none group cursor-pointer border-l-3",
+                          "w-full flex flex-col items-center gap-1.5 p-1.5 rounded-2xl transition-all duration-200 text-center outline-none group cursor-pointer border-l-2",
                           isActive 
                             ? "bg-orange-500/10 dark:bg-orange-500/15 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-2xs" 
-                            : "border-transparent text-zinc-650 dark:text-zinc-400 hover:bg-zinc-150/50 dark:hover:bg-zinc-800/80"
+                            : "border-transparent text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
                         )}
                       >
                         <div 
                           className={cn(
                             "relative w-9 h-9 min-[375px]:w-10 min-[375px]:h-10 rounded-full overflow-hidden shrink-0 border transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
                             isActive 
-                              ? "border-orange-500 scale-105" 
+                              ? "border-orange-500 scale-105 shadow-2xs" 
                               : "border-zinc-200 dark:border-zinc-800"
                           )}
                         >
@@ -591,11 +601,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                                 className="object-cover"
                               />
                             ) : (
-                              <span className="text-sm select-none">{cat.emoji}</span>
+                              <span className="text-base select-none">{cat.emoji || '🍽️'}</span>
                             )}
                           </div>
                         </div>
-                        <span className="text-[9px] min-[375px]:text-[9.5px] font-bold leading-[1.25] line-clamp-2 max-w-full">
+                        <span className="text-[9px] min-[375px]:text-[9.5px] font-bold leading-[1.2] line-clamp-2 max-w-full">
                           {cat.title}
                         </span>
                       </button>

@@ -1282,13 +1282,13 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                     🔍 Add More Items To Order
                   </label>
                   <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {isModifyCafeOrder ? '☕ Cafe Items Only' : isModifyRestaurantOrder ? '🍳 Wedson Restaurant Items Only' : '📦 Grocery Mart Items Only'}
+                    {isModifyCafeOrder ? '☕ Cafe Items Only' : isModifyRestaurantOrder ? `🍳 ${(order as any).restaurantName || (order as any).restaurant?.name || order.shopName || 'Restaurant'} Items Only` : '📦 Grocery Mart Items Only'}
                   </span>
                 </div>
                 
                 <input
                   type="text"
-                  placeholder={isModifyCafeOrder ? "Search Cafe items (Sandwiches, Chai, Shakes)..." : isModifyRestaurantOrder ? "Search Wedson dishes (Paneer, Biryani, Naan)..." : "Search Grocery items (Milk, Atta, Snacks)..."}
+                  placeholder={isModifyCafeOrder ? "Search Cafe items (Sandwiches, Chai, Shakes)..." : isModifyRestaurantOrder ? `Search ${(order as any).restaurantName || (order as any).restaurant?.name || order.shopName || 'Restaurant'} dishes (Paneer, Biryani, Naan)...` : "Search Grocery items (Milk, Atta, Snacks)..."}
                   value={modifySearchQuery}
                   onChange={(e) => setModifySearchQuery(e.target.value)}
                   className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-border/80 bg-card text-text-primary focus:outline-none focus:border-primary shadow-xs"

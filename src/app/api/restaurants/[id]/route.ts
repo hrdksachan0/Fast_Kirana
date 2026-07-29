@@ -129,6 +129,9 @@ export async function PATCH(
       data: updateData
     })
 
+    // Revalidate storefront cache so menu section edits reflect instantly for customers
+    await revalidateStorefront().catch(e => console.error('Revalidate error:', e))
+
     // Update owner assignment if requested by ADMIN
     if (ownerUserId && role === 'ADMIN') {
       await prisma.user.update({
