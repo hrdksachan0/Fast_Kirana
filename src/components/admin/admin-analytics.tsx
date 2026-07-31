@@ -306,25 +306,25 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
 
       </div>
 
-      {/* Restaurant Analytics Section Header */}
+      {/* Multi-Restaurant Analytics Section Header */}
       <div className="border-b border-border/60 pb-2 pt-2">
         <h4 className="text-xs font-extrabold text-red-500 uppercase tracking-wider flex items-center gap-1.5">
           <Utensils className="h-4.5 w-4.5 text-red-500 animate-pulse-gentle" />
-          Restaurant Kitchen Analytics
+          Multi-Restaurant Outlets Analytics
         </h4>
       </div>
 
-      {/* Restaurant Status Card */}
+      {/* Multi-Restaurant Status Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="relative overflow-hidden bg-card border border-red-500/25 p-6 rounded-2xl shadow-sm flex flex-col justify-between group">
           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
-                Active Restaurant Products
+                Active Restaurant Menu Items
               </span>
               <h3 className="text-2xl font-black text-text-primary">
-                {metrics.restaurant.totalActiveProducts} Menu Items
+                {metrics.restaurant.totalActiveProducts + metrics.cafe.totalActiveProducts} Menu Items
               </h3>
             </div>
             <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
@@ -333,38 +333,6 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
           </div>
           <div className="mt-4 pt-4 border-t border-border/60 text-xs text-text-secondary flex justify-between">
             <span>Stock Strategy: <strong className="text-red-600 dark:text-red-400 font-extrabold">Prepared On-Demand</strong></span>
-            <span className="text-text-muted italic font-bold">Unlimited Stock</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Cafe Analytics Section Header */}
-      <div className="border-b border-border/60 pb-2 pt-2">
-        <h4 className="text-xs font-extrabold text-rose-500 uppercase tracking-wider flex items-center gap-1.5">
-          <span>☕</span>
-          Café Kitchen Analytics
-        </h4>
-      </div>
-
-      {/* Cafe Status Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="relative overflow-hidden bg-card border border-rose-500/25 p-6 rounded-2xl shadow-sm flex flex-col justify-between group">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-rose-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
-                Active Café Products
-              </span>
-              <h3 className="text-2xl font-black text-text-primary">
-                {metrics.cafe.totalActiveProducts} Menu Items
-              </h3>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500">
-              <Sparkles className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-border/60 text-xs text-text-secondary flex justify-between">
-            <span>Stock Strategy: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">Prepared On-Demand</strong></span>
             <span className="text-text-muted italic font-bold">Unlimited Stock</span>
           </div>
         </div>

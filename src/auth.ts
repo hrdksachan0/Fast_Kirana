@@ -45,6 +45,34 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     ...authConfig.callbacks,
+    async session({ session, token }) {
+      if (token?.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, assignedRestaurantId: true, phone: true }
+          })
+          if (dbUser) {
+            token.role = dbUser.role
+            token.assignedRestaurantId = dbUser.assignedRestaurantId
+            if (dbUser.phone) token.phone = dbUser.phone
+          }
+        } catch (e) {
+          console.error('Session DB sync error:', e)
+        }
+      }
+
+      if (token) {
+        session.user.id = token.id as string
+        session.user.role = token.role as any
+        session.user.phone = token.phone as string
+        session.user.assignedRestaurantId = token.assignedRestaurantId as string
+        if (token.email) {
+          session.user.email = token.email as string
+        }
+      }
+      return session
+    },
     async signIn({ user, account, profile }) {
       console.log('--- NEXTAUTH SIGNIN CALLBACK ---')
       console.log('Provider:', account?.provider)

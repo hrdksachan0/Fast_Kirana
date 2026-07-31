@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
         orderId: string
         productId: string
         price: number
+        mrp: number
         quantity: number
         name: string
         costPrice: number
@@ -69,7 +73,7 @@ export async function GET(request: NextRequest) {
         orderType: string | null
       }>
     >`
-      SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
+      SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              c.name as "categoryName",
              COALESCE(oi.variants, p.variants) as "variants", 
@@ -187,7 +191,18 @@ export async function GET(request: NextRequest) {
     // Product performance
     const productData: Record<
       string,
-      { productId: string; name: string; quantity: number; sales: number; profit: number; categoryName: string; type: 'restaurant' | 'grocery' }
+      { 
+        productId: string; 
+        name: string; 
+        mrp: number; 
+        price: number; 
+        costPrice: number; 
+        quantity: number; 
+        sales: number; 
+        profit: number; 
+        categoryName: string; 
+        type: 'restaurant' | 'grocery' 
+      }
     > = {}
 
     // Process each order
@@ -235,6 +250,9 @@ export async function GET(request: NextRequest) {
           productData[item.productId] = {
             productId: item.productId,
             name: item.name,
+            mrp: item.mrp || item.price,
+            price: item.price,
+            costPrice: item.costPrice || 0,
             quantity: 0,
             sales: 0,
             profit: 0,
@@ -261,7 +279,7 @@ export async function GET(request: NextRequest) {
     const categoryList = Object.values(categoryData).sort((a, b) => b.sales - a.sales)
     const productList = Object.values(productData)
       .sort((a, b) => b.sales - a.sales)
-      .slice(0, 10) // Top 10 selling products
+      .slice(0, 200) // All sold products in date range (up to 200 items)
 
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0

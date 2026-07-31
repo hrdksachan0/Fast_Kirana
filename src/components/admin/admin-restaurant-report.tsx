@@ -248,8 +248,8 @@ export function AdminRestaurantReport() {
       ) : data.length === 0 ? (
         <div className="bg-card border border-border p-12 rounded-2xl shadow-sm text-center">
           <Store className="h-12 w-12 text-muted-foreground opacity-30 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-text-primary">Koi Data Nahi Mila</h3>
-          <p className="text-xs text-text-secondary mt-1">Is date range me kisi restaurant ki sale nahi hui.</p>
+          <h3 className="text-lg font-bold text-text-primary">No Data Found</h3>
+          <p className="text-xs text-text-secondary mt-1">No completed restaurant sales in this date range.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -268,7 +268,7 @@ export function AdminRestaurantReport() {
                   </div>
                   <div>
                     <h4 className="font-bold text-text-primary text-base line-clamp-1">{r.name}</h4>
-                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block mt-0.5 ${r.isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block mt-0.5 ${r.isOpen ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                       {r.isOpen ? 'Open' : 'Closed'}
                     </span>
                   </div>
@@ -288,20 +288,20 @@ export function AdminRestaurantReport() {
                         <button 
                           onClick={() => handleUpdateCommission(r.id)} 
                           disabled={updatingComm}
-                          className="p-1 bg-accent text-white rounded hover:bg-accent/90"
+                          className="p-1 bg-accent text-white rounded hover:bg-accent/90 cursor-pointer"
                         >
                           {updatingComm ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                         </button>
-                        <button onClick={() => setEditingComm(null)} className="p-1 bg-muted border border-border text-text-secondary rounded hover:bg-muted/80">
+                        <button onClick={() => setEditingComm(null)} className="p-1 bg-muted border border-border text-text-secondary rounded hover:bg-muted/80 cursor-pointer">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">{(r.commissionRate * 100).toFixed(1)}%</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[10px]">{(r.commissionRate * 100).toFixed(1)}%</span>
                         <button 
                           onClick={() => { setEditingComm(r.id); setCommValue((r.commissionRate * 100).toString()) }} 
-                          className="text-text-secondary hover:text-primary transition-colors"
+                          className="text-text-secondary hover:text-primary transition-colors cursor-pointer"
                         >
                           <Edit2 className="h-3 w-3" />
                         </button>
@@ -315,32 +315,32 @@ export function AdminRestaurantReport() {
               <div className="flex-1 flex flex-col justify-between">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
-                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Kul Bikri</p>
-                    <p className="text-lg font-black text-emerald-700">{formatPrice(r.totalProductSales)}</p>
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Total Product Sales</p>
+                    <p className="text-lg font-black text-emerald-700 dark:text-emerald-300">{formatPrice(r.totalProductSales)}</p>
                   </div>
                   
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Admin Comm.</p>
-                    <p className="text-lg font-black text-blue-700">{formatPrice(r.adminCommission)}</p>
+                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Admin Comm.</p>
+                    <p className="text-lg font-black text-blue-700 dark:text-blue-300">{formatPrice(r.adminCommission)}</p>
                   </div>
 
                   <div className="bg-primary/10 border-2 border-primary/30 rounded-xl p-3 md:col-span-1 shadow-sm">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Restaurant Ko Dena Hai</p>
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Payout to Restaurant</p>
                     <p className="text-xl md:text-2xl font-black text-primary">{formatPrice(r.restaurantShare)}</p>
                   </div>
                   
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
-                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Orders</p>
-                    <p className="text-lg font-black text-purple-700">{r.totalOrders}</p>
+                    <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Orders</p>
+                    <p className="text-lg font-black text-purple-700 dark:text-purple-300">{r.totalOrders}</p>
                   </div>
                 </div>
 
                 <div className="mt-3 flex flex-col md:flex-row justify-between text-[10px] font-semibold text-text-secondary bg-muted/40 p-2 rounded-lg border border-border/40 gap-2">
                   <span className="flex items-center gap-1">
-                    <Utensils className="h-3 w-3" /> Top Dish: <span className="text-text-primary">{r.topDish || 'N/A'}</span> <span className="mx-1 text-border">|</span> Avg Order: <span className="text-text-primary">{formatPrice(r.avgOrderValue)}</span>
+                    <Utensils className="h-3 w-3" /> Top Dish: <span className="text-text-primary font-bold">{r.topDish || 'N/A'}</span> <span className="mx-1 text-border">|</span> Avg Order: <span className="text-text-primary font-bold">{formatPrice(r.avgOrderValue)}</span>
                   </span>
                   <span className="text-text-muted">
-                    Delivery {formatPrice(r.totalDeliveryFee)} + Packaging {formatPrice(r.totalPackaging)} — yeh alag se, isme include nahi
+                    Delivery {formatPrice(r.totalDeliveryFee)} + Packaging {formatPrice(r.totalPackaging)} — excluded from commission
                   </span>
                 </div>
               </div>
@@ -356,25 +356,25 @@ export function AdminRestaurantReport() {
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             <h4 className="font-black text-text-primary text-sm uppercase flex items-center gap-2">
               <IndianRupee className="h-5 w-5 text-accent" />
-              Grand Total Hisaab
+              Grand Total Summary
             </h4>
             
             <div className="flex gap-4 md:gap-8 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
               <div className="shrink-0">
-                <p className="text-[10px] font-bold text-text-secondary uppercase">KUL BIKRI</p>
-                <p className="text-base font-black text-emerald-600">{formatPrice(totals.productSales)}</p>
+                <p className="text-[10px] font-bold text-text-secondary uppercase">TOTAL PRODUCT SALES</p>
+                <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{formatPrice(totals.productSales)}</p>
               </div>
               <div className="shrink-0">
                 <p className="text-[10px] font-bold text-text-secondary uppercase">ADMIN COMMISSION</p>
-                <p className="text-base font-black text-blue-600">{formatPrice(totals.adminCommission)}</p>
+                <p className="text-base font-black text-blue-600 dark:text-blue-400">{formatPrice(totals.adminCommission)}</p>
               </div>
               <div className="shrink-0 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
-                <p className="text-[10px] font-bold text-primary uppercase">RESTAURANT KO DENA HAI</p>
+                <p className="text-[10px] font-bold text-primary uppercase">PAYOUT TO RESTAURANTS</p>
                 <p className="text-lg font-black text-primary">{formatPrice(totals.restaurantShare)}</p>
               </div>
               <div className="shrink-0">
                 <p className="text-[10px] font-bold text-text-secondary uppercase">TOTAL ORDERS</p>
-                <p className="text-base font-black text-purple-600">{totals.orders}</p>
+                <p className="text-base font-black text-purple-600 dark:text-purple-400">{totals.orders}</p>
               </div>
             </div>
           </div>

@@ -34,10 +34,14 @@ interface CategorySale {
 interface TopProduct {
   productId: string
   name: string
+  mrp?: number
+  price?: number
+  costPrice?: number
   quantity: number
   sales: number
   profit: number
   categoryName?: string
+  type?: 'restaurant' | 'grocery'
 }
 
 interface ReportSummary {
@@ -59,7 +63,8 @@ export function AdminReports() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
-  const [segment, setSegment] = useState<'all' | 'grocery' | 'cafe' | 'restaurant'>('all')
+  const [segment, setSegment] = useState<'all' | 'grocery' | 'restaurant'>('all')
+  const [productSearch, setProductSearch] = useState('')
   
   // Loaded report data
   const [rawSummary, setRawSummary] = useState<ReportSummary>({
@@ -98,17 +103,21 @@ export function AdminReports() {
   // Derived filtered calculations
   const categorySales = useMemo(() => {
     if (segment === 'all') return rawCategorySales
-    if (segment === 'grocery') return rawCategorySales.filter(c => isGroceryCategory(c.categoryName))
-    if (segment === 'cafe') return rawCategorySales.filter(c => isCafeCategory(c.categoryName))
-    return rawCategorySales.filter(c => isRestaurantCategory(c.categoryName))
+    if (segment === 'grocery') return rawCategorySales.filter(c => (c as any).type === 'grocery' || isGroceryCategory(c.categoryName))
+    return rawCategorySales.filter(c => (c as any).type === 'restaurant' || isRestaurantCategory(c.categoryName) || isCafeCategory(c.categoryName))
   }, [rawCategorySales, segment])
 
   const topProducts = useMemo(() => {
-    if (segment === 'all') return rawTopProducts
-    if (segment === 'grocery') return rawTopProducts.filter(p => isGroceryCategory(p.categoryName || ''))
-    if (segment === 'cafe') return rawTopProducts.filter(p => isCafeCategory(p.categoryName || ''))
-    return rawTopProducts.filter(p => isRestaurantCategory(p.categoryName || ''))
-  }, [rawTopProducts, segment])
+    let list = rawTopProducts
+    if (segment === 'grocery') list = rawTopProducts.filter(p => (p as any).type === 'grocery' || isGroceryCategory(p.categoryName || ''))
+    else if (segment === 'restaurant') list = rawTopProducts.filter(p => (p as any).type === 'restaurant' || isRestaurantCategory(p.categoryName || '') || isCafeCategory(p.categoryName || ''))
+    
+    if (productSearch.trim()) {
+      const q = productSearch.toLowerCase()
+      list = list.filter(p => p.name.toLowerCase().includes(q))
+    }
+    return list
+  }, [rawTopProducts, segment, productSearch])
 
   const summary = useMemo(() => {
     if (segment === 'all') return rawSummary
@@ -268,10 +277,10 @@ export function AdminReports() {
       })
       csvContent += '\n'
 
-      // 4. Add Top Products
-      csvContent += 'TOP SELLING PRODUCTS\nProduct Name,Quantity Sold,Sales Revenue (INR),Profit Generated (INR)\n'
+      // 4. Add Top Products / Itemized Product Sales
+      csvContent += 'ITEMIZED PRODUCT SALES\nProduct ID,Product Name,Category,MRP (INR),Selling Price (INR),Cost Price (INR),Quantity Sold,Total Revenue (INR),Net Profit (INR)\n'
       topProducts.forEach(row => {
-        csvContent += `"${row.name}",${row.quantity},${row.sales},${row.profit}\n`
+        csvContent += `"${row.productId}","${row.name}","${row.categoryName || ''}",${row.mrp || row.price || 0},${row.price || 0},${row.costPrice || 0},${row.quantity},${row.sales},${row.profit}\n`
       })
 
       // Trigger download
@@ -354,12 +363,11 @@ export function AdminReports() {
       </div>
 
       {/* Segment Category Filters */}
-      <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/60 text-[11px] font-bold max-w-lg mb-6 shadow-xs gap-1">
+      <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/60 text-[11px] font-bold max-w-md mb-6 shadow-xs gap-1">
         {([
           { key: 'all', label: 'All Sales' },
           { key: 'grocery', label: 'Grocery 📦' },
-          { key: 'cafe', label: 'Cafe ☕' },
-          { key: 'restaurant', label: 'Restaurant 🍳' }
+          { key: 'restaurant', label: 'Restaurants 🍽️' }
         ] as const).map((seg) => (
           <button
             key={seg.key}
@@ -659,21 +667,34 @@ export function AdminReports() {
               </div>
             </div>
 
-            {/* Top Selling Products Breakdown */}
+            {/* Product Sales Itemized List */}
             <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
-              <div className="flex items-center gap-2 border-b border-border/60 pb-3">
-                <Award className="h-5 w-5 text-accent animate-bounce-slow" />
-                <div>
-                  <h4 className="text-sm font-bold text-text-primary">Top 10 Selling Products</h4>
-                  <p className="text-[10px] text-text-muted">The highest volume and revenue generator items.</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-border/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-accent" />
+                  <div>
+                    <h4 className="text-sm font-bold text-text-primary">Daily Product Sales Breakdown ({topProducts.length} Items)</h4>
+                    <p className="text-[10px] text-text-muted">Itemized list of products sold in the selected date range.</p>
+                  </div>
                 </div>
+                <input
+                  type="text"
+                  placeholder="Search sold product..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="bg-muted border border-border px-3 py-1.5 rounded-xl text-xs font-semibold text-text-primary focus:outline-none w-full sm:w-48"
+                />
               </div>
 
               <div className="overflow-x-auto divide-y divide-border/60 max-h-80 overflow-y-auto pr-1">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
-                      <th className="pb-2">Name</th>
+                      <th className="pb-2">Product ID</th>
+                      <th className="pb-2">Product Name</th>
+                      <th className="pb-2 text-right">MRP</th>
+                      <th className="pb-2 text-right">Selling Price</th>
+                      <th className="pb-2 text-right">Cost Price</th>
                       <th className="pb-2 text-center">Qty Sold</th>
                       <th className="pb-2 text-right">Revenue</th>
                       <th className="pb-2 text-right">Profit</th>
@@ -682,12 +703,33 @@ export function AdminReports() {
                   <tbody>
                     {topProducts.map((prod) => (
                       <tr key={prod.productId} className="hover:bg-muted/10">
-                        <td className="py-2.5 font-semibold text-text-primary truncate max-w-[150px]">{prod.name}</td>
+                        <td className="py-2.5 font-mono text-[10px] text-text-muted select-all truncate max-w-[90px]" title={prod.productId}>
+                          {prod.productId.slice(-8)}
+                        </td>
+                        <td className="py-2.5 font-semibold text-text-primary truncate max-w-[150px]" title={prod.name}>
+                          {prod.name}
+                        </td>
+                        <td className="py-2.5 text-right font-medium text-text-muted line-through">
+                          {formatPrice(prod.mrp || prod.price || 0)}
+                        </td>
+                        <td className="py-2.5 text-right font-bold text-text-primary">
+                          {formatPrice(prod.price || 0)}
+                        </td>
+                        <td className="py-2.5 text-right font-semibold text-blue-600 dark:text-blue-400">
+                          {formatPrice(prod.costPrice || 0)}
+                        </td>
                         <td className="py-2.5 text-center font-bold text-text-secondary">{prod.quantity}</td>
                         <td className="py-2.5 text-right font-bold text-text-primary">{formatPrice(prod.sales)}</td>
                         <td className="py-2.5 text-right font-bold text-accent">{formatPrice(prod.profit)}</td>
                       </tr>
                     ))}
+                    {topProducts.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-text-muted text-xs font-semibold">
+                          {productSearch ? `No products found matching "${productSearch}".` : 'No products sold in this date range.'}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
