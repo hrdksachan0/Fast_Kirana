@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         remainingLimit: Math.max(0, wallet.cashLimit - wallet.cashInHand)
       },
       todayCodOrders,
-      recentDeposits: recentDeposits.map(d => ({
+      recentDeposits: recentDeposits.map((d: any) => ({
         id: d.id,
         amount: d.amount,
         adminName: d.admin?.name || 'Admin',

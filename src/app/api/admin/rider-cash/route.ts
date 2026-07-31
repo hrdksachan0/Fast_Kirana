@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
         pendingRiderCash,
         activeRidersCount: ridersWithWallets.length
       },
-      recentDeposits: recentDeposits.map(d => ({
+      recentDeposits: recentDeposits.map((d: any) => ({
         id: d.id,
         riderName: d.rider?.name || 'Rider',
         riderPhone: d.rider?.phone || '',
