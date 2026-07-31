@@ -182,12 +182,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Category breakdown
-    const categoryData: Record<string, { categoryName: string; sales: number; profit: number }> = {}
+    const categoryData: Record<string, { categoryName: string; sales: number; profit: number; type: 'restaurant' | 'grocery' }> = {}
 
     // Product performance
     const productData: Record<
       string,
-      { productId: string; name: string; quantity: number; sales: number; profit: number; categoryName: string }
+      { productId: string; name: string; quantity: number; sales: number; profit: number; categoryName: string; type: 'restaurant' | 'grocery' }
     > = {}
 
     // Process each order
@@ -200,8 +200,8 @@ export async function GET(request: NextRequest) {
       }
 
       dailyData[dateString].orders++
-      dailyData[dateString].sales += order.total
-      totalRevenue += order.total
+      dailyData[dateString].sales += (order.subtotal || 0) - (order.discount || 0)
+      totalRevenue += (order.subtotal || 0) - (order.discount || 0)
       totalMiscFee += order.miscFee || 0
       totalTaxes += order.taxes || 0
       totalDeliveryFee += order.deliveryFee || 0
@@ -217,20 +217,29 @@ export async function GET(request: NextRequest) {
 
         // Category breakdown
         if (!categoryData[item.categoryName]) {
-          categoryData[item.categoryName] = { categoryName: item.categoryName, sales: 0, profit: 0 }
+          const isRestaurantOrCafe = item.restaurantId || 
+                                     item.orderType === 'RESTAURANT' || 
+                                     item.categoryName.toLowerCase().includes('cafe');
+          const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
+          categoryData[item.categoryName] = { categoryName: item.categoryName, sales: 0, profit: 0, type }
         }
         categoryData[item.categoryName].sales += itemRev
         categoryData[item.categoryName].profit += itemProf
 
         // Product breakdown
         if (!productData[item.productId]) {
+          const isRestaurantOrCafe = item.restaurantId || 
+                                     item.orderType === 'RESTAURANT' || 
+                                     item.categoryName.toLowerCase().includes('cafe');
+          const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
           productData[item.productId] = {
             productId: item.productId,
             name: item.name,
             quantity: 0,
             sales: 0,
             profit: 0,
-            categoryName: item.categoryName
+            categoryName: item.categoryName,
+            type
           }
         }
         productData[item.productId].quantity += item.quantity
@@ -261,6 +270,7 @@ export async function GET(request: NextRequest) {
       success: true,
       summary: {
         totalSales: Math.round(totalRevenue * 100) / 100,
+        totalCollected: Math.round((totalRevenue + totalDeliveryFee + totalTaxes + totalMiscFee) * 100) / 100,
         totalProfit: Math.round(totalProfit * 100) / 100,
         totalCost: Math.round(totalCost * 100) / 100,
         totalOrders,

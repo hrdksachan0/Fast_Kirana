@@ -11,11 +11,37 @@ export default async function AdminRestaurantsPage() {
     redirect('/')
   }
 
-  const restaurants = await prisma.restaurant.findMany({
-    orderBy: { sortOrder: 'asc' },
-    include: {
-      _count: {
-        select: { products: true }
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const [restaurants, orderStats] = await Promise.all([
+    prisma.restaurant.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      }
+    }),
+    prisma.order.groupBy({
+      by: ['restaurantId'],
+      where: {
+        status: 'DELIVERED',
+        restaurantId: { not: null },
+        createdAt: { gte: thirtyDaysAgo }
+      },
+      _sum: { subtotal: true, discount: true },
+      _count: { id: true }
+    })
+  ])
+
+  const statsMap: Record<string, { totalSales: number; ordersCount: number }> = {}
+  orderStats.forEach((s) => {
+    if (s.restaurantId) {
+      const sales = Math.max(0, (s._sum.subtotal || 0) - (s._sum.discount || 0))
+      statsMap[s.restaurantId] = {
+        totalSales: sales,
+        ordersCount: s._count.id || 0
       }
     }
   })
@@ -24,6 +50,7 @@ export default async function AdminRestaurantsPage() {
     ...r,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
+    stats30Days: statsMap[r.id] || { totalSales: 0, ordersCount: 0 }
   }))
 
   return (

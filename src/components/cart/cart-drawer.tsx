@@ -176,12 +176,22 @@ export function CartDrawer() {
   const combinedAdjustedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
 
   const settings = useUIStore((s) => s.settings) || {}
+  const groceryThreshold = settings.grocery_free_delivery_threshold ? parseFloat(settings.grocery_free_delivery_threshold) : GROCERY_FREE_DELIVERY_THRESHOLD
+  const cafeThreshold = settings.cafe_free_delivery_threshold ? parseFloat(settings.cafe_free_delivery_threshold) : CAFE_FREE_DELIVERY_THRESHOLD
+  const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
+  const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
 
-  // In the cart drawer, delivery is FREE when minimum order for zone is met.
-  const deliveryFee = 0
+  const activeThreshold = (groceryItems.length > 0 && cafeItems.length > 0)
+    ? combinedThreshold
+    : (cafeItems.length > 0 ? cafeThreshold : groceryThreshold)
+
+  const miscFee = settings.misc_fee ? parseFloat(settings.misc_fee) : 0
+  const miscFeeLabel = settings.misc_fee_label || 'Handling & Packaging Charge'
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
-  const total = Math.max(0, combinedAdjustedSubtotal - couponDiscount) + deliveryFee
+  const activeSubtotal = Math.max(0, combinedAdjustedSubtotal - couponDiscount)
+  const deliveryFee = activeSubtotal < activeThreshold ? deliveryFeeVal : 0
+  const total = activeSubtotal + deliveryFee + miscFee
 
   const hasInventoryIssues = items.some((item) => {
     const limit = getProductLimit(item.product)
@@ -624,13 +634,19 @@ export function CartDrawer() {
                     <div className="flex flex-col text-left">
                       <span>Delivery Charges</span>
                       <span className="text-[9px] text-zinc-400 font-normal">
-                        FREE when minimum order is met
+                        {deliveryFee === 0 ? `FREE on orders above ₹${activeThreshold}` : `₹${deliveryFee} fee on orders under ₹${activeThreshold}`}
                       </span>
                     </div>
-                    <span className="text-accent font-black text-xs">
-                      FREE 🎉
+                    <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "font-bold text-zinc-800 dark:text-zinc-200 text-xs")}>
+                      {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
                     </span>
                   </div>
+                  {miscFee > 0 && (
+                    <div className="flex justify-between text-xs text-zinc-500 font-bold items-center">
+                      <span>{miscFeeLabel}</span>
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs">₹{miscFee.toFixed(0)}</span>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -45,6 +45,7 @@ import {
   Bell,
   BrainCircuit,
   RefreshCw,
+  Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -52,10 +53,13 @@ import dynamic from 'next/dynamic'
 import { CreateOrderModal } from './create-order-modal'
 import { AdminSortManager } from './admin-sort-manager'
 
+const AdminRiderCash = dynamic(() => import('./admin-rider-cash').then((mod) => mod.AdminRiderCash), { ssr: false })
+
 const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => mod.AdminAnalytics), { ssr: false })
 const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
 const AdminBulkUpdate = dynamic(() => import('./admin-bulk-update').then((mod) => mod.AdminBulkUpdate), { ssr: false })
 const AdminReports = dynamic(() => import('./admin-reports').then((mod) => mod.AdminReports), { ssr: false })
+const AdminRestaurantReport = dynamic(() => import('./admin-restaurant-report').then((mod) => mod.AdminRestaurantReport), { ssr: false })
 const AdminInventoryCenter = dynamic(() => import('./admin-inventory-center').then((mod) => mod.AdminInventoryCenter), { ssr: false })
 const AdminBanners = dynamic(() => import('./admin-banners').then((mod) => mod.AdminBanners), { ssr: false })
 const AdminSettings = dynamic(() => import('./admin-settings').then((mod) => mod.AdminSettings), { ssr: false })
@@ -84,17 +88,17 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash'
 
 const PRODUCT_TEMPLATES = [
   {
     id: 'fresh_produce',
-    label: '🥬 Fresh Produce',
-    description: 'Fruits & Veggies',
-    categoryName: 'Fruits & Vegetables',
+    label: '🥦 Fresh Produce (Fruits & Veggies)',
+    description: 'Fresh fruits, vegetables',
+    categoryName: 'Fresh Fruits & Vegetables',
     unit: '1 kg',
-    minStock: 20,
-    tags: 'fresh, fruits, vegetables'
+    minStock: 15,
+    tags: 'fresh, produce'
   },
   {
     id: 'grocery_essential',
@@ -133,16 +137,16 @@ const HUB_CONFIG = [
     icon: TrendingUp,
     color: 'from-blue-500/10 to-cyan-500/10',
     activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['analytics', 'forecast', 'reports'] as const
+    tabs: ['analytics', 'forecast', 'reports', 'restaurant-report'] as const
   },
   {
     key: 'fulfillment',
     label: 'Ops & Fulfillment',
-    description: 'Live tracker, orders, customers, and reviews',
+    description: 'Live tracker, orders, customers, rider cash, and reviews',
     icon: Zap,
     color: 'from-amber-500/10 to-orange-500/10',
     activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['liveops', 'orders', 'users', 'reviews'] as const
+    tabs: ['liveops', 'orders', 'users', 'rider-cash', 'reviews'] as const
   },
   {
     key: 'catalog',
@@ -2213,10 +2217,12 @@ export function AdminDashboard({
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
     { key: 'reports', label: 'Reports', icon: FileText },
+    { key: 'restaurant-report', label: 'Restaurant Payouts', icon: Utensils },
     { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'products', label: 'Products', icon: Package, count: productTotal },
     { key: 'categories', label: 'Categories & Café Sections', icon: Layers, count: categories.length },
     { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
+    { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
     { key: 'banners', label: 'Promo Banners', icon: Image },
@@ -5513,6 +5519,12 @@ export function AdminDashboard({
         </div>
       )}
 
+      {activeTab === 'restaurant-report' && (
+        <div className="animate-fade-in">
+          <AdminRestaurantReport />
+        </div>
+      )}
+
       {activeTab === 'banners' && (
         <div className="animate-fade-in">
           <AdminBanners categories={categories} products={allProducts} />
@@ -5534,6 +5546,12 @@ export function AdminDashboard({
       {activeTab === 'flash-deals' && (
         <div className="animate-fade-in">
           <AdminPromotions />
+        </div>
+      )}
+
+      {activeTab === 'rider-cash' && (
+        <div className="animate-fade-in">
+          <AdminRiderCash />
         </div>
       )}
 

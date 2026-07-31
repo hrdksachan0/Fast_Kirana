@@ -238,6 +238,29 @@ export default function DeliveryDashboard() {
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [upiQrOrderId, setUpiQrOrderId] = useState<string | null>(null)
 
+  // Rider Wallet state
+  const [walletInfo, setWalletInfo] = useState<{
+    cashInHand: number
+    cashLimit: number
+    totalCollected: number
+    totalDeposited: number
+    isLocked: boolean
+    isWarning: boolean
+    remainingLimit: number
+  } | null>(null)
+
+  const fetchWallet = useCallback(async () => {
+    try {
+      const res = await fetch('/api/delivery/wallet')
+      if (res.ok) {
+        const data = await res.json()
+        setWalletInfo(data.wallet || null)
+      }
+    } catch (err) {
+      console.error('Failed to fetch wallet info:', err)
+    }
+  }, [])
+
   // UI-only state
   const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(30)
 
@@ -250,6 +273,12 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     ordersRef.current = orders
   }, [orders])
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchWallet()
+    }
+  }, [status, fetchWallet, orders])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1006,6 +1035,67 @@ export default function DeliveryDashboard() {
             </p>
           </div>
         </motion.div>
+
+        {/* ═══ Rider Cash Wallet Card ═══ */}
+        {walletInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`p-4 rounded-3xl border shadow-md space-y-2.5 transition-all ${
+              walletInfo.isLocked
+                ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                : walletInfo.isWarning
+                ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                : 'bg-slate-900 border-slate-800 text-slate-200'
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider block opacity-80 text-amber-400">
+                  💵 जेब में नकद (Cash in Hand)
+                </span>
+                <span className="text-2xl font-black text-white">{formatPrice(walletInfo.cashInHand)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold block opacity-70">कैश लिमिट (Max Limit)</span>
+                <span className="text-xs font-black text-white/90">{formatPrice(walletInfo.cashLimit)}</span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/10">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  walletInfo.isLocked
+                    ? 'bg-rose-500 shadow-sm shadow-rose-500/50 animate-pulse'
+                    : walletInfo.isWarning
+                    ? 'bg-amber-400'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                }`}
+                style={{ width: `${Math.min(100, Math.round((walletInfo.cashInHand / walletInfo.cashLimit) * 100))}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-bold">
+              {walletInfo.isLocked ? (
+                <span className="text-rose-400 font-black flex items-center gap-1">
+                  🔒 Cash Limit Reached! Deposit cash at store counter to get new orders.
+                </span>
+              ) : walletInfo.isWarning ? (
+                <span className="text-amber-300 font-bold">
+                  ⚠️ Approaching cash limit! Deposit cash at store counter soon.
+                </span>
+              ) : (
+                <span className="text-emerald-300/80 font-medium">
+                  Remaining COD capacity: {formatPrice(walletInfo.remainingLimit)}
+                </span>
+              )}
+              <span className="font-extrabold text-white/80 shrink-0">
+                {Math.round((walletInfo.cashInHand / walletInfo.cashLimit) * 100)}%
+              </span>
+            </div>
+          </motion.div>
+        )}
 
         {/* ═══ Stats Cards ═══ */}
         <motion.div

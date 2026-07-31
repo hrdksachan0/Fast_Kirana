@@ -98,6 +98,7 @@ interface Order {
   isB2B?: boolean
   shopName?: string | null
   shopPhone?: string | null
+  restaurantId?: string | null
   createdAt: string
   items: OrderItem[]
   address: OrderAddress
@@ -140,7 +141,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
   const isModifyRestaurantOrder = useMemo(() => {
     const shop = order.shopName || ''
-    return shop.includes('Restaurant') || order.items.some((i: any) => i.product?.tags?.includes('restaurant'))
+    return shop.includes('Restaurant') || !!order.restaurantId || order.items.some((i: any) => i.product?.restaurantId || i.product?.tags?.includes('restaurant'))
   }, [order])
 
   const availableProdsToAdd = useMemo(() => {
@@ -148,13 +149,19 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     const query = modifySearchQuery.toLowerCase().trim()
     return allProducts.filter(p => {
       if (isModifyCafeOrder) {
-        const isCafe = p.category?.slug === 'cafe' || (Array.isArray(p.tags) && p.tags.includes('cafe'))
+        const isCafe = (p.category?.slug === 'cafe' || (Array.isArray(p.tags) && p.tags.includes('cafe'))) && !p.restaurantId
         if (!isCafe) return false
       } else if (isModifyRestaurantOrder) {
-        const isRest = p.category?.slug === 'restaurant' || (Array.isArray(p.tags) && p.tags.includes('restaurant'))
+        // If order has restaurantId, product MUST match order.restaurantId
+        if (order.restaurantId && p.restaurantId && p.restaurantId !== order.restaurantId) {
+          return false
+        }
+        // Exclude grocery/wedson mart items: product must have restaurantId or category/tag as restaurant/wedson-restaurant
+        const isRest = p.restaurantId != null || p.category?.slug === 'restaurant' || p.category?.slug === 'wedson-restaurant' || (Array.isArray(p.tags) && (p.tags.includes('restaurant') || p.tags.includes('wedson-restaurant')))
         if (!isRest) return false
       } else {
-        const isKitchen = p.category?.slug === 'cafe' || p.category?.slug === 'restaurant' || (Array.isArray(p.tags) && (p.tags.includes('cafe') || p.tags.includes('restaurant')))
+        // Grocery order (Wedson Mart): Exclude any restaurant or cafe products
+        const isKitchen = p.restaurantId != null || p.category?.slug === 'cafe' || p.category?.slug === 'restaurant' || p.category?.slug === 'wedson-restaurant' || (Array.isArray(p.tags) && (p.tags.includes('cafe') || p.tags.includes('restaurant') || p.tags.includes('wedson-restaurant')))
         if (isKitchen) return false
       }
       
@@ -164,7 +171,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
       return (p.name && p.name.toLowerCase().includes(query)) || tagMatch
     }).slice(0, 10)
-  }, [allProducts, modifySearchQuery, isModifyCafeOrder, isModifyRestaurantOrder])
+  }, [allProducts, modifySearchQuery, isModifyCafeOrder, isModifyRestaurantOrder, order.restaurantId])
 
   const handleAddProductToOrder = (prod: any) => {
     const existingIndex = editItems.findIndex(i => i.productId === prod.id)
@@ -214,7 +221,14 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     setIsEditing(true)
 
     try {
-      const res = await fetch('/api/products?limit=250').catch(() => null)
+      const url = order.restaurantId
+        ? `/api/products?restaurantId=${order.restaurantId}&includeUnavailable=true&limit=250`
+        : (isModifyRestaurantOrder
+            ? '/api/products?category=restaurant,wedson-restaurant&includeUnavailable=true&limit=250'
+            : (isModifyCafeOrder
+                ? '/api/products?category=cafe,ice-cream,beverages&includeUnavailable=true&limit=250'
+                : '/api/products?includeUnavailable=true&limit=250'))
+      const res = await fetch(url).catch(() => null)
       if (res?.ok) {
         const d = await res.json()
         setAllProducts(d.products || [])

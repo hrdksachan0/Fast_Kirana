@@ -173,10 +173,14 @@ export default function CartPage() {
   const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
   const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
 
-  // For the cart page, delivery is FREE when minimum order for zone is met.
-  const deliveryFee = 0
+  const activeThreshold = (groceryItems.length > 0 && cafeItems.length > 0)
+    ? combinedThreshold
+    : (cafeItems.length > 0 ? cafeThreshold : groceryThreshold)
+
+  const activeSubtotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount)
+  const deliveryFee = activeSubtotal < activeThreshold ? deliveryFeeVal : 0
   const taxes = (groceryAdjustedSubtotal - groceryDiscount) * taxRate + (cafeAdjustedSubtotal - cafeDiscount) * taxRate
-  const grandTotal = (groceryAdjustedSubtotal - groceryDiscount) + (cafeAdjustedSubtotal - cafeDiscount) + deliveryFee + taxes + miscFee
+  const grandTotal = activeSubtotal + deliveryFee + taxes + miscFee
 
   const handleCheckoutRedirect = () => {
     if (session) {
@@ -521,10 +525,12 @@ export default function CartPage() {
               <div className="flex justify-between items-center">
                 <div className="flex flex-col text-left">
                   <span className="text-text-secondary">Delivery Charges</span>
-                  <span className="text-[10px] text-text-muted">FREE when minimum order is met</span>
+                  <span className="text-[10px] text-text-muted">
+                    {deliveryFee === 0 ? `FREE on orders above ₹${activeThreshold}` : `₹${deliveryFee} fee on orders under ₹${activeThreshold}`}
+                  </span>
                 </div>
-                <span className="text-accent font-black text-xs">
-                  FREE 🎉
+                <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "font-bold text-text-primary text-xs")}>
+                  {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
                 </span>
               </div>
 

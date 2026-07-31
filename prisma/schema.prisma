@@ -120,6 +120,9 @@ model User {
   pushSubscriptions PushSubscription[]
   assignedStore  DarkStore? @relation("StoreStaff", fields: [assignedStoreId], references: [id])
   assignedRestaurant Restaurant? @relation("RestaurantStaff", fields: [assignedRestaurantId], references: [id])
+  riderWallet    RiderWallet?
+  riderDeposits  CashDepositTransaction[] @relation("RiderDeposits")
+  adminCollectedCash CashDepositTransaction[] @relation("AdminCollectedCash")
 
   @@index([email])
   @@index([role])
@@ -293,6 +296,8 @@ model Order {
   deliveredAt       DateTime?
   notes             String?
   couponCode        String?
+  cashSettledToAdmin Boolean   @default(false)
+  cashSettledAt      DateTime?
 
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
@@ -617,5 +622,37 @@ model StockLog {
   @@index([productId])
   @@index([createdAt])
   @@map("stock_logs")
+}
+
+model RiderWallet {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  cashInHand     Float    @default(0.0)
+  cashLimit      Float    @default(2000.0)
+  totalCollected Float    @default(0.0)
+  totalDeposited Float    @default(0.0)
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("rider_wallets")
+}
+
+model CashDepositTransaction {
+  id          String    @id @default(cuid())
+  riderId     String
+  adminId     String
+  amount      Float
+  status      String    @default("APPROVED") // APPROVED, PENDING, REJECTED
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  rider       User      @relation("RiderDeposits", fields: [riderId], references: [id], onDelete: Cascade)
+  admin       User      @relation("AdminCollectedCash", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([riderId])
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("cash_deposit_transactions")
 }
 

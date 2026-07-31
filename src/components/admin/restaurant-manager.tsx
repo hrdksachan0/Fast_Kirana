@@ -22,7 +22,7 @@ import { RestaurantForm } from './restaurant-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 
 interface RestaurantManagerProps {
   initialRestaurants: any[]
@@ -174,9 +174,24 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                     <span className="font-bold">{restaurant._count?.products || 0}</span>
                   </div>
                   
-                  <div className="flex items-center justify-between text-sm py-2 border-t border-border/50">
-                    <span className="flex items-center text-text-secondary gap-1.5"><Clock className="h-4 w-4" /> Kitchen SLA</span>
-                    <span className="font-bold text-emerald-600">30 Mins</span>
+                  {/* 30-Day Sales & Commission Stats */}
+                  <div className="bg-muted/40 p-2.5 rounded-xl border border-border/50 space-y-1.5 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-secondary font-semibold">30-Day Sales:</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">
+                        {formatPrice(restaurant.stats30Days?.totalSales || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-text-muted">Commission Rate:</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                        {((restaurant.commissionRate ?? 0.15) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-text-muted">Orders (30d):</span>
+                      <span className="font-bold text-text-primary">{restaurant.stats30Days?.ordersCount || 0}</span>
+                    </div>
                   </div>
                   
                   <div className="flex items-center justify-between py-2 border-t border-border/50">

@@ -138,8 +138,17 @@ export async function GET(request: NextRequest) {
     })
     const dbSettingsMap = new Map(dbSettings.map(s => [s.key, s.value]))
     
-    // Parse rates (fallback to 10% and 15%)
-    const commissionRate = parseFloat(dbSettingsMap.get('restaurant_commission') || '10') / 100
+    // Parse rates (fallback to global setting)
+    let commissionRate = parseFloat(dbSettingsMap.get('restaurant_commission') || '10') / 100
+    if (assignedRestId) {
+      const restObj = await prisma.restaurant.findUnique({
+        where: { id: assignedRestId },
+        select: { commissionRate: true }
+      })
+      if (restObj && restObj.commissionRate !== null && restObj.commissionRate !== undefined) {
+        commissionRate = restObj.commissionRate
+      }
+    }
     const profitShareRate = parseFloat(dbSettingsMap.get('restaurant_profit_share') || '15') / 100
     const restaurantDefaultMargin = parseFloat(dbSettingsMap.get('restaurant_default_margin') || '30')
 

@@ -213,7 +213,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId" FROM orders WHERE id = ${id} LIMIT 1
+      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "paymentMethod"::text as "paymentMethod", total FROM orders WHERE id = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -339,13 +339,45 @@ export async function PATCH(
       await prisma.$executeRaw`
         UPDATE orders 
         SET status = ${status}::"OrderStatus", 
+            "paymentStatus" = 'PAID'::"PaymentStatus",
             "deliveryPhoto" = ${safePhoto}, 
             "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
             "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
-            "deliveredAt" = NOW(),
+            "deliveredAt" = COALESCE("deliveredAt", NOW()),
             "updatedAt" = NOW() 
         WHERE id = ${id}
       `
+
+      // If COD and assigned to a delivery rider, update RiderWallet
+      if (existingOrder.status !== 'DELIVERED' && existingOrder.paymentMethod === 'COD' && existingOrder.deliveryUserId) {
+        try {
+          const riderId = existingOrder.deliveryUserId
+          const orderTotal = parseFloat(existingOrder.total) || 0
+          
+          const wallet = await prisma.riderWallet.findUnique({ where: { userId: riderId } })
+          if (wallet) {
+            await prisma.riderWallet.update({
+              where: { userId: riderId },
+              data: {
+                cashInHand: { increment: orderTotal },
+                totalCollected: { increment: orderTotal }
+              }
+            })
+          } else {
+            await prisma.riderWallet.create({
+              data: {
+                userId: riderId,
+                cashInHand: orderTotal,
+                cashLimit: 2000,
+                totalCollected: orderTotal,
+                totalDeposited: 0
+              }
+            })
+          }
+        } catch (wErr) {
+          console.error('[API orders] Error updating rider wallet on delivery:', wErr)
+        }
+      }
     } else if (status === 'SHIPPED') {
       const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null
       const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null

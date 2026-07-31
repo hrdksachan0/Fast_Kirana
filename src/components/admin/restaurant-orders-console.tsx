@@ -92,6 +92,7 @@ interface Order {
   assignedPicker?: { name: string } | null
   assignedChef?: { name: string } | null
   shopName?: string | null
+  restaurantId?: string | null
 }
 
 const foodEmojis = ['🍲', '🍛', '🍜', '🍕', '🍔', '🌮', '🥪', '🍱', '🥘', '🥙', '🍢', '🍣']
@@ -703,7 +704,10 @@ export function RestaurantOrdersConsole() {
     setSearchQuery('')
     
     try {
-      const res = await fetch(`/api/products?category=restaurant&limit=100`)
+      const url = order.restaurantId
+        ? `/api/products?restaurantId=${order.restaurantId}&includeUnavailable=true&limit=200`
+        : `/api/products?category=restaurant&includeUnavailable=true&limit=200`
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setAllProducts(data.products || [])
@@ -719,9 +723,14 @@ export function RestaurantOrdersConsole() {
       return
     }
     const query = searchQuery.toLowerCase()
-    const filtered = allProducts.filter(p => p.name.toLowerCase().includes(query))
+    const filtered = allProducts.filter(p => {
+      if (editingOrder?.restaurantId && p.restaurantId && p.restaurantId !== editingOrder.restaurantId) {
+        return false
+      }
+      return p.name.toLowerCase().includes(query)
+    })
     setSearchResults(filtered)
-  }, [searchQuery, allProducts])
+  }, [searchQuery, allProducts, editingOrder])
 
   const updateItemQty = (productId: string, variant: string | null, delta: number) => {
     setEditItems(prev => {
