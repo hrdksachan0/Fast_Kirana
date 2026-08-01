@@ -973,7 +973,10 @@ export async function GET(request: NextRequest) {
         LIMIT 1000
       `
     } else {
-      // Normal user only queries their own orders
+      // Normal user queries their orders by userId, email, or phone match
+      const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
+      const sessionPhone = (session.user as any).phone ? (session.user as any).phone.replace(/\D/g, '') : ''
+
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",
                o.status::text as status,
@@ -983,7 +986,10 @@ export async function GET(request: NextRequest) {
                o."estimatedDelivery", o."createdAt", o."updatedAt",
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
                o."combinedId"
-        FROM orders o WHERE o."userId" = ${userId}
+        FROM orders o 
+        WHERE o."userId" = ${userId}
+           OR (${sessionEmail} != '' AND o."userId" IN (SELECT id FROM users WHERE LOWER(email) = ${sessionEmail}))
+           OR (${sessionPhone} != '' AND o."userId" IN (SELECT id FROM users WHERE REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone}))
         ORDER BY o."createdAt" DESC
       `
     }

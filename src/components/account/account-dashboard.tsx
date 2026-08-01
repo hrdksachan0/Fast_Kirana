@@ -229,6 +229,24 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
   }, [orders.map((o) => `${o.id}:${o.status}`).join(',')])
 
+  // Client-side fallback to sync latest orders from /api/orders
+  useEffect(() => {
+    async function syncOrders() {
+      try {
+        const res = await fetch('/api/orders')
+        if (res.ok) {
+          const freshOrders = await res.json()
+          if (Array.isArray(freshOrders) && freshOrders.length > 0) {
+            setOrders(freshOrders)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync orders in AccountDashboard:', err)
+      }
+    }
+    syncOrders()
+  }, [])
+
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab && (tab === 'orders' || tab === 'addresses' || tab === 'profile')) {

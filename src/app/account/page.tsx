@@ -7,11 +7,13 @@ export const revalidate = 0 // Account details are fully dynamic
 
 export default async function AccountPage() {
   const session = await auth()
-  if (!session?.user?.email) {
+  if (!session?.user) {
     redirect('/login')
   }
 
-  const email = session.user.email.toLowerCase().trim()
+  const sessionId = session.user.id || ''
+  const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
+  const sessionPhone = (session.user as any).phone ? (session.user as any).phone.replace(/\D/g, '') : ''
 
   let user = null
   let addresses: any[] = []
@@ -19,25 +21,41 @@ export default async function AccountPage() {
   let allItems: any[] = []
 
   try {
-    // Use raw SQL to work around PrismaPg adapter enum deserialization bug
+    // Find user by ID, Email, or Phone
     const usersResult: any[] = await prisma.$queryRaw`
       SELECT id, name, email, phone, role::text as role
-      FROM users WHERE email = ${email} LIMIT 1
+      FROM users 
+      WHERE id = ${sessionId}
+         OR (email IS NOT NULL AND LOWER(email) = ${sessionEmail} AND ${sessionEmail} != '')
+         OR (phone IS NOT NULL AND ${sessionPhone} != '' AND REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone})
+      LIMIT 1
     `
     user = usersResult[0]
 
-    if (user) {
-      // Fetch addresses normally (no enum fields)
+    const targetUserId = user?.id || sessionId
+
+    if (targetUserId) {
+      // Fetch addresses
       addresses = await prisma.address.findMany({
-        where: { userId: user.id },
+        where: {
+          OR: [
+            { userId: targetUserId },
+            ...(sessionId ? [{ userId: sessionId }] : [])
+          ]
+        },
       })
 
-      // Fetch orders with raw SQL to avoid enum issues (status, paymentMethod, paymentStatus are enums)
+      // Fetch orders matching targetUserId OR sessionId OR matching phone
       orders = await prisma.$queryRaw`
         SELECT o.id, o.status::text as status, o.total, o."createdAt"
-        FROM orders o WHERE o."userId" = ${user.id}
+        FROM orders o 
+        WHERE o."userId" = ${targetUserId}
+           OR o."userId" = ${sessionId}
+           OR (${sessionPhone} != '' AND o."userId" IN (
+                SELECT id FROM users WHERE REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone}
+              ))
         ORDER BY o."createdAt" DESC
-        LIMIT 30
+        LIMIT 50
       `
 
       // Fetch order items for each order
