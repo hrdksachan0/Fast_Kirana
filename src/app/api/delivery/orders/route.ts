@@ -20,30 +20,28 @@ export async function GET() {
              o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
              o."deliveryLat", o."deliveryLng"
       FROM orders o
-      WHERE o."deliveryMethod" = 'DELIVERY'
+      WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
         AND (
-          (o.status IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${session.user.id}))
+          (o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${session.user.id}))
           OR
-          (o.status = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
+          (o.status::text = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
           OR
-          (o.status = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND o."updatedAt" >= CURRENT_DATE)
+          (o.status::text = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND o."createdAt" >= CURRENT_DATE - INTERVAL '1 day')
         )
       ORDER BY o."createdAt" DESC
     `
 
     // Fetch related data
     const orderIds = orders.map(o => o.id)
-    const userIds = [...new Set(orders.map(o => o.userId))]
-    const addressIds = [...new Set(orders.map(o => o.addressId))]
+    const userIds = [...new Set(orders.map(o => o.userId).filter(Boolean))]
+    const addressIds = [...new Set(orders.map(o => o.addressId).filter(Boolean))]
 
     const [allItems, allUsers, allAddresses] = await Promise.all([
       orderIds.length > 0
         ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
         : [],
       userIds.length > 0
-        ? prisma.$queryRaw`
-            SELECT id, name, phone FROM users WHERE id = ANY(${userIds})
-          ` as Promise<any[]>
+        ? prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, phone: true } })
         : [],
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds } } })
