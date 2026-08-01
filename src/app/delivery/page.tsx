@@ -1624,6 +1624,7 @@ export default function DeliveryDashboard() {
             )}
           </AnimatePresence>
         </div>
+          </>
         )}
 
         {/* ═══ TAB 2: WALLET & COD ═══ */}
