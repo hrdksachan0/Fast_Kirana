@@ -580,11 +580,22 @@ export default function DeliveryDashboard() {
     }
 
     try {
+      const targetOrder = orders.find(o => o.id === orderId)
+      const companionId = targetOrder?.companionOrder?.id
+
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, ...extraData }),
       })
+
+      if (companionId) {
+        await fetch(`/api/orders/${companionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus, ...extraData }),
+        }).catch(() => null)
+      }
 
       if (res.ok) {
         if (newStatus === 'DELIVERED') {
@@ -643,8 +654,31 @@ export default function DeliveryDashboard() {
 
   // Group orders with route optimization for out-for-delivery orders
   const rawOutForDelivery = useMemo(() => orders.filter((o) => o.status === 'SHIPPED'), [orders])
-  const outForDeliveryOrders = useMemo(() => optimizeRoute(rawOutForDelivery), [rawOutForDelivery])
-  const pendingOrders = orders.filter((o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED')
+  const outForDeliveryOrders = useMemo(() => {
+    const optimized = optimizeRoute(rawOutForDelivery)
+    const dedupped: any[] = []
+    const seen = new Set<string>()
+    for (const o of optimized) {
+      if (seen.has(o.id)) continue
+      dedupped.push(o)
+      seen.add(o.id)
+      if (o.companionOrder) seen.add(o.companionOrder.id)
+    }
+    return dedupped
+  }, [rawOutForDelivery])
+
+  const pendingOrders = useMemo(() => {
+    const raw = orders.filter((o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED')
+    const dedupped: any[] = []
+    const seen = new Set<string>()
+    for (const o of raw) {
+      if (seen.has(o.id)) continue
+      dedupped.push(o)
+      seen.add(o.id)
+      if (o.companionOrder) seen.add(o.companionOrder.id)
+    }
+    return dedupped
+  }, [orders])
   const isToday = (dateStr: string | null | undefined) => {
     if (!dateStr) return false
     const d = new Date(dateStr)
@@ -1045,165 +1079,7 @@ export default function DeliveryDashboard() {
       <div className="px-4 py-5 space-y-5">
         {activeTab === 'deliveries' && (
           <>
-            {/* ═══ Rider Achievements Milestone Widget ═══ */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden"
-        >
-          {/* Decorative background circle */}
-          <div className="absolute -bottom-8 -right-8 h-24 w-24 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
-          
-          <div className="flex justify-between items-center pb-3 border-b border-slate-800/80">
-            <div>
-              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Daily Milestone Goal</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-xl font-black text-emerald-400">{todayDeliveries}</span>
-                <span className="text-[10px] text-slate-400 font-bold">completed today</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Active status</span>
-              <p className="text-xs font-bold text-emerald-400 mt-0.5 flex items-center gap-1">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                </span>
-                On Duty
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-3 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-300">Milestone Target</span>
-              <span className="font-black text-emerald-400">{todayDeliveries}/5 Deliveries</span>
-            </div>
-            
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-                style={{ width: `${Math.min((todayDeliveries / 5) * 100, 100)}%` }}
-              />
-            </div>
-            
-            <p className="text-[9px] font-bold text-slate-400">
-              {todayDeliveries >= 5 ? (
-                <span className="text-emerald-400 flex items-center gap-1">🎉 Milestone bonus target achieved today!</span>
-              ) : (
-                `Complete ${5 - todayDeliveries} more deliveries to reach your daily milestone bonus!`
-              )}
-            </p>
-          </div>
-        </motion.div>
-
-        {/* ═══ Rider Cash Wallet Card ═══ */}
-        {walletInfo && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`p-4 rounded-3xl border shadow-md space-y-2.5 transition-all ${
-              walletInfo.isLocked
-                ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-                : walletInfo.isWarning
-                ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-                : 'bg-slate-900 border-slate-800 text-slate-200'
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider block opacity-80 text-amber-400">
-                  💵 जेब में नकद (Cash in Hand)
-                </span>
-                <span className="text-2xl font-black text-white">{formatPrice(walletInfo.cashInHand)}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold block opacity-70">कैश लिमिट (Max Limit)</span>
-                <span className="text-xs font-black text-white/90">{formatPrice(walletInfo.cashLimit)}</span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/10">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  walletInfo.isLocked
-                    ? 'bg-rose-500 shadow-sm shadow-rose-500/50 animate-pulse'
-                    : walletInfo.isWarning
-                    ? 'bg-amber-400'
-                    : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                }`}
-                style={{ width: `${Math.min(100, Math.round((walletInfo.cashInHand / walletInfo.cashLimit) * 100))}%` }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] font-bold">
-              {walletInfo.isLocked ? (
-                <span className="text-rose-400 font-black flex items-center gap-1">
-                  🔒 Cash Limit Reached! Deposit cash at store counter to get new orders.
-                </span>
-              ) : walletInfo.isWarning ? (
-                <span className="text-amber-300 font-bold">
-                  ⚠️ Approaching cash limit! Deposit cash at store counter soon.
-                </span>
-              ) : (
-                <span className="text-emerald-300/80 font-medium">
-                  Remaining COD capacity: {formatPrice(walletInfo.remainingLimit)}
-                </span>
-              )}
-              <span className="font-extrabold text-white/80 shrink-0">
-                {Math.round((walletInfo.cashInHand / walletInfo.cashLimit) * 100)}%
-              </span>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ═══ Stats Cards ═══ */}
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={containerVariants}
-          className="grid grid-cols-3 gap-2.5"
-        >
-          {/* Deliveries Done */}
-          <motion.div variants={itemVariants} className="relative overflow-hidden bg-card border border-border p-3.5 rounded-2xl shadow-sm group">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-2 shadow-md shadow-emerald-500/20">
-                <Package className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="text-xl font-black text-text-primary leading-none block">{animDeliveries}</span>
-              <span className="text-[9px] font-bold text-text-secondary block mt-1">Delivered</span>
-            </div>
-          </motion.div>
-
-          {/* COD Collected */}
-          <motion.div variants={itemVariants} className="relative overflow-hidden bg-card border border-border p-3.5 rounded-2xl shadow-sm group">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-2 shadow-md shadow-amber-500/20">
-                <IndianRupee className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="text-xl font-black text-text-primary leading-none block">{formatPrice(animCod)}</span>
-              <span className="text-[9px] font-bold text-text-secondary block mt-1">COD Cash</span>
-            </div>
-          </motion.div>
-
-          {/* Active Deliveries */}
-          <motion.div variants={itemVariants} className="relative overflow-hidden bg-card border border-border p-3.5 rounded-2xl shadow-sm group">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-2 shadow-md shadow-blue-500/20">
-                <Zap className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="text-xl font-black text-text-primary leading-none block">{animActive}</span>
-              <span className="text-[9px] font-bold text-text-secondary block mt-1">Active</span>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* ═══ SECTION 1: Active Deliveries ═══ */}
+            {/* ═══ SECTION 1: Active Deliveries ═══ */}
         <div className="space-y-3">
           {/* Section divider */}
           <div className="flex items-center gap-2.5">
@@ -1249,6 +1125,19 @@ export default function DeliveryDashboard() {
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 via-teal-500 to-emerald-600 rounded-l-2xl" />
 
                   <div className="pl-4 pr-4 pt-4 pb-4 space-y-3.5">
+                    {/* Combined Multi-Pickup Banner if companionOrder present */}
+                    {order.companionOrder && (
+                      <div className="bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-indigo-500/15 border border-purple-500/30 p-2.5 rounded-xl flex items-center justify-between shadow-xs">
+                        <div className="flex items-center gap-2 text-xs font-black text-purple-700 dark:text-purple-300">
+                          <span className="p-1 rounded-lg bg-purple-500 text-white text-[10px]">🛍️</span>
+                          <span>COMBINED MULTI-PICKUP ORDER</span>
+                        </div>
+                        <span className="text-[10px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+                          2 Pickups
+                        </span>
+                      </div>
+                    )}
+
                     {/* Top row: ID & Payment + pulsing indicator */}
                     <div className="flex justify-between items-start border-b border-border/40 pb-3">
                       <div className="flex items-center gap-2">
@@ -1264,7 +1153,9 @@ export default function DeliveryDashboard() {
                               Stop #{idx + 1}
                             </span>
                           </div>
-                          <span className="text-xs font-mono font-bold text-text-primary">{order.id}</span>
+                          <span className="text-xs font-mono font-bold text-text-primary">
+                            {order.id} {order.companionOrder ? `+ #${order.companionOrder.id}` : ''}
+                          </span>
                         </div>
                       </div>
                       <div className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
@@ -1336,13 +1227,20 @@ export default function DeliveryDashboard() {
                           {/* Connecting line */}
                           <div className="w-0.5 flex-1 bg-gradient-to-b from-teal-400 to-emerald-300 my-1 rounded-full min-h-[20px]" />
                         </div>
-                        <div className="pb-3">
-                          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Pickup</span>
-                          <span className="text-[11px] leading-relaxed text-text-primary font-bold block mt-0.5">
-                            {order.shopName === 'FastKirana Cafe Kitchen'
-                              ? '☕ FastKirana Cafe Kitchen (Food counter)'
-                              : '🏪 FastKirana Central Hub (Grocery Darkstore)'}
+                        <div className="pb-3 space-y-1">
+                          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Pickup Point 1</span>
+                          <span className="text-[11px] leading-relaxed text-text-primary font-bold block">
+                            {order.shopName || '🏪 FastKirana Central Hub (Grocery Darkstore)'}
                           </span>
+
+                          {order.companionOrder && (
+                            <div className="pt-2 border-t border-border/40">
+                              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">Pickup Point 2 (Companion)</span>
+                              <span className="text-[11px] leading-relaxed text-text-primary font-bold block mt-0.5">
+                                {order.companionOrder.shopName || '🏪 FastKirana Cafe / Restaurant'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1382,15 +1280,29 @@ export default function DeliveryDashboard() {
 
                     {/* Items bag summary */}
                     <div className="border-t border-border/40 pt-3 space-y-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <ShoppingBag className="h-3 w-3 text-text-muted" />
-                        <span className="text-[10px] font-bold text-text-secondary">Items in bag ({order.items.length})</span>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-text-secondary">
+                        <span className="flex items-center gap-1.5">
+                          <ShoppingBag className="h-3 w-3 text-text-muted" />
+                          Items in bag ({order.items.length + (order.companionOrder?.items?.length || 0)})
+                        </span>
+                        {order.companionOrder && (
+                          <span className="text-purple-600 dark:text-purple-400 font-black">
+                            Multi-Store Order
+                          </span>
+                        )}
                       </div>
-                      <div className="bg-muted/10 p-2.5 rounded-xl border border-border/30 space-y-1 max-h-[110px] overflow-y-auto">
+                      <div className="bg-muted/10 p-2.5 rounded-xl border border-border/30 space-y-1.5 max-h-[160px] overflow-y-auto">
                         {order.items.map((item: any) => (
                           <div key={item.id} className="flex justify-between items-center text-[11px]">
                             <span className="text-text-primary font-bold">{item.name}</span>
                             <span className="text-text-secondary font-semibold bg-muted/20 px-1.5 py-0.5 rounded text-[10px]">×{item.quantity}</span>
+                          </div>
+                        ))}
+
+                        {order.companionOrder?.items?.map((item: any) => (
+                          <div key={`comp-${item.id}`} className="flex justify-between items-center text-[11px] pt-1.5 border-t border-dashed border-purple-500/20 text-purple-700 dark:text-purple-300">
+                            <span className="font-bold">🧊 {item.name} ({order.companionOrder.shopName || 'Companion'})</span>
+                            <span className="font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded text-[10px]">×{item.quantity}</span>
                           </div>
                         ))}
                       </div>
@@ -1399,21 +1311,25 @@ export default function DeliveryDashboard() {
                     {/* COD total + action */}
                     <div className="flex justify-between items-center border-t border-border/40 pt-3">
                       <div>
-                        <span className="text-[10px] font-bold text-text-secondary block">Total to Collect</span>
-                        <span className="text-lg font-black text-text-primary">{formatPrice(order.total)}</span>
+                        <span className="text-[10px] font-bold text-text-secondary block">
+                          {order.companionOrder ? 'Combined Total to Collect' : 'Total to Collect'}
+                        </span>
+                        <span className="text-lg font-black text-text-primary">
+                          {formatPrice((order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0))}
+                        </span>
                       </div>
                       
                       <button
                         onClick={() => handleMarkDelivered(order.id)}
                         disabled={updatingId === order.id}
-                        className="flex items-center gap-1.5 px-5 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-5 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60 cursor-pointer"
                       >
                         {updatingId === order.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
                             <Camera className="h-4 w-4" />
-                            Mark Delivered
+                            {order.companionOrder ? 'Deliver Both Orders ✅' : 'Mark Delivered'}
                           </>
                         )}
                       </button>
@@ -1483,6 +1399,19 @@ export default function DeliveryDashboard() {
                     }`} />
 
                     <div className="pl-4 pr-4 pt-4 pb-4 space-y-3">
+                      {/* Combined Multi-Pickup Banner */}
+                      {order.companionOrder && (
+                        <div className="bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-indigo-500/15 border border-purple-500/30 p-2.5 rounded-xl flex items-center justify-between shadow-xs">
+                          <div className="flex items-center gap-2 text-xs font-black text-purple-700 dark:text-purple-300">
+                            <span className="p-1 rounded-lg bg-purple-500 text-white text-[10px]">🛍️</span>
+                            <span>COMBINED MULTI-PICKUP ORDER</span>
+                          </div>
+                          <span className="text-[10px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+                            2 Pickups
+                          </span>
+                        </div>
+                      )}
+
                       {/* ID & Status */}
                       <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
                         <div>
@@ -1494,7 +1423,9 @@ export default function DeliveryDashboard() {
                               </span>
                             )}
                           </span>
-                          <span className="text-xs font-mono font-bold text-text-primary">{order.id}</span>
+                          <span className="text-xs font-mono font-bold text-text-primary">
+                            {order.id} {order.companionOrder ? `+ #${order.companionOrder.id}` : ''}
+                          </span>
                         </div>
                         <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
                           order.status === 'PACKED'
@@ -1516,12 +1447,27 @@ export default function DeliveryDashboard() {
                             P
                           </div>
                           <div>
-                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">Pickup</span>
+                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">Pickup Point 1</span>
                             <span className="text-text-primary font-bold">
-                              {isRestaurant ? `🥘 ${order.shopName || 'Restaurant'}` : '🏪 FastKirana Central Hub'}
+                              {order.shopName || (isRestaurant ? '🥘 Restaurant' : '🏪 FastKirana Central Hub')}
                             </span>
                           </div>
                         </div>
+
+                        {order.companionOrder && (
+                          <div className="flex items-start gap-2 pt-1 border-t border-border/30">
+                            <div className="h-5 w-5 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-black text-white">
+                              P2
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">Pickup Point 2 (Companion)</span>
+                              <span className="text-text-primary font-bold">
+                                {order.companionOrder.shopName || '🏪 FastKirana Store'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="h-px bg-border/30 ml-7" />
                         <a
                           href={
@@ -1546,7 +1492,6 @@ export default function DeliveryDashboard() {
                           </div>
                         </a>
                       </div>
-
 
                       {/* 2 Quick Action Buttons: Customer Map & Call */}
                       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
@@ -1584,8 +1529,12 @@ export default function DeliveryDashboard() {
 
                       <div className="flex justify-between items-center pt-1.5 border-t border-border/40">
                         <div>
-                          <span className="text-[9px] font-bold text-text-secondary block">Amount</span>
-                          <span className="text-sm font-black text-text-primary">{formatPrice(order.total)}</span>
+                          <span className="text-[9px] font-bold text-text-secondary block">
+                            {order.companionOrder ? 'Combined Amount' : 'Amount'}
+                          </span>
+                          <span className="text-sm font-black text-text-primary">
+                            {formatPrice((order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0))}
+                          </span>
                           <span className="text-[8px] text-text-muted font-bold block">
                             ({order.paymentMethod === 'COD' ? '💰 Collect Cash' : '✅ Paid Online'})
                           </span>
@@ -1724,8 +1673,43 @@ export default function DeliveryDashboard() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-3 pt-1"
+            className="space-y-4 pt-1"
           >
+            {/* ═══ Rider Achievements Milestone Widget ═══ */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-800/80">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Daily Milestone Goal</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-xl font-black text-emerald-400">{todayDeliveries}</span>
+                    <span className="text-[10px] text-slate-400 font-bold">completed today</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Target Bonus</span>
+                  <p className="text-xs font-bold text-emerald-400 mt-0.5">
+                    {todayDeliveries}/5 Deliveries
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-3 space-y-2">
+                <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                    style={{ width: `${Math.min((todayDeliveries / 5) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[9px] font-bold text-slate-400">
+                  {todayDeliveries >= 5 ? (
+                    <span className="text-emerald-400 flex items-center gap-1">🎉 Milestone bonus target achieved today!</span>
+                  ) : (
+                    `Complete ${5 - todayDeliveries} more deliveries to reach your daily milestone bonus!`
+                  )}
+                </p>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between pb-2 border-b border-border/40">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
