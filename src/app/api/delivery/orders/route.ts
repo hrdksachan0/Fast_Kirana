@@ -22,7 +22,7 @@ export async function GET() {
       FROM orders o
       WHERE o."deliveryMethod" = 'DELIVERY'
         AND (
-          (o.status = 'PACKED' AND o."deliveryUserId" IS NULL)
+          (o.status IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${session.user.id}))
           OR
           (o.status = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
           OR

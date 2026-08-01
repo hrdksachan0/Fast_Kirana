@@ -39,12 +39,30 @@ export const proxy = auth((req) => {
   // Allow API auth routes to go through
   if (isApiAuthRoute) return NextResponse.next()
 
-  // Redirect logged-in users away from /login and /signup
+  // Helper to get target console URL for staff roles
+  const userRole = req.auth?.user?.role
+  const getStaffConsoleUrl = (role?: string) => {
+    if (role === 'RESTAURANT_OWNER' || role === 'CHEF') return '/restaurant-kitchen'
+    if (role === 'DELIVERY') return '/delivery'
+    if (role === 'PICKER') return '/picker'
+    return null
+  }
+  const staffConsoleUrl = getStaffConsoleUrl(userRole)
+
+  // Redirect logged-in users away from /login and /signup to their console
   if (isAuthRoute) {
     if (isLoggedIn) {
+      if (staffConsoleUrl) {
+        return NextResponse.redirect(new URL(staffConsoleUrl, baseUrl))
+      }
       return NextResponse.redirect(new URL('/', baseUrl))
     }
     return NextResponse.next()
+  }
+
+  // If a staff user visits home page '/', redirect them directly to their console
+  if (nextUrl.pathname === '/' && isLoggedIn && staffConsoleUrl) {
+    return NextResponse.redirect(new URL(staffConsoleUrl, baseUrl))
   }
 
   // Redirect authenticated users who lack a mobile number to /setup-profile (Disabled to improve signup UX)

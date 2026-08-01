@@ -15,6 +15,7 @@ interface Payout {
   paidAt: string | null
   notes: string | null
   createdAt: string
+  restaurant?: { name: string; slug: string } | null
 }
 
 interface RestaurantPayoutsLedgerProps {
@@ -272,6 +273,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
               <thead>
                 <tr className="border-b border-border/40 text-[9px] font-black uppercase tracking-wider text-text-secondary">
                   <th className="py-3 px-2">Date Generated</th>
+                  <th className="py-3 px-2">Outlet / Partner</th>
                   <th className="py-3 px-2">Settlement Period</th>
                   <th className="py-3 px-2">Amount</th>
                   <th className="py-3 px-2">Status</th>
@@ -285,7 +287,10 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
                     <td className="py-3.5 px-2 text-text-muted text-[10px]">
                       {formatDate(p.createdAt)}
                     </td>
-                    <td className="py-3.5 px-2 font-bold text-text-primary">
+                    <td className="py-3.5 px-2 font-bold text-text-primary text-xs">
+                      {p.restaurant?.name || 'All Outlets'}
+                    </td>
+                    <td className="py-3.5 px-2 font-semibold text-text-primary">
                       {formatDate(p.startDate)} – {formatDate(p.endDate)}
                     </td>
                     <td className="py-3.5 px-2 font-black text-text-primary text-sm">

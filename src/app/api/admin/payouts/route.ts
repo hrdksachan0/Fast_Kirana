@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
 
     const payouts = await prisma.restaurantPayout.findMany({
       where: type ? { type } : {},
+      include: {
+        restaurant: {
+          select: { name: true, slug: true }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     })
     return NextResponse.json(payouts)
@@ -64,12 +69,22 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Calculate total share
+    // Calculate total share (food sales minus admin commission)
     let totalShare = 0
-    orders.forEach(o => {
+    for (const o of orders) {
       const foodSales = (o.subtotal || 0) - (o.discount || 0)
-      totalShare += foodSales * profitShareRate
-    })
+      let commRate = 0.15
+      if (o.restaurantId) {
+        const restObj = await prisma.restaurant.findUnique({
+          where: { id: o.restaurantId },
+          select: { commissionRate: true }
+        })
+        if (restObj && restObj.commissionRate !== null && restObj.commissionRate !== undefined) {
+          commRate = restObj.commissionRate
+        }
+      }
+      totalShare += foodSales * (1 - commRate)
+    }
 
     const finalAmount = Math.round(totalShare * 100) / 100
 
@@ -77,6 +92,7 @@ export async function POST(request: NextRequest) {
     const payout = await prisma.restaurantPayout.create({
       data: {
         type,
+        restaurantId: restaurantId || undefined,
         startDate: start,
         endDate: end,
         amount: finalAmount,

@@ -234,6 +234,17 @@ export default function DeliveryDashboard() {
   const [capturingOrderId, setCapturingOrderId] = useState<string | null>(null)
   const [capturingPhotoSubmitting, setCapturingPhotoSubmitting] = useState(false)
 
+  // Active Tab View: 'deliveries' | 'wallet' | 'history'
+  const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
+
+  const getWhatsappLink = (phone?: string, orderId?: string) => {
+    if (!phone) return '#'
+    const cleanPhone = phone.replace(/\D/g, '')
+    const formatted = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
+    const msg = encodeURIComponent(`Hi! FastKirana delivery agent calling for Order #${orderId || ''}.`)
+    return `https://wa.me/${formatted}?text=${msg}`
+  }
+
   // Payment choice states for COD orders
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [upiQrOrderId, setUpiQrOrderId] = useState<string | null>(null)
@@ -633,7 +644,7 @@ export default function DeliveryDashboard() {
   // Group orders with route optimization for out-for-delivery orders
   const rawOutForDelivery = useMemo(() => orders.filter((o) => o.status === 'SHIPPED'), [orders])
   const outForDeliveryOrders = useMemo(() => optimizeRoute(rawOutForDelivery), [rawOutForDelivery])
-  const pendingOrders = orders.filter((o) => o.status === 'PACKED')
+  const pendingOrders = orders.filter((o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED')
   const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED')
 
   // Active coordinate tracking for shipped orders
@@ -979,6 +990,43 @@ export default function DeliveryDashboard() {
         <p className="text-[8px] text-white/40 mt-1 text-right font-mono">
           auto-refresh in {autoRefreshCountdown}s
         </p>
+
+        {/* Rider Navigation Tabs */}
+        <div className="flex bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 mt-3 gap-1 shadow-inner">
+          <button
+            onClick={() => setActiveTab('deliveries')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              activeTab === 'deliveries'
+                ? 'bg-white text-emerald-700 shadow-md scale-[1.01]'
+                : 'text-white/85 hover:bg-white/10'
+            }`}
+          >
+            <Truck className="h-3.5 w-3.5" />
+            Deliveries
+          </button>
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              activeTab === 'wallet'
+                ? 'bg-white text-emerald-700 shadow-md scale-[1.01]'
+                : 'text-white/85 hover:bg-white/10'
+            }`}
+          >
+            <IndianRupee className="h-3.5 w-3.5" />
+            Wallet & COD
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              activeTab === 'history'
+                ? 'bg-white text-emerald-700 shadow-md scale-[1.01]'
+                : 'text-white/85 hover:bg-white/10'
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            History
+          </button>
+        </div>
       </motion.div>
 
       <div className="px-4 py-5 space-y-5">
@@ -1214,25 +1262,53 @@ export default function DeliveryDashboard() {
                       </div>
                     </div>
 
-                    {/* Customer contact card */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-muted/30 to-muted/10 p-3 rounded-xl border border-border/40">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-[10px] font-bold shadow-md shadow-emerald-500/15">
-                          <User className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-text-primary">{order.user.name || 'Customer'}</div>
-                          <div className="text-[10px] text-text-secondary">{formatPhone(order.user.phone) || 'No phone'}</div>
+                    {/* Customer contact card & Quick Actions */}
+                    <div className="space-y-2 bg-gradient-to-r from-muted/30 to-muted/10 p-3 rounded-xl border border-border/40">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-[10px] font-bold shadow-md shadow-emerald-500/15">
+                            <User className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-text-primary">{order.user.name || 'Customer'}</div>
+                            <div className="text-[10px] text-text-secondary">{formatPhone(order.user.phone) || 'No phone'}</div>
+                          </div>
                         </div>
                       </div>
-                      {order.user.phone && (
+
+                      {/* 2 Quick Action Buttons: Customer Map & Call */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        {/* 1. Customer Map */}
                         <a
-                          href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
-                          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95"
+                          href={
+                            (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
+                              ? `https://www.google.com/maps/search/?api=1&query=${order.deliveryLat || order.address.lat},${order.deliveryLng || order.address.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(order.address))}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
                         >
-                          <Phone className="h-4.5 w-4.5" />
+                          <MapPin className="h-4 w-4 text-emerald-600" />
+                          Customer Map 📍
                         </a>
-                      )}
+
+                        {/* 2. Call Customer */}
+                        {order.user.phone ? (
+                          <a
+                            href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
+                          >
+                            <Phone className="h-4 w-4 text-blue-600" />
+                            Call Customer 📞
+                          </a>
+                        ) : (
+                          <span className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-muted text-text-muted text-xs font-bold opacity-50 text-center">
+                            <Phone className="h-4 w-4" />
+                            No Phone
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Pickup & Delivery with step indicators */}
@@ -1406,12 +1482,14 @@ export default function DeliveryDashboard() {
                           </span>
                           <span className="text-xs font-mono font-bold text-text-primary">{order.id}</span>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase ${
+                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
                           order.status === 'PACKED'
                             ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-500/10 dark:to-teal-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                            : order.status === 'PREPARING'
+                            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20 animate-pulse'
+                            : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                         }`}>
-                          {order.status === 'PACKED' ? '✅ Packed (Ready)' : '⏳ Preparing'}
+                          {order.status === 'PACKED' ? '✅ Packed (Ready)' : order.status === 'PREPARING' ? '🍳 Kitchen Preparing' : '⏳ Order Confirmed'}
                         </span>
                       </div>
 
@@ -1456,7 +1534,40 @@ export default function DeliveryDashboard() {
                       </div>
 
 
-                      {/* Amount + Action */}
+                      {/* 2 Quick Action Buttons: Customer Map & Call */}
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
+                        {/* 1. Customer Map */}
+                        <a
+                          href={
+                            (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
+                              ? `https://www.google.com/maps/search/?api=1&query=${order.deliveryLat || order.address.lat},${order.deliveryLng || order.address.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(order.address))}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
+                        >
+                          <MapPin className="h-4 w-4 text-emerald-600" />
+                          Customer Map 📍
+                        </a>
+
+                        {/* 2. Call Customer */}
+                        {order.user.phone ? (
+                          <a
+                            href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
+                          >
+                            <Phone className="h-4 w-4 text-blue-600" />
+                            Call Customer 📞
+                          </a>
+                        ) : (
+                          <span className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-muted text-text-muted text-xs font-bold opacity-50 text-center">
+                            <Phone className="h-4 w-4" />
+                            No Phone
+                          </span>
+                        )}
+                      </div>
+
                       <div className="flex justify-between items-center pt-1.5 border-t border-border/40">
                         <div>
                           <span className="text-[9px] font-bold text-text-secondary block">Amount</span>
@@ -1466,24 +1577,44 @@ export default function DeliveryDashboard() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
-                          disabled={updatingId === order.id}
-                          className={`flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-60 ${
-                            isRestaurant
-                              ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 shadow-rose-500/15'
-                              : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/15'
-                          }`}
-                        >
-                          {updatingId === order.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <>
-                              <Navigation className="h-3.5 w-3.5" />
-                              Pick Up Order
-                            </>
-                          )}
-                        </button>
+                        {order.status === 'PACKED' ? (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
+                            disabled={updatingId === order.id}
+                            className={`flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-60 ${
+                              isRestaurant
+                                ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 shadow-rose-500/15'
+                                : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/15'
+                            }`}
+                          >
+                            {updatingId === order.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Navigation className="h-3.5 w-3.5" />
+                                Pick Up Order
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              disabled
+                              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl cursor-not-allowed opacity-90 shadow-xs"
+                            >
+                              <Clock className="h-3.5 w-3.5 animate-spin" />
+                              Preparing in Kitchen...
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
+                              disabled={updatingId === order.id}
+                              className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer pt-0.5 active:scale-95"
+                              title="Click if kitchen handed over food but forgot to press Pack on console"
+                            >
+                              <span>Food Handed Over? Pick Up Anyway 📦</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
