@@ -74,8 +74,8 @@ export default async function AccountPage() {
   // Fallback if database is offline/unreachable
   const activeUser = user || {
     name: session.user.name || 'User',
-    email: email,
-    phone: '',
+    email: sessionEmail,
+    phone: sessionPhone,
     role: 'USER',
   }
 
