@@ -26,7 +26,7 @@ export async function GET() {
           OR
           (o.status::text = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
           OR
-          (o.status::text = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND o."createdAt" >= CURRENT_DATE - INTERVAL '1 day')
+          (o.status::text = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND COALESCE(o."deliveredAt", o."updatedAt", o."createdAt") >= CURRENT_DATE)
         )
       ORDER BY o."createdAt" DESC
     `

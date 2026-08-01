@@ -645,7 +645,20 @@ export default function DeliveryDashboard() {
   const rawOutForDelivery = useMemo(() => orders.filter((o) => o.status === 'SHIPPED'), [orders])
   const outForDeliveryOrders = useMemo(() => optimizeRoute(rawOutForDelivery), [rawOutForDelivery])
   const pendingOrders = orders.filter((o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED')
-  const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED')
+  const isToday = (dateStr: string | null | undefined) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    const today = new Date()
+    return (
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear()
+    )
+  }
+
+  const deliveredOrders = orders.filter(
+    (o) => o.status === 'DELIVERED' && isToday(o.deliveredAt || o.updatedAt || o.createdAt)
+  )
 
   // Active coordinate tracking for shipped orders
   useEffect(() => {
