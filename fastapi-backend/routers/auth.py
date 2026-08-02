@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text
 import jwt
 from typing import Optional
 from database import get_db
@@ -29,11 +30,18 @@ async def get_current_user_from_jwt(
         user_id = x_user_id
 
     if not user_id:
-        # Fallback to dev admin for OpenAPI Swagger testing
-        result = await db.execute(select(User).where(User.role == Role.ADMIN).limit(1))
-        admin = result.scalars().first()
-        if admin:
-            return admin
+        # Fallback: fetch first admin user via raw SQL to avoid enum type mismatch
+        result = await db.execute(
+            text('SELECT * FROM users WHERE role = \'ADMIN\' LIMIT 1')
+        )
+        admin_row = result.mappings().first()
+        if admin_row:
+            # Build a User object from the row
+            admin_stmt = select(User).where(User.id == admin_row["id"])
+            admin_result = await db.execute(admin_stmt)
+            admin = admin_result.scalars().first()
+            if admin:
+                return admin
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication credentials were not provided or invalid"
@@ -57,7 +65,7 @@ async def get_current_user_from_jwt(
     return user
 
 async def require_admin(current_user: User = Depends(get_current_user_from_jwt)) -> User:
-    if current_user.role != Role.ADMIN:
+    if current_user.role != Role.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access restricted to Admin role"
@@ -65,7 +73,7 @@ async def require_admin(current_user: User = Depends(get_current_user_from_jwt))
     return current_user
 
 async def require_delivery(current_user: User = Depends(get_current_user_from_jwt)) -> User:
-    if current_user.role not in [Role.DELIVERY, Role.ADMIN]:
+    if current_user.role not in [Role.DELIVERY.value, Role.ADMIN.value]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access restricted to Delivery or Admin roles"

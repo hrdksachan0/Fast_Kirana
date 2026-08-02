@@ -3,11 +3,12 @@ from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, ForeignKey, 
-    Text, Enum as SQLEnum, JSON
+    Text, JSON
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database import Base
 
+# Python enums for validation only (NOT mapped as PostgreSQL enum types)
 class Role(str, enum.Enum):
     USER = "USER"
     PICKER = "PICKER"
@@ -40,6 +41,8 @@ class OrderType(str, enum.Enum):
     GROCERY = "GROCERY"
     RESTAURANT = "RESTAURANT"
 
+# All enum columns use String type since Prisma stores enums as text in PostgreSQL
+
 class User(Base):
     __tablename__ = "users"
 
@@ -48,7 +51,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     passwordHash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[Role] = mapped_column(SQLEnum(Role), default=Role.USER, index=True)
+    image: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    role: Mapped[str] = mapped_column(String, default="USER", index=True)
     assignedStoreId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     assignedRestaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     isBlocked: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -128,25 +132,29 @@ class Order(Base):
     addressId: Mapped[str] = mapped_column(String, ForeignKey("addresses.id"))
     combinedId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     restaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    orderType: Mapped[OrderType] = mapped_column(SQLEnum(OrderType), default=OrderType.GROCERY)
-    status: Mapped[OrderStatus] = mapped_column(SQLEnum(OrderStatus), default=OrderStatus.PENDING)
+    orderType: Mapped[str] = mapped_column(String, default="GROCERY")
+    status: Mapped[str] = mapped_column(String, default="PENDING")
     subtotal: Mapped[float] = mapped_column(Float)
     discount: Mapped[float] = mapped_column(Float, default=0.0)
     deliveryFee: Mapped[float] = mapped_column(Float, default=0.0)
     taxes: Mapped[float] = mapped_column(Float, default=0.0)
     miscFee: Mapped[float] = mapped_column(Float, default=0.0)
     total: Mapped[float] = mapped_column(Float)
-    paymentMethod: Mapped[PaymentMethod] = mapped_column(SQLEnum(PaymentMethod), default=PaymentMethod.COD)
-    paymentStatus: Mapped[PaymentStatus] = mapped_column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING)
+    paymentMethod: Mapped[str] = mapped_column(String, default="COD")
+    paymentStatus: Mapped[str] = mapped_column(String, default="PENDING")
+    deliveryMethod: Mapped[str] = mapped_column(String, default="DELIVERY")
     deliveryUserId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True)
     deliveryPhoto: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     deliveryLat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     deliveryLng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     shopName: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    confirmedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    packedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    shippedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     deliveredAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     cashSettledToAdmin: Mapped[bool] = mapped_column(Boolean, default=False)
     cashSettledAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 

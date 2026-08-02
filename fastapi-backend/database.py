@@ -1,20 +1,38 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
 
-# Format database URL for asyncpg engine compatibility
-raw_db_url = settings.DATABASE_URL
-if raw_db_url.startswith("postgresql://"):
-    async_db_url = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-elif raw_db_url.startswith("postgres://"):
-    async_db_url = raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-else:
-    async_db_url = raw_db_url
+def clean_async_db_url(url: str) -> str:
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# Handle SSL parameter for asyncpg
-if "sslmode=" in async_db_url:
-    async_db_url = async_db_url.replace("sslmode=require", "ssl=require")
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+
+    # Filter out query parameters not supported by asyncpg driver
+    unsupported = ["connection_limit", "pool_timeout", "schema", "sslmode"]
+    filtered_params = {k: v for k, v in query_params.items() if k not in unsupported}
+
+    # Ensure ssl=require for Neon DB SSL connection
+    if "ssl" not in filtered_params:
+        filtered_params["ssl"] = ["require"]
+
+    new_query = urlencode(filtered_params, doseq=True)
+    cleaned = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+    return cleaned
+
+async_db_url = clean_async_db_url(settings.DATABASE_URL)
 
 engine = create_async_engine(
     async_db_url,

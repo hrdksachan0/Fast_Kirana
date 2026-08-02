@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, and_, desc
 from typing import List, Optional
 from database import get_db
@@ -20,9 +21,9 @@ async def list_products(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    High-performance catalog listing with restaurant & store filtering
+    High-performance catalog listing with eager loaded category relationships
     """
-    stmt = select(Product)
+    stmt = select(Product).options(selectinload(Product.category))
 
     conditions = []
     if is_available is not None:
@@ -30,7 +31,6 @@ async def list_products(
     if category_id:
         conditions.append(Product.categoryId == category_id)
     
-    # Strictly filter by restaurantId if provided (prevents darkstore products leaking into restaurant search)
     if restaurant_id is not None:
         if restaurant_id == "":
             conditions.append(Product.restaurantId == None)
@@ -66,7 +66,7 @@ async def list_categories(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{product_id}", response_model=ProductOut)
 async def get_product(product_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Product).where(Product.id == product_id)
+    stmt = select(Product).options(selectinload(Product.category)).where(Product.id == product_id)
     result = await db.execute(stmt)
     product = result.scalars().first()
     if not product:

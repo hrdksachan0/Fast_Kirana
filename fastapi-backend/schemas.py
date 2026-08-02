@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import Optional, List, Any
 from datetime import datetime
 from models import Role, OrderStatus, PaymentStatus, PaymentMethod, OrderType
@@ -16,8 +16,7 @@ class UserOut(UserBase):
     assignedStoreId: Optional[str] = None
     assignedRestaurantId: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Category Schemas ---
 class CategoryOut(BaseModel):
@@ -28,8 +27,7 @@ class CategoryOut(BaseModel):
     parentId: Optional[str] = None
     sortOrder: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Product Schemas ---
 class ProductBase(BaseModel):
@@ -57,8 +55,7 @@ class ProductOut(ProductBase):
     category: Optional[CategoryOut] = None
     createdAt: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Order Schemas ---
 class OrderItemOut(BaseModel):
@@ -70,8 +67,7 @@ class OrderItemOut(BaseModel):
     quantity: int
     image: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrderOut(BaseModel):
     id: str
@@ -97,8 +93,7 @@ class OrderOut(BaseModel):
     items: List[OrderItemOut] = []
     companionOrder: Optional[Any] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Rider Wallet & Cash Schemas ---
 class RiderWalletOut(BaseModel):

@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, desc, and_
+from sqlalchemy import func, desc, and_, text
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from database import get_db
-from models import Order, OrderItem, Product, OrderStatus
+from models import Order, OrderItem, Product
 from routers.auth import require_admin
 
 router = APIRouter(prefix="/forecast", tags=["AI Demand Forecasting"])
@@ -23,7 +23,7 @@ async def get_ai_demand_forecast(
     """
     start_date = datetime.utcnow() - timedelta(days=30)
 
-    # Fetch last 30 days completed order items
+    # Fetch last 30 days completed order items using text cast for enum compatibility
     stmt = select(
         OrderItem.productId,
         OrderItem.name,
@@ -31,7 +31,7 @@ async def get_ai_demand_forecast(
         Order.createdAt
     ).join(Order, OrderItem.orderId == Order.id).where(
         and_(
-            Order.status == OrderStatus.DELIVERED,
+            text("orders.status::text = 'DELIVERED'"),
             Order.createdAt >= start_date
         )
     )
