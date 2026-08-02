@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
-import ssl
 
 def clean_async_db_url(url: str) -> str:
     if url.startswith("postgresql://"):
@@ -31,11 +30,6 @@ def clean_async_db_url(url: str) -> str:
 
 async_db_url = clean_async_db_url(settings.DATABASE_URL)
 
-# Configure SSL context for Neon PostgreSQL
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
 engine = create_async_engine(
     async_db_url,
     echo=False,
@@ -43,7 +37,7 @@ engine = create_async_engine(
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
-    connect_args={"ssl": ssl_context}
+    connect_args={"ssl": "require"}
 )
 
 AsyncSessionLocal = async_sessionmaker(
