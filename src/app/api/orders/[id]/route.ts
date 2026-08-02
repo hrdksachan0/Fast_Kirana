@@ -57,12 +57,29 @@ export async function GET(
     const deliveryUserIdToFetch = order.deliveryUserId
     if (deliveryUserIdToFetch) {
       const riders: any[] = await prisma.$queryRaw`
-        SELECT id, name, phone, "liveLat", "liveLng" FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
+        SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
       `
       if (riders.length > 0) {
+        let name = riders[0].name
+        let phone = riders[0].phone
+
+        // If order was picked up by Admin, fetch active delivery rider phone so internal admin phone is never exposed
+        if (riders[0].role === 'ADMIN' || name === 'Admin') {
+          const mainRider: any[] = await prisma.$queryRaw`
+            SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
+          `
+          if (mainRider.length > 0) {
+            name = mainRider[0].name || 'FastKirana Delivery Executive'
+            phone = mainRider[0].phone || '+919696503759'
+          } else {
+            name = 'FastKirana Delivery Executive'
+            phone = '+919696503759'
+          }
+        }
+
         deliveryUser = {
-          name: riders[0].name,
-          phone: riders[0].phone
+          name,
+          phone
         }
         if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
           order.deliveryLat = riders[0].liveLat
@@ -97,12 +114,28 @@ export async function GET(
         const assignedOrder = combinedOrders.find(o => o.deliveryUserId)
         if (assignedOrder) {
           const riders: any[] = await prisma.$queryRaw`
-            SELECT id, name, phone, "liveLat", "liveLng" FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
+            SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
           `
           if (riders.length > 0) {
+            let name = riders[0].name
+            let phone = riders[0].phone
+
+            if (riders[0].role === 'ADMIN' || name === 'Admin') {
+              const mainRider: any[] = await prisma.$queryRaw`
+                SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
+              `
+              if (mainRider.length > 0) {
+                name = mainRider[0].name || 'FastKirana Delivery Executive'
+                phone = mainRider[0].phone || '+919696503759'
+              } else {
+                name = 'FastKirana Delivery Executive'
+                phone = '+919696503759'
+              }
+            }
+
             deliveryUser = {
-              name: riders[0].name,
-              phone: riders[0].phone
+              name,
+              phone
             }
             if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
               order.deliveryLat = riders[0].liveLat
