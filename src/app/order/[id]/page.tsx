@@ -137,18 +137,18 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
 
   return (
-    <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6 md:space-y-8 bg-background relative">
+    <div className="container mx-auto px-3 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6 md:space-y-8 bg-background relative">
       {/* 60fps Canvas Confetti & Chime sound effects */}
       <OrderSuccessEffects />
 
       {companionOrder && (
-        <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 rounded-2xl text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up relative z-10">
+        <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 min-[375px]:p-5 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up relative z-10 border border-white/20">
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-0.5 text-[9px] font-black uppercase tracking-wider">
               {isCompanionCafe ? '☕ Cafe Order Split' : '📦 Grocery Order Split'}
             </span>
-            <h3 className="text-sm font-black">Your Order Has Been Split!</h3>
-            <p className="text-[10px] text-white/90 leading-relaxed font-semibold">
+            <h3 className="text-sm font-black tracking-tight">Your Order Has Been Split!</h3>
+            <p className="text-[11px] text-white/90 leading-relaxed font-semibold">
               {isCafeOrder
                 ? 'To ensure your beverages and hot bites are delivered piping hot, we created a separate order for your other grocery items. Track the Grocery order here.'
                 : 'To ensure your beverages and hot bites are delivered piping hot, we created a separate Cafe order for them. Track the Cafe order here.'}
@@ -156,41 +156,49 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           </div>
           <Link
             href={`/order/${companionOrder.id}`}
-            className="px-4 py-2 bg-white hover:bg-white/90 text-rose-600 font-extrabold rounded-xl text-xs transition-all shrink-0 shadow-sm active:scale-98"
+            className="px-5 py-2.5 bg-white hover:bg-white/95 text-rose-600 font-black rounded-2xl text-xs transition-all shrink-0 shadow-lg active:scale-95"
           >
             {isCompanionCafe ? 'Track Cafe Order →' : 'Track Grocery Order →'}
           </Link>
         </div>
       )}
 
-      {/* Confirmation success block */}
-      <div className="relative z-10 flex flex-col items-center text-center p-4 min-[375px]:p-6 bg-card border border-border/80 dark:border-zinc-800/60 rounded-3xl shadow-lg animate-card-enter">
-        <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mb-4 border border-accent/20 animate-status-pulse">
-          <CheckCircle2 className="h-9 w-9 text-accent animate-bounce-subtle" />
+      {/* Confirmation Success Hero Card (Modern Glassmorphism) */}
+      <div className="relative z-10 flex flex-col items-center text-center p-6 min-[375px]:p-8 bg-gradient-to-b from-emerald-500/10 via-card to-card border border-emerald-500/20 dark:border-emerald-500/30 rounded-3xl shadow-xl animate-card-enter overflow-hidden">
+        {/* Glow Ring */}
+        <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="h-20 w-20 bg-emerald-500/15 rounded-3xl flex items-center justify-center text-emerald-500 mb-4 border border-emerald-500/30 shadow-inner animate-status-pulse">
+          <CheckCircle2 className="h-10 w-10 text-emerald-500 animate-bounce-subtle" />
         </div>
-        <h1 className="text-2xl font-black text-text-primary tracking-tight">Order Placed Successfully!</h1>
-        <p className="text-xs text-text-secondary mt-1">Thank you for shopping. Your order has been registered.</p>
-        
-        {/* Animated Delivery Timeline (Client Component for live status updates) */}
+
+        <h1 className="text-2xl min-[375px]:text-3xl font-black text-text-primary tracking-tight">
+          Order Placed Successfully!
+        </h1>
+        <p className="text-xs font-semibold text-text-secondary mt-1.5 max-w-sm">
+          Thank you for shopping with FastKirana. Your order is registered and active!
+        </p>
+
+        {/* Animated Delivery Timeline */}
         <OrderConfirmationStatus
           orderId={order.id}
           initialStatus={order.status}
           deliveryMethod={order.deliveryMethod}
         />
 
-        <div className="flex gap-3 mt-6 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full sm:w-auto">
           <Link
             href={`/order/${order.id}/track`}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-6 py-3 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-7 py-3.5 bg-gradient-to-r from-primary via-primary/95 to-rose-600 hover:opacity-95 text-white font-black rounded-2xl text-xs transition-all shadow-lg hover:shadow-xl active:scale-95"
           >
-            {order.deliveryMethod === 'PICKUP' ? 'Track Pickup Status' : 'Track Delivery Live'}
+            {order.deliveryMethod === 'PICKUP' ? 'Track Pickup Status 🏬' : 'Track Delivery Live ⚡'}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/"
-            className="flex-1 sm:flex-initial px-6 py-3 border border-border bg-card hover:bg-muted/30 font-black rounded-xl text-xs transition-colors text-text-primary"
+            className="flex-1 sm:flex-initial px-6 py-3.5 border border-border/80 bg-card hover:bg-muted/40 font-black rounded-2xl text-xs transition-colors text-text-primary text-center"
           >
-            Continue Shopping
+            Continue Shopping 🛍️
           </Link>
         </div>
       </div>
@@ -198,26 +206,23 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       <LockscreenAlertMockup orderId={order.id} />
 
       {/* Summary grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
         {/* Delivery schedules */}
-        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
+        <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-4 hover:border-primary/30 transition-colors">
+          <h2 className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-2 border-b border-border/40 pb-3">
             <Clock className="h-4 w-4 text-primary" />
             {order.deliveryMethod === 'PICKUP' ? 'Pickup Schedule' : 'Delivery Schedule'}
           </h2>
-          <div className="text-xs font-semibold text-text-primary space-y-2">
-            <div className="flex justify-between">
+          <div className="text-xs font-semibold text-text-primary space-y-3">
+            <div className="flex justify-between items-center">
               <span className="text-text-secondary">Estimated Arrival</span>
-              <span className="text-accent font-bold">
-                {order.estimatedDelivery
-                  ? `${new Date(order.estimatedDelivery).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
-                  : order.deliveryMethod === 'PICKUP' ? 'Instant Pickup' : 'Fast Delivery'}
-
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-black uppercase tracking-wider">
+                {order.deliveryMethod === 'PICKUP' ? 'Instant Pickup' : '⚡ Arriving Soon'}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-text-secondary">{order.deliveryMethod === 'PICKUP' ? 'Pickup Date' : 'Delivery Date'}</span>
-              <span>
+              <span className="font-bold">
                 {new Date(order.createdAt).toLocaleDateString('en-IN', {
                   day: 'numeric',
                   month: 'short',
@@ -225,60 +230,64 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 })}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-text-secondary">Order Number</span>
-              <span className="font-extrabold text-accent">#{order.readableId || order.id.slice(-6).toUpperCase()}</span>
+              <span className="font-mono font-black text-primary bg-primary/10 px-2.5 py-1 rounded-xl text-xs border border-primary/20">
+                #{order.readableId || order.id.slice(-6).toUpperCase()}
+              </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center pt-1 border-t border-border/30">
               <span className="text-text-secondary">Order Reference</span>
-              <span className="font-mono text-[9px] select-all bg-muted/60 px-1.5 py-0.5 rounded break-all">{order.id}</span>
+              <span className="font-mono text-[9px] select-all bg-muted/70 text-text-secondary px-2 py-0.5 rounded-lg break-all font-bold">
+                {order.id}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Saved Addresses destination */}
-        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            {order.deliveryMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Destination'}
-          </h2>
-          <div className="text-xs flex flex-col justify-between h-[calc(100%-2rem)]">
-            <div>
-              <span className="font-extrabold uppercase bg-muted px-2 py-0.5 rounded text-[10px]">
+        {/* Saved Address Destination */}
+        <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-4 hover:border-primary/30 transition-colors flex flex-col justify-between">
+          <div>
+            <h2 className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-2 border-b border-border/40 pb-3">
+              <MapPin className="h-4 w-4 text-primary" />
+              {order.deliveryMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Destination'}
+            </h2>
+            <div className="mt-3">
+              <span className="font-black uppercase bg-primary/10 text-primary px-2.5 py-1 rounded-lg text-[9px] border border-primary/20 tracking-wider">
                 {order.address.label}
               </span>
-              <p className="text-text-secondary leading-relaxed font-semibold mt-2">
+              <p className="text-text-secondary text-xs leading-relaxed font-semibold mt-2.5">
                 {formatAddress(order.address)}
               </p>
             </div>
-            <a
-              href={
-                order.address.lat && order.address.lng
-                  ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      formatAddress(order.address)
-                    )}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-accent hover:underline w-fit"
-            >
-              📍 View Address on Google Maps
-            </a>
           </div>
+          <a
+            href={
+              order.address.lat && order.address.lng
+                ? `https://www.google.com/maps/search/?api=1&query=${order.address.lat},${order.address.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    formatAddress(order.address)
+                  )}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs font-black text-primary hover:underline bg-primary/5 hover:bg-primary/10 px-3.5 py-2 rounded-xl border border-primary/15 transition-all w-fit"
+          >
+            <span>📍</span> View Address on Google Maps
+          </a>
         </div>
 
         {/* Fulfilling Shop */}
         {!order.isB2B && order.shopName && (
-          <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4 md:col-span-2">
-            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border/40 pb-2">
+          <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-3 md:col-span-2 hover:border-primary/30 transition-colors">
+            <h2 className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-2 border-b border-border/40 pb-3">
               <span className="text-base">🏪</span>
               Fulfillment Center
             </h2>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-semibold">
               <div>
                 <p className="text-text-primary font-black text-sm">{order.shopName}</p>
-                <p className="text-text-secondary mt-1">
+                <p className="text-text-secondary mt-1 leading-relaxed text-[11px]">
                   {order.deliveryMethod === 'PICKUP'
                     ? 'Your order is packed and ready for pickup at our local FastKirana Ghatampur Hub.'
                     : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and instant delivery.'}
@@ -287,7 +296,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
               {order.shopPhone && (
                 <a
                   href={`tel:${order.shopPhone}`}
-                  className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl transition-all flex items-center gap-1.5 shrink-0 border border-primary/20"
                 >
                   <span>📞</span> Call Shop
                 </a>
@@ -297,49 +306,49 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         )}
       </div>
 
-      {/* Reciept Summary */}
-      <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
-        <h2 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2">
-          Receipt Sum
+      {/* Receipt Summary */}
+      <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-4">
+        <h2 className="text-xs font-black uppercase tracking-wider text-text-primary border-b border-border/40 pb-3">
+          Receipt Summary
         </h2>
         <div className="text-xs font-semibold text-text-secondary space-y-2.5">
           {order.items.map((item: any) => (
-            <div key={item.id} className="flex justify-between">
-              <span>
-                {item.name} × {item.quantity}
+            <div key={item.id} className="flex justify-between items-center text-text-primary">
+              <span className="font-semibold">
+                {item.name} <span className="text-text-secondary font-mono">× {item.quantity}</span>
               </span>
-              <span>{formatPrice(item.price * item.quantity)}</span>
+              <span className="font-bold">{formatPrice(item.price * item.quantity)}</span>
             </div>
           ))}
-          <div className="flex justify-between">
+          <div className="flex justify-between pt-2 border-t border-border/30">
             <span className="text-text-secondary">Subtotal</span>
-            <span>{formatPrice(order.subtotal)}</span>
+            <span className="font-bold">{formatPrice(order.subtotal)}</span>
           </div>
           {order.discount > 0 && (
-            <div className="flex justify-between text-accent font-bold">
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
               <span>Savings</span>
               <span>-{formatPrice(order.discount)}</span>
             </div>
           )}
           <div className="flex justify-between">
             <span className="text-text-secondary">Delivery Fee</span>
-            <span>{order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee)}</span>
+            <span className="font-bold">{order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee)}</span>
           </div>
           {order.taxes > 0 && (
             <div className="flex justify-between">
               <span className="text-text-secondary">GST / Taxes</span>
-              <span>{formatPrice(order.taxes)}</span>
+              <span className="font-bold">{formatPrice(order.taxes)}</span>
             </div>
           )}
           {order.miscFee > 0 && (
             <div className="flex justify-between">
               <span className="text-text-secondary">{miscFeeLabel}</span>
-              <span>{formatPrice(order.miscFee)}</span>
+              <span className="font-bold">{formatPrice(order.miscFee)}</span>
             </div>
           )}
-          <div className="flex justify-between text-base font-black text-text-primary border-t border-border/40 pt-3 mt-3">
-            <span>Amount Paid ({order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'COP' : 'COD') : order.paymentMethod})</span>
-            <span className="text-primary">{formatPrice(order.total)}</span>
+          <div className="flex justify-between items-center text-base font-black text-text-primary border-t border-border/40 pt-3.5 mt-3">
+            <span>Total Paid ({order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'COP' : 'COD') : order.paymentMethod})</span>
+            <span className="text-primary text-lg">{formatPrice(order.total)}</span>
           </div>
         </div>
       </div>

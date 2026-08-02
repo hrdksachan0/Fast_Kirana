@@ -124,7 +124,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const [packingStep, setPackingStep] = useState(0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
-  const [supportPhone, setSupportPhone] = useState('+91 70544 70303')
+  const [supportPhone, setSupportPhone] = useState('+91 8112849854')
   const [isCafeOpen, setIsCafeOpen] = useState(initialIsCafeOpen)
   
   // Customer Edit Order Modal States & Handlers
@@ -580,33 +580,28 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     
     const animateRider = () => {
       if (!riderMarkerRef.current) return
-      let currentLat = storeLat
-      let currentLng = storeLng
-      if (order.status === 'SHIPPED' && !order.deliveryLat) {
-        const elapsed = (Date.now() - startTime) % 20000
-        const t = elapsed / 20000
-        currentLat = storeLat + (destLat - storeLat) * t
-        currentLng = storeLng + (destLng - storeLng) * t
-        riderMarkerRef.current.setLatLng([currentLat, currentLng])
-      } else if (order.deliveryLat && order.deliveryLng) {
-        currentLat = order.deliveryLat
-        currentLng = order.deliveryLng
-        riderMarkerRef.current.setLatLng([currentLat, currentLng])
+      
+      // Update rider marker position ONLY when real deliveryLat/deliveryLng GPS data exists
+      if (order.deliveryLat && order.deliveryLng) {
+        riderMarkerRef.current.setLatLng([order.deliveryLat, order.deliveryLng])
+        if (riderMarkerRef.current.getElement()) {
+          riderMarkerRef.current.getElement().style.display = 'flex'
+        }
+        if (routeLineRef.current) {
+          routeLineRef.current.setLatLngs([[order.deliveryLat, order.deliveryLng], [destLat, destLng]])
+        }
       } else {
-        riderMarkerRef.current.setLatLng([storeLat, storeLng])
+        // Hide rider marker if no real GPS location is available yet (No fake location animation)
+        if (riderMarkerRef.current.getElement()) {
+          riderMarkerRef.current.getElement().style.display = 'none'
+        }
+        if (routeLineRef.current) {
+          routeLineRef.current.setLatLngs([[storeLat, storeLng], [destLat, destLng]])
+        }
       }
-
-      // Update route line path dynamically from current rider position to destination
-      if (routeLineRef.current) {
-        routeLineRef.current.setLatLngs([[currentLat, currentLng], [destLat, destLng]])
-      }
-
-      animationFrame = requestAnimationFrame(animateRider)
     }
 
     animateRider()
-
-    return () => cancelAnimationFrame(animationFrame)
   }, [order.status, order.deliveryLat, order.deliveryLng, storeLat, storeLng, order.address?.lat, order.address?.lng])
 
   // Merge items from both orders
@@ -886,14 +881,66 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           )
         )}
 
+        {/* Out For Delivery Dedicated Contact Card (Rider Phone + FastKirana Support 8112849854) */}
+        {order.status === 'SHIPPED' && (
+          <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border-2 border-emerald-500/30 p-4 rounded-2xl shadow-md space-y-3">
+            <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛵</span>
+                <div>
+                  <h3 className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                    Out For Delivery Contact
+                  </h3>
+                  <p className="text-[10px] text-text-secondary font-semibold">
+                    {order.deliveryUser?.name ? `Delivery Partner: ${order.deliveryUser.name}` : 'Rider is carrying your order'}
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9px] font-black uppercase tracking-wider">
+                Active Delivery
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Call Rider Button */}
+              {order.deliveryUser?.phone ? (
+                <a
+                  href={`tel:${formatPhone(order.deliveryUser.phone).replace(/\s+/g, '')}`}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call Rider ({order.deliveryUser.name || 'Rider'})
+                </a>
+              ) : (
+                <a
+                  href="tel:8112849854"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call Dispatch Support
+                </a>
+              )}
+
+              {/* Call FastKirana Support Button (8112849854) */}
+              <a
+                href="tel:8112849854"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/95 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
+              >
+                <Phone className="h-4 w-4" />
+                Call FastKirana Support (8112849854)
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Support Call Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <a
-            href={`tel:${formatPhone(supportPhone).replace(/\s+/g, '')}`}
+            href="tel:8112849854"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
           >
             <Phone className="h-4 w-4" />
-            Call Store Support ({formatPhone(supportPhone)})
+            FastKirana Support (8112849854)
           </a>
           {order.deliveryMethod === 'PICKUP' && (
             <a

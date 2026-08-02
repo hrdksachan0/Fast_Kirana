@@ -2,8 +2,24 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
 from config import settings
 from routers import products, delivery, admin, forecast, orders, websockets
+
+# Initialize Sentry Error Monitoring if DSN is set
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.APP_ENV,
+        traces_sample_rate=0.2,
+        integrations=[
+            StarletteIntegration(transaction_style="endpoint"),
+            FastApiIntegration(at_exit=True),
+        ],
+    )
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -35,6 +51,8 @@ async def add_process_time_header(request: Request, call_next):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     print(f"CRITICAL ERROR on {request.url}: {exc}")
+    if settings.SENTRY_DSN:
+        sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
         content={"error": "Internal Server Error", "detail": str(exc)}
@@ -54,12 +72,19 @@ async def root():
         "status": "online",
         "service": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "docs": "/docs"
+        "docs": "/docs",
+        "sentryEnabled": bool(settings.SENTRY_DSN),
+        "redisConfigured": bool(settings.REDIS_URL)
     }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": time.time()}
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "sentry": bool(settings.SENTRY_DSN),
+        "redis": bool(settings.REDIS_URL)
+    }
 
 if __name__ == "__main__":
     import uvicorn
