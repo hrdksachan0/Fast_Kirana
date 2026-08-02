@@ -3404,41 +3404,22 @@ export function AdminDashboard({
                   <h4 className="font-extrabold text-text-primary text-sm">Add New Product Details</h4>
                   <p className="text-[10px] text-text-secondary mt-0.5">Define your inventory item specs, MRP and FastKirana pricing.</p>
                 </div>
-                {/* Product Type Selector Toggle */}
-                <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/30 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => handleNewProductTypeChange('grocery')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      newProductType === 'grocery'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                
+                {/* Store / Outlet Selection */}
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Assign to Store / Restaurant Outlet *</label>
+                  <select
+                    value={newProduct.restaurantId}
+                    onChange={(e) => setNewProduct({ ...newProduct, restaurantId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-2xs"
                   >
-                    <span>🛒</span> Grocery Product
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleNewProductTypeChange('cafe')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      newProductType === 'cafe'
-                        ? 'bg-rose-500 text-white shadow-sm'
-                        : 'text-text-secondary hover:text-rose-500'
-                    }`}
-                  >
-                    <span>☕</span> Café Item
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleNewProductTypeChange('restaurant')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      newProductType === 'restaurant'
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'text-text-secondary hover:text-amber-500'
-                    }`}
-                  >
-                    <span>🍳</span> Restaurant Item
-                  </button>
+                    <option value="">🛒 General Kirana / Grocery Store</option>
+                    {restaurantsList.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        🍽️ Restaurant: {r.name} ({r.city || 'Outlet'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -3477,64 +3458,24 @@ export function AdminDashboard({
 
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  {newProductType === 'cafe' ? (
-                    <div className="w-full px-3 py-2 text-xs rounded-xl border bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-1.5 h-[34px] select-none">
-                      <span>☕</span> FastKirana Cafe
-                    </div>
-                  ) : (
-                    <select
-                      required
-                      value={newProduct.categoryId}
-                      onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                    >
-                      {categories
-                        .filter((c) => c.slug !== 'cafe')
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  )}
+                  <select
+                    required
+                    value={newProduct.categoryId}
+                    onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {newProductType === 'cafe' && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
-                    <select
-                      required
-                      value={CAFE_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.tag);
-                        let cleanTags = newProduct.tags
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
-                        
-                        if (val) {
-                          cleanTags.push(val);
-                        }
-                        setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/15 focus:outline-none focus:border-rose-500 font-extrabold text-rose-600 dark:text-rose-400 cursor-pointer"
-                    >
-                      <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
-                      {CAFE_MENU_SECTIONS.map((sec) => (
-                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
-                          {sec.emoji} {sec.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {newProductType === 'restaurant' && (
+                {Boolean(newProduct.restaurantId) && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
-                      required
                       value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -3547,14 +3488,11 @@ export function AdminDashboard({
                         if (val) {
                           cleanTags.push(val);
                         }
-                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
-                          cleanTags.push('restaurant');
-                        }
                         setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
                       }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
                     >
-                      <option value="" className="text-text-primary font-normal">-- Select Restaurant Section --</option>
+                      <option value="" className="text-text-primary font-normal">-- Select Menu Section --</option>
                       {RESTAURANT_MENU_SECTIONS.map((sec) => (
                         <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
                           {sec.emoji} {sec.title}
@@ -3767,21 +3705,21 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Emoji Icon / Image URL (Cloudinary)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. 🍎 or image absolute link"
-                      value={newProduct.imageUrl}
-                      onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Product Photo / Image (Cloudinary)</label>
+                  <input
+                    type="text"
+                    placeholder="Paste image absolute URL..."
+                    value={newProduct.imageUrl}
+                    onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
                     <label
                       htmlFor="new-product-image-file"
-                      className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                      className="cursor-pointer px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
                     >
-                      {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
+                      {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '📤 Upload File'}
                     </label>
                     <button
                       type="button"
@@ -3789,9 +3727,9 @@ export function AdminDashboard({
                         setMediaTarget('newProduct')
                         setShowMediaLibrary(true)
                       }}
-                      className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-xl border border-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                      className="px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-black rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-2xs"
                     >
-                      🖼️ Choose from Library
+                      🖼️ Choose from Photo Library
                     </button>
                     <input
                       id="new-product-image-file"
@@ -3810,6 +3748,11 @@ export function AdminDashboard({
                       disabled={isUploading}
                     />
                   </div>
+                  {newProduct.imageUrl && (
+                    <div className="h-20 w-20 relative overflow-hidden rounded-xl border border-border bg-white/5 p-1 mt-1">
+                      <img src={newProduct.imageUrl} alt="Preview" className="h-full w-full object-contain" />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -5699,43 +5642,24 @@ export function AdminDashboard({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {/* Product Type Selector Toggle */}
-            <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/30 w-fit">
-              <button
-                type="button"
-                onClick={() => handleEditProductTypeChange('grocery')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  editProductType === 'grocery'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <span>🛒</span> Grocery Product
-              </button>
-              <button
-                type="button"
-                onClick={() => handleEditProductTypeChange('cafe')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  editProductType === 'cafe'
-                    ? 'bg-rose-500 text-white shadow-sm'
-                    : 'text-text-secondary hover:text-rose-500'
-                }`}
-              >
-                <span>☕</span> Café Item
-              </button>
-              <button
-                type="button"
-                onClick={() => handleEditProductTypeChange('restaurant')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  editProductType === 'restaurant'
-                    ? 'bg-amber-500 text-white shadow-sm'
-                    : 'text-text-secondary hover:text-amber-500'
-                }`}
-              >
-                <span>🍳</span> Restaurant Item
-              </button>
-            </div>
             <form onSubmit={saveProductChanges} className="space-y-4">
+              {/* Store / Outlet Selector */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Assign to Store / Restaurant Outlet *</label>
+                <select
+                  value={productEditForm.restaurantId}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, restaurantId: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-2xs"
+                >
+                  <option value="">🛒 General Kirana / Grocery Store</option>
+                  {restaurantsList.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      🍽️ Restaurant: {r.name} ({r.city || 'Outlet'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Product Name *</label>
@@ -5749,26 +5673,18 @@ export function AdminDashboard({
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  {editProductType === 'cafe' ? (
-                    <div className="w-full px-3 py-2 text-xs rounded-xl border bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-1.5 h-[34px] select-none">
-                      <span>☕</span> FastKirana Cafe
-                    </div>
-                  ) : (
-                    <select
-                      required
-                      value={productEditForm.categoryId}
-                      onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                    >
-                      {categories
-                        .filter((c) => c.slug !== 'cafe')
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  )}
+                  <select
+                    required
+                    value={productEditForm.categoryId}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {editProductType === 'cafe' && (
@@ -6037,20 +5953,21 @@ export function AdminDashboard({
                     </div>
                   )}
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Emoji Icon / Image URL (Cloudinary)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={productEditForm.imageUrl}
-                      onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Product Photo / Image (Cloudinary)</label>
+                  <input
+                    type="text"
+                    placeholder="Paste image absolute URL..."
+                    value={productEditForm.imageUrl}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
                     <label
                       htmlFor="edit-product-image-file"
-                      className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                      className="cursor-pointer px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
                     >
-                      {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
+                      {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '📤 Upload File'}
                     </label>
                     <button
                       type="button"
@@ -6058,9 +5975,9 @@ export function AdminDashboard({
                         setMediaTarget('editProduct')
                         setShowMediaLibrary(true)
                       }}
-                      className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-xl border border-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                      className="px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-black rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-2xs"
                     >
-                      🖼️ Choose from Library
+                      🖼️ Choose from Photo Library
                     </button>
                     <input
                       id="edit-product-image-file"
@@ -6079,6 +5996,11 @@ export function AdminDashboard({
                       disabled={isUploading}
                     />
                   </div>
+                  {productEditForm.imageUrl && (
+                    <div className="h-20 w-20 relative overflow-hidden rounded-xl border border-border bg-white/5 p-1 mt-1">
+                      <img src={productEditForm.imageUrl} alt="Preview" className="h-full w-full object-contain" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Tags (comma-separated)</label>

@@ -78,6 +78,28 @@ export function RestaurantCatalogManager() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Media Library states
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+
+  const mediaImages = useMemo(() => {
+    const setOfImages = new Map<string, { url: string; name: string }>()
+    products.forEach((p) => {
+      if (p.imageUrl && p.imageUrl.startsWith('http')) {
+        if (!setOfImages.has(p.imageUrl)) {
+          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Dish Photo' })
+        }
+      }
+    })
+    return Array.from(setOfImages.values())
+  }, [products])
+
+  const filteredMediaImages = useMemo(() => {
+    if (!mediaSearchQuery.trim()) return mediaImages
+    const q = mediaSearchQuery.toLowerCase().trim()
+    return mediaImages.filter(img => img.name.toLowerCase().includes(q) || img.url.toLowerCase().includes(q))
+  }, [mediaImages, mediaSearchQuery])
+
   const handleDishImageUpload = async (file: File) => {
     if (!file) return
     setUploadingImage(true)
@@ -744,7 +766,7 @@ export function RestaurantCatalogManager() {
                     if (file) handleDishImageUpload(file)
                   }}
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -754,12 +776,19 @@ export function RestaurantCatalogManager() {
                     <Upload className="h-3.5 w-3.5" />
                     {uploadingImage ? 'Uploading...' : 'Upload Photo'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMediaLibrary(true)}
+                    className="px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-black rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    🖼️ Choose from Photo Library
+                  </button>
                   <input
                     type="text"
                     value={imageUrl}
                     onChange={e => setImageUrl(e.target.value)}
                     placeholder="Or paste photo URL..."
-                    className="w-full px-4 py-2 bg-muted/40 border border-border rounded-xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
+                    className="flex-1 min-w-[200px] px-3.5 py-2 bg-muted/40 border border-border rounded-xl text-xs focus:outline-none focus:border-orange-500/50 transition-all font-semibold"
                   />
                 </div>
                 {imageUrl && (

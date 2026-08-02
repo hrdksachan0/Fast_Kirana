@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
@@ -81,7 +81,19 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
-  const allDisplayCategories: Array<Category & { isCafeSection?: boolean; emoji?: string }> = categories
+  const allDisplayCategories = useMemo(() => {
+    return (categories || []).filter((c) => {
+      const slug = (c.slug || '').toLowerCase()
+      const name = (c.name || '').toLowerCase()
+      return (
+        slug !== 'cafe' &&
+        slug !== 'restaurant' &&
+        !slug.includes('restaurant') &&
+        !name.includes('fastkirana cafe') &&
+        !name.includes('fastkirana restaurant')
+      )
+    })
+  }, [categories])
 
   // Map of category slugs to visual themes with glowing rings
   const colorMap: Record<string, { bg: string; text: string; gradient: string; ring: string }> = {
@@ -177,12 +189,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Mobile: Horizontal scrollable/sliding list */}
       <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth">
-        {allDisplayCategories.map((category) => {
+        {allDisplayCategories.map((category: any) => {
             const config = mobileColorMap[category.slug] || {
               bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',
               text: 'text-rose-500 dark:text-rose-450',
               label: category.name,
-              emoji: category.emoji || '🍽️'
+              emoji: (category as any).emoji || '🍽️'
             }
 
             const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
@@ -263,7 +275,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
       {/* Desktop: Grid layout */}
       <div className="hidden md:grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 gap-4 stagger-children">
-        {allDisplayCategories.map((category) => {
+        {allDisplayCategories.map((category: any) => {
             const colors = colorMap[category.slug] || {
               bg: 'bg-rose-500/5 dark:bg-rose-950/10 hover:bg-rose-500/10',
               text: 'text-rose-500 dark:text-rose-450',

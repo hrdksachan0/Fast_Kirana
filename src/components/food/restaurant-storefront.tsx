@@ -416,11 +416,9 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
               <h2 className="text-lg sm:text-2xl font-black text-white drop-shadow-lg leading-tight">
                 {restaurant.name}
               </h2>
-              {restaurant.description && (
-                <p className="text-xs sm:text-sm font-bold text-white/95 drop-shadow-md line-clamp-2 mt-0.5 leading-snug">
-                  {restaurant.description}
-                </p>
-              )}
+              <p className="text-xs sm:text-sm font-bold text-white/95 drop-shadow-md line-clamp-2 mt-0.5 leading-snug">
+                {restaurant.description || (restaurant.cuisineTags && restaurant.cuisineTags.length > 0 ? `${restaurant.cuisineTags.join(' • ')} Specials` : 'Delicious North Indian Curries, Gravies & Fast Food Specials')}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 {restaurant.cuisineTags?.slice(0, 4).map((tag: string) => (
                   <span key={tag} className="text-[9px] font-extrabold uppercase tracking-wider text-white bg-black/40 backdrop-blur-xs border border-white/20 px-2 py-0.5 rounded-full shadow-2xs">
