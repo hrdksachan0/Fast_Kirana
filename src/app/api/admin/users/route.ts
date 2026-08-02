@@ -80,25 +80,37 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const { userId, role } = await request.json()
+    const { userId, role, name, phone } = await request.json()
 
-    if (!userId || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing required userId' }, { status: 400 })
     }
 
-    if (role !== 'USER' && role !== 'DELIVERY' && role !== 'ADMIN' && role !== 'PICKER' && role !== 'CHEF') {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    const updateData: any = {}
+    if (name) updateData.name = name.trim()
+    if (phone) updateData.phone = phone.trim()
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      })
     }
 
-    // Update using raw SQL to bypass PrismaPg enum casting issue
-    await prisma.$executeRaw`
-      UPDATE users SET role = ${role}::"Role", "updatedAt" = NOW() WHERE id = ${userId}
-    `
+    if (role) {
+      if (role !== 'USER' && role !== 'DELIVERY' && role !== 'ADMIN' && role !== 'PICKER' && role !== 'CHEF') {
+        return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+      }
+      // Update using raw SQL to bypass PrismaPg enum casting issue
+      await prisma.$executeRaw`
+        UPDATE users SET role = ${role}::"Role", "updatedAt" = NOW() WHERE id = ${userId}
+      `
+    }
 
-    return NextResponse.json({ success: true, message: 'User role updated successfully' })
+    return NextResponse.json({ success: true, message: 'User details updated successfully' })
   } catch (error: any) {
-    console.error('Failed to update user role:', error)
-    return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 })
+    console.error('Failed to update user details:', error)
+    return NextResponse.json({ error: 'Failed to update user details' }, { status: 500 })
   }
 }
 

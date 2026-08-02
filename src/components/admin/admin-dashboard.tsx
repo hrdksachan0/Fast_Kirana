@@ -792,6 +792,9 @@ export function AdminDashboard({
   const [settingPasswordUserId, setSettingPasswordUserId] = useState<string | null>(null)
   const [passwordInput, setPasswordInput] = useState('')
   const [savingPasswordId, setSavingPasswordId] = useState<string | null>(null)
+  const [editingPhoneUserId, setEditingPhoneUserId] = useState<string | null>(null)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [savingPhoneId, setSavingPhoneId] = useState<string | null>(null)
 
   // States for Pagination
   const [orderPage, setOrderPage] = useState(1)
@@ -1372,6 +1375,33 @@ export function AdminDashboard({
       toast.error('Error setting password')
     } finally {
       setSavingPasswordId(null)
+    }
+  }
+
+  const handleUserPhoneSave = async (userId: string) => {
+    if (!phoneInput.trim()) {
+      toast.error('Phone number cannot be empty')
+      return
+    }
+
+    setSavingPhoneId(userId)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, phone: phoneInput.trim() }),
+      })
+
+      if (!res.ok) throw new Error('Failed to update phone number')
+
+      setUsers(users.map((u) => (u.id === userId ? { ...u, phone: phoneInput.trim() } : u)))
+      toast.success('Phone number updated successfully!')
+      setEditingPhoneUserId(null)
+      setPhoneInput('')
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating phone number')
+    } finally {
+      setSavingPhoneId(null)
     }
   }
 
@@ -4576,7 +4606,49 @@ export function AdminDashboard({
                       </div>
                     </td>
                     <td className="py-3 px-4 font-medium text-text-secondary">{u.email}</td>
-                    <td className="py-3 px-4 text-text-muted font-mono">{u.phone || 'N/A'}</td>
+                    <td className="py-3 px-4 font-mono">
+                      {editingPhoneUserId === u.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="+91..."
+                            value={phoneInput}
+                            onChange={(e) => setPhoneInput(e.target.value)}
+                            className="w-28 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
+                          />
+                          <button
+                            onClick={() => handleUserPhoneSave(u.id)}
+                            disabled={savingPhoneId === u.id}
+                            className="px-2 py-1 text-[10px] bg-emerald-600 text-white rounded-md font-bold hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                          >
+                            {savingPhoneId === u.id ? '...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPhoneUserId(null)
+                              setPhoneInput('')
+                            }}
+                            className="px-1.5 py-1 text-[10px] text-text-muted hover:text-text-primary cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-text-muted">{u.phone || 'N/A'}</span>
+                          <button
+                            onClick={() => {
+                              setEditingPhoneUserId(u.id)
+                              setPhoneInput(u.phone || '')
+                            }}
+                            className="text-[10px] text-primary hover:underline font-bold opacity-80 hover:opacity-100 cursor-pointer"
+                            title="Edit Phone Number"
+                          >
+                            ✏️ Edit
+                          </button>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-center">
                       <select
                         value={u.role}

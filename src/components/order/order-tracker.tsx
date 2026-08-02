@@ -864,7 +864,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             </div>
           </div>
         ) : (
-          !order.isB2B && order.shopName && (
+          !order.isB2B && order.shopName && order.status !== 'SHIPPED' && (
             <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 flex items-center justify-between text-xs font-semibold text-text-secondary">
               <div className="flex items-center gap-2">
                 <Store className="h-4 w-4 text-primary shrink-0" />
@@ -881,7 +881,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           )
         )}
 
-        {/* Out For Delivery Dedicated Contact Card (Rider Phone + FastKirana Support 8112849854) */}
+        {/* Out For Delivery Dedicated Contact Card */}
         {order.status === 'SHIPPED' && (
           <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border-2 border-emerald-500/30 p-4 rounded-2xl shadow-md space-y-3">
             <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
@@ -889,71 +889,53 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 <span className="text-xl">🛵</span>
                 <div>
                   <h3 className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                    Out For Delivery Contact
+                    OUT FOR DELIVERY CONTACT
                   </h3>
                   <p className="text-[10px] text-text-secondary font-semibold">
-                    {order.deliveryUser?.name ? `Delivery Partner: ${order.deliveryUser.name}` : 'Rider is carrying your order'}
+                    {order.deliveryUser?.name && order.deliveryUser.name !== 'Admin'
+                      ? `Delivery Partner: ${order.deliveryUser.name}`
+                      : 'Delivery Partner: FastKirana Executive'}
                   </p>
                 </div>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9px] font-black uppercase tracking-wider">
-                Active Delivery
+                ACTIVE DELIVERY
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Call Rider Button */}
-              {order.deliveryUser?.phone ? (
-                <a
-                  href={`tel:${formatPhone(order.deliveryUser.phone).replace(/\s+/g, '')}`}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call Rider ({order.deliveryUser.name || 'Rider'})
-                </a>
-              ) : (
-                <a
-                  href="tel:8112849854"
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call Dispatch Support
-                </a>
-              )}
-
-              {/* Call FastKirana Support Button (8112849854) */}
-              <a
-                href="tel:8112849854"
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/95 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95"
-              >
-                <Phone className="h-4 w-4" />
-                Call FastKirana Support (8112849854)
-              </a>
-            </div>
+            <a
+              href={`tel:${formatPhone(order.deliveryUser?.phone || '+919696503759').replace(/\s+/g, '')}`}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95 text-center"
+            >
+              <Phone className="h-4 w-4" />
+              Call Delivery Partner ({order.deliveryUser?.name && order.deliveryUser.name !== 'Admin' ? order.deliveryUser.name : 'Rider'})
+            </a>
           </div>
         )}
 
         {/* Support Call Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-1">
-          <a
-            href="tel:8112849854"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
-          >
-            <Phone className="h-4 w-4" />
-            FastKirana Support (8112849854)
-          </a>
-          {order.deliveryMethod === 'PICKUP' && (
+        {order.status !== 'SHIPPED' && (
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${order.address?.lat || storeLat},${order.address?.lng || storeLng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-accent/20 bg-accent/5 hover:bg-accent/10 text-accent font-black text-xs rounded-xl transition-all"
+              href="tel:8112849854"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
             >
-              <Navigation className="h-4 w-4" />
-              Get Store Directions
+              <Phone className="h-4 w-4" />
+              FastKirana Support (8112849854)
             </a>
-          )}
-        </div>
+            {order.deliveryMethod === 'PICKUP' && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${order.address?.lat || storeLat},${order.address?.lng || storeLng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-accent/20 bg-accent/5 hover:bg-accent/10 text-accent font-black text-xs rounded-xl transition-all"
+              >
+                <Navigation className="h-4 w-4" />
+                Get Store Directions
+              </a>
+            )}
+          </div>
+        )}
 
 
 
