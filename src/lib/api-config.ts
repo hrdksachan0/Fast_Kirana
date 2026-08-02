@@ -3,7 +3,7 @@
  * Dynamically switches requests between Python FastAPI Microservice & Next.js Local Server
  */
 
-export const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000'
+export const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fast-kirana-0ezx.onrender.com'
 
 export async function fetchFromFastAPI(endpoint: string, options: RequestInit = {}) {
   const url = `${FASTAPI_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
