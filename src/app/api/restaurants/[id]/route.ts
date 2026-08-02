@@ -134,6 +134,18 @@ export async function PATCH(
 
     // Update owner assignment if requested by ADMIN
     if (ownerUserId && role === 'ADMIN') {
+      // Unassign any other user currently linked to this restaurant
+      await prisma.user.updateMany({
+        where: {
+          assignedRestaurantId: restaurant.id,
+          id: { not: ownerUserId },
+        },
+        data: {
+          assignedRestaurantId: null,
+        },
+      }).catch(err => console.error('Failed to unassign previous outlet head:', err))
+
+      // Assign the new outlet head
       await prisma.user.update({
         where: { id: ownerUserId },
         data: {

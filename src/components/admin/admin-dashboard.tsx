@@ -577,14 +577,25 @@ export function AdminDashboard({
     }
   }, [])
   
-  // Modal Edit states for Products
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [savingProductId, setSavingProductId] = useState<string | null>(null)
+  const [restaurantsList, setRestaurantsList] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/restaurants?all=true')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setRestaurantsList(data)
+      })
+      .catch(console.error)
+  }, [])
+
   const [productEditForm, setProductEditForm] = useState({
     name: '',
     description: '',
     imageUrl: '',
     categoryId: '',
+    restaurantId: '',
     mrp: '',
     price: '',
     unit: '',
@@ -614,6 +625,7 @@ export function AdminDashboard({
     description: '',
     imageUrl: '',
     categoryId: initialCategories?.[0]?.id || '',
+    restaurantId: '',
     mrp: '',
     price: '',
     unit: '',
@@ -1174,7 +1186,7 @@ export function AdminDashboard({
 
   const toggleTag = (form: 'new' | 'edit', tag: string, checked: boolean) => {
     const currentForm = form === 'new' ? newProduct : productEditForm
-    const setForm = form === 'new' ? setNewProduct : setProductEditForm
+    const setForm: any = form === 'new' ? setNewProduct : setProductEditForm
     
     let tagsList = currentForm.tags
       .split(',')
@@ -1185,10 +1197,10 @@ export function AdminDashboard({
       tagsList.push(tag)
     }
     
-    setForm({
-      ...currentForm,
+    setForm((prev: any) => ({
+      ...prev,
       tags: tagsList.join(', ')
-    })
+    }))
   }
 
   const handleCreateCustomTag = (form: 'new' | 'edit', tagText: string) => {
@@ -1196,7 +1208,7 @@ export function AdminDashboard({
     if (!cleanTag) return;
     
     const currentForm = form === 'new' ? newProduct : productEditForm
-    const setForm = form === 'new' ? setNewProduct : setProductEditForm
+    const setForm: any = form === 'new' ? setNewProduct : setProductEditForm
     
     let tagsList = currentForm.tags
       .split(',')
@@ -1207,10 +1219,10 @@ export function AdminDashboard({
       tagsList.push(cleanTag)
     }
     
-    setForm({
-      ...currentForm,
+    setForm((prev: any) => ({
+      ...prev,
       tags: tagsList.join(', ')
-    })
+    }))
     
     if (form === 'new') {
       setNewCustomTag('')
@@ -1645,6 +1657,7 @@ export function AdminDashboard({
       description: p.description || '',
       imageUrl: p.imageUrl || '',
       categoryId: p.categoryId || '',
+      restaurantId: p.restaurantId || '',
       mrp: String(p.mrp || ''),
       price: String(p.price || ''),
       unit: p.unit || '',
@@ -1693,6 +1706,7 @@ export function AdminDashboard({
           description: productEditForm.description,
           imageUrl: productEditForm.imageUrl,
           categoryId: productEditForm.categoryId,
+          restaurantId: productEditForm.restaurantId || null,
           mrp: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].mrp) : parseFloat(productEditForm.mrp),
           price: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].price) : parseFloat(productEditForm.price),
           unit: productEditForm.unit,
@@ -5771,6 +5785,24 @@ export function AdminDashboard({
                       {RESTAURANT_MENU_SECTIONS.map((sec) => (
                         <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
                           {sec.emoji} {sec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {(editProductType === 'restaurant' || editProductType === 'cafe' || restaurantsList.length > 0) && (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Assign to Restaurant Outlet</label>
+                    <select
+                      value={productEditForm.restaurantId || ''}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, restaurantId: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
+                    >
+                      <option value="" className="text-text-primary font-normal">-- Main Store / General --</option>
+                      {restaurantsList.map((r) => (
+                        <option key={r.id} value={r.id} className="text-text-primary font-semibold">
+                          🍽️ {r.name} ({r.city || 'Outlet'})
                         </option>
                       ))}
                     </select>

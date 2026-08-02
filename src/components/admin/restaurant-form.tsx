@@ -99,6 +99,16 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     lng: restaurant?.lng?.toString() || '',
   })
 
+  // Sync ownerUserId state when restaurant prop changes
+  useEffect(() => {
+    if (restaurant?.staff && restaurant.staff.length > 0) {
+      const owner = restaurant.staff.find((s: any) => s.role === 'RESTAURANT_OWNER') || restaurant.staff[0]
+      if (owner?.id) {
+        setOwnerUserId(owner.id)
+      }
+    }
+  }, [restaurant])
+
   // Fetch assignable users if isAdmin & sync ownerUserId
   useEffect(() => {
     if (isAdmin) {
@@ -108,7 +118,6 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         .then(data => {
           if (Array.isArray(data)) {
             setAssignableUsers(data)
-            // Smart fall-back: If ownerUserId is not set, find user assigned to this restaurant
             if (restaurant?.id) {
               const assignedUser = data.find((u: any) => u.assignedRestaurantId === restaurant.id)
               if (assignedUser) {
