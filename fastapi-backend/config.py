@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     APP_ENV: str = os.getenv("NODE_ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
 
-    # Database Configuration (Neon PostgreSQL)
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://neondb_owner:npg_g0hWSj4wOqZp@ep-crimson-term-ao9b30gv.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require")
+    # Database Configuration (Neon PostgreSQL with actual password)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://neondb_owner:npg_UBf9ay3IjRFX@ep-crimson-term-ao9b30gv.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require")
     
     # Optional Upstash Redis Caching URL (e.g. rediss://default:token@xxx.upstash.io:6379)
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN", None)
 
     # JWT Authentication Config
-    AUTH_SECRET: str = os.getenv("AUTH_SECRET", "super-secret-auth-key")
+    AUTH_SECRET: str = os.getenv("AUTH_SECRET", "supersecretkey1234567890abcdef123456")
     ALGORITHM: str = "HS256"
 
     # Store Defaults
