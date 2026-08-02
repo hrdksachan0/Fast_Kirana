@@ -413,23 +413,26 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-black text-white drop-shadow-lg truncate">
+              <h2 className="text-lg sm:text-2xl font-black text-white drop-shadow-lg leading-tight">
                 {restaurant.name}
               </h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {restaurant.cuisineTags?.slice(0, 3).map((tag: string) => (
-                  <span key={tag} className="text-[9px] font-bold uppercase tracking-wider text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
+              {restaurant.description && (
+                <p className="text-xs sm:text-sm font-bold text-white/95 drop-shadow-md line-clamp-2 mt-0.5 leading-snug">
+                  {restaurant.description}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {restaurant.cuisineTags?.slice(0, 4).map((tag: string) => (
+                  <span key={tag} className="text-[9px] font-extrabold uppercase tracking-wider text-white bg-black/40 backdrop-blur-xs border border-white/20 px-2 py-0.5 rounded-full shadow-2xs">
                     {tag}
                   </span>
                 ))}
-              </div>
-              {restaurant.isPureVeg && (
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-green-400">
-                    <Leaf size={11} /> Pure Veg
+                {restaurant.isPureVeg && (
+                  <span className="flex items-center gap-0.5 text-[9.5px] font-black text-emerald-400 bg-emerald-950/70 backdrop-blur-xs border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-2xs">
+                    <Leaf size={10} /> Pure Veg
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -514,11 +517,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
           {/* Veg Toggle + Info Bar */}
           <div className={cn("mx-auto px-4 py-2 flex items-center justify-between bg-zinc-100/60 dark:bg-zinc-900/60 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 my-2", isCafe ? "max-w-4xl" : "max-w-3xl")}>
             <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0">
-                {products.length} Items
+              <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0">
+                {products.length} ITEMS
               </span>
-              <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate">
-                {restaurant.description || 'Gourmet dishes & artisan meals'}
+              <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 hidden sm:inline">
+                Fresh & Fast Delivery
               </span>
             </div>
             <button

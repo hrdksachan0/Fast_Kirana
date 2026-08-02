@@ -818,6 +818,39 @@ export function AdminDashboard({
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
 
   const [userPage, setUserPage] = useState(1)
+
+  // Media Library Modal states
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [mediaTarget, setMediaTarget] = useState<'newProduct' | 'editProduct' | 'category' | null>(null)
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+
+  const mediaLibraryImages = useMemo(() => {
+    const setOfImages = new Map<string, { url: string; name: string }>()
+
+    allProducts.forEach((p) => {
+      if (p.imageUrl && p.imageUrl.startsWith('http')) {
+        if (!setOfImages.has(p.imageUrl)) {
+          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Product Image' })
+        }
+      }
+    })
+
+    categories.forEach((c) => {
+      if (c.imageUrl && c.imageUrl.startsWith('http')) {
+        if (!setOfImages.has(c.imageUrl)) {
+          setOfImages.set(c.imageUrl, { url: c.imageUrl, name: c.name || 'Category Image' })
+        }
+      }
+    })
+
+    return Array.from(setOfImages.values())
+  }, [allProducts, categories])
+
+  const filteredMediaImages = useMemo(() => {
+    if (!mediaSearchQuery.trim()) return mediaLibraryImages
+    const q = mediaSearchQuery.toLowerCase().trim()
+    return mediaLibraryImages.filter(img => img.name.toLowerCase().includes(q) || img.url.toLowerCase().includes(q))
+  }, [mediaLibraryImages, mediaSearchQuery])
   const [userTotal, setUserTotal] = useState(stats.userCount || (initialUsers || []).length)
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [userSearch, setUserSearch] = useState('')
@@ -1440,6 +1473,7 @@ export function AdminDashboard({
       description: p.description || '',
       imageUrl: p.imageUrl || '',
       categoryId: p.categoryId || '',
+      restaurantId: p.restaurantId || '',
       mrp: String(p.mrp || ''),
       price: String(p.price || ''),
       unit: p.unit || '',
@@ -1827,6 +1861,7 @@ export function AdminDashboard({
           description: '',
           imageUrl: '',
           categoryId: initialCategories?.[0]?.id || '',
+          restaurantId: '',
           mrp: '',
           price: '',
           unit: '',
@@ -3748,6 +3783,16 @@ export function AdminDashboard({
                     >
                       {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaTarget('newProduct')
+                        setShowMediaLibrary(true)
+                      }}
+                      className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-xl border border-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                    >
+                      🖼️ Choose from Library
+                    </button>
                     <input
                       id="new-product-image-file"
                       type="file"
@@ -6007,6 +6052,16 @@ export function AdminDashboard({
                     >
                       {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaTarget('editProduct')
+                        setShowMediaLibrary(true)
+                      }}
+                      className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-xl border border-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                    >
+                      🖼️ Choose from Library
+                    </button>
                     <input
                       id="edit-product-image-file"
                       type="file"
@@ -7180,6 +7235,71 @@ export function AdminDashboard({
         onClose={() => setShowSortManager(false)}
         categories={categories}
       />
+
+      {/* 🖼️ Media Library Modal (Photo Selector) */}
+      {showMediaLibrary && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🖼️</span>
+                <div>
+                  <h3 className="font-extrabold text-text-primary text-sm sm:text-base">Media Photo Library</h3>
+                  <p className="text-[10px] text-text-secondary">Pick any existing photo from past uploads ({filteredMediaImages.length} available)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Search filter input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search photo by product name or keyword (e.g. dal, biryani, paneer)..."
+                value={mediaSearchQuery}
+                onChange={(e) => setMediaSearchQuery(e.target.value)}
+                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+              />
+            </div>
+
+            {/* Photo Grid */}
+            <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 min-h-[250px]">
+              {filteredMediaImages.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-xs font-bold text-text-muted">
+                  No matching images found. Try searching another keyword!
+                </div>
+              ) : (
+                filteredMediaImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      if (mediaTarget === 'newProduct') {
+                        setNewProduct((prev) => ({ ...prev, imageUrl: img.url }))
+                      } else if (mediaTarget === 'editProduct') {
+                        setProductEditForm((prev) => ({ ...prev, imageUrl: img.url }))
+                      } else if (mediaTarget === 'category') {
+                        setCategoryEditForm((prev) => ({ ...prev, imageUrl: img.url }))
+                      }
+                      setShowMediaLibrary(false)
+                      toast.success('Image selected from library! 🖼️')
+                    }}
+                    className="group relative flex flex-col items-center border border-border/50 rounded-2xl p-2 bg-muted/10 hover:bg-primary/10 hover:border-primary transition-all cursor-pointer text-center"
+                  >
+                    <div className="h-16 w-16 relative overflow-hidden rounded-xl bg-white/5 flex items-center justify-center mb-1.5 border border-border/30">
+                      <img src={img.url} alt={img.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform" />
+                    </div>
+                    <span className="text-[9px] font-bold text-text-secondary truncate w-full group-hover:text-primary">{img.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

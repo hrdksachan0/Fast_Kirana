@@ -27,6 +27,8 @@ interface AdminRestaurantConsoleProps {
   isAdmin?: boolean
 }
 
+import { Plus, Loader2, Image as ImageIcon } from 'lucide-react'
+
 export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConsoleProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +39,142 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
   const [editPriceVal, setEditPriceVal] = useState('')
   const [editMrpVal, setEditMrpVal] = useState('')
+
+  // Dish Add/Edit Modal states
+  const [showDishModal, setShowDishModal] = useState(false)
+  const [editingDish, setEditingDish] = useState<Product | null>(null)
+  const [savingDish, setSavingDish] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  // Media Library states
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+
+  const [dishForm, setDishForm] = useState({
+    name: '',
+    price: '',
+    mrp: '',
+    imageUrl: '',
+    sectionTag: 'main-course',
+  })
+
+  const mediaImages = useMemo(() => {
+    const setOfImages = new Map<string, { url: string; name: string }>()
+    products.forEach((p) => {
+      if (p.imageUrl && p.imageUrl.startsWith('http')) {
+        if (!setOfImages.has(p.imageUrl)) {
+          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Dish Photo' })
+        }
+      }
+    })
+    return Array.from(setOfImages.values())
+  }, [products])
+
+  const filteredMediaImages = useMemo(() => {
+    if (!mediaSearchQuery.trim()) return mediaImages
+    const q = mediaSearchQuery.toLowerCase().trim()
+    return mediaImages.filter(img => img.name.toLowerCase().includes(q) || img.url.toLowerCase().includes(q))
+  }, [mediaImages, mediaSearchQuery])
+
+  const handleOpenAddDish = () => {
+    setEditingDish(null)
+    setDishForm({
+      name: '',
+      price: '',
+      mrp: '',
+      imageUrl: '',
+      sectionTag: 'main-course',
+    })
+    setShowDishModal(true)
+  }
+
+  const handleOpenEditDish = (product: Product) => {
+    setEditingDish(product)
+    setDishForm({
+      name: product.name || '',
+      price: String(product.price || ''),
+      mrp: String(product.mrp || ''),
+      imageUrl: product.imageUrl || '',
+      sectionTag: (product as any).tags?.[0] || 'main-course',
+    })
+    setShowDishModal(true)
+  }
+
+  const handleSaveDish = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!dishForm.name || !dishForm.price || !dishForm.mrp) {
+      toast.error('Please fill in dish name, price, and MRP')
+      return
+    }
+
+    setSavingDish(true)
+    try {
+      if (editingDish) {
+        // Edit existing dish
+        const res = await fetch(`/api/products/${editingDish.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: dishForm.name,
+            price: parseFloat(dishForm.price),
+            mrp: parseFloat(dishForm.mrp),
+            imageUrl: dishForm.imageUrl,
+            tags: [dishForm.sectionTag, 'restaurant'],
+          }),
+        })
+        if (!res.ok) throw new Error('Failed to update dish')
+        const updated = await res.json()
+        setProducts(prev => prev.map(p => p.id === editingDish.id ? updated : p))
+        toast.success(`Dish "${dishForm.name}" updated successfully! 🎉`)
+      } else {
+        // Add new dish
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: dishForm.name,
+            price: parseFloat(dishForm.price),
+            mrp: parseFloat(dishForm.mrp),
+            imageUrl: dishForm.imageUrl,
+            stock: 99999,
+            isAvailable: true,
+            tags: [dishForm.sectionTag, 'restaurant'],
+          }),
+        })
+        if (!res.ok) throw new Error('Failed to create dish')
+        const created = await res.json()
+        setProducts(prev => [created, ...prev])
+        toast.success(`New dish "${dishForm.name}" added to menu! 🎉`)
+      }
+      setShowDishModal(false)
+    } catch (err: any) {
+      toast.error(err.message || 'Error saving dish')
+    } finally {
+      setSavingDish(false)
+    }
+  }
+
+  const handleCloudinaryUpload = async (file: File) => {
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json()
+      if (data.url) {
+        setDishForm(prev => ({ ...prev, imageUrl: data.url }))
+        toast.success('Photo uploaded successfully! 📸')
+      }
+    } catch (err) {
+      toast.error('Failed to upload image')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const fetchRestaurantProducts = async () => {
     setLoading(true)
@@ -208,15 +346,25 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
         <>
           {/* Filters & Search */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search Restaurant dishes, combos, main courses..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-card border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
-          />
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Search Restaurant dishes, combos, main courses..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleOpenAddDish}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-black rounded-2xl shadow-md transition-all cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            + Add New Dish
+          </button>
         </div>
 
         <div className="flex bg-muted/40 p-1 rounded-xl border border-border/40 gap-1 overflow-x-auto w-full sm:w-auto">
@@ -279,8 +427,18 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
                         </div>
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-black text-text-primary line-clamp-1">{product.name}</h4>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="text-xs font-black text-text-primary line-clamp-1">{product.name}</h4>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditDish(product)}
+                          className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-2 py-0.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                          title="Edit Dish Photo & Details"
+                        >
+                          🖼️ Photo
+                        </button>
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase">
                           {product.category?.name || 'Restaurant'}
@@ -419,6 +577,201 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
 
       {activeSubTab === 'payouts' && (
         <RestaurantPayoutsLedger isAdmin={isAdmin} />
+      )}
+
+      {/* Add / Edit Dish Modal */}
+      {showDishModal && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🍳</span>
+                <h3 className="font-black text-text-primary text-base">
+                  {editingDish ? `Edit "${editingDish.name}"` : 'Add New Restaurant Dish'}
+                </h3>
+              </div>
+              <button onClick={() => setShowDishModal(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDish} className="p-5 space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Dish Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Paneer Butter Masala, Chicken Biryani"
+                  value={dishForm.name}
+                  onChange={e => setDishForm({ ...dishForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Selling Price (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="e.g. 240"
+                    value={dishForm.price}
+                    onChange={e => setDishForm({ ...dishForm, price: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="e.g. 290"
+                    value={dishForm.mrp}
+                    onChange={e => setDishForm({ ...dishForm, mrp: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Menu Section Tag *</label>
+                <select
+                  value={dishForm.sectionTag}
+                  onChange={e => setDishForm({ ...dishForm, sectionTag: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                >
+                  <option value="main-course">🍛 Main Course</option>
+                  <option value="starters">🍢 Starters & Snacks</option>
+                  <option value="biryani">🍚 Biryani & Rice</option>
+                  <option value="thali">🍱 Thali & Meals</option>
+                  <option value="breads">🍞 Roti & Breads</option>
+                  <option value="beverages">🥤 Beverages & Drinks</option>
+                  <option value="dessert">🍨 Desserts & Sweets</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Dish Photo URL (Cloudinary / Library)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Photo URL..."
+                    value={dishForm.imageUrl}
+                    onChange={e => setDishForm({ ...dishForm, imageUrl: e.target.value })}
+                    className="flex-1 px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  />
+                  <label
+                    htmlFor="restaurant-dish-image-file"
+                    className="cursor-pointer px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Upload'}
+                  </label>
+                  <input
+                    id="restaurant-dish-image-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) handleCloudinaryUpload(file)
+                      e.target.value = ''
+                    }}
+                    className="sr-only"
+                    disabled={isUploading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMediaLibrary(true)}
+                    className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-xl border border-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  >
+                    🖼️ Library
+                  </button>
+                </div>
+              </div>
+
+              {dishForm.imageUrl && (
+                <div className="h-24 w-full rounded-2xl bg-muted/30 border border-border/40 overflow-hidden flex items-center justify-center">
+                  <img src={dishForm.imageUrl} alt="Dish Preview" className="h-full w-full object-contain p-1" />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDishModal(false)}
+                  className="px-4 py-2 text-xs font-bold border border-border rounded-xl hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingDish}
+                  className="px-5 py-2 text-xs font-black bg-primary text-white rounded-xl hover:bg-primary/95 shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  {savingDish ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (editingDish ? 'Save Changes' : '+ Add Dish')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🖼️ Media Library Photo Picker Modal */}
+      {showMediaLibrary && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🖼️</span>
+                <div>
+                  <h3 className="font-extrabold text-text-primary text-sm sm:text-base">Kitchen Photo Library</h3>
+                  <p className="text-[10px] text-text-secondary">Pick any existing dish photo from library ({filteredMediaImages.length} available)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Search filter input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search photo by dish name or keyword (e.g. paneer, biryani, thali)..."
+                value={mediaSearchQuery}
+                onChange={(e) => setMediaSearchQuery(e.target.value)}
+                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+              />
+            </div>
+
+            {/* Photo Grid */}
+            <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 min-h-[250px]">
+              {filteredMediaImages.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-xs font-bold text-text-muted">
+                  No matching dish photos found. Try searching another keyword!
+                </div>
+              ) : (
+                filteredMediaImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setDishForm(prev => ({ ...prev, imageUrl: img.url }))
+                      setShowMediaLibrary(false)
+                      toast.success('Photo selected from library! 🖼️')
+                    }}
+                    className="group relative flex flex-col items-center border border-border/50 rounded-2xl p-2 bg-muted/10 hover:bg-primary/10 hover:border-primary transition-all cursor-pointer text-center"
+                  >
+                    <div className="h-16 w-16 relative overflow-hidden rounded-xl bg-white/5 flex items-center justify-center mb-1.5 border border-border/30">
+                      <img src={img.url} alt={img.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform" />
+                    </div>
+                    <span className="text-[9px] font-bold text-text-secondary truncate w-full group-hover:text-primary">{img.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
