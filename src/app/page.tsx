@@ -101,6 +101,11 @@ const getCachedFlashDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
+        NOT: [
+          { tags: { has: 'restaurant' } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        ],
         OR: [
           { isFlashDeal: true },
           { discount: { gt: 10 } }
@@ -123,6 +128,11 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
+        NOT: [
+          { tags: { has: 'restaurant' } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        ]
       },
       orderBy: [
         { isBestSeller: 'desc' },

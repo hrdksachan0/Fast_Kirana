@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Minus, Check, Zap, Heart } from 'lucide-react'
+import { Plus, Minus, Check, Zap, Heart, Store } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
@@ -114,7 +114,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
 
   const productType = getProductType(product)
   const isCafe = productType === 'CAFE'
-  const isRestaurant = productType === 'RESTAURANT'
+  const isRestaurant = productType === 'RESTAURANT' || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)
   const categorySlug = product.category?.slug || (product as any).categorySlug || ''
   const isCategoryOpen = categoryStatus[categorySlug] !== false
   const isStoreClosed = isProductStoreClosed(
@@ -144,9 +144,10 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   }, [hasVariants, variantsList, product.stock])
 
   const resolvedStock = useMemo(() => {
+    if (isRestaurant || isCafe || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) return 999
     if (liveState !== null) return liveState.stock
     return totalStock
-  }, [liveState, totalStock])
+  }, [isRestaurant, isCafe, product.restaurantId, liveState, totalStock])
 
   const resolvedIsAvailable = useMemo(() => {
     if (liveState !== null) return liveState.isAvailable
@@ -292,7 +293,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 ? "bg-gradient-to-r from-red-600 to-amber-600 shadow-[0_2px_8px_rgba(226,10,34,0.3)]" 
                 : "bg-amber-500/95 shadow-[0_2px_8px_rgba(245,158,11,0.25)]"
             )}>
-              {isRestaurant ? '👨‍🍳 Wedson Special' : '⭐ Bestseller'}
+              {isRestaurant ? `👨‍🍳 ${((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef'} Special` : '⭐ Bestseller'}
             </div>
           )}
 
@@ -440,13 +441,21 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
 
         {/* ROW 3: Product Name / Title */}
         <h3 className={cn(
-          "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors mb-1",
+          "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors mb-0.5",
           isCompact 
             ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
             : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
         )}>
           {product.name}
         </h3>
+
+        {/* Restaurant Outlet Sub-label Identifier */}
+        {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
+          <div className="flex items-center gap-1 text-[8.5px] font-extrabold text-red-600 dark:text-red-400 truncate mt-auto">
+            <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
+            <span className="truncate">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
+          </div>
+        )}
       </Link>
     </div>
   )

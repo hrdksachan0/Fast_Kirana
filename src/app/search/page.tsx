@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/product/product-card'
+import { SearchResultsClient } from '@/components/search/search-results-client'
 import { Product } from '@/types'
 import { Search, Frown } from 'lucide-react'
 import { sortProductsByStock } from '@/lib/utils'
@@ -34,6 +35,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       },
       include: {
         category: true,
+        restaurant: true,
       },
     }).catch(() => [])
 
@@ -44,6 +46,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       description: p.description,
       imageUrl: p.imageUrl,
       categoryId: p.categoryId,
+      restaurantId: p.restaurantId,
       mrp: p.mrp,
       price: p.price,
       discount: p.discount,
@@ -53,6 +56,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       tags: p.tags,
       minStock: p.minStock,
       variants: p.variants as any,
+      restaurant: p.restaurant as any,
       category: p.category ? {
         id: p.category.id,
         name: p.category.name,
@@ -288,12 +292,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </div>
         </div>
       ) : (
-        // Results catalog grid
-        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 animate-fade-in px-1">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        // Results catalog grid with restaurant outlet filters
+        <SearchResultsClient products={products} query={query} />
       )}
 
     </div>

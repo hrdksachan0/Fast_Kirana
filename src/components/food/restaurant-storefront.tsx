@@ -128,6 +128,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     return slug.includes('cafe') || slug.includes('as-') || name.includes('cafe') || name.includes('a.s') || tags.some(t => t.includes('cafe'))
   }, [restaurant.slug, restaurant.name, restaurant.cuisineTags])
 
+  const hasNonVegItems = useMemo(() => {
+    if (restaurant.isPureVeg) return false
+    return products.some((p: any) => p.tags?.some((t: string) => t.toLowerCase() === 'non-veg' || t.toLowerCase() === 'nonveg'))
+  }, [restaurant.isPureVeg, products])
+
   // Determine menu sections based on restaurant type
   const getDefaultSections = () => {
     return isCafe ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS
@@ -522,18 +527,24 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 Fresh & Fast Delivery
               </span>
             </div>
-            <button
-              onClick={() => { setIsVegOnly(!isVegOnly); triggerHaptic('light') }}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition-all shrink-0 cursor-pointer shadow-2xs active:scale-95",
-                isVegOnly
-                  ? "bg-emerald-600 text-white shadow-emerald-500/20"
-                  : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
-              )}
-            >
-              <Leaf size={12} className={isVegOnly ? "text-white" : "text-emerald-600"} />
-              <span>Veg Only</span>
-            </button>
+            {hasNonVegItems ? (
+              <button
+                onClick={() => { setIsVegOnly(!isVegOnly); triggerHaptic('light') }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition-all shrink-0 cursor-pointer shadow-2xs active:scale-95",
+                  isVegOnly
+                    ? "bg-emerald-600 text-white shadow-emerald-500/20"
+                    : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                )}
+              >
+                <Leaf size={12} className={isVegOnly ? "text-white" : "text-emerald-600"} />
+                <span>Veg Only</span>
+              </button>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 shrink-0">
+                <Leaf size={12} className="text-emerald-500" /> 100% Pure Veg Kitchen
+              </span>
+            )}
           </div>
 
           {/* Menu Content */}

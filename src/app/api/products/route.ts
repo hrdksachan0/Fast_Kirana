@@ -77,11 +77,16 @@ export async function GET(request: NextRequest) {
       where.isAvailable = true
     }
 
-    // Filter by restaurant
+    // Filter by restaurant — or exclude restaurant items for grocery context
+    const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
     if (restaurantId) {
       where.restaurantId = restaurantId
     } else if (restaurantSlug) {
       where.restaurant = { slug: restaurantSlug }
+    } else if (excludeRestaurant || (!isWorker && !category)) {
+      // In grocery context (no restaurant specified, no category override), exclude restaurant products
+      // This prevents restaurant items from appearing in grocery search, home page, etc.
+      where.restaurantId = null
     }
 
     if (category) {
@@ -543,12 +548,30 @@ export async function POST(request: NextRequest) {
     const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
 
     let finalCategoryId = categoryId
-    const tagsList = Array.isArray(tags) 
-      ? tags.map((t: any) => String(t).toLowerCase()) 
-      : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim().toLowerCase()) : [])
+    let tagsList = Array.isArray(tags) 
+      ? tags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0)
+      : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [])
 
-    if (!finalCategoryId || finalCategoryId === '') {
-      if (tagsList.includes('restaurant')) {
+    // ── Restaurant product hardening ──
+    // When restaurantId is present, ALWAYS force restaurant category, tags, and unlimited stock
+    if (restaurantId) {
+      let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
+      if (!restCat) {
+        restCat = await prisma.category.create({
+          data: { name: 'FastKirana Restaurant', slug: 'restaurant', imageUrl: '🍽️', sortOrder: 10 }
+        })
+      }
+      finalCategoryId = restCat.id
+
+      // Ensure 'restaurant' tag is present
+      if (!tagsList.map(t => t.toLowerCase()).includes('restaurant')) {
+        tagsList.push('restaurant')
+      }
+      // Remove 'cafe' tag to prevent cross-contamination
+      tagsList = tagsList.filter(t => t.toLowerCase() !== 'cafe')
+    } else if (!finalCategoryId || finalCategoryId === '') {
+      const lowerTags = tagsList.map(t => t.toLowerCase())
+      if (lowerTags.includes('restaurant')) {
         let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
         if (!restCat) {
           restCat = await prisma.category.create({
@@ -556,7 +579,7 @@ export async function POST(request: NextRequest) {
           })
         }
         finalCategoryId = restCat.id
-      } else if (tagsList.includes('cafe')) {
+      } else if (lowerTags.includes('cafe')) {
         let cafeCat = await prisma.category.findFirst({ where: { slug: { in: ['cafe', 'fastkirana-cafe'] } } })
         if (!cafeCat) {
           cafeCat = await prisma.category.create({
@@ -625,9 +648,9 @@ export async function POST(request: NextRequest) {
         price: finalPrice,
         discount: calculatedDiscount,
         unit: finalUnit,
-        stock: parseInt(stock) || 0,
+        stock: restaurantId ? 999 : (parseInt(stock) || 0),
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
-        tags: Array.isArray(tags) ? tags : [],
+        tags: tagsList,
         variants: sortedVariants || null,
         minStock: minStock !== undefined ? parseInt(minStock) : 10,
         expiryDate: expiryDate ? new Date(expiryDate) : null,
