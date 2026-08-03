@@ -531,9 +531,17 @@ export function RestaurantCatalogManager() {
                   </p>
 
                   <div className="flex items-center gap-1 text-[9px] sm:text-xs text-text-secondary font-bold pt-0.5">
-                    <span className="text-[8px] sm:text-[10px] font-black uppercase text-orange-600 bg-orange-500/10 px-1.5 py-0.5 rounded-md border border-orange-500/20 truncate">
-                      {product.category?.name || 'Dish'}
-                    </span>
+                    {(() => {
+                      const matchSec = DEFAULT_RESTAURANT_MENU_SECTIONS.find(s => 
+                        product.tags?.includes(s.tag) || (s.matchTags && product.tags?.some(t => s.matchTags.includes(t)))
+                      )
+                      const label = matchSec ? matchSec.title : (product.category?.name && !['fruits & vegetables', 'fruits-vegetables'].includes(product.category.name.toLowerCase()) ? product.category.name : 'Restaurant Special')
+                      return (
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-orange-600 bg-orange-500/10 px-1.5 py-0.5 rounded-md border border-orange-500/20 truncate">
+                          {label}
+                        </span>
+                      )
+                    })()}
                     
                     {product.stock <= 0 && (
                       <span className="text-[8px] sm:text-[10px] font-black uppercase text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 shrink-0">

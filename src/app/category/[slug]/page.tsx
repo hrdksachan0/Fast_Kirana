@@ -24,7 +24,15 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     }).catch(() => []),
     prisma.product.groupBy({
       by: ['categoryId'],
-      where: { isAvailable: true },
+      where: {
+        isAvailable: true,
+        restaurantId: null,
+        NOT: {
+          tags: {
+            has: 'restaurant'
+          }
+        }
+      },
       _count: {
         id: true,
       },
@@ -73,6 +81,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     where: {
       category: { slug },
       isAvailable: true,
+      restaurantId: null,
+      NOT: {
+        tags: {
+          has: 'restaurant'
+        }
+      }
     },
     orderBy,
     include: {

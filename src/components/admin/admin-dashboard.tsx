@@ -1835,11 +1835,23 @@ export function AdminDashboard({
         ? newProduct.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
         : []
 
+      let resolvedCategoryId = newProduct.categoryId
+      if (newProduct.restaurantId || isSpecialProduct) {
+        const restCat = categories.find(c => 
+          c.slug === 'restaurant' || c.slug === 'cafe' || 
+          c.name.toLowerCase().includes('restaurant') || c.name.toLowerCase().includes('food')
+        )
+        if (restCat) {
+          resolvedCategoryId = restCat.id
+        }
+      }
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newProduct,
+          categoryId: resolvedCategoryId || newProduct.categoryId,
           mrp: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].mrp) : parseFloat(newProduct.mrp),
           price: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].price) : parseFloat(newProduct.price),
           stock: (isNewProductCafe || isNewProductRestaurant) ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
