@@ -20,6 +20,7 @@ interface ProductCardProps {
 
 import { isCafeProduct, cn, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
+import { checkDishTimeAvailability } from '@/lib/dish-timing'
 
 export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
@@ -27,6 +28,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
+
+  const timingStatus = useMemo(() => {
+    return checkDishTimeAvailability(
+      (product as any).availableStartTime,
+      (product as any).availableEndTime
+    )
+  }, [(product as any).availableStartTime, (product as any).availableEndTime])
   
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -295,6 +303,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             </div>
           )}
 
+          {/* Time Slot Badge (if outside active timing) */}
+          {!timingStatus.isAvailableNow && timingStatus.formattedTimeSlot && (
+            <div className="absolute top-1.5 left-1.5 z-20 flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[8px] font-black text-white shadow-xs pointer-events-none select-none">
+              ⏰ {timingStatus.formattedTimeSlot}
+            </div>
+          )}
+
           {/* Low Stock Badge */}
           {isLowStock && (
             <motion.div
@@ -346,11 +361,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                       handleAdd(e)
                     }
                   }}
-                  disabled={isStoreClosed && resolvedStock > 0}
+                  disabled={(isStoreClosed && resolvedStock > 0) || !timingStatus.isAvailableNow}
                   className={cn(
                     "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
                     isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
-                    isStoreClosed && resolvedStock > 0
+                    !timingStatus.isAvailableNow
+                      ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-not-allowed shadow-none"
+                      : isStoreClosed && resolvedStock > 0
                       ? "border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
                       : resolvedStock <= 0 || !resolvedIsAvailable
                       ? "border-amber-500 bg-amber-500/5 text-amber-600"
@@ -361,7 +378,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                       : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white"
                   )}
                 >
-                  {resolvedStock <= 0 || !resolvedIsAvailable ? (
+                  {!timingStatus.isAvailableNow ? (
+                    `Next @ ${timingStatus.nextAvailableTimeStr || 'Slot'}`
+                  ) : resolvedStock <= 0 || !resolvedIsAvailable ? (
                     'Notify'
                   ) : isStoreClosed ? (
                     'Closed'

@@ -37,6 +37,8 @@ interface Product {
   isAvailable: boolean
   tags: string[]
   unit: string
+  availableStartTime?: string | null
+  availableEndTime?: string | null
   category?: {
     id: string
     name: string
@@ -75,6 +77,8 @@ export function RestaurantCatalogManager() {
   const [imageUrl, setImageUrl] = useState('')
   const [stock, setStock] = useState('999')
   const [isVeg, setIsVeg] = useState(true)
+  const [availableStartTime, setAvailableStartTime] = useState('')
+  const [availableEndTime, setAvailableEndTime] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -190,6 +194,8 @@ export function RestaurantCatalogManager() {
     setImageUrl('')
     setStock('999')
     setIsVeg(true)
+    setAvailableStartTime('')
+    setAvailableEndTime('')
     setIsFormOpen(true)
   }
 
@@ -209,6 +215,8 @@ export function RestaurantCatalogManager() {
     setImageUrl(product.imageUrl || '')
     setStock(product.stock.toString())
     setIsVeg(!product.tags.includes('non-veg'))
+    setAvailableStartTime(product.availableStartTime || '')
+    setAvailableEndTime(product.availableEndTime || '')
     setIsFormOpen(true)
   }
 
@@ -244,6 +252,8 @@ export function RestaurantCatalogManager() {
       description: description.trim() || null,
       imageUrl: imageUrl.trim() || null,
       stock: stockVal,
+      availableStartTime: availableStartTime.trim() || null,
+      availableEndTime: availableEndTime.trim() || null,
       tags,
     }
 
@@ -798,6 +808,91 @@ export function RestaurantCatalogManager() {
                 )}
               </div>
 
+              {/* Dish Timing Slot / Availability Hours */}
+              <div className="space-y-1.5 bg-orange-500/5 p-3 rounded-2xl border border-orange-500/20">
+                <label className="text-xs font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span>⏰</span> Dish Serving Timing / Availability
+                  </span>
+                  <span className="text-[10px] font-extrabold text-text-secondary">
+                    {(!availableStartTime && !availableEndTime) ? 'Available 24x7 / Store Hours' : `${availableStartTime || '00:00'} - ${availableEndTime || '23:59'}`}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setAvailableStartTime(''); setAvailableEndTime('') }}
+                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                      !availableStartTime && !availableEndTime
+                        ? 'bg-orange-500 text-white border-orange-600 shadow-xs'
+                        : 'bg-card border-border text-text-secondary hover:bg-muted'
+                    }`}
+                  >
+                    ⏰ All Day (Store Hours)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAvailableStartTime('07:00'); setAvailableEndTime('11:30') }}
+                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                      availableStartTime === '07:00' && availableEndTime === '11:30'
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-card border-border text-text-secondary hover:bg-muted'
+                    }`}
+                  >
+                    🌅 Breakfast (7 AM-11:30 AM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAvailableStartTime('12:00'); setAvailableEndTime('16:00') }}
+                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                      availableStartTime === '12:00' && availableEndTime === '16:00'
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-xs'
+                        : 'bg-card border-border text-text-secondary hover:bg-muted'
+                    }`}
+                  >
+                    ☀️ Lunch (12 PM-4 PM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAvailableStartTime('16:00'); setAvailableEndTime('19:30') }}
+                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                      availableStartTime === '16:00' && availableEndTime === '19:30'
+                        ? 'bg-purple-500 text-white border-purple-600 shadow-xs'
+                        : 'bg-card border-border text-text-secondary hover:bg-muted'
+                    }`}
+                  >
+                    🌆 Evening (4 PM-7:30 PM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAvailableStartTime('19:30'); setAvailableEndTime('23:30') }}
+                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                      availableStartTime === '19:30' && availableEndTime === '23:30'
+                        ? 'bg-indigo-500 text-white border-indigo-600 shadow-xs'
+                        : 'bg-card border-border text-text-secondary hover:bg-muted'
+                    }`}
+                  >
+                    🌙 Dinner (7:30 PM-11:30 PM)
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-orange-500/10">
+                  <span className="text-[10px] font-extrabold text-text-secondary">Custom Hours:</span>
+                  <input
+                    type="time"
+                    value={availableStartTime}
+                    onChange={(e) => setAvailableStartTime(e.target.value)}
+                    className="px-2 py-1 bg-background border border-border rounded-lg text-xs font-mono"
+                  />
+                  <span className="text-xs font-bold text-text-secondary">to</span>
+                  <input
+                    type="time"
+                    value={availableEndTime}
+                    onChange={(e) => setAvailableEndTime(e.target.value)}
+                    className="px-2 py-1 bg-background border border-border rounded-lg text-xs font-mono"
+                  />
+                </div>
+              </div>
+
               {/* Description */}
               <div className="space-y-1.5">
                 <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
@@ -840,6 +935,65 @@ export function RestaurantCatalogManager() {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* 🖼️ Media Photo Library Picker Modal */}
+      {showMediaLibrary && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🖼️</span>
+                <div>
+                  <h3 className="font-extrabold text-text-primary text-sm sm:text-base">Kitchen Photo Library</h3>
+                  <p className="text-[10px] text-text-secondary">Pick any existing dish photo from library ({filteredMediaImages.length} available)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Search filter input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search photo by dish name or keyword (e.g. paneer, biryani, thali)..."
+                value={mediaSearchQuery}
+                onChange={(e) => setMediaSearchQuery(e.target.value)}
+                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+              />
+            </div>
+
+            {/* Photo Grid */}
+            <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 min-h-[250px]">
+              {filteredMediaImages.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-xs font-bold text-text-muted">
+                  No matching dish photos found. Try searching another keyword!
+                </div>
+              ) : (
+                filteredMediaImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setImageUrl(img.url)
+                      setShowMediaLibrary(false)
+                      toast.success('Photo selected from library! 🖼️')
+                    }}
+                    className="group relative flex flex-col items-center border border-border/50 rounded-2xl p-2 bg-muted/10 hover:bg-primary/10 hover:border-primary transition-all cursor-pointer text-center"
+                  >
+                    <div className="h-16 w-16 relative overflow-hidden rounded-xl bg-white/5 flex items-center justify-center mb-1.5 border border-border/30">
+                      <img src={img.url} alt={img.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform" />
+                    </div>
+                    <span className="text-[9px] font-bold text-text-secondary truncate w-full group-hover:text-primary">{img.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

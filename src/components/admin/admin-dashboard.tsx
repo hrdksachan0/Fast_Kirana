@@ -3464,11 +3464,17 @@ export function AdminDashboard({
                     onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
                   >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {categories
+                      .filter((c) => {
+                        const slug = (c.slug || '').toLowerCase()
+                        const name = (c.name || '').toLowerCase()
+                        return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                      })
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -3551,12 +3557,12 @@ export function AdminDashboard({
                       />
                     </div>
 
-                    {!isNewProductCafe && !isNewProductRestaurant && (
+                    {!newProduct.restaurantId && !isNewProductCafe && !isNewProductRestaurant && (
                       <div>
                         <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
                         <input
                           type="number"
-                          required={!hasVariantsNew}
+                          required={!hasVariantsNew && !newProduct.restaurantId}
                           placeholder="e.g. 50"
                           value={newProduct.stock}
                           onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
@@ -5679,50 +5685,24 @@ export function AdminDashboard({
                     onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
                   >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {categories
+                      .filter((c) => {
+                        const slug = (c.slug || '').toLowerCase()
+                        const name = (c.name || '').toLowerCase()
+                        return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                      })
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
-                {editProductType === 'cafe' && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Café Menu Section *</label>
-                    <select
-                      required
-                      value={CAFE_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const sectionValues = CAFE_MENU_SECTIONS.map(s => s.tag);
-                        let cleanTags = productEditForm.tags
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
-                        
-                        if (val) {
-                          cleanTags.push(val);
-                        }
-                        setProductEditForm({ ...productEditForm, tags: cleanTags.join(', ') });
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/15 focus:outline-none focus:border-rose-500 font-extrabold text-rose-600 dark:text-rose-400 cursor-pointer"
-                    >
-                      <option value="" className="text-text-primary font-normal">-- Select Café Section --</option>
-                      {CAFE_MENU_SECTIONS.map((sec) => (
-                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
-                          {sec.emoji} {sec.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {editProductType === 'restaurant' && (
+                {Boolean(productEditForm.restaurantId) && (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
-                      required
                       value={RESTAURANT_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -5735,14 +5715,11 @@ export function AdminDashboard({
                         if (val) {
                           cleanTags.push(val);
                         }
-                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
-                          cleanTags.push('restaurant');
-                        }
                         setProductEditForm({ ...productEditForm, tags: cleanTags.join(', ') });
                       }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
                     >
-                      <option value="" className="text-text-primary font-normal">-- Select Restaurant Section --</option>
+                      <option value="" className="text-text-primary font-normal">-- Select Menu Section --</option>
                       {RESTAURANT_MENU_SECTIONS.map((sec) => (
                         <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
                           {sec.emoji} {sec.title}
@@ -5752,23 +5729,6 @@ export function AdminDashboard({
                   </div>
                 )}
 
-                {(editProductType === 'restaurant' || editProductType === 'cafe' || restaurantsList.length > 0) && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Assign to Restaurant Outlet</label>
-                    <select
-                      value={productEditForm.restaurantId || ''}
-                      onChange={(e) => setProductEditForm({ ...productEditForm, restaurantId: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
-                    >
-                      <option value="" className="text-text-primary font-normal">-- Main Store / General --</option>
-                      {restaurantsList.map((r) => (
-                        <option key={r.id} value={r.id} className="text-text-primary font-semibold">
-                          🍽️ {r.name} ({r.city || 'Outlet'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
                   <input
@@ -5780,12 +5740,12 @@ export function AdminDashboard({
                 </div>
                 {!hasVariantsEdit && (
                   <>
-                    {!isEditProductCafe && !isEditProductRestaurant && (
+                    {!productEditForm.restaurantId && !isEditProductCafe && !isEditProductRestaurant && (
                       <div>
                         <label className="text-[10px] font-bold text-text-secondary block mb-1">Stock Qty *</label>
                         <input
                           type="number"
-                          required={!hasVariantsEdit}
+                          required={!hasVariantsEdit && !productEditForm.restaurantId}
                           value={productEditForm.stock}
                           onChange={(e) => setProductEditForm({ ...productEditForm, stock: e.target.value })}
                           className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
