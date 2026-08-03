@@ -21,6 +21,7 @@ import {
   Upload
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 import { formatPrice } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 
@@ -87,21 +88,33 @@ export function RestaurantCatalogManager() {
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
 
   const mediaImages = useMemo(() => {
-    const setOfImages = new Map<string, { url: string; name: string }>()
+    const setOfImages = new Map<string, { url: string; name: string; tags?: string[] }>()
+
+    // 1. Add preset HD kitchen food photos
+    PRESET_KITCHEN_PHOTOS.forEach((preset) => {
+      setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
+    })
+
+    // 2. Add existing product photos from catalog
     products.forEach((p) => {
       if (p.imageUrl && p.imageUrl.startsWith('http')) {
         if (!setOfImages.has(p.imageUrl)) {
-          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Dish Photo' })
+          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Dish Photo', tags: p.tags || [] })
         }
       }
     })
+
     return Array.from(setOfImages.values())
   }, [products])
 
   const filteredMediaImages = useMemo(() => {
     if (!mediaSearchQuery.trim()) return mediaImages
     const q = mediaSearchQuery.toLowerCase().trim()
-    return mediaImages.filter(img => img.name.toLowerCase().includes(q) || img.url.toLowerCase().includes(q))
+    return mediaImages.filter(img => 
+      img.name.toLowerCase().includes(q) || 
+      img.url.toLowerCase().includes(q) ||
+      (img.tags && img.tags.some(t => t.toLowerCase().includes(q)))
+    )
   }, [mediaImages, mediaSearchQuery])
 
   const handleDishImageUpload = async (file: File) => {

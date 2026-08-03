@@ -5,6 +5,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
+import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 import { 
   Loader2, 
   Search, 
@@ -825,12 +826,16 @@ export function AdminDashboard({
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
 
   const mediaLibraryImages = useMemo(() => {
-    const setOfImages = new Map<string, { url: string; name: string }>()
+    const setOfImages = new Map<string, { url: string; name: string; tags?: string[] }>()
+
+    PRESET_KITCHEN_PHOTOS.forEach((preset) => {
+      setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
+    })
 
     allProducts.forEach((p) => {
       if (p.imageUrl && p.imageUrl.startsWith('http')) {
         if (!setOfImages.has(p.imageUrl)) {
-          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Product Image' })
+          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Product Image', tags: p.tags || [] })
         }
       }
     })
@@ -849,7 +854,11 @@ export function AdminDashboard({
   const filteredMediaImages = useMemo(() => {
     if (!mediaSearchQuery.trim()) return mediaLibraryImages
     const q = mediaSearchQuery.toLowerCase().trim()
-    return mediaLibraryImages.filter(img => img.name.toLowerCase().includes(q) || img.url.toLowerCase().includes(q))
+    return mediaLibraryImages.filter(img => 
+      img.name.toLowerCase().includes(q) || 
+      img.url.toLowerCase().includes(q) ||
+      (img.tags && img.tags.some(t => t.toLowerCase().includes(q)))
+    )
   }, [mediaLibraryImages, mediaSearchQuery])
   const [userTotal, setUserTotal] = useState(stats.userCount || (initialUsers || []).length)
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
@@ -3456,32 +3465,33 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  <select
-                    required
-                    value={newProduct.categoryId}
-                    onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                  >
-                    {categories
-                      .filter((c) => {
-                        const slug = (c.slug || '').toLowerCase()
-                        const name = (c.name || '').toLowerCase()
-                        return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
-                      })
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {Boolean(newProduct.restaurantId) && (
+                {!newProduct.restaurantId ? (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
+                    <select
+                      required={!newProduct.restaurantId}
+                      value={newProduct.categoryId}
+                      onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                    >
+                      {categories
+                        .filter((c) => {
+                          const slug = (c.slug || '').toLowerCase()
+                          const name = (c.name || '').toLowerCase()
+                          return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                        })
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                ) : (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
+                      required
                       value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -3493,6 +3503,9 @@ export function AdminDashboard({
                         
                         if (val) {
                           cleanTags.push(val);
+                        }
+                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
+                          cleanTags.push('restaurant');
                         }
                         setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
                       }}
@@ -5677,32 +5690,33 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                  <select
-                    required
-                    value={productEditForm.categoryId}
-                    onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                  >
-                    {categories
-                      .filter((c) => {
-                        const slug = (c.slug || '').toLowerCase()
-                        const name = (c.name || '').toLowerCase()
-                        return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
-                      })
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {Boolean(productEditForm.restaurantId) && (
+                {!productEditForm.restaurantId ? (
+                  <div>
+                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
+                    <select
+                      required={!productEditForm.restaurantId}
+                      value={productEditForm.categoryId}
+                      onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                    >
+                      {categories
+                        .filter((c) => {
+                          const slug = (c.slug || '').toLowerCase()
+                          const name = (c.name || '').toLowerCase()
+                          return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                        })
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                ) : (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
+                      required
                       value={RESTAURANT_MENU_SECTIONS.find(sec => productEditForm.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -5714,6 +5728,9 @@ export function AdminDashboard({
                         
                         if (val) {
                           cleanTags.push(val);
+                        }
+                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
+                          cleanTags.push('restaurant');
                         }
                         setProductEditForm({ ...productEditForm, tags: cleanTags.join(', ') });
                       }}
