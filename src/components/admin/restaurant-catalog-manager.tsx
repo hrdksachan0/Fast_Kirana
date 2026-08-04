@@ -86,26 +86,65 @@ export function RestaurantCatalogManager() {
   // Media Library states
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+  const [globalProducts, setGlobalProducts] = useState<any[]>([])
+  const [globalCategories, setGlobalCategories] = useState<any[]>([])
+
+  // Fetch all store products & categories so local media gallery shows ALL photos in system
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/products?limit=2000').then(r => r.ok ? r.json() : null),
+      fetch('/api/categories').then(r => r.ok ? r.json() : null)
+    ]).then(([prodData, catData]) => {
+      if (prodData?.products) setGlobalProducts(prodData.products)
+      if (catData) {
+        const catList = catData.categories || (Array.isArray(catData) ? catData : [])
+        setGlobalCategories(catList)
+      }
+    }).catch(console.error)
+  }, [])
 
   const mediaImages = useMemo(() => {
     const setOfImages = new Map<string, { url: string; name: string; tags?: string[] }>()
 
     // 1. Add preset HD kitchen food photos
     PRESET_KITCHEN_PHOTOS.forEach((preset) => {
-      setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
+      if (preset.url) {
+        setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
+      }
     })
 
-    // 2. Add existing product photos from catalog
+    // 2. Add all global products from entire database (Beverages, Ice Creams, Dishes, Snacks, Grocery, etc.)
+    globalProducts.forEach((p) => {
+      if (p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0) {
+        const url = p.imageUrl.trim()
+        if (!setOfImages.has(url)) {
+          setOfImages.set(url, { url, name: p.name || 'Product Image', tags: p.tags || [] })
+        }
+      }
+    })
+
+    // 3. Add existing product photos from outlet catalog
     products.forEach((p) => {
-      if (p.imageUrl && p.imageUrl.startsWith('http')) {
-        if (!setOfImages.has(p.imageUrl)) {
-          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Dish Photo', tags: p.tags || [] })
+      if (p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0) {
+        const url = p.imageUrl.trim()
+        if (!setOfImages.has(url)) {
+          setOfImages.set(url, { url, name: p.name || 'Dish Photo', tags: p.tags || [] })
+        }
+      }
+    })
+
+    // 4. Add category photos
+    globalCategories.forEach((c) => {
+      if (c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim().length > 0) {
+        const url = c.imageUrl.trim()
+        if (!setOfImages.has(url)) {
+          setOfImages.set(url, { url, name: c.name || 'Category Image' })
         }
       }
     })
 
     return Array.from(setOfImages.values())
-  }, [products])
+  }, [products, globalProducts, globalCategories])
 
   const filteredMediaImages = useMemo(() => {
     if (!mediaSearchQuery.trim()) return mediaImages

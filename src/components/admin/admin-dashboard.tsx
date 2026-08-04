@@ -130,13 +130,22 @@ const PRODUCT_TEMPLATES = [
 
 const HUB_CONFIG = [
   {
-    key: 'grocery',
-    label: 'Grocery Store',
-    description: 'Manage products, categories, inward stock, and grocery orders',
+    key: 'orders_hub',
+    label: 'Orders & Fulfillment',
+    description: 'Live order queue, fulfillment dispatch, pickup & table orders, and historical orders',
     icon: ShoppingBag,
-    color: 'from-[#e20a22]/10 to-orange-500/10',
-    activeBorder: 'border-[#e20a22]/60 ring-2 ring-[#e20a22]/20',
-    tabs: ['orders', 'products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
+    color: 'from-amber-500/10 to-orange-500/10',
+    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
+    tabs: ['orders'] as const
+  },
+  {
+    key: 'grocery',
+    label: 'Products & Inventory',
+    description: 'Manage products, categories, inward stock, low stock alerts, and bulk pricing updates',
+    icon: Package,
+    color: 'from-emerald-500/10 to-teal-500/10',
+    activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
+    tabs: ['products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
   },
   {
     key: 'insights',
@@ -178,8 +187,8 @@ export function AdminDashboard({
   initialOrderCounts,
   stats
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('analytics')
-  const [activeHub, setActiveHub] = useState<'grocery' | 'insights' | 'ops' | 'marketing'>('insights')
+  const [activeTab, setActiveTab] = useState<TabType>('orders')
+  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'insights' | 'ops' | 'marketing'>('orders_hub')
 
   // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
   useEffect(() => {

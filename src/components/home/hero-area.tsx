@@ -72,13 +72,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
     const firstName = name ? name.split(' ')[0] : ''
     const welcome = firstName ? `Hey ${firstName}, ` : ''
 
-    // CASE 1: Both Grocery and Cafe are closed
-    if (mounted && !groceryMartOpen && !cafeOpen) {
+    // CASE 1: Grocery Mart Closed
+    if (mounted && !groceryMartOpen) {
       return {
-        greeting: settings.hero_greeting_closed || `We're resting right now 💤`,
-        subtitle: settings.hero_subtitle_closed || 'FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!',
+        greeting: settings.hero_greeting_closed || `${welcome}We're resting right now 💤`,
+        subtitle: settings.hero_subtitle_closed || 'FastKirana Grocery Mart is taking a break. We will be back soon to deliver fresh essentials!',
         icon: <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0" />,
-        modeLabel: 'Store Closed',
+        modeLabel: '🔒 GROCERY MART CLOSED',
         gradient: 'from-zinc-100 via-stone-50 to-zinc-50',
         darkGradient: 'dark:from-zinc-950/20 dark:via-zinc-900/10 dark:to-zinc-900/5',
         border: 'border-zinc-200/50',
@@ -89,18 +89,11 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
 
     // 6 AM - 11 AM: Morning Mode
     if (currentHour >= 6 && currentHour < 11) {
-      const isCafeClosed = mounted && !cafeOpen
-      const isMartClosed = mounted && !groceryMartOpen
-
       return {
-        greeting: `${welcome}${settings.hero_greeting_morning || "Good morning, let's get breakfast! 🌅"}`,
-        subtitle: isMartClosed 
-          ? (settings.hero_subtitle_morning_mart_closed || 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨')
-          : isCafeClosed
-          ? (settings.hero_subtitle_morning_cafe_closed || 'Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦')
-          : (settings.hero_subtitle_morning_both_open || 'Fresh milk, fruits, hot brews, and breakfast essentials delivered to your doorstep.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-amber-500 shrink-0" /> : <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
-        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Morning Mode',
+        greeting: `${welcome}${settings.hero_greeting_morning || "Good morning, fresh groceries ready! 🌅"}`,
+        subtitle: settings.hero_subtitle_morning_both_open || settings.hero_subtitle_morning_cafe_closed || 'Fresh milk, fruits, vegetables, and breakfast grocery essentials delivered to your doorstep in minutes.',
+        icon: <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
+        modeLabel: '⚡ GROCERY MART • ONLINE',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',
         darkGradient: 'dark:from-amber-950/20 dark:via-yellow-950/10 dark:to-zinc-900/10',
         border: 'border-amber-200/40',
@@ -108,20 +101,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-amber-600 dark:text-amber-400',
       }
     }
-    // 11 AM - 4 PM: Lunch Mode
+    // 11 AM - 4 PM: Lunch & Staples Mode
     else if (currentHour >= 11 && currentHour < 16) {
-      const isCafeClosed = mounted && !cafeOpen
-      const isMartClosed = mounted && !groceryMartOpen
-
       return {
-        greeting: `${welcome}${settings.hero_greeting_afternoon || "Good afternoon! Ready for lunch? 🍛"}`,
-        subtitle: isMartClosed
-          ? (settings.hero_subtitle_afternoon_mart_closed || 'Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨')
-          : isCafeClosed
-          ? (settings.hero_subtitle_afternoon_cafe_closed || 'Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦')
-          : (settings.hero_subtitle_afternoon_both_open || 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-emerald-500 shrink-0" /> : <Utensils className="h-4 w-4 text-emerald-500 shrink-0" />,
-        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Lunch Mode',
+        greeting: `${welcome}${settings.hero_greeting_afternoon || "Good afternoon! Cooking essentials ready 🌾"}`,
+        subtitle: settings.hero_subtitle_afternoon_both_open || settings.hero_subtitle_afternoon_cafe_closed || 'Atta, rice, dal, fresh vegetables, oils, and kitchen staples delivered super fast.',
+        icon: <Utensils className="h-4 w-4 text-emerald-500 shrink-0" />,
+        modeLabel: '⚡ GROCERY MART • ONLINE',
         gradient: 'from-emerald-50 via-teal-50/60 to-cyan-50/40',
         darkGradient: 'dark:from-emerald-950/20 dark:via-teal-950/10 dark:to-zinc-900/10',
         border: 'border-emerald-200/30',
@@ -129,20 +115,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-emerald-600 dark:text-emerald-400',
       }
     }
-    // 4 PM - 8 PM: Evening Snacks Mode
+    // 4 PM - 8 PM: Evening Munchies Mode
     else if (currentHour >= 16 && currentHour < 20) {
-      const isCafeClosed = mounted && !cafeOpen
-      const isMartClosed = mounted && !groceryMartOpen
-
       return {
-        greeting: `${welcome}${settings.hero_greeting_evening || "It's snack o'clock! Tea & snacks are ready ☕"}`,
-        subtitle: isMartClosed
-          ? (settings.hero_subtitle_evening_mart_closed || 'Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟')
-          : isCafeClosed
-          ? (settings.hero_subtitle_evening_cafe_closed || 'Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦')
-          : (settings.hero_subtitle_evening_both_open || 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-orange-500 shrink-0" /> : <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10 shrink-0" />,
-        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Tea & Snacks Mode',
+        greeting: `${welcome}${settings.hero_greeting_evening || "Evening snacks & munchies ready 🍿"}`,
+        subtitle: settings.hero_subtitle_evening_both_open || settings.hero_subtitle_evening_cafe_closed || 'Chips, biscuits, munchies, chilled soft drinks, and evening grocery essentials delivered in minutes.',
+        icon: <Cookie className="h-4 w-4 text-orange-500 fill-orange-500/10 shrink-0" />,
+        modeLabel: '⚡ GROCERY MART • ONLINE',
         gradient: 'from-orange-100/40 via-rose-50/40 to-amber-100/30',
         darkGradient: 'dark:from-orange-950/25 dark:via-rose-950/15 dark:to-zinc-900/10',
         border: 'border-orange-200/30',
@@ -150,20 +129,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-orange-600 dark:text-orange-400',
       }
     }
-    // 8 PM - 5 AM: Late Night Cravings Mode
+    // 8 PM - 5 AM: Night Cravings Mode
     else {
-      const isCafeClosed = mounted && !cafeOpen
-      const isMartClosed = mounted && !groceryMartOpen
-
       return {
-        greeting: `${welcome}${settings.hero_greeting_night || "Late night cravings? We got you! 🌙"}`,
-        subtitle: isMartClosed
-          ? (settings.hero_subtitle_night_mart_closed || 'Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨')
-          : isCafeClosed
-          ? (settings.hero_subtitle_night_cafe_closed || 'Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦')
-          : (settings.hero_subtitle_night_both_open || 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.'),
-        icon: isMartClosed ? <Coffee className="h-4 w-4 text-indigo-500 shrink-0" /> : <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20 shrink-0" />,
-        modeLabel: isMartClosed ? 'Cafe Open • Mart Closed' : isCafeClosed ? 'Mart Open • Cafe Closed' : 'Cravings Mode',
+        greeting: `${welcome}${settings.hero_greeting_night || "Late night snacks & ice creams? We got you! 🌙"}`,
+        subtitle: settings.hero_subtitle_night_both_open || settings.hero_subtitle_night_cafe_closed || 'Chocolates, ice creams, cold drinks, late night munchies, and instant grocery essentials.',
+        icon: <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20 shrink-0" />,
+        modeLabel: '⚡ GROCERY MART • ONLINE',
         gradient: 'from-indigo-100/60 via-purple-50/50 to-pink-100/30',
         darkGradient: 'dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-zinc-900/10',
         border: 'border-indigo-200/40',
@@ -171,7 +143,7 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         accentColor: 'text-indigo-600 dark:text-indigo-400',
       }
     }
-  }, [currentHour, session, groceryMartOpen, cafeOpen, mounted, settings])
+  }, [currentHour, session, groceryMartOpen, mounted, settings])
 
   // Soft fallback for SSR to prevent layout shifting
   const currentGradient = mounted
@@ -222,21 +194,12 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
             <p className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm text-text-secondary max-w-2xl font-bold leading-relaxed">
               {themeConfig.subtitle}
             </p>
-            {/* Timings row if closed */}
-            {(!groceryMartOpen || !cafeOpen) && (
-              <div className="flex flex-wrap gap-2 mt-2 pt-1">
-                {!groceryMartOpen && (
-                  <span className="inline-flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
-                    🛒 Mart: {formatTime12h(settings.grocery_open_time || '06:00')} - {formatTime12h(settings.grocery_close_time || '23:59')}
-                  </span>
-                )}
-                {!cafeOpen && (
-                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
-                    ☕ Cafe: {formatTime12h(settings.cafe_open_time || '06:00')} - {formatTime12h(settings.cafe_close_time || '23:59')}
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Timings row */}
+            <div className="flex flex-wrap gap-2 mt-2 pt-1">
+              <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                🛒 GROCERY MART: {formatTime12h(settings.grocery_open_time || '06:00')} - {formatTime12h(settings.grocery_close_time || '23:59')}
+              </span>
+            </div>
           </motion.div>
 
         ) : (

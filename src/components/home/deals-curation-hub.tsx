@@ -582,10 +582,16 @@ export function DealsCurationHub({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
-      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages or ice cream
-      const isBevOrIce = product.category?.slug === 'beverages' || 
-        product.category?.slug === 'ice-cream' || 
-        (product.tags && (product.tags.includes('beverages') || product.tags.includes('ice-cream') || product.tags.includes('drinks') || product.tags.includes('chilled')))
+      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages, ice cream, or desserts
+      const isIceCream = product.category?.slug === 'ice-cream' || 
+        (product.tags && (product.tags.includes('ice-cream') || product.tags.includes('desserts'))) ||
+        /ice.?cream|kulfi|sundae/i.test(product.name || '')
+
+      const isBeverage = product.category?.slug === 'beverages' || 
+        (product.tags && (product.tags.includes('beverages') || product.tags.includes('drinks') || product.tags.includes('chilled') || product.tags.includes('soft-drink'))) ||
+        /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza/i.test(product.name || '')
+
+      const isBevOrIce = isIceCream || isBeverage
 
       if (
         !isBevOrIce && (
@@ -598,9 +604,28 @@ export function DealsCurationHub({
         return
       }
 
-      const categoryName = product.category?.name || 'Other Essentials'
-      const categorySlug = product.category?.slug || ''
-      const sortOrder = product.category?.sortOrder ?? 999
+      // Override category grouping ONLY for restaurant-tagged items that are beverages or ice creams
+      let categoryName = product.category?.name || 'Other Essentials'
+      let categorySlug = product.category?.slug || ''
+      let sortOrder = product.category?.sortOrder ?? 999
+
+      const isRestaurantItem = categorySlug === 'restaurant' || 
+        categorySlug === 'fastkirana-restaurant' || 
+        categorySlug === 'cafe' || 
+        categorySlug === 'fastkirana-cafe' ||
+        Boolean(product.restaurantId)
+
+      if (isRestaurantItem) {
+        if (isIceCream) {
+          categoryName = 'Ice Cream'
+          categorySlug = 'ice-cream'
+          sortOrder = 50
+        } else if (isBeverage) {
+          categoryName = 'Beverages'
+          categorySlug = 'beverages'
+          sortOrder = 51
+        }
+      }
       if (!groups[categoryName]) {
         groups[categoryName] = {
           categoryName,

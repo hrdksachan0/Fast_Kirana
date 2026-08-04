@@ -117,13 +117,30 @@ export function getProductPrice(p: { price: number; variants?: any }): number {
 export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROCERY' {
   if (!p) return 'GROCERY'
 
-  // Check restaurantId first (multi-restaurant system)
+  const slug = (p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '') || '').toLowerCase()
+  const tags = (p.tags || []).map((t: any) => (typeof t === 'string' ? t.toLowerCase().trim() : ''))
+  const name = (p.name || '').toLowerCase()
+
+  // 1. Check BYPASS (Beverages, Ice Cream, Desserts, Packaged drinks) BEFORE restaurantId
+  if (
+    slug === 'ice-cream' ||
+    slug === 'beverages' ||
+    tags.includes('ice-cream') ||
+    tags.includes('beverages') ||
+    tags.includes('desserts') ||
+    tags.includes('drinks') ||
+    tags.includes('chilled') ||
+    tags.includes('soft-drink') ||
+    /ice.?cream|kulfi|sundae/i.test(name) ||
+    /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza/i.test(name)
+  ) {
+    return 'BYPASS'
+  }
+
+  // 2. Check restaurantId for actual restaurant food dishes
   if (p.restaurantId) {
     return 'RESTAURANT'
   }
-
-  const slug = (p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '') || '').toLowerCase()
-  const tags = (p.tags || []).map((t: any) => (typeof t === 'string' ? t.toLowerCase().trim() : ''))
 
   if (
     slug === 'restaurant' ||
@@ -132,15 +149,6 @@ export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROC
     tags.some((t: string) => t.includes('restaurant'))
   ) {
     return 'RESTAURANT'
-  }
-
-  if (
-    slug === 'ice-cream' ||
-    slug === 'beverages' ||
-    tags.includes('ice-cream') ||
-    tags.includes('beverages')
-  ) {
-    return 'BYPASS'
   }
 
   if (
@@ -159,7 +167,7 @@ export function getProductLimit(p: any): number {
   const type = getProductType(p)
   if (type === 'RESTAURANT') return 20
   if (type === 'CAFE') return 10
-  return 5 // GROCERY / BYPASS
+  return 10 // GROCERY / BYPASS
 }
 
 export function isProductStoreClosed(
@@ -172,16 +180,17 @@ export function isProductStoreClosed(
   const isCatOpen = categoryStatus && categorySlug ? categoryStatus[categorySlug] !== false : true
   if (!isCatOpen) return true
 
+  const type = getProductType(p)
+  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen && !status.restaurantOpen
+
   // Check specific restaurant isOpen status if product is linked to an individual restaurant
   const restObj = p.restaurant
   if (restObj && typeof restObj === 'object' && restObj.isOpen !== undefined && restObj.isOpen !== null) {
     if (restObj.isOpen === false || restObj.isOpen === 'false') return true
   }
 
-  const type = getProductType(p)
   if (type === 'RESTAURANT') return !status.restaurantOpen
   if (type === 'CAFE') return !status.cafeOpen
-  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen
   return !status.groceryMartOpen
 }
 export function getDeliveryPin(orderId: string): string {

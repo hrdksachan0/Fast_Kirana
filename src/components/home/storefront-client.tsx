@@ -246,142 +246,34 @@ export function StorefrontClient({
       </AnimatePresence>
     </div>
   )
-}
-
-function FoodBanner() {
+}function FoodBanner() {
   return (
-    <div className="w-full overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-200/50 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all duration-400 select-none">
-      {/* Background */}
-      <div className="relative bg-gradient-to-br from-[#fff5f0] via-[#fff9f5] to-[#fef3eb] dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-850 px-4 sm:px-6 md:px-8 py-5 sm:py-6 md:py-7">
-        
-        {/* Decorative circles */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-red-500/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-orange-500/5 to-transparent rounded-full translate-y-1/2 -translate-x-1/4" />
-
-        {/* Top Row: Logo + Category Pills */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          {/* Logo */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-[#e20a22] to-[#ff4444] flex items-center justify-center shadow-md shadow-red-500/20">
-              <span className="text-white font-black text-[11px] sm:text-xs">F</span>
-            </div>
-            <div>
-              <h4 className="text-[13px] sm:text-[15px] font-black text-[#e20a22] leading-none tracking-tight">
-                Fast<span className="text-zinc-800 dark:text-zinc-200">Kirana</span>
-              </h4>
-              <p className="text-[7px] sm:text-[8px] font-bold text-zinc-400 italic leading-none mt-0.5">Sab kuch, super fast!</p>
-            </div>
+    <div className="w-full overflow-hidden rounded-xl md:rounded-2xl border border-orange-500/20 shadow-xs select-none bg-gradient-to-r from-orange-600 via-rose-600 to-amber-600 text-white px-3.5 py-2.5 sm:px-5 sm:py-3 relative">
+      <div className="flex items-center justify-between gap-3 relative z-10">
+        {/* Left: Text & Icon */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
+            <span className="text-base sm:text-xl">🍔</span>
           </div>
-
-          {/* Category Pills */}
-          <div className="hidden min-[400px]:flex items-center gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-white dark:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700 rounded-full px-2.5 sm:px-3 py-1.5 shadow-sm">
-              <span className="text-[10px] sm:text-[11px]">☕</span>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-black text-zinc-800 dark:text-zinc-200 leading-none">Cafe</p>
-                <p className="text-[6.5px] sm:text-[7px] text-zinc-400 font-bold leading-none mt-0.5">Coffee, Snacks & More</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-[#e20a22] rounded-full px-2.5 sm:px-3 py-1.5 shadow-sm shadow-red-500/20">
-              <span className="text-[10px] sm:text-[11px]">🍴</span>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-black text-white leading-none">Restaurant</p>
-                <p className="text-[6.5px] sm:text-[7px] text-white/80 font-bold leading-none mt-0.5">Meals, Combos & More</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex items-center gap-3 sm:gap-5">
-          {/* Left: Text */}
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] sm:text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-1">Your Favourite</p>
-            <h3 className="text-[20px] sm:text-[26px] md:text-[32px] font-black text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight group-hover:scale-[1.01] transition-transform origin-left">
-              Cafe & Restaurant
-              <br />
-              <span className="text-[#e20a22]">Delivered Fast!</span>
-            </h3>
-            
-            {/* Offer Badge */}
-            <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
-              <div className="bg-[#e20a22] text-white rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-1.5 shadow-md shadow-red-500/25">
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wide">Flat</span>
-                <span className="text-[18px] sm:text-[22px] font-black leading-none">5%</span>
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wide">OFF</span>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] sm:text-[9px] font-bold text-zinc-500 dark:text-zinc-400">Use code:</span>
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#e20a22] bg-red-50 dark:bg-red-950/30 border border-dashed border-red-300 dark:border-red-800 px-2 py-0.5 rounded-md tracking-wider">FIRST5</span>
-                </div>
-                <span className="text-[7px] sm:text-[8px] text-zinc-400 font-bold mt-0.5">On your first food order</span>
-              </div>
-            </div>
-
-            {/* CTA Button */}
-            <div className="mt-3 sm:mt-4">
-              <span className="inline-flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                Order Now
-                <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] sm:text-sm font-black tracking-tight text-white leading-tight">
+                Hot Cafe &amp; Restaurant Meals
+              </span>
+              <span className="bg-amber-400 text-zinc-950 text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md">
+                5% OFF
               </span>
             </div>
-          </div>
-
-          {/* Right: Premium Food Visual */}
-          <div className="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px] md:w-[170px] md:h-[170px] shrink-0">
-            {/* Outer glow ring */}
-            <div className="absolute inset-[-6px] sm:inset-[-8px] rounded-full bg-gradient-to-br from-[#e20a22]/10 via-orange-400/5 to-amber-300/10 blur-sm" />
-            {/* Main circle bg */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#fff0e6] via-white to-[#ffecd6] dark:from-zinc-800 dark:via-zinc-850 dark:to-zinc-800 border border-orange-200/40 dark:border-orange-800/20 shadow-lg shadow-orange-500/10 overflow-hidden">
-              {/* Decorative pattern */}
-              <div className="absolute inset-0 opacity-[0.04]" style={{backgroundImage: 'radial-gradient(circle, #e20a22 1px, transparent 1px)', backgroundSize: '12px 12px'}} />
-            </div>
-            {/* Center emoji - static, clean */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[44px] sm:text-[56px] md:text-[68px] drop-shadow-lg select-none" style={{filter: 'drop-shadow(0 4px 12px rgba(226,10,34,0.15))'}}>🍔</span>
-            </div>
-            {/* Static accent food items — no bouncing, just subtle placement */}
-            <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[16px] sm:text-[20px] select-none opacity-90" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>🍕</span>
-            <span className="absolute top-[15%] -right-1 text-[14px] sm:text-[18px] select-none opacity-80" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>☕</span>
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[15px] sm:text-[19px] select-none opacity-85" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>🍟</span>
-            <span className="absolute top-[15%] -left-1 text-[14px] sm:text-[18px] select-none opacity-80" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>🥤</span>
-            {/* Red accent dot */}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-[#e20a22] to-[#ff4444] flex items-center justify-center shadow-md shadow-red-500/30 border-2 border-white dark:border-zinc-900">
-              <span className="text-[8px] sm:text-[10px] text-white font-black">5%</span>
-            </div>
+            <p className="text-[9.5px] sm:text-[11px] text-white/90 font-medium truncate mt-0.5">
+              Order fresh food super fast · Use code <span className="font-black bg-white/20 px-1 py-0.2 rounded border border-dashed border-white/30 text-white">FIRST5</span>
+            </p>
           </div>
         </div>
 
-        {/* Trust Badges */}
-        <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-zinc-200/60 dark:border-zinc-800/50 flex items-center justify-between sm:justify-start sm:gap-6 md:gap-10">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
-              <span className="text-[10px] sm:text-xs">🏆</span>
-            </div>
-            <div>
-              <p className="text-[8px] sm:text-[9px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider leading-none">Top Quality</p>
-              <p className="text-[6.5px] sm:text-[7px] text-zinc-450 font-bold leading-none mt-0.5">You can trust</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
-              <span className="text-[10px] sm:text-xs">🚀</span>
-            </div>
-            <div>
-              <p className="text-[8px] sm:text-[9px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider leading-none">Super Fast</p>
-              <p className="text-[6.5px] sm:text-[7px] text-zinc-450 font-bold leading-none mt-0.5">At your doorstep</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-green-50 dark:bg-green-950/30 flex items-center justify-center">
-              <span className="text-[10px] sm:text-xs">✅</span>
-            </div>
-            <div>
-              <p className="text-[8px] sm:text-[9px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider leading-none">Safe & Hygienic</p>
-              <p className="text-[6.5px] sm:text-[7px] text-zinc-455 font-bold leading-none mt-0.5">Packed with care</p>
-            </div>
-          </div>
+        {/* Right: Compact Badge */}
+        <div className="shrink-0 hidden min-[420px]:flex items-center gap-1 bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider">
+          <span>Explore</span>
+          <span>→</span>
         </div>
       </div>
     </div>

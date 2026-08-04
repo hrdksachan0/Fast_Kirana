@@ -89,35 +89,36 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
 
             {/* Right: Restaurant Info */}
             <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 
                 {/* Full Width Restaurant Name */}
                 <div className="pr-5">
-                  <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-tight group-hover:text-orange-600 transition-colors line-clamp-1">
+                  <h3 className="text-sm sm:text-base font-black text-text-primary leading-tight group-hover:text-orange-600 transition-colors line-clamp-1">
                     {restaurant.name}
                   </h3>
                 </div>
 
                 {/* Badges Row: Top Rated & Pure Veg */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0">
-                    🏆 Top Rated
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0">
+                    🏆 TOP RATED
                   </span>
                   {restaurant.isPureVeg && (
-                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md uppercase tracking-wide shrink-0">
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg uppercase tracking-wide shrink-0">
                       <Leaf size={10} /> Pure Veg
                     </span>
                   )}
                 </div>
 
-                {/* Cuisine & Location */}
-                <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 font-medium line-clamp-1">
-                  {restaurant.cuisineTags?.join(', ') || 'Multi-cuisine'} · 📍 {restaurant.address || restaurant.city || 'Ghatampur'}
-                </p>
+                {/* ONLY Location (Cuisine text removed per request) */}
+                <div className="flex items-center gap-1 text-[11px] font-semibold text-text-secondary dark:text-zinc-400 line-clamp-1">
+                  <span>📍</span>
+                  <span className="truncate">{restaurant.address || restaurant.city || 'Ghatampur Market'}</span>
+                </div>
 
                 {/* Offer Banner Badge */}
                 <div className="pt-0.5">
-                  <span className="inline-block text-[9.5px] font-black text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20 leading-tight line-clamp-1">
+                  <span className="inline-block text-[10px] font-black text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2.5 py-0.5 rounded-lg border border-orange-500/25 leading-tight line-clamp-1">
                     🔥 {offerText}
                   </span>
                 </div>
@@ -125,12 +126,12 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
               </div>
 
               {/* Bottom Row: Fresh Prep + Explore Menu Button */}
-              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 mt-1">
-                <span className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 shrink-0">
+              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-border/40 mt-1.5">
+                <span className="text-[10px] font-bold text-text-muted flex items-center gap-1 shrink-0">
                   ⚡ 30m Prep
                 </span>
 
-                <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-2xs group-hover:scale-105 shrink-0 cursor-pointer">
+                <div className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs group-hover:scale-105 shrink-0 cursor-pointer">
                   <span>Explore</span>
                   <span>→</span>
                 </div>

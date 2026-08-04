@@ -146,6 +146,21 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
+  // Filter products for category view
+  let finalProductsRaw = productsRaw
+  if (normSlug === 'beverages') {
+    finalProductsRaw = productsRaw.filter((p) => {
+      // Keep all packaged drinks, soda, juices, tea, coffee, and beverages
+      const isFoodDish = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal/i.test(p.name)
+      return !isFoodDish
+    })
+  } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
+    finalProductsRaw = productsRaw.filter((p) => {
+      const isFoodDish = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal/i.test(p.name)
+      return !isFoodDish
+    })
+  }
+
   // 4. Map product counts list to a lookup map
   const countsMap: Record<string, number> = {}
   productCounts.forEach((group) => {
@@ -162,7 +177,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     sortOrder: c.sortOrder,
   }))
 
-  const products: Product[] = sortProductsByStock(productsRaw.map((p) => ({
+  const products: Product[] = sortProductsByStock(finalProductsRaw.map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,

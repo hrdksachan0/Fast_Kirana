@@ -382,26 +382,26 @@ export default async function AdminPage() {
       </div>
 
       {/* Finance & Live Orders Top Metrics Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {statsList.map((card) => {
           const CardIcon = card.icon
           return (
             <div 
               key={card.label} 
-              className="relative overflow-hidden bg-card border border-border hover:border-primary/20 p-4 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center gap-3.5 group"
+              className="relative overflow-hidden bg-card border border-border hover:border-primary/20 p-3 sm:p-4 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center gap-2.5 sm:gap-3.5 group"
             >
               {/* Subtle background glow effect on hover */}
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-16 h-16 bg-current opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 rounded-full blur-md" />
               
-              <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 ${card.color}`}>
-                <CardIcon className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+              <div className={`flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 ${card.color}`}>
+                <CardIcon className="h-4.5 w-4.5 sm:h-5.5 sm:w-5.5" />
               </div>
               
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black text-text-secondary uppercase tracking-wider block leading-none">
+                <span className="text-[9px] sm:text-[10px] font-black text-text-secondary uppercase tracking-wider block leading-tight">
                   {card.label}
                 </span>
-                <span className="text-base sm:text-lg font-black text-text-primary mt-1 block truncate leading-none">
+                <span className="text-xs sm:text-base md:text-lg font-black text-text-primary mt-0.5 block tracking-tight leading-tight whitespace-nowrap overflow-x-auto scrollbar-none">
                   {card.value}
                 </span>
               </div>

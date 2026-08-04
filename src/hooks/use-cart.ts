@@ -76,26 +76,25 @@ export function useCart() {
 
     const storeState = useCartStore.getState()
 
-    const areTypesCompatible = (t1: string, t2: string): boolean => {
-      if (t1 === t2) return true
-      if (t1 === 'BYPASS' && (t2 === 'CAFE' || t2 === 'GROCERY')) return true
-      if (t2 === 'BYPASS' && (t1 === 'CAFE' || t1 === 'GROCERY')) return true
-      return false
-    }
-
-    const newType = getProductType(product)
-    const newRestaurantId = (product as any).restaurantId || null
+    const AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
+    const newRestId = (product as any).restaurantId || (product as any).restaurant?.id || null
+    const isNewThirdPartyRest = Boolean(newRestId && newRestId !== AS_RESTAURANT_ID)
 
     const incompatibleItem = storeState.items.find((item) => {
-      const existType = getProductType(item.product)
-      const existRestaurantId = (item.product as any).restaurantId || null
+      const existRestId = (item.product as any).restaurantId || (item.product as any).restaurant?.id || null
+      const isExistThirdPartyRest = Boolean(existRestId && existRestId !== AS_RESTAURANT_ID)
 
-      // Type-level incompatibility (e.g., RESTAURANT vs GROCERY)
-      if (!areTypesCompatible(newType, existType)) return true
+      // 1. If both are third-party restaurant items (e.g. Wedson vs another outlet), check if they're from the same restaurant
+      if (isNewThirdPartyRest && isExistThirdPartyRest) {
+        return newRestId !== existRestId
+      }
 
-      // Per-restaurant isolation: different restaurants can't mix
-      if (newRestaurantId && existRestaurantId && newRestaurantId !== existRestaurantId) return true
+      // 2. Third-party restaurant items (like Wedson) CANNOT mix with AS Restaurant / Grocery / Beverages / Ice Creams
+      if (isNewThirdPartyRest || isExistThirdPartyRest) {
+        return true
+      }
 
+      // 3. AS Restaurant + Grocery + Beverages + Ice Creams can all mix seamlessly together
       return false
     })
 

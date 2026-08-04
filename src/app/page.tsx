@@ -101,14 +101,13 @@ const getCachedFlashDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        restaurantId: null,
-        NOT: [
-          { tags: { has: 'restaurant' } },
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
-        ],
         OR: [
-          { isFlashDeal: true },
-          { discount: { gt: 10 } }
+          // Grocery flash deals (no restaurant link)
+          { restaurantId: null, isFlashDeal: true },
+          // Grocery high-discount items (no restaurant link)
+          { restaurantId: null, discount: { gt: 10 } },
+          // Beverages & Ice Cream by tag (they live in restaurant category but should show in grocery too)
+          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts'] } }
         ]
       },
       orderBy: [
@@ -119,7 +118,7 @@ const getCachedFlashDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-flash-deals'],
+  ['storefront-flash-deals-v3'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -128,10 +127,17 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        restaurantId: null,
-        NOT: [
-          { tags: { has: 'restaurant' } },
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        OR: [
+          // Grocery products (no restaurant link, no restaurant tag)
+          {
+            restaurantId: null,
+            NOT: [
+              { tags: { has: 'restaurant' } },
+              { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+            ]
+          },
+          // Beverages & Ice Cream by tag (include even though they have restaurant tag/category)
+          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts'] } }
         ]
       },
       orderBy: [
@@ -142,7 +148,7 @@ const getCachedBestSellers = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-best-sellers'],
+  ['storefront-best-sellers-v4'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -381,6 +387,34 @@ export default async function Home() {
     manualTopPicks = manualTopPicksRes
     popularProducts = popularProductsRes
     sortRulesRaw = sortRulesRes
+
+    // DEBUG: trace beverage/ice-cream counts (by tag since they're in restaurant category)
+    const _dbgFlashBev = flashDealsRaw.filter((p: any) => p.tags?.includes('beverages')).length
+    const _dbgFlashIce = flashDealsRaw.filter((p: any) => p.tags?.includes('ice-cream')).length
+    const _dbgBestBev = bestSellersRaw.filter((p: any) => p.tags?.includes('beverages')).length
+    const _dbgBestIce = bestSellersRaw.filter((p: any) => p.tags?.includes('ice-cream')).length
+    console.log(`[DEBUG] Flash: ${flashDealsRaw.length} total, ${_dbgFlashBev} bev, ${_dbgFlashIce} ice | Best: ${bestSellersRaw.length} total, ${_dbgBestBev} bev, ${_dbgBestIce} ice`)
+    // DEBUG: direct non-cached query to verify Prisma behavior
+    try {
+      const _iceItems = await prisma.product.findMany({ 
+        where: { isAvailable: true, name: { contains: 'ice', mode: 'insensitive' as any } },
+        select: { name: true, tags: true, category: { select: { slug: true } } },
+        take: 30
+      })
+      const _iceItems2 = await prisma.product.findMany({ 
+        where: { isAvailable: true, name: { contains: 'kulfi', mode: 'insensitive' as any } },
+        select: { name: true, tags: true, category: { select: { slug: true } } },
+        take: 10
+      })
+      const _iceItems3 = await prisma.product.findMany({ 
+        where: { isAvailable: true, name: { contains: 'sundae', mode: 'insensitive' as any } },
+        select: { name: true, tags: true, category: { select: { slug: true } } },
+        take: 10
+      })
+      const all = [..._iceItems, ..._iceItems2, ..._iceItems3]
+      console.log(`[DEBUG-ICE] Found ${all.length} ice-related items:`)
+      all.forEach((p: any) => console.log(`  -> ${p.name} | tags: [${(p.tags||[]).join(',')}] | cat: ${p.category?.slug}`))
+    } catch(e) { console.log('[DEBUG-ICE] Error:', e) }
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }

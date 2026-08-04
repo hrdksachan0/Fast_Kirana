@@ -29,14 +29,28 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     notFound()
   }
 
+  const isASCafe = restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant' || restaurant.id === 'cms2p1lap0000n0id8alldboy'
+
+  const productWhere: any = {
+    isAvailable: true,
+  }
+
+  if (isASCafe) {
+    productWhere.OR = [
+      { restaurantId: restaurant.id },
+      { restaurant: { slug: restaurant.slug } },
+      { category: { slug: { in: ['beverages', 'ice-cream', 'cold-beverages', 'hot-beverages', 'desserts', 'cafe', 'fastkirana-cafe'] } } },
+      { tags: { hasSome: ['beverages', 'beverage', 'drinks', 'cold-drinks', 'ice-cream', 'ice cream', 'desserts', 'shake', 'shakes'] } }
+    ]
+  } else {
+    productWhere.OR = [
+      { restaurantId: restaurant.id },
+      { restaurant: { slug: restaurant.slug } },
+    ]
+  }
+
   const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { restaurantId: restaurant.id },
-        { restaurant: { slug: restaurant.slug } },
-      ],
-      isAvailable: true,
-    },
+    where: productWhere,
     include: {
       category: true,
       images: true,
