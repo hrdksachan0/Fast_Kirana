@@ -77,16 +77,59 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     ]
   }
 
+  // 2. Fetch or construct active category to prevent 404s
+  let activeCategory = categoriesRaw.find(
+    (c) => c.slug.toLowerCase() === slug.toLowerCase() ||
+           c.slug.toLowerCase().replace(/[-_]/g, '') === slug.toLowerCase().replace(/[-_]/g, '')
+  )
+
+  if (!activeCategory) {
+    activeCategory = categoriesRaw.find(
+      (c) => c.name.toLowerCase().includes(slug.toLowerCase()) || c.slug.toLowerCase().includes(slug.toLowerCase())
+    )
+  }
+
+  if (!activeCategory) {
+    const formattedTitle = slug.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    activeCategory = {
+      id: `virtual-${slug}`,
+      name: formattedTitle,
+      slug: slug,
+      imageUrl: null,
+      parentId: null,
+      sortOrder: 99,
+    } as any
+  }
+
+  // 3. Build broad product search query to include both direct category items and tagged products
+  const normSlug = slug.toLowerCase().trim()
+  const relatedTagsMap: Record<string, string[]> = {
+    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee'],
+    'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'desserts', 'dessert', 'kulfi', 'cones', 'tubs', 'sweet', 'sweets'],
+    'dairy-breakfast': ['dairy', 'breakfast', 'milk', 'curd', 'paneer', 'butter', 'nashta', 'bread', 'eggs', 'dahi'],
+    'snacks-munchies': ['snack', 'snacks', 'namkeen', 'chips', 'biscuits', 'munchies', 'bhujia', 'biscuit'],
+    'fruits-vegetables': ['fruit', 'fruits', 'vegetable', 'vegetables', 'sabzi', 'pyaz', 'tamatar', 'aalu'],
+    'bakery-biscuits': ['bakery', 'biscuit', 'biscuits', 'bread', 'cake', 'cookies', 'toast', 'rusk'],
+    'atta-rice-dal': ['atta', 'rice', 'dal', 'pulse', 'pulses', 'flour', 'chawal', 'aata'],
+    'personal-care': ['personal', 'care', 'soap', 'shampoo', 'paste', 'brush', 'lotion'],
+    'household': ['household', 'cleaner', 'detergent', 'dishwash', 'clean'],
+  }
+
+  const related = relatedTagsMap[normSlug] || [normSlug, normSlug.replace(/-/g, ' '), normSlug.replace(/-/g, '')]
+  const conditions: any[] = [
+    { category: { slug: { equals: normSlug, mode: 'insensitive' } } },
+    { tags: { hasSome: related } },
+  ]
+
+  if (activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
+    conditions.push({ categoryId: activeCategory.id })
+  }
+
   const productsRaw = await prisma.product.findMany({
     where: {
-      category: { slug },
       isAvailable: true,
       restaurantId: null,
-      NOT: {
-        tags: {
-          has: 'restaurant'
-        }
-      }
+      OR: conditions,
     },
     orderBy,
     include: {
@@ -94,20 +137,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     },
   }).catch(() => [])
 
-  // 2. Fetch the active category from the pre-loaded category pool
-  const activeCategory = categoriesRaw.find((c) => c.slug === slug)
-
-  if (!activeCategory) {
-    notFound()
-  }
-
-  // 3. Map product counts list to a lookup map
+  // 4. Map product counts list to a lookup map
   const countsMap: Record<string, number> = {}
   productCounts.forEach((group) => {
     countsMap[group.categoryId] = group._count.id
   })
 
-  // 4. Map database categories and products to UI models
+  // 5. Map database categories and products to UI models
   const categories: Category[] = categoriesRaw.map((c) => ({
     id: c.id,
     name: c.name,
@@ -134,12 +170,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     minStock: p.minStock,
     variants: p.variants as any,
     category: {
-      id: activeCategory.id,
-      name: activeCategory.name,
-      slug: activeCategory.slug,
-      imageUrl: activeCategory.imageUrl,
-      parentId: activeCategory.parentId,
-      sortOrder: activeCategory.sortOrder,
+      id: p.category?.id || activeCategory.id,
+      name: p.category?.name || activeCategory.name,
+      slug: p.category?.slug || activeCategory.slug,
+      imageUrl: p.category?.imageUrl || activeCategory.imageUrl,
+      parentId: p.category?.parentId || activeCategory.parentId,
+      sortOrder: p.category?.sortOrder || activeCategory.sortOrder,
     },
   })))
 
