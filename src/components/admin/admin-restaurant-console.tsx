@@ -329,10 +329,40 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
     }
   }
 
+  const [restaurants, setRestaurants] = useState<any[]>([])
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('ALL')
+
+  // Fetch all outlets dynamically
+  useEffect(() => {
+    fetch('/api/restaurants')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.restaurants) {
+          setRestaurants(data.restaurants)
+        }
+      })
+      .catch(console.error)
+  }, [])
+
+  const selectedRestaurant = useMemo(() => {
+    return restaurants.find(r => r.id === selectedRestaurantId)
+  }, [restaurants, selectedRestaurantId])
+
+  const consoleTitle = selectedRestaurant 
+    ? `${selectedRestaurant.name} Console`
+    : 'All Restaurants & Outlets Console'
+
   const filteredList = useMemo(() => {
     return products.filter(p => {
+      // 1. Outlet Filter
+      if (selectedRestaurantId !== 'ALL') {
+        const pRestId = (p as any).restaurantId || (p as any).restaurant?.id
+        if (pRestId && pRestId !== selectedRestaurantId) return false
+      }
+
+      // 2. Search & Stock Filter
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
+                            (p.category?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
       
       if (!matchesSearch) return false
       
@@ -341,7 +371,7 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
       if (filter === 'hidden') return !p.isAvailable
       return true
     })
-  }, [products, searchQuery, filter])
+  }, [products, searchQuery, filter, selectedRestaurantId])
 
   return (
     <div className="space-y-6">
@@ -352,21 +382,37 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
             <div className="h-8 w-8 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
               <Utensils className="h-4.5 w-4.5" />
             </div>
-            <h2 className="text-xl font-black text-text-primary">Wedson Restaurant Kitchen Console</h2>
+            <h2 className="text-xl font-black text-text-primary">{consoleTitle}</h2>
           </div>
           <p className="text-xs text-text-secondary">
             Manage live menu availability, kitchen stock status, and pricing for Restaurant meals, main courses, and combo deals.
           </p>
         </div>
         
-        <button
-          onClick={fetchRestaurantProducts}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black bg-card border border-border hover:bg-muted/40 text-text-primary rounded-xl transition-all cursor-pointer disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Menu
-        </button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Real-time Outlet Selector */}
+          <select
+            value={selectedRestaurantId}
+            onChange={(e) => setSelectedRestaurantId(e.target.value)}
+            className="px-3.5 py-2 text-xs font-black bg-card border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500/30 cursor-pointer shadow-xs"
+          >
+            <option value="ALL">🍽️ All Outlets ({restaurants.length})</option>
+            {restaurants.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={fetchRestaurantProducts}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black bg-card border border-border hover:bg-muted/40 text-text-primary rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Menu
+          </button>
+        </div>
       </div>
 
       {/* Sub-tab Navigation */}
