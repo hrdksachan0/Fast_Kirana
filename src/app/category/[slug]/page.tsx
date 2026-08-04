@@ -135,7 +135,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const productsRaw = await prisma.product.findMany({
     where: {
       isAvailable: true,
-      restaurantId: null,
       OR: conditions,
     },
     orderBy,
