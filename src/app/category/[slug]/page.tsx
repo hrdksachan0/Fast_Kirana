@@ -78,7 +78,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }
 
   // 2. Fetch or construct active category to prevent 404s
-  let activeCategory = categoriesRaw.find(
+  let activeCategory: any = categoriesRaw.find(
     (c) => c.slug.toLowerCase() === slug.toLowerCase() ||
            c.slug.toLowerCase().replace(/[-_]/g, '') === slug.toLowerCase().replace(/[-_]/g, '')
   )

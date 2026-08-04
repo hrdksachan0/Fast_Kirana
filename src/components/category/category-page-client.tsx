@@ -194,31 +194,25 @@ function getSubcategories(
         filterFn: (p) => /chocolate|cadbury|dairy milk|kitkat|munch|5 star|snickers|mithai|sweets/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'cold-drinks-juices') {
+  } else if (categorySlug === 'beverages' || categorySlug === 'cold-drinks-juices') {
     list.push(
       {
         id: 'soft-drinks',
-        name: 'Soft Drinks',
+        name: 'Soft Drinks & Soda',
         emoji: '🥤',
-        filterFn: (p) => /coke|pepsi|thums up|sprite|7up|limca|fanta|mirinda|soda/i.test(p.name)
+        filterFn: (p) => /coke|pepsi|thums up|sprite|7up|limca|fanta|mirinda|soda|cold|drink|beverage/i.test(p.name) || (p.tags && p.tags.some(t => /drink|soda|beverage/i.test(t)))
       },
       {
         id: 'juices',
-        name: 'Fruit Juices',
+        name: 'Fruit Juices & Shakes',
         emoji: '🧃',
-        filterFn: (p) => /juice|real|tropicana|frooti|maaza|slice|appfy|paper boat/i.test(p.name)
+        filterFn: (p) => /juice|real|tropicana|frooti|maaza|slice|appfy|paper boat|shake|smoothie/i.test(p.name) || (p.tags && p.tags.some(t => /juice|shake/i.test(t)))
       },
       {
         id: 'energy-drinks',
-        name: 'Energy Drinks',
+        name: 'Energy Drinks & Water',
         emoji: '⚡',
-        filterFn: (p) => /red bull|monster|sting|hell|charged/i.test(p.name)
-      },
-      {
-        id: 'water',
-        name: 'Water & Soda',
-        emoji: '💧',
-        filterFn: (p) => /water|bisleri|kinley|aquafina|soda/i.test(p.name)
+        filterFn: (p) => /red bull|monster|sting|hell|charged|water|bisleri|kinley|aquafina/i.test(p.name) || (p.tags && p.tags.some(t => /energy|water/i.test(t)))
       }
     )
   } else if (categorySlug === 'instant-food') {
@@ -290,19 +284,19 @@ function getSubcategories(
         filterFn: (p) => /oil|ghee|mustard|refine/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'ice-cream') {
+  } else if (categorySlug === 'ice-cream' || categorySlug === 'ice_cream') {
     list.push(
       {
         id: 'cones-cups',
         name: 'Cones & Cups',
         emoji: '🍦',
-        filterFn: (p) => /cone|cup|cornetto|matka/i.test(p.name)
+        filterFn: (p) => /cone|cup|cornetto|matka|scoop|single|chocobar|vanilla|chocolate|butterscotch|amul|havmor|kwality|ice/i.test(p.name) || (p.tags && p.tags.some(t => /ice|cone|cup/i.test(t)))
       },
       {
         id: 'tubs-packs',
         name: 'Family Tubs',
         emoji: '🍨',
-        filterFn: (p) => /tub|brick|pack|family/i.test(p.name)
+        filterFn: (p) => /tub|brick|pack|family|party|1l|750ml|500ml|container|bucket|cream/i.test(p.name) || (p.tags && p.tags.some(t => /tub|pack/i.test(t)))
       }
     )
   } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
@@ -578,8 +572,11 @@ export function CategoryPageClient({
 
     // 0. Filter by subcategory
     const activeSub = subcategories.find((s) => s.id === activeSubcategoryId)
-    if (activeSub) {
-      result = result.filter(activeSub.filterFn)
+    if (activeSub && activeSub.id !== 'all') {
+      const filtered = result.filter(activeSub.filterFn)
+      if (filtered.length > 0) {
+        result = filtered
+      }
     }
 
     // 1. Filter by search query
