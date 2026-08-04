@@ -103,6 +103,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // 3. Build broad product search query to include both direct category items and tagged products
   const normSlug = slug.toLowerCase().trim()
+  const slugVariants = [
+    normSlug,
+    normSlug.replace(/-/g, '_'),
+    normSlug.replace(/_/g, '-'),
+    normSlug.replace(/-/g, ' '),
+  ]
+
   const relatedTagsMap: Record<string, string[]> = {
     'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee'],
     'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'desserts', 'dessert', 'kulfi', 'cones', 'tubs', 'sweet', 'sweets'],
@@ -115,13 +122,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     'household': ['household', 'cleaner', 'detergent', 'dishwash', 'clean'],
   }
 
-  const related = relatedTagsMap[normSlug] || [normSlug, normSlug.replace(/-/g, ' '), normSlug.replace(/-/g, '')]
+  const related = relatedTagsMap[normSlug] || slugVariants
   const conditions: any[] = [
-    { category: { slug: { equals: normSlug, mode: 'insensitive' } } },
+    { category: { slug: { in: slugVariants } } },
     { tags: { hasSome: related } },
   ]
 
-  if (activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
+  if (activeCategory && activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
     conditions.push({ categoryId: activeCategory.id })
   }
 
@@ -135,7 +142,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     include: {
       category: true,
     },
-  }).catch(() => [])
+  }).catch((err) => {
+    console.error('Error querying category products:', err)
+    return []
+  })
 
   // 4. Map product counts list to a lookup map
   const countsMap: Record<string, number> = {}
