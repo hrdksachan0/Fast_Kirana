@@ -357,9 +357,10 @@ export default async function AdminPage() {
   }))
 
   const statsList = [
-    { label: 'Active Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
-    { label: 'Today Revenue', value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-accent bg-accent/10' },
-    { label: 'Today Orders', value: todayOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: 'Active Live Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
+    { label: "Today's Net Revenue", value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-emerald-500 bg-emerald-500/10' },
+    { label: "Today's Orders", value: todayOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: 'Total Sales Revenue', value: formatPrice(revenue), icon: TrendingUp, color: 'text-blue-500 bg-blue-500/10' },
   ]
 
   return (
@@ -369,7 +370,7 @@ export default async function AdminPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Manage store status, pricing, inventory and customers.</p>
+          <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Monitor finance, live order fulfillment, and store metrics.</p>
         </div>
         <a 
           href="/admin/restaurants" 
@@ -379,8 +380,8 @@ export default async function AdminPage() {
         </a>
       </div>
 
-      {/* Grid of Stats Cards (Only Active Orders, Today Revenue, Today Orders) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      {/* Finance & Live Orders Top Metrics Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {statsList.map((card) => {
           const CardIcon = card.icon
           return (
