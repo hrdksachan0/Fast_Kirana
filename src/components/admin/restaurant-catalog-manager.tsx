@@ -236,7 +236,7 @@ export function RestaurantCatalogManager() {
   // Handle Form Submit (Add or Edit)
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !price || !unit) {
+    if (!name.trim() || !price) {
       toast.error('Please fill all required fields')
       return
     }
@@ -260,7 +260,7 @@ export function RestaurantCatalogManager() {
       name: name.trim(),
       price: priceVal,
       mrp: mrpVal,
-      unit,
+      unit: unit.trim() || '1 Serving',
       categoryId,
       description: description.trim() || null,
       imageUrl: imageUrl.trim() || null,
@@ -684,15 +684,14 @@ export function RestaurantCatalogManager() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Serving Unit *
+                    Serving Unit
                   </label>
                   <input
                     type="text"
                     value={unit}
                     onChange={e => setUnit(e.target.value)}
-                    placeholder="e.g. Serving, Plate, Piece"
+                    placeholder="e.g. Serving, Plate, Piece (Optional)"
                     className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
-                    required
                   />
                 </div>
 
