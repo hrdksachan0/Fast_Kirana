@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
       } else if (isRestaurantQuery) {
         where.OR = [
           { restaurantId: { not: null } },
-          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry'] } } },
-          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice'] } },
+          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry', 'beverages', 'ice-cream'] } } },
+          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice', 'beverages', 'beverage', 'drinks', 'ice-cream', 'desserts'] } },
         ]
       } else {
         where.category = {

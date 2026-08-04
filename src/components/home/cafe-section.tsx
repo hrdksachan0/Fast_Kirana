@@ -147,7 +147,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     setCategories([])
     setCafeProducts([])
     setActiveCategoryTag('all')
-    const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant' : 'cafe,ice-cream,beverages'
+    const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant,ice-cream,beverages' : 'cafe,ice-cream,beverages'
     fetch(`/api/products?category=${categoryQuery}&limit=9999`)
       .then(res => res.json())
       .then(productsRes => {

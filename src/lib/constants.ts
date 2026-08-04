@@ -237,14 +237,14 @@ export const DEFAULT_RESTAURANT_MENU_SECTIONS: CafeMenuSection[] = [
   },
   {
     tag: 'shakes-beverages',
-    matchTags: ['shake', 'shakes', 'beverage', 'drinks', 'mocktail', 'coffee'],
+    matchTags: ['shake', 'shakes', 'beverage', 'beverages', 'drinks', 'drink', 'cold-drink', 'cold-drinks', 'mocktail', 'coffee', 'chilled'],
     title: 'Thick Shakes & Beverages',
     emoji: '🥤',
     description: 'Chocolate, Oreo, Strawberry thick shakes & refreshing coolers',
   },
   {
     tag: 'desserts',
-    matchTags: ['desserts', 'gulab-jamun', 'ice-cream', 'kheer', 'dessert', 'sweet'],
+    matchTags: ['desserts', 'gulab-jamun', 'ice-cream', 'ice cream', 'kheer', 'dessert', 'sweet', 'sweets'],
     title: 'Desserts & Sweet Sips',
     emoji: '🍨',
     description: 'Hot gulab jamuns, premium ice creams, and traditional sweets',
