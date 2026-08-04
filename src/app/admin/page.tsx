@@ -366,61 +366,16 @@ export default async function AdminPage() {
     <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8 bg-background animate-fade-in">
       
       {/* Title Header */}
-      <div className="border-b border-border/60 pb-4">
-        <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
-        <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Manage store status, pricing, inventory and customers.</p>
-      </div>
-
-      {/* Premium Quick Access Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
+          <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Manage store status, pricing, inventory and customers.</p>
+        </div>
         <a 
-          href="/cafe-kitchen"
-          target="_blank"
-          className="relative overflow-hidden bg-gradient-to-br from-orange-500/10 via-card to-card hover:to-orange-500/[0.03] border border-orange-500/20 hover:border-orange-500/40 p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
+          href="/admin/restaurants" 
+          className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
         >
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
-              <span className="text-xl">☕</span>
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-orange-700 dark:text-orange-400 uppercase tracking-wider">Cafe Kitchen Console</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5 font-semibold">Live orders tracker, kitchen sound alerts & KOT print</p>
-            </div>
-          </div>
-          <span className="text-lg font-black text-orange-600 group-hover:translate-x-1 transition-transform">➔</span>
-        </a>
-
-        <a 
-          href="/restaurant-kitchen"
-          target="_blank"
-          className="relative overflow-hidden bg-gradient-to-br from-[#e20a22]/10 via-card to-card hover:to-rose-500/[0.03] border border-rose-500/20 hover:border-rose-500/40 p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
-        >
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-md shadow-[#e20a22]/20 group-hover:scale-105 transition-transform">
-              <span className="text-xl">🥘</span>
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-rose-700 dark:text-rose-400 uppercase tracking-wider">Restaurant Kitchen</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5 font-semibold">Track partner restaurant orders, dispatch & menus</p>
-            </div>
-          </div>
-          <span className="text-lg font-black text-rose-600 group-hover:translate-x-1 transition-transform">➔</span>
-        </a>
-
-        <a 
-          href="/admin/restaurants"
-          className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-card to-card hover:to-emerald-500/[0.03] border border-emerald-500/20 hover:border-emerald-500/40 p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
-        >
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <span className="text-xl">📋</span>
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Manage Outlets</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5 font-semibold">Onboard new outlets, configure commissions & payouts</p>
-            </div>
-          </div>
-          <span className="text-lg font-black text-emerald-600 group-hover:translate-x-1 transition-transform">➔</span>
+          Manage Outlets 🍽️
         </a>
       </div>
 
