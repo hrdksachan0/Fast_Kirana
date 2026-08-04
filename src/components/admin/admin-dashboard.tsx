@@ -139,22 +139,13 @@ const HUB_CONFIG = [
     tabs: ['orders', 'products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
   },
   {
-    key: 'restaurants',
-    label: 'Restaurant Hub',
-    description: 'Live kitchen orders console and restaurant payouts/commission status',
-    icon: Utensils,
-    color: 'from-amber-500/10 to-orange-500/10',
-    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['restaurant-console', 'restaurant-report'] as const
-  },
-  {
     key: 'insights',
     label: 'Business Intelligence',
-    description: 'Analytics dashboards, sales velocity, reports, and AI stock forecasting',
+    description: 'Analytics dashboards, sales velocity, reports, restaurant payouts, and AI stock forecasting',
     icon: TrendingUp,
     color: 'from-blue-500/10 to-cyan-500/10',
     activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['analytics', 'forecast', 'reports'] as const
+    tabs: ['analytics', 'forecast', 'reports', 'restaurant-report'] as const
   },
   {
     key: 'ops',
@@ -188,7 +179,7 @@ export function AdminDashboard({
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
-  const [activeHub, setActiveHub] = useState<'grocery' | 'restaurants' | 'insights' | 'ops' | 'marketing'>('insights')
+  const [activeHub, setActiveHub] = useState<'grocery' | 'insights' | 'ops' | 'marketing'>('insights')
 
   // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
   useEffect(() => {
@@ -2488,7 +2479,7 @@ export function AdminDashboard({
       )}
 
       {/* Consolidated Operational Hub Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {HUB_CONFIG.map((hub) => {
           const HubIcon = hub.icon
           const isActive = activeHub === hub.key
