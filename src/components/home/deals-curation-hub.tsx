@@ -582,12 +582,18 @@ export function DealsCurationHub({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
-      // Exclude restaurant dishes from main Grocery home page sections
+      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages or ice cream
+      const isBevOrIce = product.category?.slug === 'beverages' || 
+        product.category?.slug === 'ice-cream' || 
+        (product.tags && (product.tags.includes('beverages') || product.tags.includes('ice-cream') || product.tags.includes('drinks') || product.tags.includes('chilled')))
+
       if (
-        product.restaurantId ||
-        (product.tags && product.tags.includes('restaurant')) ||
-        (product.category?.name && product.category.name.toLowerCase().includes('restaurant')) ||
-        (product.category?.slug && ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'].includes(product.category.slug.toLowerCase()))
+        !isBevOrIce && (
+          product.restaurantId ||
+          (product.tags && product.tags.includes('restaurant')) ||
+          (product.category?.name && product.category.name.toLowerCase().includes('restaurant')) ||
+          (product.category?.slug && ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'].includes(product.category.slug.toLowerCase()))
+        )
       ) {
         return
       }

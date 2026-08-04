@@ -220,10 +220,8 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
   const handleSaveClick = async () => {
     if (sortRule === 'manual') {
       await handleSavePositions()
-    } else {
-      await handleSaveRule(sortRule)
-      onClose()
     }
+    onClose()
   }
 
   if (!isOpen) return null

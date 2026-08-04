@@ -16,6 +16,7 @@ export function revalidateStorefront(categorySlug?: string | null, restaurantSlu
 
     // 3. Revalidate Cafe page
     revalidatePath('/cafe')
+    revalidatePath('/food')
 
     // 4. Revalidate dynamic category page if slug provided
     if (categorySlug) {
@@ -25,6 +26,7 @@ export function revalidateStorefront(categorySlug?: string | null, restaurantSlu
     // 5. Revalidate restaurant detail page if slug provided
     if (restaurantSlug) {
       revalidatePath(`/restaurant/${restaurantSlug}`)
+      revalidatePath(`/food/${restaurantSlug}`)
     }
   } catch (err) {
     console.error('Failed to trigger on-demand revalidation:', err)

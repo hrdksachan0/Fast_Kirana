@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -5,6 +6,17 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password:
+        return False
+    return pwd_context.verify(plain_password, hashed_password)
 
 from database import get_session
 from models import Product, Category, Order, OrderItem, ProductBatch, StockLog, User, Address, StoreSetting
@@ -47,9 +59,10 @@ class ProductResponse(BaseModel):
 app = FastAPI(title="FastKirana Mobile API Hub", version="1.0.0")
 
 # CORS Setup
+app_origin = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[app_origin, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -228,13 +241,12 @@ def register_user(payload: RegisterRequest, session: Session = Depends(get_sessi
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # In production, use bcrypt/argon2 to hash. Mapped to passwordHash.
     new_user = User(
         id=generate_id(),
         name=payload.name,
         email=payload.email,
         phone=payload.phone,
-        passwordHash=payload.password, # Plain text for simplicity in dev/testing
+        passwordHash=hash_password(payload.password),
         role=payload.role,
         createdAt=datetime.utcnow(),
         updatedAt=datetime.utcnow()
@@ -242,14 +254,24 @@ def register_user(payload: RegisterRequest, session: Session = Depends(get_sessi
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
-    return {"success": True, "message": "User registered successfully!", "user": new_user}
+    return {
+        "success": True,
+        "message": "User registered successfully!",
+        "user": {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email,
+            "phone": new_user.phone,
+            "role": new_user.role
+        }
+    }
 
 @app.post("/api/auth/login")
 def login_user(payload: LoginRequest, session: Session = Depends(get_session)):
     statement = select(User).where(User.email == payload.email)
     user = session.exec(statement).first()
     
-    if not user or user.passwordHash != payload.password:
+    if not user or not verify_password(payload.password, user.passwordHash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     # Return user details and simulated login token

@@ -14,12 +14,8 @@ export async function GET(request: NextRequest) {
         : 'MISSING',
     },
     googleOAuth: {
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID 
-        ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...${process.env.GOOGLE_CLIENT_ID.substring(process.env.GOOGLE_CLIENT_ID.length - 15)}`
-        : 'MISSING',
-      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET 
-        ? `${process.env.GOOGLE_CLIENT_SECRET.substring(0, 6)}...${process.env.GOOGLE_CLIENT_SECRET.substring(process.env.GOOGLE_CLIENT_SECRET.length - 6)}`
-        : 'MISSING',
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'PRESENT' : 'MISSING',
+      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'PRESENT' : 'MISSING',
     },
     database: {
       status: 'unknown',

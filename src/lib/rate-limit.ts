@@ -71,9 +71,6 @@ export function rateLimit(options: RateLimitOptions = {}) {
      * Returns null if allowed, or a 429 NextResponse if limited.
      */
     async check(request: NextRequest): Promise<NextResponse | null> {
-      if (request.headers.get('x-bypass-limiter') === 'true') {
-        return null
-      }
       const ip = getClientIp(request)
       const now = Date.now()
 
@@ -175,11 +172,11 @@ export function rateLimit(options: RateLimitOptions = {}) {
 
 // ── Pre-configured limiters for different route types ──
 
-/** For auth routes (login, OTP, signup): 10 requests per minute */
-export const authLimiter = rateLimit({ interval: 60_000, limit: 10 })
+/** For auth routes (login, signup): 5 requests per minute */
+export const authLimiter = rateLimit({ interval: 60_000, limit: 5 })
 
-/** For OTP send: 3 requests per minute (prevent spam) */
-export const otpLimiter = rateLimit({ interval: 60_000, limit: 3 })
+/** For OTP send / password reset: 3 requests per hour (prevent spam/brute-force) */
+export const otpLimiter = rateLimit({ interval: 3_600_000, limit: 3 })
 
 /** For general API reads: 60 requests per minute */
 export const apiReadLimiter = rateLimit({ interval: 60_000, limit: 60 })

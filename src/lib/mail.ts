@@ -5,11 +5,7 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const fromEmail = process.env.EMAIL_FROM || 'FastKirana <onboarding@resend.dev>'
 
 export async function sendOtpEmail(email: string, otp: string) {
-  console.log(`\n==============================================`)
-  console.log(`[OTP Verification Code]`)
-  console.log(`To: ${email}`)
-  console.log(`OTP: ${otp}`)
-  console.log(`==============================================\n`)
+  console.log(`[OTP Verification Code] Delivery requested via Resend`)
 
   const htmlContent = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 0; background-color: #ffffff;">
@@ -56,7 +52,7 @@ export async function sendOtpEmail(email: string, otp: string) {
       if (error) {
         console.error('Error response from Resend API:', error)
       } else {
-        console.log(`OTP email sent successfully via Resend to: ${email}, ID: ${data?.id}`)
+        console.log(`OTP email sent successfully via Resend, ID: ${data?.id}`)
       }
     } catch (error) {
       console.error('Error sending email via Resend:', error)

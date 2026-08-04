@@ -68,8 +68,6 @@ const AdminCsvImport = dynamic(() => import('./admin-csv-import').then((mod) => 
 const AdminPushNotifications = dynamic(() => import('./admin-push-notifications').then((mod) => mod.AdminPushNotifications), { ssr: false })
 const AdminPromotions = dynamic(() => import('./admin-promotions').then((mod) => mod.AdminPromotions), { ssr: false })
 const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod.AdminForecast), { ssr: false })
-const AdminCafeSections = dynamic(() => import('./admin-cafe-sections').then((mod) => mod.AdminCafeSections), { ssr: false })
-const AdminCafeConsole = dynamic(() => import('./admin-cafe-console').then((mod) => mod.AdminCafeConsole), { ssr: false })
 const AdminRestaurantConsole = dynamic(() => import('./admin-restaurant-console').then((mod) => mod.AdminRestaurantConsole), { ssr: false })
 
 interface AdminDashboardProps {
@@ -89,7 +87,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console'
 
 const PRODUCT_TEMPLATES = [
   {
@@ -132,36 +130,45 @@ const PRODUCT_TEMPLATES = [
 
 const HUB_CONFIG = [
   {
+    key: 'grocery',
+    label: 'Grocery Store',
+    description: 'Manage products, categories, inward stock, and grocery orders',
+    icon: ShoppingBag,
+    color: 'from-[#e20a22]/10 to-orange-500/10',
+    activeBorder: 'border-[#e20a22]/60 ring-2 ring-[#e20a22]/20',
+    tabs: ['orders', 'products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
+  },
+  {
+    key: 'restaurants',
+    label: 'Restaurant Hub',
+    description: 'Live kitchen orders console and restaurant payouts/commission status',
+    icon: Utensils,
+    color: 'from-amber-500/10 to-orange-500/10',
+    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
+    tabs: ['restaurant-console', 'restaurant-report'] as const
+  },
+  {
     key: 'insights',
-    label: 'Business Insights & AI',
-    description: 'Analytics, forecasting, and financial reports',
+    label: 'Business Intelligence',
+    description: 'Analytics dashboards, sales velocity, reports, and AI stock forecasting',
     icon: TrendingUp,
     color: 'from-blue-500/10 to-cyan-500/10',
     activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['analytics', 'forecast', 'reports', 'restaurant-report'] as const
+    tabs: ['analytics', 'forecast', 'reports'] as const
   },
   {
-    key: 'fulfillment',
-    label: 'Ops & Fulfillment',
-    description: 'Live tracker, orders, customers, rider cash, and reviews',
+    key: 'ops',
+    label: 'Operations',
+    description: 'Real-time liveops tracker, rider COD settlements, and reviews moderation',
     icon: Zap,
-    color: 'from-amber-500/10 to-orange-500/10',
-    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['liveops', 'orders', 'users', 'rider-cash', 'reviews'] as const
-  },
-  {
-    key: 'catalog',
-    label: 'Catalog & Inventory',
-    description: 'Products, categories, GRN stock, and bulk update',
-    icon: Package,
-    color: 'from-emerald-500/10 to-teal-500/10',
-    activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['alerts', 'products', 'categories', 'inward', 'bulk-update'] as const
+    color: 'from-indigo-500/10 to-purple-500/10',
+    activeBorder: 'border-indigo-500/60 ring-2 ring-indigo-500/20',
+    tabs: ['liveops', 'users', 'rider-cash', 'reviews'] as const
   },
   {
     key: 'marketing',
-    label: 'Marketing & Settings',
-    description: 'Banners, coupons, notifications, and settings',
+    label: 'Marketing & Config',
+    description: 'Promo banners, campaign coupons, global settings, and push notifications',
     icon: Ticket,
     color: 'from-rose-500/10 to-pink-500/10',
     activeBorder: 'border-rose-500/60 ring-2 ring-rose-500/20',
@@ -181,7 +188,7 @@ export function AdminDashboard({
   stats
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('analytics')
-  const [activeHub, setActiveHub] = useState<'insights' | 'fulfillment' | 'catalog' | 'marketing'>('insights')
+  const [activeHub, setActiveHub] = useState<'grocery' | 'restaurants' | 'insights' | 'ops' | 'marketing'>('insights')
 
   // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
   useEffect(() => {
@@ -189,7 +196,7 @@ export function AdminDashboard({
       (hub.tabs as readonly string[]).includes(activeTab)
     )
     if (parentHub && parentHub.key !== activeHub) {
-      setActiveHub(parentHub.key)
+      setActiveHub(parentHub.key as any)
     }
   }, [activeTab, activeHub])
 
@@ -2320,7 +2327,7 @@ export function AdminDashboard({
     { key: 'restaurant-report', label: 'Restaurant Payouts', icon: Utensils },
     { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'products', label: 'Products', icon: Package, count: productTotal },
-    { key: 'categories', label: 'Categories & Café Sections', icon: Layers, count: categories.length },
+    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
     { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
     { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
@@ -2329,6 +2336,7 @@ export function AdminDashboard({
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
+    { key: 'restaurant-console', label: 'Restaurant Console', icon: Utensils },
   ]
 
   return (
@@ -2480,7 +2488,7 @@ export function AdminDashboard({
       )}
 
       {/* Consolidated Operational Hub Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {HUB_CONFIG.map((hub) => {
           const HubIcon = hub.icon
           const isActive = activeHub === hub.key
@@ -5657,6 +5665,12 @@ export function AdminDashboard({
       {activeTab === 'rider-cash' && (
         <div className="animate-fade-in">
           <AdminRiderCash />
+        </div>
+      )}
+
+      {activeTab === 'restaurant-console' && (
+        <div className="animate-fade-in">
+          <AdminRestaurantConsole />
         </div>
       )}
 

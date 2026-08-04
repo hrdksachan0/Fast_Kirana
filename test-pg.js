@@ -1,8 +1,7 @@
 const { parse } = require('pg-connection-string');
 require('dotenv').config();
 
-const url = process.env.DATABASE_URL;
-console.log('Raw DATABASE_URL:', url);
+console.log('Testing DATABASE_URL connection string parsing...');
 
 try {
   const config = parse(url);

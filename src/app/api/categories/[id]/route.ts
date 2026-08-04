@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateTag } from 'next/cache'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function PATCH(
   request: Request,
@@ -56,6 +58,14 @@ export async function PATCH(
       data: updateData,
     })
 
+    // Revalidate category lists cache immediately
+    try {
+      revalidateTag('categories', 'max')
+      revalidateStorefront()
+    } catch (e) {
+      console.error('Failed to trigger category revalidation on patch:', e)
+    }
+
     return NextResponse.json(updatedCategory)
   } catch (error: any) {
     console.error('Failed to update category:', error)
@@ -98,6 +108,14 @@ export async function DELETE(
     await prisma.category.delete({
       where: { id },
     })
+
+    // Revalidate category lists cache immediately
+    try {
+      revalidateTag('categories', 'max')
+      revalidateStorefront()
+    } catch (e) {
+      console.error('Failed to trigger category revalidation on delete:', e)
+    }
 
     return NextResponse.json({ success: true, message: 'Category deleted successfully' })
   } catch (error: any) {

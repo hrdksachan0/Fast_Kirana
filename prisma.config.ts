@@ -93,6 +93,6 @@ export default {
     seed: 'npx tsx prisma/seed.ts',
   },
   datasource: {
-    url: activeUrl || 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: activeUrl,
   },
 }

@@ -76,7 +76,6 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       console.log('--- NEXTAUTH SIGNIN CALLBACK ---')
       console.log('Provider:', account?.provider)
-      console.log('User email:', user?.email)
       console.log('Account type:', account?.type)
       
       if (user?.email) {
@@ -85,7 +84,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           select: { isBlocked: true, blockReason: true }
         })
         if (dbUser?.isBlocked) {
-          console.log(`[Blocked Sign-In Rejected] ${user.email} is blocked. Reason: ${dbUser.blockReason}`)
+          console.log(`[Blocked Sign-In Rejected] User account is blocked.`)
           return false
         }
       }
@@ -95,15 +94,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   events: {
     async linkAccount({ user, account }) {
       console.log('--- NEXTAUTH LINK ACCOUNT ---')
-      console.log('Linked provider:', account.provider, 'to user:', user.email)
+      console.log('Linked provider:', account.provider)
     },
     async createUser({ user }) {
       console.log('--- NEXTAUTH CREATE USER ---')
-      console.log('Created user:', user.email)
     },
     async signIn({ user }) {
       console.log('--- NEXTAUTH SIGNIN EVENT ---')
-      console.log('Signed in:', user.email)
     },
   },
   providers: [

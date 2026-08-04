@@ -8,7 +8,7 @@ if (connectionString) {
   const separator = connectionString.includes('?') ? '&' : '?'
   connectionString = `${connectionString}${separator}uselibpqcompat=true`
 }
-console.log('Connecting with compat to:', connectionString)
+console.log('Connecting with compat to PostgreSQL...')
 
 const pool = new Pool({
   connectionString,

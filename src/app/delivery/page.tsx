@@ -324,9 +324,16 @@ export default function DeliveryDashboard() {
         const data = await res.json()
         setOrders(data)
         
-        // Cache to local storage
+        // Cache to local storage (sanitized to remove raw PII)
         if (typeof window !== 'undefined') {
-          localStorage.setItem('delivery_orders_cache', JSON.stringify(data))
+          const sanitizedCache = data.map((o: any) => ({
+            id: o.id,
+            orderNumber: o.orderNumber,
+            status: o.status,
+            total: o.total,
+            createdAt: o.createdAt,
+          }))
+          localStorage.setItem('delivery_orders_cache', JSON.stringify(sanitizedCache))
         }
       } else {
         toast.error('Failed to fetch delivery orders')
@@ -559,8 +566,14 @@ export default function DeliveryDashboard() {
           }
           return o
         })
-        setOrders(updatedOrders)
-        localStorage.setItem('delivery_orders_cache', JSON.stringify(updatedOrders))
+        const sanitizedUpdatedCache = updatedOrders.map((o: any) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          status: o.status,
+          total: o.total,
+          createdAt: o.createdAt,
+        }))
+        localStorage.setItem('delivery_orders_cache', JSON.stringify(sanitizedUpdatedCache))
 
         if (newStatus === 'DELIVERED') {
           playSuccessChime()

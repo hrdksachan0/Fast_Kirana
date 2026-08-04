@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2 } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
@@ -137,6 +137,30 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [isPhoneOtpSent, setIsPhoneOtpSent] = useState(false)
   const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false)
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false)
+
+  // Account Deletion State
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true)
+    try {
+      const res = await fetch('/api/profile/delete-account', {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success('Your account and personal data have been deleted.')
+        window.location.href = '/api/auth/signout'
+      } else {
+        toast.error(data.error || 'Failed to delete account')
+      }
+    } catch (err) {
+      toast.error('Failed to delete account. Please try again.')
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }
 
   const handleSendPhoneOtp = async () => {
     if (!newPhone || newPhone.replace(/\D/g, '').length < 10) {
@@ -915,6 +939,48 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Danger Zone: Account Deletion */}
+              <div className="mt-8 pt-6 border-t border-danger/20">
+                <div className="bg-danger/5 border border-danger/20 rounded-xl p-4">
+                  <h4 className="text-sm font-bold text-danger flex items-center gap-2">
+                    <Trash2 className="h-4 w-4" /> Danger Zone: Delete Account
+                  </h4>
+                  <p className="text-xs text-text-secondary mt-1">
+                    Permanently anonymize and delete your account, addresses, and personal information. This action cannot be undone.
+                  </p>
+                  {!showDeleteConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="mt-3 bg-danger text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-danger-dark transition-all"
+                    >
+                      Delete Account
+                    </button>
+                  ) : (
+                    <div className="mt-3 p-3 bg-background rounded-lg border border-danger/30 space-y-2">
+                      <p className="text-xs font-bold text-danger">Are you sure you want to permanently delete your account?</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={isDeletingAccount}
+                          onClick={handleDeleteAccount}
+                          className="bg-danger text-white text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-danger-dark disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {isDeletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Yes, Delete My Account'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="bg-surface text-text-secondary text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-surface-hover"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

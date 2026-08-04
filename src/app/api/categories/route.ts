@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateTag } from 'next/cache'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(request: Request) {
   try {
@@ -68,6 +70,14 @@ export async function POST(request: Request) {
         parentId: body.parentId || null,
       }
     })
+
+    // Revalidate category lists cache immediately
+    try {
+      revalidateTag('categories', 'max')
+      revalidateStorefront()
+    } catch (e) {
+      console.error('Failed to trigger category revalidation:', e)
+    }
 
     return NextResponse.json(category, { status: 201 })
   } catch (error: any) {

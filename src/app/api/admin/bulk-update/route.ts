@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -232,6 +233,13 @@ export async function POST(request: NextRequest) {
       }
     }, { maxWait: 15000, timeout: 60000 })
 
+    // Revalidate storefront cache immediately so customers see the updated prices/stock
+    try {
+      revalidateStorefront()
+    } catch (e) {
+      console.error('Failed to trigger revalidation on bulk update:', e)
+    }
+
     return NextResponse.json({
       success: true,
       updated: changes.length,
@@ -422,6 +430,13 @@ export async function DELETE(request: NextRequest) {
         where: { batchId },
       })
     })
+
+    // Revalidate storefront cache immediately so customers see reverted values
+    try {
+      revalidateStorefront()
+    } catch (e) {
+      console.error('Failed to trigger revalidation on bulk revert:', e)
+    }
 
     return NextResponse.json({
       success: true,

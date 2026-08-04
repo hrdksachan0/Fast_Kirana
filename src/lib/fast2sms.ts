@@ -2,7 +2,7 @@ export async function sendFast2SmsOtp(phone: string, otp: string): Promise<boole
   const apiKey = process.env.FAST2SMS_API_KEY;
 
   if (!apiKey || apiKey === "YOUR_FAST2SMS_DEV_API_KEY_HERE" || apiKey === "") {
-    console.log(`[Fast2SMS Mock] API key not configured. Logged OTP for ${phone}: ${otp}`);
+    console.log(`[Fast2SMS Mock] API key not configured. OTP delivery skipped.`);
     return false;
   }
 
@@ -10,7 +10,7 @@ export async function sendFast2SmsOtp(phone: string, otp: string): Promise<boole
   const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
   if (cleanPhone.length !== 10) {
-    console.error(`[Fast2SMS Error] Invalid 10-digit phone number: ${phone}`);
+    console.error(`[Fast2SMS Error] Invalid 10-digit phone number.`);
     return false;
   }
 
@@ -34,7 +34,7 @@ export async function sendFast2SmsOtp(phone: string, otp: string): Promise<boole
       return false;
     }
 
-    console.log(`[Fast2SMS Success] OTP sent successfully to ${cleanPhone}. Request ID: ${data.request_id}`);
+    console.log(`[Fast2SMS Success] OTP sent successfully. Request ID: ${data.request_id}`);
     return true;
   } catch (err) {
     console.error("[Fast2SMS Connection Error]:", err);

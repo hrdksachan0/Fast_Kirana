@@ -155,7 +155,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     }))
     if (isVegOnly) {
       filteredProducts = filteredProducts.filter(p =>
-        p.tags?.some((t: string) => ['veg', 'pure-veg', 'vegetarian'].includes(t.toLowerCase()))
+        restaurant.isPureVeg || p.tags?.some((t: string) => ['veg', 'pure-veg', 'vegetarian'].includes(t.toLowerCase()))
       )
     }
     if (searchQuery) {

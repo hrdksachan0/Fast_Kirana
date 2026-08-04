@@ -4,7 +4,7 @@ dotenv.config()
 import { Pool } from 'pg'
 
 const connectionString = process.env.DATABASE_URL
-console.log('Connecting to:', connectionString)
+console.log('Connecting to PostgreSQL database...')
 
 const pool = new Pool({
   connectionString,

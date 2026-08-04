@@ -6,7 +6,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 
 let connectionString = process.env.DATABASE_URL || ''
-console.log('DATABASE_URL is:', connectionString)
+console.log('Testing DATABASE_URL connection...')
 
 if (connectionString) {
   connectionString = connectionString.replace(/\r/g, '').trim()
@@ -19,7 +19,7 @@ if (connectionString) {
     connectionString = `${connectionString}${separator}uselibpqcompat=true`
   }
 }
-console.log('Final connectionString:', connectionString)
+
 
 const pool = new Pool({
   connectionString,

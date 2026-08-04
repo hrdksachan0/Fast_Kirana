@@ -29,10 +29,13 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+import uuid
+
 # Configure CORS Middleware for Next.js Frontend
+app_origin = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[app_origin, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,12 +53,13 @@ async def add_process_time_header(request: Request, call_next):
 # Global Exception Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"CRITICAL ERROR on {request.url}: {exc}")
+    correlation_id = str(uuid.uuid4())
+    print(f"CRITICAL ERROR [CorrelationID: {correlation_id}] on {request.url}: {exc}")
     if settings.SENTRY_DSN:
         sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
-        content={"error": "Internal Server Error", "detail": str(exc)}
+        content={"error": "An internal server error occurred. Please contact support.", "correlationId": correlation_id}
     )
 
 # Include API Routers

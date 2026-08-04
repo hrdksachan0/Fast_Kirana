@@ -152,16 +152,15 @@ const getCachedBreakfastDeals = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { tags: { has: 'breakfast' } },
-          { tags: { has: 'dairy' } },
-          { category: { slug: 'dairy-breakfast' } },
+          { tags: { hasSome: ['breakfast', 'dairy', 'beverages', 'juices'] } },
+          { category: { slug: { in: ['dairy-breakfast', 'beverages'] } } },
         ],
         NOT: [
-          { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { tags: { has: 'restaurant' } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 16,
+      take: 24,
       select: productSelect,
     })
   },
@@ -175,15 +174,15 @@ const getCachedLunchDeals = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { tags: { has: 'staples' } },
-          { category: { slug: 'atta-rice-dal' } },
+          { tags: { hasSome: ['staples', 'beverages', 'drinks'] } },
+          { category: { slug: { in: ['atta-rice-dal', 'beverages'] } } },
         ],
         NOT: [
-          { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { tags: { has: 'restaurant' } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 16,
+      take: 24,
       select: productSelect,
     })
   },
@@ -197,15 +196,15 @@ const getCachedTeaDeals = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { tags: { has: 'snacks' } },
-          { category: { slug: 'snacks-munchies' } },
+          { tags: { hasSome: ['snacks', 'beverages', 'drinks', 'ice-cream', 'chilled'] } },
+          { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream'] } } },
         ],
         NOT: [
-          { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { tags: { has: 'restaurant' } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 16,
+      take: 24,
       select: productSelect,
     })
   },
@@ -219,8 +218,8 @@ const getCachedNightCravings = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream'] } } },
-          { tags: { hasSome: ['snacks', 'drinks', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night'] } }
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream', 'snacks-munchies'] } } },
+          { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night'] } }
         ]
       },
       orderBy: [

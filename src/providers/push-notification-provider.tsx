@@ -80,7 +80,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
         timeoutPromise
       ]) as ServiceWorkerRegistration
       
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BPxeEdEbKwG5gG_jE6jT6ReXk516Pi1iszzLJSW3OHrpIg9UloqpDOlrfZISFl97PpBYMQHOoesTKtPAruF4QEw'
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
 
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,

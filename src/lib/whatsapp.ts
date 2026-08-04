@@ -4,7 +4,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME
 
   if (!token || !phoneId) {
-    console.log(`[WhatsApp Mock] Credentials not configured. Logged OTP for ${phone}: ${otp}`)
+    console.log(`[WhatsApp Mock] Credentials not configured. OTP delivery skipped.`)
     return false
   }
 
@@ -82,7 +82,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
       return false
     }
 
-    console.log(`[WhatsApp Success] Message sent to ${phone} successfully. Response:`, JSON.stringify(data, null, 2))
+    console.log(`[WhatsApp Success] Message sent successfully.`)
     return true
   } catch (err) {
     console.error('Meta WhatsApp API connection error:', err)
@@ -96,7 +96,7 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
   const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME
 
   if (!token || !phoneId || !templateName) {
-    console.log(`[WhatsApp Mock Alert] Logged Order Alert to ${phone}: ${textParam} (template name not configured in env)`)
+    console.log(`[WhatsApp Mock Alert] Logged Order Alert (template name not configured in env)`)
     return false
   }
 
@@ -143,7 +143,7 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
       return false
     }
 
-    console.log(`[WhatsApp Order Alert Success] Sent to ${phone} successfully. Response:`, JSON.stringify(data, null, 2))
+    console.log(`[WhatsApp Order Alert Success] Sent successfully.`)
     return true
   } catch (err) {
     console.error('Meta WhatsApp Order Alert API connection error:', err)
