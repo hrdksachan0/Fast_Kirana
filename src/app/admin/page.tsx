@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   RotateCw,
   CheckCircle,
+  TrendingUp,
 } from 'lucide-react'
 
 export const revalidate = 0 // Admin dashboard is fully dynamic
