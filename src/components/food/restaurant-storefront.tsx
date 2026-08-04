@@ -151,7 +151,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     let filteredProducts = products.map((p: any) => ({
       ...p,
       restaurantId: p.restaurantId || restaurant.id,
-      restaurant: p.restaurant || { id: restaurant.id, name: restaurant.name, slug: restaurant.slug, address: restaurant.address, ownerPhone: restaurant.ownerPhone }
+      restaurant: p.restaurant || { id: restaurant.id, name: restaurant.name, slug: restaurant.slug, address: restaurant.address, ownerPhone: restaurant.ownerPhone, isOpen: restaurant.isOpen }
     }))
     if (isVegOnly) {
       filteredProducts = filteredProducts.filter(p =>

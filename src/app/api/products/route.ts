@@ -212,6 +212,7 @@ export async function GET(request: NextRequest) {
           bannerUrl: true,
           rating: true,
           deliveryTime: true,
+          isOpen: true,
         }
       }
     }

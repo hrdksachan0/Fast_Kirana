@@ -172,6 +172,12 @@ export function isProductStoreClosed(
   const isCatOpen = categoryStatus && categorySlug ? categoryStatus[categorySlug] !== false : true
   if (!isCatOpen) return true
 
+  // Check specific restaurant isOpen status if product is linked to an individual restaurant
+  const restObj = p.restaurant
+  if (restObj && typeof restObj === 'object' && restObj.isOpen !== undefined && restObj.isOpen !== null) {
+    if (restObj.isOpen === false || restObj.isOpen === 'false') return true
+  }
+
   const type = getProductType(p)
   if (type === 'RESTAURANT') return !status.restaurantOpen
   if (type === 'CAFE') return !status.cafeOpen

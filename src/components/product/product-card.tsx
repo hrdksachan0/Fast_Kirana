@@ -180,6 +180,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         stock: resolvedStock,
         isAvailable: resolvedIsAvailable,
         category: product.category,
+        restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
+        restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
+        restaurant: (product as any).restaurant,
       })
       setShowAdded(true)
       setTimeout(() => setShowAdded(false), 600)
