@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any
 import random
 import os
 import httpx
+import uuid
 
 from database import get_db
 from models import User, Role
@@ -209,6 +210,7 @@ async def signup(
 
     # Create user
     new_user = User(
+        id=f"c{uuid.uuid4().hex[:24]}",
         email=email,
         phone=phone,
         name=body.name or "",
@@ -313,6 +315,7 @@ async def verify_otp(
         # Create new user (WhatsApp login)
         wa_email = f"wa-91{phone}@fastkirana.com"
         user = User(
+            id=f"c{uuid.uuid4().hex[:24]}",
             email=wa_email,
             phone=phone,
             name="",
