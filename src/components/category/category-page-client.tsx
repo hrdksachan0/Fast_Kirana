@@ -104,6 +104,27 @@ function getSubcategories(
 
   const normSlug = (categorySlug || '').toLowerCase().trim()
 
+  // 1. Check if Admin has created/edited custom DB subcategories under activeCategory
+  const dbChildCategories = activeCategory && allCategories.length > 0
+    ? allCategories.filter((c) => c.parentId && (c.parentId === activeCategory.id || c.parentId === activeCategory.slug))
+    : []
+
+  if (dbChildCategories.length > 0) {
+    dbChildCategories.forEach((child) => {
+      list.push({
+        id: child.id,
+        name: child.name,
+        emoji: child.imageUrl && !child.imageUrl.startsWith('http') ? child.imageUrl : '🛒',
+        filterFn: (p) =>
+          p.categoryId === child.id ||
+          (p.category && (p.category.id === child.id || p.category.slug === child.slug)) ||
+          (p.tags && p.tags.some((t) => t.toLowerCase() === child.name.toLowerCase() || t.toLowerCase() === child.slug.toLowerCase())) ||
+          p.name.toLowerCase().includes(child.name.toLowerCase())
+      })
+    })
+    return list
+  }
+
   if (normSlug === 'fruits-vegetables' || normSlug.includes('fruit') || normSlug.includes('vegetable')) {
     list.push(
       {
