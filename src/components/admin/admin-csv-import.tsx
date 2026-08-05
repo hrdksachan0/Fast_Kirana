@@ -54,46 +54,11 @@ interface AdminCsvImportProps {
 }
 
 function parseCSV(text: string): string[][] {
-  const rows: string[][] = []
-  let current = ''
-  let inQuotes = false
-  let row: string[] = []
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]
-    const next = text[i + 1]
-
-    if (inQuotes) {
-      if (ch === '"' && next === '"') {
-        current += '"'
-        i++
-      } else if (ch === '"') {
-        inQuotes = false
-      } else {
-        current += ch
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true
-      } else if (ch === ',') {
-        row.push(current.trim())
-        current = ''
-      } else if (ch === '\n' || (ch === '\r' && next === '\n')) {
-        row.push(current.trim())
-        if (row.some(cell => cell.length > 0)) rows.push(row)
-        row = []
-        current = ''
-        if (ch === '\r') i++
-      } else {
-        current += ch
-      }
-    }
-  }
-  // last row
-  row.push(current.trim())
-  if (row.some(cell => cell.length > 0)) rows.push(row)
-
-  return rows
+  const result = Papa.parse(text, {
+    skipEmptyLines: true,
+    transform: (value: string) => value.trim(),
+  })
+  return result.data as string[][]
 }
 
 const GROCERY_TEMPLATE_HEADERS = [

@@ -57,10 +57,27 @@ body {
   will-change: transform, opacity;
 }
 
+/* Custom selection & focus styling from Impeccable craft floor */
+::selection {
+  background-color: rgba(226, 10, 34, 0.15);
+  color: var(--color-primary-dark);
+}
+
+.dark ::selection {
+  background-color: rgba(255, 77, 98, 0.25);
+  color: #ffffff;
+}
+
+/* Custom tabular numerals for prices & timers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -68,12 +85,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: rgba(156, 163, 175, 0.4);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: rgba(156, 163, 175, 0.8);
 }
 
 /* ============================================

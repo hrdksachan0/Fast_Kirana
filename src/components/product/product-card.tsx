@@ -427,7 +427,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           <motion.span
             key={resolvedPrice}
             className={cn(
-              "font-black text-text-primary block tracking-tight",
+              "font-black text-text-primary block tracking-tight tabular-nums",
               isCompact 
                 ? "text-[11px] min-[375px]:text-xs sm:text-sm" 
                 : "text-[12px] min-[375px]:text-sm sm:text-base"
@@ -436,7 +436,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             ₹{resolvedPrice}
           </motion.span>
           {resolvedMrp > resolvedPrice && (
-            <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold">
+            <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold tabular-nums">
               ₹{resolvedMrp}
             </span>
           )}

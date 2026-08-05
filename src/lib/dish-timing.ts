@@ -1,3 +1,5 @@
+import { getTotalMinutes } from '@/lib/date-helpers'
+
 export interface DishTimingStatus {
   isAvailableNow: boolean
   formattedTimeSlot: string | null
