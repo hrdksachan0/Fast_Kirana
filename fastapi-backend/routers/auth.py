@@ -209,18 +209,26 @@ async def signup(
         role_value = Role.USER.value
 
     # Create user
-    new_user = User(
-        id=f"c{uuid.uuid4().hex[:24]}",
-        email=email,
-        phone=phone,
-        name=body.name or "",
-        role=role_value,
-        passwordHash=hash_password(body.password),
-        isBlocked=False,
-    )
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+    import traceback
+    try:
+        new_user = User(
+            id=f"c{uuid.uuid4().hex[:24]}",
+            email=email,
+            phone=phone,
+            name=body.name or "",
+            role=role_value,
+            passwordHash=hash_password(body.password),
+            isBlocked=False,
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Signup Error: {str(e)}\nTraceback: {tb}"
+        )
 
     return SessionResponse(
         id=new_user.id,
