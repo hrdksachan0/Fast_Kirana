@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, ForeignKey,
-    Text, JSON, Index, UniqueConstraint
+    Text, JSON, Index, UniqueConstraint, Enum as SAEnum
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database import Base
@@ -60,7 +60,7 @@ class User(Base):
     image: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     passwordHash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, default="USER", index=True)
+    role: Mapped[str] = mapped_column(SAEnum(Role, name="Role", create_type=False, native_enum=True), default="USER", index=True)
     assignedStoreId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     assignedRestaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     isBlocked: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -195,16 +195,16 @@ class Order(Base):
     addressId: Mapped[str] = mapped_column(String, ForeignKey("addresses.id"))
     combinedId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     restaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
-    orderType: Mapped[str] = mapped_column(String, default="GROCERY")
-    status: Mapped[str] = mapped_column(String, default="PENDING", index=True)
+    orderType: Mapped[str] = mapped_column(SAEnum(OrderType, name="OrderType", create_type=False, native_enum=True), default="GROCERY")
+    status: Mapped[str] = mapped_column(SAEnum(OrderStatus, name="OrderStatus", create_type=False, native_enum=True), default="PENDING", index=True)
     subtotal: Mapped[float] = mapped_column(Float)
     discount: Mapped[float] = mapped_column(Float, default=0.0)
     deliveryFee: Mapped[float] = mapped_column(Float, default=0.0)
     taxes: Mapped[float] = mapped_column(Float, default=0.0)
     miscFee: Mapped[float] = mapped_column(Float, default=0.0)
     total: Mapped[float] = mapped_column(Float)
-    paymentMethod: Mapped[str] = mapped_column(String, default="COD")
-    paymentStatus: Mapped[str] = mapped_column(String, default="PENDING")
+    paymentMethod: Mapped[str] = mapped_column(SAEnum(PaymentMethod, name="PaymentMethod", create_type=False, native_enum=True), default="COD")
+    paymentStatus: Mapped[str] = mapped_column(SAEnum(PaymentStatus, name="PaymentStatus", create_type=False, native_enum=True), default="PENDING")
     estimatedDelivery: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     deliveryPhoto: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     deliveryLat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
