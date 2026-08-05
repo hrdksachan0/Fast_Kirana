@@ -8,14 +8,14 @@ export interface ExcelRow {
 
 export async function parseExcelFile(file: File): Promise<ExcelRow[]> {
   try {
-    const XLSX = await import('xlsx')
+    const XLSX: any = await import('xlsx')
     const buffer = await file.arrayBuffer()
     const workbook = XLSX.read(buffer, { type: 'array' })
     const firstSheetName = workbook.SheetNames[0]
     if (!firstSheetName) return []
 
     const worksheet = workbook.Sheets[firstSheetName]
-    const json = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, { defval: '' })
+    const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as ExcelRow[]
     return json
   } catch (error) {
     console.error('Failed to parse Excel file:', error)
