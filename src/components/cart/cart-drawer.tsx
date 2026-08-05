@@ -472,16 +472,15 @@ export function CartDrawer() {
                   const groups: Record<string, typeof cafeItems> = {}
                   for (const item of cafeItems) {
                     const p = item.product as any
-                    let outlet = 'A.S Restaurant'
+                    let outlet = p.restaurant?.name || p.restaurantName || null
 
-                    if (p.restaurant?.name) {
-                      outlet = p.restaurant.name
-                    } else if (p.restaurantName) {
-                      outlet = p.restaurantName
-                    } else if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || p.tags?.includes('wedson') || p.tags?.includes('restaurant-kitchen')) {
-                      outlet = 'Wedson Restaurant'
-                    } else if (p.restaurantId === 'cms2p1lap0000n0id8alldboy' || p.tags?.includes('as-restaurant') || p.tags?.includes('cafe')) {
-                      outlet = 'A.S Restaurant'
+                    if (!outlet) {
+                      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+                      if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || tags.includes('wedson') || tags.includes('dal-fry')) {
+                        outlet = 'Wedson Restaurant'
+                      } else {
+                        outlet = 'A.S. Restaurant'
+                      }
                     }
 
                     if (!groups[outlet]) groups[outlet] = []

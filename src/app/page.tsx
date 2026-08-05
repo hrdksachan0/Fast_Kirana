@@ -23,6 +23,14 @@ const productSelect = {
   description: true,
   imageUrl: true,
   categoryId: true,
+  restaurantId: true,
+  restaurant: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+    }
+  },
   mrp: true,
   price: true,
   discount: true,
