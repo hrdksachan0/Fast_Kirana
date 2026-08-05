@@ -15,7 +15,7 @@ from database import get_db
 from models import User, Role
 from utils.jwt import extract_user_from_token, is_token_expired
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
