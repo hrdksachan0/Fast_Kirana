@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const FASTAPI = process.env.NEXT_PUBLIC_API_URL || ''
+const FASTAPI = process.env.NEXT_PUBLIC_FASTAPI_URL || ''
 
 /**
  * POST /api/cart/add - Proxy to FastAPI

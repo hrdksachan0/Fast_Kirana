@@ -2,7 +2,7 @@
  * FastAPI Backend Client
  *
  * Lightweight wrapper around fetch() for calling FastAPI endpoints.
- * Uses NEXT_PUBLIC_API_URL env var.
+ * Uses NEXT_PUBLIC_FASTAPI_URL env var.
  *
  * Usage:
  *   import { fastApi } from "@/lib/fastapi";
@@ -10,7 +10,7 @@
  *   const user = await fastApi.post("/auth/login", { email, password });
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
 
 export interface FastApiOptions extends Omit<RequestInit, "body"> {
     body?: unknown;

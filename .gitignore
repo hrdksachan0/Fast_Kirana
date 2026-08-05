@@ -46,8 +46,10 @@ next-env.d.ts
 /fastkirana-rn
 /fastkirana-android
 
-# python virtual env
+# python virtual env & cache
 fastapi-backend/venv/
+__pycache__/
+*.pyc
 
 # dev scratch scripts
 scratch/
