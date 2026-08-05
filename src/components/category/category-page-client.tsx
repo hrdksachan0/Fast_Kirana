@@ -89,7 +89,9 @@ function getSubcategories(
   categorySlug: string,
   products: Product[],
   settings: Record<string, any> = {},
-  categoryStatus: Record<string, boolean> = {}
+  categoryStatus: Record<string, boolean> = {},
+  allCategories: Category[] = [],
+  activeCategory?: Category
 ): Subcategory[] {
   const list: Subcategory[] = [
     {
@@ -100,7 +102,9 @@ function getSubcategories(
     }
   ]
 
-  if (categorySlug === 'fruits-vegetables') {
+  const normSlug = (categorySlug || '').toLowerCase().trim()
+
+  if (normSlug === 'fruits-vegetables' || normSlug.includes('fruit') || normSlug.includes('vegetable')) {
     list.push(
       {
         id: 'vegetables',
@@ -140,7 +144,7 @@ function getSubcategories(
         filterFn: (p) => p.tags?.map(t => t.toLowerCase()).includes('premium') || false
       }
     )
-  } else if (categorySlug === 'dairy-breakfast') {
+  } else if (normSlug === 'dairy-breakfast' || normSlug === 'daily-breakfast' || normSlug.includes('breakfast') || normSlug.includes('dairy')) {
     list.push(
       {
         id: 'milk',
@@ -155,6 +159,12 @@ function getSubcategories(
         filterFn: (p) => /bread|pav|bun|toast|rusk/i.test(p.name)
       },
       {
+        id: 'sewai-vermicelli',
+        name: 'Sewai & Vermicelli',
+        emoji: '🍜',
+        filterFn: (p) => /sewai|vermicelli|semiya|kheer/i.test(p.name) || (p.tags && p.tags.some(t => /sewai|vermicelli/i.test(t)))
+      },
+      {
         id: 'cereal-oats',
         name: 'Cereal & Oats',
         emoji: '🥣',
@@ -167,7 +177,7 @@ function getSubcategories(
         filterFn: (p) => /egg|butter|cheese/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'munchies') {
+  } else if (normSlug === 'munchies' || normSlug === 'snacks-munchies' || normSlug === 'snacks-biscuits' || normSlug.includes('snack') || normSlug.includes('biscuit') || normSlug.includes('munchie')) {
     list.push(
       {
         id: 'chips',
@@ -185,7 +195,7 @@ function getSubcategories(
         id: 'biscuits',
         name: 'Biscuits & Cookies',
         emoji: '🍪',
-        filterFn: (p) => /biscuit|cookie|parle|good day|oreo|dark fantasy/i.test(p.name)
+        filterFn: (p) => /biscuit|cookie|parle|good day|oreo|dark fantasy|gobbles|cake/i.test(p.name)
       },
       {
         id: 'chocolates',
@@ -364,6 +374,27 @@ function getSubcategories(
         emoji: meta.emoji,
         filterFn: (p) => p.tags?.map((t) => t.toLowerCase()).includes(tag.toLowerCase()) || false
       })
+    })
+  }
+
+  // 4. Dynamically append DB Child Subcategories if they exist under activeCategory
+  if (activeCategory && allCategories.length > 0) {
+    const dbChildCategories = allCategories.filter(
+      (c) => c.parentId && (c.parentId === activeCategory.id || c.parentId === activeCategory.slug)
+    )
+
+    dbChildCategories.forEach((child) => {
+      if (!list.some((s) => s.id === child.id || s.name.toLowerCase() === child.name.toLowerCase())) {
+        list.push({
+          id: child.id,
+          name: child.name,
+          emoji: child.imageUrl && !child.imageUrl.startsWith('http') ? child.imageUrl : '🛒',
+          filterFn: (p) =>
+            p.categoryId === child.id ||
+            (p.category && (p.category.id === child.id || p.category.slug === child.slug)) ||
+            (p.tags && p.tags.some((t) => t.toLowerCase() === child.name.toLowerCase() || t.toLowerCase() === child.slug.toLowerCase()))
+        })
+      }
     })
   }
 
@@ -563,8 +594,8 @@ export function CategoryPageClient({
   ]
 
   const subcategories = useMemo(() => {
-    return getSubcategories(activeCategory.slug, initialProducts, settings, categoryStatus)
-  }, [activeCategory.slug, initialProducts, settings, categoryStatus])
+    return getSubcategories(activeCategory.slug, initialProducts, settings, categoryStatus, categories, activeCategory)
+  }, [activeCategory, initialProducts, settings, categoryStatus, categories])
 
   // Filter and sort products in memory
   const processedProducts = useMemo(() => {
@@ -938,7 +969,7 @@ export function CategoryPageClient({
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Redesigned into Sleek Rectangular Vertical Tabs */}
-          <aside className="w-[92px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[52px] self-start backdrop-blur-md">
+          <aside className="w-[94px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 pl-1.5 pr-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[52px] self-start backdrop-blur-md">
             {subcategories.map((subcat) => {
               const isActive = subcat.id === activeSubcategoryId
               // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
@@ -961,7 +992,7 @@ export function CategoryPageClient({
                   {isActive && (
                     <motion.div
                       layoutId="activeSubcategoryMobileBar"
-                      className={cn("absolute left-0 top-2 bottom-2 w-[3.5px] rounded-r-full", theme.indicatorBg)}
+                      className={cn("absolute left-0.5 top-2.5 bottom-2.5 w-[3px] rounded-full", theme.indicatorBg)}
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     />
                   )}

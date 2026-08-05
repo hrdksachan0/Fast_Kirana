@@ -2662,29 +2662,71 @@ export function AdminDashboard({
                   />
                 </div>
 
-                {!newProduct.restaurantId ? (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                    <select
-                      required={!newProduct.restaurantId}
-                      value={newProduct.categoryId}
-                      onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                    >
-                      {categories
-                        .filter((c) => {
-                          const slug = (c.slug || '').toLowerCase()
-                          const name = (c.name || '').toLowerCase()
-                          return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
-                        })
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
+                {!newProduct.restaurantId ? (() => {
+                  const currentCat = categories.find(c => c.id === newProduct.categoryId)
+                  const activeParentId = currentCat ? (currentCat.parentId || currentCat.id) : ''
+                  const activeSubId = currentCat && currentCat.parentId ? currentCat.id : ''
+
+                  const parentCategories = categories.filter((c) => {
+                    const slug = (c.slug || '').toLowerCase()
+                    const name = (c.name || '').toLowerCase()
+                    return !c.parentId && slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                  })
+
+                  const availableSubcategories = activeParentId
+                    ? categories.filter((c) => c.parentId === activeParentId)
+                    : []
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 col-span-1 sm:col-span-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Main Category *</label>
+                        <select
+                          required={!newProduct.restaurantId}
+                          value={activeParentId}
+                          onChange={(e) => {
+                            const newParentId = e.target.value
+                            setNewProduct({ ...newProduct, categoryId: newParentId })
+                          }}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                        >
+                          <option value="">-- Select Parent Category --</option>
+                          {parentCategories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                          Subcategory {availableSubcategories.length > 0 ? '(Recommended)' : '(Optional)'}
+                        </label>
+                        <select
+                          value={activeSubId}
+                          disabled={!activeParentId || availableSubcategories.length === 0}
+                          onChange={(e) => {
+                            const subId = e.target.value
+                            setNewProduct({ ...newProduct, categoryId: subId || activeParentId })
+                          }}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="">
+                            {availableSubcategories.length === 0
+                              ? '(No subcategories created yet)'
+                              : '-- All / Main Category --'}
                           </option>
-                        ))}
-                    </select>
-                  </div>
-                ) : (
+                          {availableSubcategories.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              └ {sub.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })() : (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
@@ -5012,29 +5054,71 @@ export function AdminDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
-                {!productEditForm.restaurantId ? (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category *</label>
-                    <select
-                      required={!productEditForm.restaurantId}
-                      value={productEditForm.categoryId}
-                      onChange={(e) => setProductEditForm({ ...productEditForm, categoryId: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                    >
-                      {categories
-                        .filter((c) => {
-                          const slug = (c.slug || '').toLowerCase()
-                          const name = (c.name || '').toLowerCase()
-                          return slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
-                        })
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
+                {!productEditForm.restaurantId ? (() => {
+                  const currentCat = categories.find(c => c.id === productEditForm.categoryId)
+                  const activeParentId = currentCat ? (currentCat.parentId || currentCat.id) : ''
+                  const activeSubId = currentCat && currentCat.parentId ? currentCat.id : ''
+
+                  const parentCategories = categories.filter((c) => {
+                    const slug = (c.slug || '').toLowerCase()
+                    const name = (c.name || '').toLowerCase()
+                    return !c.parentId && slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
+                  })
+
+                  const availableSubcategories = activeParentId
+                    ? categories.filter((c) => c.parentId === activeParentId)
+                    : []
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 col-span-1 sm:col-span-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Main Category *</label>
+                        <select
+                          required={!productEditForm.restaurantId}
+                          value={activeParentId}
+                          onChange={(e) => {
+                            const newParentId = e.target.value
+                            setProductEditForm({ ...productEditForm, categoryId: newParentId })
+                          }}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                        >
+                          <option value="">-- Select Parent Category --</option>
+                          {parentCategories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                          Subcategory {availableSubcategories.length > 0 ? '(Recommended)' : '(Optional)'}
+                        </label>
+                        <select
+                          value={activeSubId}
+                          disabled={!activeParentId || availableSubcategories.length === 0}
+                          onChange={(e) => {
+                            const subId = e.target.value
+                            setProductEditForm({ ...productEditForm, categoryId: subId || activeParentId })
+                          }}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="">
+                            {availableSubcategories.length === 0
+                              ? '(No subcategories created yet)'
+                              : '-- All / Main Category --'}
                           </option>
-                        ))}
-                    </select>
-                  </div>
-                ) : (
+                          {availableSubcategories.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              └ {sub.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })() : (
                   <div>
                     <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                     <select
