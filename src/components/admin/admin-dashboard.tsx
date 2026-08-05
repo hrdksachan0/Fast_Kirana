@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { formatOrderTime } from '@/lib/date-helpers'
-import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES } from '@/lib/constants'
+import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
+import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
@@ -2450,79 +2451,14 @@ export function AdminDashboard({
         </motion.div>
       )}
 
-      {/* Consolidated Operational Hub Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {HUB_CONFIG.map((hub) => {
-          const HubIcon = hub.icon
-          const isActive = activeHub === hub.key
-          return (
-            <button
-              key={hub.key}
-              type="button"
-              onClick={() => {
-                setActiveHub(hub.key)
-                setActiveTab(hub.tabs[0])
-              }}
-              className={`relative text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden select-none ${
-                isActive
-                  ? `bg-gradient-to-br ${hub.color} ${hub.activeBorder} shadow-md`
-                  : 'bg-card hover:bg-muted/40 border-border/50 shadow-sm hover:shadow-md'
-              }`}
-            >
-              {/* Dynamic decorative background glow */}
-              <div className={`absolute right-0 bottom-0 -mr-6 -mb-6 h-16 w-16 rounded-full bg-gradient-to-br ${hub.color} blur-lg opacity-40 transition-transform duration-500 ${isActive ? 'scale-150' : 'scale-100'}`} />
-              
-              <div className="flex items-center gap-3.5 relative z-10">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                  isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-text-secondary'
-                }`}>
-                  <HubIcon className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-text-primary">{hub.label}</h4>
-                  <p className="text-[10px] text-text-secondary mt-0.5 line-clamp-1">{hub.description}</p>
-                </div>
-              </div>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Sub-Tab Navigation inside active Hub */}
-      <div className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative">
-        {(() => {
-          const activeHubData = HUB_CONFIG.find(h => h.key === activeHub)
-          const activeHubSubTabs = activeHubData 
-            ? tabConfig.filter(tab => (activeHubData.tabs as readonly string[]).includes(tab.key)) 
-            : []
-          
-          return activeHubSubTabs.map((tab) => {
-            const TabIcon = tab.icon
-            const isActive = activeTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer select-none ${
-                  isActive
-                    ? 'text-primary'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTabBackground"
-                    className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-lg -z-10"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <TabIcon className="h-3.5 w-3.5 z-10" />
-                <span className="z-10">{tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}</span>
-              </button>
-            )
-          })
-        })()}
-      </div>
+      <DashboardHubNav
+        activeHub={activeHub}
+        setActiveHub={setActiveHub}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        hubs={HUB_CONFIG}
+        tabConfig={tabConfig}
+      />
 
       <AnimatePresence mode="wait">
         <motion.div
