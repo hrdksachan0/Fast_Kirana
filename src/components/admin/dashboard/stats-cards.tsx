@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ShoppingBag, DollarSign, TrendingUp, Package, Users } from 'lucide-react'
+import { ShoppingBag, DollarSign, TrendingUp, Zap } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
 export interface DashboardStats {
@@ -9,6 +9,7 @@ export interface DashboardStats {
   netSales?: number
   revenue?: number
   orderCount?: number
+  activeOrderCount?: number
   lowStockCount?: number
   userCount?: number
 }
@@ -38,21 +39,15 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
       color: 'text-blue-600 bg-blue-500/10 border-blue-500/20',
     },
     {
-      title: 'Low Stock Alerts',
-      value: stats.lowStockCount || 0,
-      icon: Package,
-      color: 'text-amber-600 bg-amber-500/10 border-amber-500/20',
-    },
-    {
-      title: 'Registered Users',
-      value: stats.userCount || 0,
-      icon: Users,
-      color: 'text-purple-600 bg-purple-500/10 border-purple-500/20',
+      title: 'Active Orders',
+      value: stats.activeOrderCount || 0,
+      icon: Zap,
+      color: 'text-orange-600 bg-orange-500/10 border-orange-500/20',
     },
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
       {cards.map((card, idx) => {
         const Icon = card.icon
         return (

@@ -2425,8 +2425,7 @@ export function AdminDashboard({
           todaySales,
           netSales: netSales || stats.revenue,
           orderCount: orderTotal,
-          lowStockCount: stats.lowStockCount || 0,
-          userCount: userTotal,
+          activeOrderCount: liveOrders.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
         }}
       />
 
