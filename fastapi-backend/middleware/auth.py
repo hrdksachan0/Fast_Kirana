@@ -53,6 +53,9 @@ async def require_auth(
     return user
 
 
+get_current_user_from_jwt = get_current_user
+
+
 async def require_admin(
     user: Dict[str, Any] = Depends(require_auth)
 ) -> Dict[str, Any]:
@@ -66,6 +69,20 @@ async def require_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden - admin access required",
+        )
+    return user
+
+
+async def require_delivery(
+    user: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """
+    Require delivery role (ADMIN or DELIVERY).
+    """
+    if user.get("role") not in ["ADMIN", "DELIVERY"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden - delivery access required",
         )
     return user
 

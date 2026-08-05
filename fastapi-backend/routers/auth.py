@@ -13,6 +13,14 @@ import httpx
 from database import get_db
 from models import User, Role
 from utils.jwt import extract_user_from_token, is_token_expired
+from middleware.auth import (
+    get_current_user,
+    get_current_user_from_jwt,
+    require_auth,
+    require_admin,
+    require_delivery,
+    require_staff
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
