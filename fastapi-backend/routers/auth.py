@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Dict, Any
 import random
 import os
 import httpx
@@ -13,18 +14,83 @@ import httpx
 from database import get_db
 from models import User, Role
 from utils.jwt import extract_user_from_token, is_token_expired
-from middleware.auth import (
-    get_current_user,
-    get_current_user_from_jwt,
-    require_auth,
-    require_admin,
-    require_delivery,
-    require_staff
-)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ---------- Auth Dependencies ----------
+# Defined here so other routers can import them from routers.auth
+
+security = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Optional[Dict[str, Any]]:
+    """Extract and validate current user from JWT token."""
+    if not credentials or not credentials.credentials:
+        return None
+    user = extract_user_from_token(credentials.credentials)
+    if not user:
+        return None
+    if is_token_expired(user):
+        return None
+    return user
+
+
+# Alias for backward compatibility
+get_current_user_from_jwt = get_current_user
+
+
+async def require_auth(
+    user: Optional[Dict[str, Any]] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Require authenticated user. Raises 401 if not authenticated."""
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized - valid JWT token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def require_admin(
+    user: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Require admin role."""
+    if user.get("role") != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden - admin access required",
+        )
+    return user
+
+
+async def require_delivery(
+    user: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Require delivery role (ADMIN or DELIVERY)."""
+    if user.get("role") not in ["ADMIN", "DELIVERY"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden - delivery access required",
+        )
+    return user
+
+
+async def require_staff(
+    user: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Require staff role."""
+    staff_roles = ["ADMIN", "CHEF", "PICKER", "DELIVERY", "RESTAURANT_OWNER"]
+    if user.get("role") not in staff_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden - staff access required",
+        )
+    return user
 
 
 # ---------- Schemas ----------
