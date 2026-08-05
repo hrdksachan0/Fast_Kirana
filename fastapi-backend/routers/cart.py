@@ -88,6 +88,68 @@ async def get_cart(
     }
 
 
+@router.post("")
+async def sync_cart(
+    payload: dict = Body(...),
+    current_user: User = Depends(get_current_user_from_jwt),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Full cart sync — replace all items.
+    Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}]}
+    """
+    items_data = payload.get("items", [])
+
+    if not isinstance(items_data, list):
+        raise HTTPException(status_code=400, detail="items must be a list")
+
+    # Get or create cart
+    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    cart = cart_result.scalars().first()
+
+    if not cart:
+        cart = Cart(
+            id=generate_id("cart_"),
+            userId=current_user.id,
+        )
+        db.add(cart)
+        await db.commit()
+        await db.refresh(cart)
+
+    # Delete existing items
+    existing_items_result = await db.execute(
+        select(CartItem).where(CartItem.cartId == cart.id)
+    )
+    existing_items = existing_items.scalars().all()
+    for item in existing_items:
+        await db.delete(item)
+
+    # Create new items
+    for item_data in items_data:
+        product_id = item_data.get("productId")
+        quantity = int(item_data.get("quantity", 1))
+        selected_variant = item_data.get("selectedVariant")
+        notes = item_data.get("notes")
+
+        if not product_id:
+            continue
+
+        new_item = CartItem(
+            id=generate_id("ci_"),
+            cartId=cart.id,
+            productId=product_id,
+            quantity=quantity,
+            selectedVariant=selected_variant,
+            notes=notes,
+        )
+        db.add(new_item)
+
+    cart.updatedAt = datetime.utcnow()
+    await db.commit()
+
+    return {"success": True, "count": len(items_data)}
+
+
 @router.post("/add")
 async def add_to_cart(
     payload: dict = Body(...),
