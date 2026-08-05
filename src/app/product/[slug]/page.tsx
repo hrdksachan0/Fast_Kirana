@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Star, Truck, ShieldCheck, Heart, Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, ChevronRight } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
 import { ProductVariantSelector } from '@/components/product/product-variant-selector'
+import { formatDate } from '@/lib/date-helpers'
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   'fruits-vegetables': Salad,
@@ -266,11 +267,7 @@ const [productRaw, relatedRaw] = await Promise.all([
                     </div>
                   </div>
                   <span className="text-[10px] text-text-muted">
-                    {new Date(review.createdAt).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {formatDate(review.createdAt, 'd MMM yyyy')}
                   </span>
                 </div>
                 {review.comment && (
@@ -284,6 +281,32 @@ const [productRaw, relatedRaw] = await Promise.all([
         )}
       </section>
 
+      {/* JSON-LD: Product schema for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "image": product.imageUrl,
+            "description": product.description || product.name,
+            "sku": product.id,
+            "offers": {
+              "@type": "Offer",
+              "price": product.price,
+              "priceCurrency": "INR",
+              "availability": (product.stock ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              "url": `https://www.fastkirana.in/product/${product.slug}`
+            },
+            "aggregateRating": avgRating ? {
+              "@type": "AggregateRating",
+              "ratingValue": avgRating,
+              "reviewCount": reviewCount
+            } : undefined
+          })
+        }}
+      />
     </div>
   )
 }

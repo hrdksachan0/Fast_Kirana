@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { auth } from '@/auth'
+import { requireRole } from '@/lib/auth-guard'
 
 export async function GET() {
-  const session = await auth()
-  if (!session || (session.user.role !== 'DELIVERY' && session.user.role !== 'ADMIN')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error, session } = await requireRole(['DELIVERY', 'ADMIN'])
+  if (error) return error
 
   try {
     const orders: any[] = await prisma.$queryRaw`

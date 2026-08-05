@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
-
-// Helper to authenticate admin
-async function checkAdmin() {
-  const session = await auth()
-  return session?.user && (session.user as any).role === 'ADMIN'
-}
 
 // GET: Retrieve all banners (for admin console list)
 export async function GET() {
   try {
-    if (!(await checkAdmin())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const banners = await prisma.promoBanner.findMany({
       orderBy: {
@@ -33,9 +27,9 @@ export async function GET() {
 // POST: Create a new promo banner
 export async function POST(request: NextRequest) {
   try {
-    if (!(await checkAdmin())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const body = await request.json()
     const { title, description, code, gradient, type, imageUrl, linkUrl, isActive, sortOrder } = body
@@ -75,9 +69,9 @@ export async function POST(request: NextRequest) {
 // PUT: Update an existing promo banner
 export async function PUT(request: NextRequest) {
   try {
-    if (!(await checkAdmin())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const body = await request.json()
     const { id, title, description, code, gradient, type, imageUrl, linkUrl, isActive, sortOrder } = body
@@ -124,9 +118,9 @@ export async function PUT(request: NextRequest) {
 // DELETE: Delete a promo banner
 export async function DELETE(request: NextRequest) {
   try {
-    if (!(await checkAdmin())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

@@ -1,4 +1,4 @@
-import { getTotalMinutes } from '@/lib/date-helpers'
+import { getTotalMinutes, formatTime12h } from '@/lib/date-helpers'
 
 export interface DishTimingStatus {
   isAvailableNow: boolean
@@ -39,17 +39,8 @@ export function checkDishTimeAvailability(
       isAvailableNow = currentMinutes >= startMinutes || currentMinutes <= endMinutes
     }
 
-    const format12h = (time24: string) => {
-      const [hStr, mStr] = time24.split(':')
-      let h = parseInt(hStr, 10)
-      const m = mStr || '00'
-      const ampm = h >= 12 ? 'PM' : 'AM'
-      h = h % 12 || 12
-      return `${h}:${m} ${ampm}`
-    }
-
-    const formattedStart = format12h(startTime)
-    const formattedEnd = format12h(endTime)
+    const formattedStart = formatTime12h(startTime)
+    const formattedEnd = formatTime12h(endTime)
 
     return {
       isAvailableNow,

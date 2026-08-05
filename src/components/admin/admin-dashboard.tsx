@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
-import { formatOrderTime } from '@/lib/date-helpers'
+import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
@@ -60,6 +60,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { CreateOrderModal } from './create-order-modal'
 import { AdminSortManager } from './admin-sort-manager'
+import { getLast10Digits } from '@/lib/phone'
 
 const AdminRiderCash = dynamic(() => import('./admin-rider-cash').then((mod) => mod.AdminRiderCash), { ssr: false })
 
@@ -1007,7 +1008,7 @@ export function AdminDashboard({
         `"${c.isBlocked ? 'BLOCKED' : 'ACTIVE'}"`,
         `"${(c.blockReason || '').replace(/"/g, '""')}"`,
         c._count?.orders ?? 0,
-        new Date(c.createdAt).toLocaleDateString('en-IN')
+        formatDate(c.createdAt, 'dd/MM/yyyy')
       ])
 
       const csvContent = [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n')
@@ -1321,7 +1322,7 @@ export function AdminDashboard({
 
   const sendWhatsAppMessage = () => {
     if (!whatsappTargetUser) return
-    let cleanPhone = whatsappTargetUser.phone.replace(/\D/g, '')
+    let cleanPhone = getLast10Digits(whatsappTargetUser.phone)
     if (cleanPhone.length === 10) {
       cleanPhone = '91' + cleanPhone
     }
@@ -4229,11 +4230,7 @@ export function AdminDashboard({
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center text-text-muted font-medium">
-                      {new Date(u.createdAt).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatDate(u.createdAt, 'd MMM yyyy')}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {u.role === 'ADMIN' ? (
@@ -4396,11 +4393,7 @@ export function AdminDashboard({
                           </p>
                         </td>
                         <td className="py-3 px-4 text-text-muted font-medium text-[10px]">
-                          {new Date(r.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatDate(r.createdAt, 'd MMM yyyy')}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -4739,7 +4732,7 @@ export function AdminDashboard({
                           <td className="py-3 px-4">
                             <span className={`text-[10px] font-medium ${isExpired ? 'text-discount font-bold' : 'text-text-muted'}`}>
                               {c.expiresAt
-                                ? new Date(c.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                                ? formatDate(c.expiresAt, 'd MMM yyyy')
                                 : 'Never'}
                               {isExpired && ' (Expired)'}
                             </span>

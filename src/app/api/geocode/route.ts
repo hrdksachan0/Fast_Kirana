@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     }
 
     // FALLBACK: If no GOOGLE_MAPS_API_KEY is configured, fallback to OpenStreetMap (Nominatim)
-    console.log('No GOOGLE_MAPS_API_KEY configured. Falling back to OpenStreetMap Nominatim geocoding...')
     
     const headers = {
       'User-Agent': 'FastKiranaApp/1.0 (contact@fastkirana.in)'

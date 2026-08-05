@@ -2,30 +2,16 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { withRetry } from '@/lib/utils'
 import { CheckCircle2, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { formatPrice, formatAddress } from '@/lib/utils'
+import { formatDate } from '@/lib/date-helpers'
 import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
-}
-
-async function runWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1500): Promise<T> {
-  let lastError: any;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      console.warn(`Database query attempt ${i + 1} failed. Retrying in ${delay}ms...`, err);
-      if (i < retries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw lastError;
 }
 
 export default async function OrderConfirmPage({ params }: OrderConfirmPageProps) {
@@ -40,7 +26,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   let companionOrder = null
 
   try {
-    await runWithRetry(async () => {
+    await withRetry(async () => {
       const orders: any[] = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
@@ -223,11 +209,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
             <div className="flex justify-between items-center">
               <span className="text-text-secondary">{order.deliveryMethod === 'PICKUP' ? 'Pickup Date' : 'Delivery Date'}</span>
               <span className="font-bold">
-                {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
+                {formatDate(order.createdAt, 'd MMM yyyy')}
               </span>
             </div>
             <div className="flex justify-between items-center">

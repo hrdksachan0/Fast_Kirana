@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { triggerHaptic } from '@/lib/haptic'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 interface AccountDashboardProps {
   user: {
@@ -163,7 +164,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   }
 
   const handleSendPhoneOtp = async () => {
-    if (!newPhone || newPhone.replace(/\D/g, '').length < 10) {
+    if (!newPhone || !isValidIndianPhone(newPhone)) {
       toast.error('Please enter a valid 10-digit mobile number')
       return
     }
@@ -801,7 +802,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                                 type="text"
                                 maxLength={6}
                                 value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                onChange={(e) => setOtpCode(getLast10Digits(e.target.value))}
                                 placeholder="Enter 6-digit code"
                                 className="w-full bg-background text-text-primary px-3 py-2 text-xs font-black tracking-wider rounded-lg border border-input focus:outline-none text-center"
                               />
@@ -904,7 +905,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                               type="text"
                               maxLength={6}
                               value={phoneOtpCode}
-                              onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                              onChange={(e) => setPhoneOtpCode(getLast10Digits(e.target.value))}
                               placeholder="Enter 6-digit code"
                               className="w-full bg-background text-text-primary px-3 py-2 text-xs font-black tracking-wider rounded-lg border border-input focus:outline-none text-center"
                             />

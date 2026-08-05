@@ -3,18 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { clearSettingsCache } from '@/lib/settings-cache'
-
-async function checkAdmin() {
-  const session = await auth()
-  return session?.user && (session.user as any).role === 'ADMIN'
-}
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function PATCH(request: NextRequest) {
-  try {
-    if (!(await checkAdmin())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
+  try {
     const body = await request.json()
 
     // 1. Fetch current settings to perform delta updates

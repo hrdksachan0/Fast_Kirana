@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronRight, Coffee, ChefHat } from 'lucide-react'
-import { cn, format12h } from '@/lib/utils'
+import { cn, formatTime12h } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
@@ -415,7 +415,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                 <span className="h-1.2 w-1.2 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
               </span>
               <span className="text-[7px] sm:text-[9px] font-extrabold text-red-500 normal-case tracking-normal leading-relaxed">
-                (Timings: {format12h(experienceMode === 'cafe' ? settings.cafe_open_time : settings.restaurant_open_time)} - {format12h(experienceMode === 'cafe' ? settings.cafe_close_time : settings.restaurant_close_time)})
+                (Timings: {formatTime12h(experienceMode === 'cafe' ? settings.cafe_open_time : settings.restaurant_open_time)} - {formatTime12h(experienceMode === 'cafe' ? settings.cafe_close_time : settings.restaurant_close_time)})
               </span>
             </div>
           )}
@@ -549,7 +549,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" /> KITCHEN CLOSED
                     </span>
                     <span className="text-[7.5px] sm:text-[9px] font-extrabold text-red-400 normal-case tracking-normal leading-relaxed">
-                      (Timings: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)})
+                      (Timings: {formatTime12h(settings.restaurant_open_time)} - {formatTime12h(settings.restaurant_close_time)})
                     </span>
                   </div>
                 )}

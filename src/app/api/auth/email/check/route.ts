@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authLimiter } from '@/lib/rate-limit'
+import { isValidIndianPhone, normalizePhone, getLast10Digits } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   const limited = await authLimiter.check(request)
@@ -18,25 +19,12 @@ export async function POST(request: NextRequest) {
     let isPhone = false
     let normalizedPhone = ''
 
-    // Helper to check if it's a phone number
-    const isPhoneNumber = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
-    }
-
-    const getNormalizedPhone = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      if (cleaned.length === 10) return `+91${cleaned}`
-      if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
-      return val
-    }
-
-    if (isPhoneNumber(trimmed)) {
+    if (isValidIndianPhone(trimmed)) {
       isPhone = true
-      normalizedPhone = getNormalizedPhone(trimmed)
-      
+      normalizedPhone = normalizePhone(trimmed)
+
       // Check if user exists with this phone number (matching both +91 and 10-digit formats)
-      const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+      const phoneDigits = getLast10Digits(normalizedPhone)
       const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
@@ -61,7 +49,7 @@ export async function POST(request: NextRequest) {
         })
       } else {
         // Generate placeholder email for the phone number
-        const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+        const phoneDigits = getLast10Digits(normalizedPhone)
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
     } else {

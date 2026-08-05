@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: Request) {
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -74,10 +74,9 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const { userId, role, name, phone } = await request.json()
@@ -115,10 +114,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const { userId, password } = await request.json()
@@ -139,7 +137,7 @@ export async function POST(request: Request) {
     })
 
     if (targetUser?.phone) {
-      const digits = targetUser.phone.replace(/\D/g, '').replace(/^91/, '')
+      const digits = getLast10Digits(targetUser.phone)
       await prisma.user.updateMany({
         where: {
           OR: [

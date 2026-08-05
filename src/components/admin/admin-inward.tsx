@@ -489,7 +489,7 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
                           Quantity: <strong className="text-text-primary font-extrabold">+{log.quantity} units</strong> @ {formatPrice(log.costPrice)}/unit
                         </span>
                         <span className="text-[10px] text-red-500 font-semibold block mt-1">
-                          Expiry: {new Date(log.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          Expiry: {formatDate(log.expiryDate, 'd MMM yyyy')}
                         </span>
                       </div>
                     </motion.div>

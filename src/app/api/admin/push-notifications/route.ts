@@ -3,12 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { broadcastPushNotification } from '@/lib/push-notification'
 import { apiWriteLimiter } from '@/lib/rate-limit'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function GET(request: NextRequest) {
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const notifications = await prisma.pushNotification.findMany({
@@ -28,10 +28,9 @@ export async function POST(request: NextRequest) {
   const limitResponse = await apiWriteLimiter.check(request)
   if (limitResponse) return limitResponse
 
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()

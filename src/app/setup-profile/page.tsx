@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, ShoppingBag, User, Phone } from 'lucide-react'
+import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 function ProfileSetupForm() {
   const { data: session, update, status } = useSession()
@@ -69,7 +70,7 @@ function ProfileSetupForm() {
     if (!name.trim()) errs.name = 'Full name is required'
     if (!phone.trim()) {
       errs.phone = 'Mobile number is required'
-    } else if (phone.trim().replace(/\D/g, '').length < 10) {
+    } else if (!isValidIndianPhone(phone.trim())) {
       errs.phone = 'Mobile number must be at least 10 digits'
     }
     return errs
@@ -189,7 +190,7 @@ function ProfileSetupForm() {
                   type="tel"
                   placeholder="9876543210"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => setPhone(getLast10Digits(e.target.value))}
                   className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                   disabled={isLoading}
                   required

@@ -19,6 +19,7 @@ import {
   Eye
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { formatDate } from '@/lib/date-helpers'
 
 interface AlertItem {
   id: string
@@ -181,7 +182,7 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
       return `Accepted ${diffMin}m ago`
     }
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    return formatDate(dateStr, 'd MMM yyyy')
   }
 
   // Get status details based on Alert Type

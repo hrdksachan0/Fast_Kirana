@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 // GET: Check if user already has profile data (used by setup-profile page to detect stale JWT)
 export async function GET() {
@@ -42,9 +43,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id
     const trimmedName = name.trim()
-    const cleaned = phone.replace(/\D/g, '')
-    const cleanDigits = cleaned.slice(-10)
-    const normalizedPhone = `+91${cleanDigits}`
+    const normalizedPhone = normalizePhone(phone)
 
     // Update the user record
     await prisma.user.update({

@@ -9,12 +9,12 @@ import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
 import { getProductLimit } from '@/lib/utils'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const {
@@ -460,7 +460,7 @@ export async function POST(request: Request) {
 
         // Get next unique readableId using PostgreSQL sequence atomically
         const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
-        const nextReadableId = Number(seqResult[0].nextval)
+        const nextReadableId = String(seqResult[0].nextval)
 
         const newOrder = await tx.order.create({
           data: {

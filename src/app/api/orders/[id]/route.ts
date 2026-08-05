@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { requireOrderAccess } from '@/lib/auth-guard'
 import { sendPushNotification, sendPushNotificationToRoles } from '@/lib/push-notification'
 import { Role } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'
 
+const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
     const { id } = await params
 
@@ -40,12 +37,11 @@ export async function GET(
 
     const order = orders[0]
 
-    // Check ownership
-    if (order.userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'DELIVERY' && session.user.role !== 'PICKER' && session.user.role !== 'CHEF' && session.user.role !== 'RESTAURANT_OWNER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Check ownership (order owner) or staff role
+    const { error: authError, session } = await requireOrderAccess(order.userId)
+    if (authError) return authError
 
-    const isWorker = session.user.role === 'ADMIN' || session.user.role === 'DELIVERY' || session.user.role === 'PICKER' || session.user.role === 'CHEF' || session.user.role === 'RESTAURANT_OWNER'
+    const isWorker = STAFF_ROLES.includes(session!.user.role)
 
     // Fetch address
     const address = await prisma.address.findUnique({
@@ -316,7 +312,7 @@ export async function PATCH(
               where: { id: item.productId },
               data: { stock: newStock }
             })
-            console.log(`[Inventory Sync] Deducted ${item.quantity} units of ${product.name}. New stock: ${newStock}`)
+            // Inventory deducted silently
           }
         }
       } catch (stockErr) {
@@ -348,10 +344,8 @@ export async function PATCH(
           const uploadPreset = settingsMap['cloudinary_upload_preset']
 
           if (cloudName && uploadPreset) {
-            console.log(`[Cloudinary Upload] Uploading photo for order ${id} to cloud: ${cloudName}...`)
             const cloudinaryUrl = await uploadToCloudinary(deliveryPhoto, cloudName, uploadPreset)
             finalDeliveryPhoto = cloudinaryUrl
-            console.log(`[Cloudinary Upload] Successfully uploaded delivery photo. URL: ${cloudinaryUrl}`)
           } else {
             console.warn('[Cloudinary Upload] Cloudinary is not configured. Falling back to raw base64 photo.')
           }
@@ -539,7 +533,7 @@ export async function PATCH(
                 })
               }
             }
-            console.log(`[Inventory Sync] Restored ${item.quantity} units of ${product.name} due to cancellation.`)
+            // Inventory restored silently on cancellation
           }
         } catch (stockErr) {
           console.error('Failed to restore inventory for cancelled order:', id, stockErr)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 
 interface ForecastItem {
   id: string
@@ -29,11 +30,11 @@ interface ForecastItem {
 }
 
 export async function GET(request: NextRequest) {
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
+
   try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Load active products from categories other than cafe
     const products = await prisma.product.findMany({

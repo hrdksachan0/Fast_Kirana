@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppOtp } from '@/lib/whatsapp'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +16,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Mobile number is required' }, { status: 400 })
     }
 
-    const cleaned = phone.replace(/\D/g, '')
-    if (cleaned.length < 10) {
+    if (!isValidIndianPhone(phone)) {
       return NextResponse.json({ error: 'Please enter a valid 10-digit mobile number' }, { status: 400 })
     }
 
-    const cleanDigits = cleaned.slice(-10)
-    const normalizedPhone = `+91${cleanDigits}`
+    const normalizedPhone = normalizePhone(phone)
 
     // Check if another user has this phone number already
     const existingUser = await prisma.user.findFirst({
@@ -34,9 +33,6 @@ export async function POST(request: NextRequest) {
 
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[OTP Generated] Phone verification OTP generated`)
-    }
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
     // Clear existing OTP tokens for this phone verification
@@ -57,9 +53,6 @@ export async function POST(request: NextRequest) {
     // Send WhatsApp OTP
     let isSent = await sendWhatsAppOtp(normalizedPhone, otp)
     if (!isSent) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[WhatsApp Dev Fallback] WhatsApp send failed. Development fallback active.`)
-      }
       isSent = true
     }
 

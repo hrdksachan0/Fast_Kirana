@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { formatDate } from '@/lib/date-helpers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -203,10 +204,7 @@ export async function GET(request: NextRequest) {
     // 4. Daily Sales Trend
     const dailyTrendMap = new Map<string, { date: string; sales: number; profit: number; adminProfit: number; orders: number }>()
     orders.forEach(o => {
-      const dateStr = new Date(o.createdAt).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-      })
+      const dateStr = formatDate(o.createdAt, 'dd MMM')
 
       if (!dailyTrendMap.has(dateStr)) {
         dailyTrendMap.set(dateStr, { date: dateStr, sales: 0, profit: 0, adminProfit: 0, orders: 0 })

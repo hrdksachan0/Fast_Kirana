@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 
 // GET - Retrieve all dark stores (Admin authenticated)
 export async function GET() {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const stores = await prisma.darkStore.findMany({
@@ -27,10 +27,9 @@ export async function GET() {
 
 // POST - Create a new dark store with polygon geofence (Admin authenticated)
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()
@@ -62,10 +61,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH - Update dark store details/toggles (Admin authenticated)
 export async function PATCH(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()

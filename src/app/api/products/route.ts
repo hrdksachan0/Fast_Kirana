@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
@@ -539,10 +540,9 @@ export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
   if (limited) return limited
 
-  const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()

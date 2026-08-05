@@ -26,7 +26,8 @@ import {
   Plus,
   Minus
 } from 'lucide-react'
-import { cn, formatPhone, formatAddress, getDeliveryPin, calculateDistance } from '@/lib/utils'
+import { cn, formatPhone, formatAddress, getDeliveryPin } from '@/lib/utils'
+import { getDistanceKm } from '@/lib/distance'
 import { toast } from 'sonner'
 
 function PrepCountdown({ clockTarget }: { clockTarget: string | Date }) {
@@ -642,7 +643,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       riderLng = storeLng
     }
     
-    const distanceKm = calculateDistance(riderLat, riderLng, destLat, destLng)
+    const distanceKm = getDistanceKm(riderLat, riderLng, destLat, destLng)
     const etaMins = Math.max(2, Math.round(distanceKm * 3.5))
 
     const isArrived = distanceKm <= 0.25

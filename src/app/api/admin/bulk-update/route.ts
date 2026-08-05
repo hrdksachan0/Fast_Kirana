@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 
 // ---------------------------------------------------------------------------
@@ -43,10 +43,9 @@ function round2(n: number): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const body = await request.json()
     const {
@@ -261,10 +260,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const { searchParams } = new URL(request.url)
     const batchId = searchParams.get('batchId')
@@ -385,10 +383,9 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const body = await request.json()
     const { batchId } = body as { batchId: string }

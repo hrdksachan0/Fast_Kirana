@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
       paytmParams[key] = value.toString();
     });
 
-    console.log('Paytm Callback params received:', paytmParams);
-
     const checksum = paytmParams.CHECKSUMHASH;
     if (!checksum) {
       console.error('Paytm Callback: Missing CHECKSUMHASH');
@@ -48,8 +46,6 @@ export async function POST(request: NextRequest) {
     const status = paytmParams.STATUS;
 
     if (status === 'TXN_SUCCESS') {
-      console.log(`Paytm Transaction Success for Order ID: ${orderId}`);
-
       // Update order status in database using raw SQL
       await prisma.$executeRaw`
         UPDATE orders 

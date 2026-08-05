@@ -13,6 +13,7 @@ import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+import { formatDate } from '@/lib/date-helpers'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
 const getCafeSectionImage = (tag: string) => {
@@ -790,7 +791,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                         )}
                         <div>
                           <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">{rev.user.name || 'Anonymous'}</p>
-                          <p className="text-[9px] font-bold text-zinc-400">{new Date(rev.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-[9px] font-bold text-zinc-400">{formatDate(rev.createdAt, 'dd MMM yyyy')}</p>
                         </div>
                       </div>
 

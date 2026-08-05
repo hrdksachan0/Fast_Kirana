@@ -100,7 +100,7 @@ export interface Address {
 
 export interface Order {
   id: string
-  readableId?: number
+  readableId?: string
   userId: string
   addressId: string
   status: string

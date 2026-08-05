@@ -30,18 +30,8 @@ import { triggerHaptic } from '@/lib/haptic'
 import { Address } from '@/types'
 import MapPicker from '@/components/shared/map-picker'
 import { getDistanceKm, getDeliveryRules } from '@/lib/distance'
-
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371 // Radius of the earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180)
-  const dLon = (lon2 - lon1) * (Math.PI / 180)
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c // Distance in km
-}
+import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+import { formatTime12h, isNearClosing } from '@/lib/date-helpers'
 
 interface SlideToOrderProps {
   onConfirm: () => void
@@ -75,46 +65,6 @@ function SlideToOrder({ onConfirm, isPlacingOrder, amount }: SlideToOrderProps) 
       )}
     </button>
   )
-}
-
-function formatTime12h(timeStr?: string): string {
-  if (!timeStr) return ''
-  const [hStr, mStr] = timeStr.split(':')
-  const h = parseInt(hStr, 10)
-  if (isNaN(h)) return timeStr
-  const m = parseInt(mStr, 10) || 0
-  const ampm = h >= 12 ? 'PM' : 'AM'
-  const h12 = h % 12 === 0 ? 12 : h % 12
-  const mPad = m === 0 ? '' : `:${String(m).padStart(2, '0')}`
-  return `${h12}${mPad} ${ampm}`
-}
-
-function isNearClosing(closeTimeStr: string): boolean {
-  if (!closeTimeStr) return false
-  const [closeHStr, closeMStr] = closeTimeStr.split(':')
-  const closeH = parseInt(closeHStr, 10)
-  const closeM = parseInt(closeMStr, 10) || 0
-  if (isNaN(closeH)) return false
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false
-  })
-  const parts = formatter.formatToParts(new Date())
-  const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
-  const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
-  const currentTotal = currentH * 60 + currentM
-  
-  const closeTotal = closeH * 60 + closeM
-  let diff = closeTotal - currentTotal
-  
-  if (closeTotal < 300 && currentTotal > 1200) {
-    diff = (closeTotal + 1440) - currentTotal
-  }
-  
-  return diff > 0 && diff <= 30
 }
 
 export default function CheckoutPage() {
@@ -328,7 +278,7 @@ export default function CheckoutPage() {
       if (phoneVal.startsWith('wa-') && phoneVal.includes('@')) {
         phoneVal = phoneVal.split('@')[0].replace('wa-', '')
       }
-      const digits = phoneVal.replace(/\D/g, '')
+      const digits = getLast10Digits(phoneVal)
       const cleanPhone = digits.length > 10 && digits.startsWith('91') ? digits.slice(-10) : digits
       
       setAddressForm(prev => ({
@@ -351,7 +301,7 @@ export default function CheckoutPage() {
         let { latitude, longitude } = position.coords
         
         // Calculate distance from store
-        const dist = getDistance(storeLat, storeLng, latitude, longitude)
+        const dist = getDistanceKm(storeLat, storeLng, latitude, longitude)
         
         // If developer testing from far away (> 20 km), automatically mock to nearby (2.5 km away)
         if (dist > 20) {
@@ -671,7 +621,7 @@ export default function CheckoutPage() {
     }
 
     const trimmedPhone = phone.trim()
-    let cleanPhone = trimmedPhone.replace(/\D/g, '')
+    let cleanPhone = getLast10Digits(trimmedPhone)
     if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
       cleanPhone = cleanPhone.slice(-10)
     }
@@ -827,9 +777,9 @@ export default function CheckoutPage() {
             setIsPlacingOrder(false)
             return
           }
-          const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
-          const cleanPhone = phoneVal.length > 10 && phoneVal.startsWith('91') ? phoneVal.slice(-10) : phoneVal
-          if (cleanPhone.length !== 10) {
+          const phoneVal = (selectedAddr.phone || '').trim()
+          const cleanPhone = getLast10Digits(phoneVal)
+          if (!isValidIndianPhone(cleanPhone)) {
             triggerHaptic('warning')
             toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
             setIsPlacingOrder(false)
@@ -1022,9 +972,9 @@ export default function CheckoutPage() {
             setIsPlacingOrder(false)
             return
           }
-          const phoneVal = (selectedAddr.phone || '').trim().replace(/\D/g, '')
-          const cleanPhone = phoneVal.length > 10 && phoneVal.startsWith('91') ? phoneVal.slice(-10) : phoneVal
-          if (cleanPhone.length !== 10) {
+          const phoneVal = (selectedAddr.phone || '').trim()
+          const cleanPhone = getLast10Digits(phoneVal)
+          if (!isValidIndianPhone(cleanPhone)) {
             triggerHaptic('warning')
             toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
             setIsPlacingOrder(false)
@@ -1527,7 +1477,7 @@ export default function CheckoutPage() {
                                 required
                                 placeholder="Enter 10-digit mobile number"
                                 value={addressForm.phone}
-                                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })}
+                                onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
                                 className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
                               />
                             </div>

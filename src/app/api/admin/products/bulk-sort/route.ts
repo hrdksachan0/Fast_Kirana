@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
+  try {
     const { positions } = await request.json()
     if (!positions || !Array.isArray(positions) || positions.length === 0) {
       return NextResponse.json({ error: 'positions array is required' }, { status: 400 })

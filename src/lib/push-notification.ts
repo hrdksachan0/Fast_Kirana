@@ -39,7 +39,6 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
     })
 
     if (subscriptions.length === 0) {
-      console.log(`No active push subscriptions found for user: ${userId}`)
       return
     }
 
@@ -66,7 +65,6 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
             const errText = await expoRes.text()
             throw new Error(`Expo API returned status ${expoRes.status}: ${errText}`)
           }
-          console.log(`Push notification sent successfully via Expo to: ${sub.endpoint}`)
         } else {
           const pushSubscription = {
             endpoint: sub.endpoint,
@@ -77,12 +75,10 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
           }
 
           await webpush.sendNotification(pushSubscription, payloadString)
-          console.log(`Push notification sent successfully to endpoint: ${sub.endpoint.slice(0, 30)}...`)
         }
       } catch (err: any) {
         // Handle expired or invalid subscription (status 410 or 404)
         if (err.statusCode === 410 || err.statusCode === 404) {
-          console.log(`Removing expired subscription: ${sub.id} / ${sub.endpoint.slice(0, 30)}...`)
           await prisma.pushSubscription.delete({
             where: { id: sub.id },
           }).catch((dbErr) => {
@@ -120,7 +116,6 @@ export async function broadcastPushNotification(payload: PushPayload) {
     })
 
     if (subscriptions.length === 0) {
-      console.log('No active push subscriptions found in database.')
       return { successCount: 0, failureCount: 0 }
     }
 
@@ -151,7 +146,6 @@ export async function broadcastPushNotification(payload: PushPayload) {
             throw new Error(`Expo API returned status ${expoRes.status}: ${errText}`)
           }
           successCount++
-          console.log(`Push notification sent successfully via Expo to: ${sub.endpoint}`)
         } else {
           const pushSubscription = {
             endpoint: sub.endpoint,
@@ -163,12 +157,10 @@ export async function broadcastPushNotification(payload: PushPayload) {
 
           await webpush.sendNotification(pushSubscription, payloadString)
           successCount++
-          console.log(`Push notification sent successfully to endpoint: ${sub.endpoint.slice(0, 30)}...`)
         }
       } catch (err: any) {
         failureCount++
         if (err.statusCode === 410 || err.statusCode === 404) {
-          console.log(`Removing expired subscription: ${sub.id} / ${sub.endpoint.slice(0, 30)}...`)
           await prisma.pushSubscription.delete({
             where: { id: sub.id },
           }).catch((dbErr) => {
@@ -206,12 +198,9 @@ export async function sendPushNotificationToRoles(roles: Role[], payload: PushPa
     })
 
     if (users.length === 0) {
-      console.log(`No active users found for roles: ${roles.join(', ')}`)
       return
     }
 
-    console.log(`Sending role-based push notification to ${users.length} users with roles ${roles.join(', ')}`)
-    
     // Send to all matching users
     await Promise.all(users.map(user => sendPushNotification(user.id, payload)))
   } catch (error) {

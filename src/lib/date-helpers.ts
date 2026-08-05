@@ -40,3 +40,46 @@ export function getTotalMinutes(date: string | Date): number {
 export function parseISODate(dateStr: string): Date {
   return parseISO(dateStr)
 }
+
+// --- 12-hour time format ---
+/** Convert "14:30" → "2:30 PM" */
+export function formatTime12h(timeStr?: string): string {
+  if (!timeStr) return ''
+  const [hStr, mStr] = timeStr.split(':')
+  const h = parseInt(hStr, 10)
+  if (isNaN(h)) return timeStr
+  const m = parseInt(mStr, 10) || 0
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  const mPad = m === 0 ? '' : `:${String(m).padStart(2, '0')}`
+  return `${h12}${mPad} ${ampm}`
+}
+
+/** Check if current IST time is within 30 min of closing time */
+export function isNearClosing(closeTimeStr: string): boolean {
+  if (!closeTimeStr) return false
+  const [closeHStr, closeMStr] = closeTimeStr.split(':')
+  const closeH = parseInt(closeHStr, 10)
+  const closeM = parseInt(closeMStr, 10) || 0
+  if (isNaN(closeH)) return false
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(new Date())
+  const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+  const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+  const currentTotal = currentH * 60 + currentM
+
+  const closeTotal = closeH * 60 + closeM
+  let diff = closeTotal - currentTotal
+
+  if (closeTotal < 300 && currentTotal > 1200) {
+    diff = (closeTotal + 1440) - currentTotal
+  }
+
+  return diff > 0 && diff <= 30
+}

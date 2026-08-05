@@ -23,9 +23,6 @@ export default function MobileCallbackPage() {
       const separator = redirectBase.includes('?') ? '&' : '?'
       const target = `${redirectBase}${separator}user=${encodeURIComponent(JSON.stringify(user))}`
       
-      setRedirectTarget(target)
-      console.log('Redirecting to mobile deep link:', target)
-      
       // Clear localStorage
       localStorage.removeItem('mobile_redirect_url')
       

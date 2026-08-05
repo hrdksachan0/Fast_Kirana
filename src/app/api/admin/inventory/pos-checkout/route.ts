@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { OrderStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
+  try {
     const body = await request.json()
     const { items, paymentMethod, subtotal, discount, total } = body as {
       items: Array<{
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const order = await prisma.$transaction(async (tx) => {
       // Get next unique readableId using PostgreSQL sequence atomically
       const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
-      const nextReadableId = Number(seqResult[0].nextval)
+      const nextReadableId = String(seqResult[0].nextval)
 
       // Create Order
       const newOrder = await tx.order.create({

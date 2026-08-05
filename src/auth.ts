@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 // Clean environment variables (removes quotes if copy-pasted with quotes)
 const getCleanSecret = (key: string): string => {
@@ -38,9 +39,6 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
     },
     debug: (code, metadata) => {
       if (process.env.NODE_ENV === 'production') return
-      console.log('--- NEXTAUTH DEBUG ---')
-      console.log('Code:', code)
-      console.log('Metadata:', JSON.stringify(metadata, null, 2))
     }
   },
   callbacks: {
@@ -74,17 +72,12 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
       return session
     },
     async signIn({ user, account, profile }) {
-      console.log('--- NEXTAUTH SIGNIN CALLBACK ---')
-      console.log('Provider:', account?.provider)
-      console.log('Account type:', account?.type)
-      
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
           select: { isBlocked: true, blockReason: true }
         })
         if (dbUser?.isBlocked) {
-          console.log(`[Blocked Sign-In Rejected] User account is blocked.`)
           return false
         }
       }
@@ -93,14 +86,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   },
   events: {
     async linkAccount({ user, account }) {
-      console.log('--- NEXTAUTH LINK ACCOUNT ---')
-      console.log('Linked provider:', account.provider)
     },
     async createUser({ user }) {
-      console.log('--- NEXTAUTH CREATE USER ---')
     },
     async signIn({ user }) {
-      console.log('--- NEXTAUTH SIGNIN EVENT ---')
     },
   },
   providers: [
@@ -123,13 +112,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const isBypass = bypassEnabled && !!bypassPassword && password === bypassPassword
 
         // Check if input is a phone number or email
-        const cleanPhoneDigits = input.replace(/\D/g, '')
-        const isPhone = cleanPhoneDigits.length >= 10 && cleanPhoneDigits.length <= 12
+        const normPhone = normalizePhone(input)
+        const isPhone = isValidIndianPhone(input)
+        const cleanPhoneDigits = getLast10Digits(input)
 
         let user = null
         if (isPhone) {
-          const normPhone = cleanPhoneDigits.length === 10 ? `+91${cleanPhoneDigits}` : `+${cleanPhoneDigits}`
-          const rawDigits = cleanPhoneDigits.length === 10 ? cleanPhoneDigits : cleanPhoneDigits.slice(2)
+          const rawDigits = cleanPhoneDigits
           user = await prisma.user.findFirst({
             where: {
               OR: [
@@ -173,7 +162,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
                 name,
                 role,
                 passwordHash,
-                phone: isPhone ? `+91${cleanPhoneDigits.slice(-10)}` : '+919999999999',
+                phone: isPhone ? normPhone : '+919999999999',
               }
             })
           }
@@ -223,21 +212,8 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const name = credentials.name as string
         let phone = credentials.phone as string
 
-        // Helper to check if it's a phone number
-        const isPhoneNumber = (val: string) => {
-          const cleaned = val.replace(/\D/g, '')
-          return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
-        }
-
-        const getNormalizedPhone = (val: string) => {
-          const cleaned = val.replace(/\D/g, '')
-          if (cleaned.length === 10) return `+91${cleaned}`
-          if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
-          return val
-        }
-
-        if (isPhoneNumber(email)) {
-          const normalizedPhone = getNormalizedPhone(email)
+        if (isValidIndianPhone(email)) {
+          const normalizedPhone = normalizePhone(email)
           const existingUser = await prisma.user.findFirst({
             where: { phone: normalizedPhone },
             select: { email: true }
@@ -245,7 +221,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           if (existingUser) {
             email = existingUser.email
           } else {
-            const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+            const phoneDigits = getLast10Digits(normalizedPhone)
             email = `wa-${phoneDigits}@fastkirana.com`
           }
           if (!phone) {
@@ -282,10 +258,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           let userPhone = phone || null
           if (email.startsWith('wa-') && !userPhone) {
             const phoneDigits = email.split('@')[0].replace('wa-', '')
-            const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
-              ? phoneDigits.slice(2)
-              : phoneDigits
-            userPhone = `+91${cleanPhone}`
+            userPhone = `+91${phoneDigits}`
           }
 
           user = await prisma.user.create({

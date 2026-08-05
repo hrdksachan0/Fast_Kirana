@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 
 // GET - Fetch all active inventory alerts (computed from current product state)
 export async function GET() {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const now = new Date()
@@ -229,10 +229,9 @@ export async function GET() {
 
 // POST - Generate/refresh StockAlert records based on current inventory state
 export async function POST() {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const now = new Date()
@@ -344,10 +343,9 @@ export async function POST() {
 
 // PATCH - Mark alerts as read
 export async function PATCH(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()
@@ -398,10 +396,9 @@ export async function PATCH(request: NextRequest) {
 
 // PUT - Take action on an alert (snooze/hide for 30 minutes)
 export async function PUT(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const { targetId, alertType } = await request.json()

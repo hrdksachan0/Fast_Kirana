@@ -35,7 +35,7 @@ async function main() {
     const assignedId = 600000 + i + 1
     await prisma.order.update({
       where: { id: o.id },
-      data: { readableId: assignedId }
+      data: { readableId: String(assignedId) }
     })
     orderCount++
   }

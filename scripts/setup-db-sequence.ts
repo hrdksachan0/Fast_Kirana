@@ -9,7 +9,8 @@ async function main() {
     select: { readableId: true }
   })
   
-  const startVal = (maxOrder?.readableId || 600000) + 1
+  const maxIdNum = maxOrder?.readableId ? parseInt(maxOrder.readableId, 10) : 600000
+  const startVal = (isNaN(maxIdNum) ? 600000 : maxIdNum) + 1
   console.log(`Highest readableId found: ${maxOrder?.readableId || 'none'}. Sequence starting at: ${startVal}`)
   
   // Create sequence

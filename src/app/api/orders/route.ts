@@ -10,6 +10,7 @@ import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
 import { getProductLimit } from '@/lib/utils'
+import { getLast10Digits } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
@@ -666,7 +667,7 @@ export async function POST(request: NextRequest) {
 
         // Get next unique readableId using PostgreSQL sequence atomically
         const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
-        const nextReadableId = Number(seqResult[0].nextval)
+        const nextReadableId = String(seqResult[0].nextval)
 
         // Create order
         const newOrder = await tx.order.create({
@@ -975,7 +976,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Normal user queries their orders by userId, email, or phone match
       const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
-      const sessionPhone = (session.user as any).phone ? (session.user as any).phone.replace(/\D/g, '') : ''
+      const sessionPhone = (session.user as any).phone ? getLast10Digits((session.user as any).phone) : ''
 
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId",

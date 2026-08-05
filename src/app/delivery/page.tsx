@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
 import { formatDate, formatOrderTime } from '@/lib/date-helpers'
+import { getLast10Digits } from '@/lib/phone'
 import { 
   Loader2, 
   MapPin, 
@@ -233,7 +234,7 @@ export default function DeliveryDashboard() {
 
   const getWhatsappLink = (phone?: string, orderId?: string) => {
     if (!phone) return '#'
-    const cleanPhone = phone.replace(/\D/g, '')
+    const cleanPhone = getLast10Digits(phone)
     const formatted = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
     const msg = encodeURIComponent(`Hi! FastKirana delivery agent calling for Order #${orderId || ''}.`)
     return `https://wa.me/${formatted}?text=${msg}`

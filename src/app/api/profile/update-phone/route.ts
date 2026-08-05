@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,13 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Phone number and verification code are required' }, { status: 400 })
     }
 
-    const cleaned = phone.replace(/\D/g, '')
-    if (cleaned.length < 10) {
+    if (!isValidIndianPhone(phone)) {
       return NextResponse.json({ error: 'Invalid mobile number' }, { status: 400 })
     }
 
-    const cleanDigits = cleaned.slice(-10)
-    const normalizedPhone = `+91${cleanDigits}`
+    const normalizedPhone = normalizePhone(phone)
     const tokenKey = `phone-verify-${normalizedPhone}`
 
     // 1. Find and verify the OTP

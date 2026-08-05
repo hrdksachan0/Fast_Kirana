@@ -16,6 +16,7 @@ import {
   Undo
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { formatTime } from '@/lib/date-helpers'
 
 interface Category {
   id: string
@@ -463,7 +464,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
                       {batch.changeType}
                     </span>
                     <span className="text-text-muted">
-                      {new Date(batch.createdAt).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      {formatTime(batch.createdAt)}
                     </span>
                   </div>
                   

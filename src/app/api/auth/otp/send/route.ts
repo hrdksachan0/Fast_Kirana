@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendOtpEmail } from '@/lib/mail'
 import { sendWhatsAppOtp } from '@/lib/whatsapp'
 import { otpLimiter } from '@/lib/rate-limit'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   const limited = await otpLimiter.check(request)
@@ -19,17 +20,9 @@ export async function POST(request: NextRequest) {
     let normalizedEmail = trimmed.toLowerCase()
 
     // Helper to check if it's a phone number
-    const isPhoneNumber = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
-    }
+    const isPhoneNumber = (val: string) => isValidIndianPhone(val)
 
-    const getNormalizedPhone = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      if (cleaned.length === 10) return `+91${cleaned}`
-      if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
-      return val
-    }
+    const getNormalizedPhone = (val: string) => normalizePhone(val)
 
     if (isPhoneNumber(trimmed)) {
       const normalizedPhone = getNormalizedPhone(trimmed)
@@ -40,7 +33,7 @@ export async function POST(request: NextRequest) {
       if (existingUser) {
         normalizedEmail = existingUser.email
       } else {
-        const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+        const phoneDigits = getLast10Digits(normalizedPhone)
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
     } else if (!trimmed.includes('@')) {
@@ -66,9 +59,6 @@ export async function POST(request: NextRequest) {
 
     // 1. Generate a 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[OTP Generated] OTP token generated successfully`)
-    }
 
     // 2. Set expiry to 5 minutes from now
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
@@ -93,9 +83,6 @@ export async function POST(request: NextRequest) {
       const recipientPhone = `+91${phoneDigits}`
       let isSent = await sendWhatsAppOtp(recipientPhone, otp)
       if (!isSent) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[WhatsApp Dev Fallback] WhatsApp send failed. Development fallback active.`)
-        }
         isSent = true
       }
     } else {

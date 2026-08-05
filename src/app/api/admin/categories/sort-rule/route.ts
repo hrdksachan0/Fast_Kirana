@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 
 export const dynamic = 'force-dynamic'
@@ -28,10 +28,9 @@ export async function GET(request: NextRequest) {
 // POST: Save sorting rule for a category
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const adminResult = await requireAdmin()
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const { categorySlug, rule } = await request.json()
     if (!categorySlug || !rule) {

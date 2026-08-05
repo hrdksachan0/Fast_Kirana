@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 export async function GET() {
   const session = await auth()
@@ -36,11 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    let cleanPhone = phone.toString().trim().replace(/\D/g, '')
-    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
-      cleanPhone = cleanPhone.slice(-10)
-    }
-
+    let cleanPhone = getLast10Digits(phone.toString().trim())
     if (cleanPhone.length !== 10) {
       return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
     }
@@ -148,10 +145,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
-    let cleanPhone = phone.toString().trim().replace(/\D/g, '')
-    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
-      cleanPhone = cleanPhone.slice(-10)
-    }
+    let cleanPhone = getLast10Digits(phone.toString().trim())
 
     if (cleanPhone.length !== 10) {
       return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })

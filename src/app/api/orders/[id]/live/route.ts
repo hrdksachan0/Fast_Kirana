@@ -1,17 +1,12 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireOrderAccess } from '@/lib/auth-guard'
 import { OrderStatus } from '@prisma/client'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
   const { id } = await params
 
   // Verify order exists using raw SQL to avoid the enum deserialization bug
@@ -25,14 +20,9 @@ export async function GET(
 
   const order = orders[0]
 
-  // Verify access authorization
-  if (
-    order.userId !== session.user.id &&
-    session.user.role !== 'ADMIN' &&
-    session.user.role !== 'DELIVERY'
-  ) {
-    return new Response('Unauthorized', { status: 401 })
-  }
+  // Verify access authorization (order owner OR staff role)
+  const { error: authError } = await requireOrderAccess(order.userId)
+  if (authError) return new Response('Unauthorized', { status: 401 })
 
   const encoder = new TextEncoder()
 

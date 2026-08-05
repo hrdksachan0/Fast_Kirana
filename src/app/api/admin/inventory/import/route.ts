@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { requireAdmin } from '@/lib/auth-guard'
 
 // Helper to create a unique URL-friendly slug
 function slugify(text: string) {
@@ -16,12 +17,11 @@ function slugify(text: string) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user || (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
+  try {
     const body = await request.json()
     const { items } = body as {
       items: Array<{

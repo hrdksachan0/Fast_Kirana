@@ -68,8 +68,6 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
             
             // Overwrite local Zustand store with the merged results
             useCartStore.setState({ items: finalItems })
-            
-            console.log('Successfully synced/merged cart from DB:', finalItems.length, 'items')
           }
         }
       } catch (err) {

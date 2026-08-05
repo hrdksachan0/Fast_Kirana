@@ -14,7 +14,6 @@ export default function MobileLoginPage() {
       localStorage.setItem('mobile_redirect_url', redirectUrl)
     }
     
-    console.log('Initiating Google sign-in redirect to callback...')
     signIn('google', { 
       redirectTo: '/auth/mobile-callback', 
       callbackUrl: '/auth/mobile-callback' 

@@ -3,33 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, Navigation, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
-
-// Load Google Maps script globally
-let scriptLoadingPromise: Promise<any> | null = null
-
-function loadGoogleMapsScript(apiKey: string): Promise<any> {
-  if (typeof window === 'undefined') return Promise.resolve()
-  if ((window as any).google?.maps) return Promise.resolve((window as any).google.maps)
-
-  if (scriptLoadingPromise) return scriptLoadingPromise
-
-  scriptLoadingPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      resolve((window as any).google.maps)
-    }
-    script.onerror = (err) => {
-      scriptLoadingPromise = null
-      reject(err)
-    }
-    document.head.appendChild(script)
-  })
-
-  return scriptLoadingPromise
-}
+import { loadGoogleMapsScript } from '@/lib/google-maps'
 
 interface LocationData {
   lat: number

@@ -1,18 +1,16 @@
+import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+
 export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boolean> {
   const token = process.env.WHATSAPP_TOKEN
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME
 
   if (!token || !phoneId) {
-    console.log(`[WhatsApp Mock] Credentials not configured. OTP delivery skipped.`)
     return false
   }
 
-  // Clean phone number to digits only (e.g. +919876543210 -> 919876543210)
-  let cleanPhone = phone.replace(/\D/g, '')
-  if (cleanPhone.length === 10) {
-    cleanPhone = '91' + cleanPhone
-  }
+  // Normalize phone to WhatsApp format (no +, country code included)
+  const cleanPhone = normalizePhone(phone)
 
   try {
     let body: any = {
@@ -82,7 +80,6 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
       return false
     }
 
-    console.log(`[WhatsApp Success] Message sent successfully.`)
     return true
   } catch (err) {
     console.error('Meta WhatsApp API connection error:', err)
@@ -96,14 +93,10 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
   const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME
 
   if (!token || !phoneId || !templateName) {
-    console.log(`[WhatsApp Mock Alert] Logged Order Alert (template name not configured in env)`)
     return false
   }
 
-  let cleanPhone = phone.replace(/\D/g, '')
-  if (cleanPhone.length === 10) {
-    cleanPhone = '91' + cleanPhone
-  }
+  const cleanPhone = normalizePhone(phone)
 
   try {
     const body = {
@@ -143,7 +136,6 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
       return false
     }
 
-    console.log(`[WhatsApp Order Alert Success] Sent successfully.`)
     return true
   } catch (err) {
     console.error('Meta WhatsApp Order Alert API connection error:', err)

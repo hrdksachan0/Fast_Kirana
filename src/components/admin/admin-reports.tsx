@@ -17,6 +17,7 @@ import {
   FileText
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { formatDate } from '@/lib/date-helpers'
 
 interface DailySale {
   date: string
@@ -595,7 +596,7 @@ export function AdminReports() {
                     if (!showLabel) return null
                     
                     const datePart = p.label.split('-')[2]
-                    const monthPart = new Date(p.label).toLocaleDateString('en-US', { month: 'short' })
+                    const monthPart = formatDate(p.label, 'MMM')
                     
                     return (
                       <g key={i} className="opacity-80">

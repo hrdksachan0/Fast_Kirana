@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { isValidIndianPhone, normalizePhone, getLast10Digits } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,22 +15,9 @@ export async function POST(request: NextRequest) {
     const trimmed = rawEmail.trim()
     let email = trimmed.toLowerCase()
 
-    // Helper to check if it's a phone number
-    const isPhoneNumber = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
-    }
-
-    const getNormalizedPhone = (val: string) => {
-      const cleaned = val.replace(/\D/g, '')
-      if (cleaned.length === 10) return `+91${cleaned}`
-      if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
-      return val
-    }
-
     let phoneForSignup = ''
-    if (isPhoneNumber(trimmed)) {
-      const normalizedPhone = getNormalizedPhone(trimmed)
+    if (isValidIndianPhone(trimmed)) {
+      const normalizedPhone = normalizePhone(trimmed)
       const existingUser = await prisma.user.findFirst({
         where: { phone: normalizedPhone },
         select: { email: true }
@@ -37,7 +25,7 @@ export async function POST(request: NextRequest) {
       if (existingUser) {
         email = existingUser.email
       } else {
-        const phoneDigits = normalizedPhone.replace(/\D/g, '').replace(/^91/, '')
+        const phoneDigits = getLast10Digits(normalizedPhone)
         email = `wa-${phoneDigits}@fastkirana.com`
       }
       phoneForSignup = normalizedPhone

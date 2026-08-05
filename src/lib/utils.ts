@@ -5,20 +5,34 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Retry a promise-returning function with exponential-like delay */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 1500
+): Promise<T> {
+  let lastError: unknown
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastError = err
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+  throw lastError
+}
+
 export function formatPrice(price: number): string {
   return `₹${price.toLocaleString('en-IN')}`
 }
 
-export function format12h(timeStr: string | null | undefined): string {
-  if (!timeStr) return ''
-  const parts = timeStr.split(':')
-  if (parts.length < 2) return timeStr
-  const hour = parseInt(parts[0])
-  const minute = parts[1]
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12
-  return `${displayHour}:${minute} ${ampm}`
-}
+import { formatTime12h } from "./date-helpers"
+
+// Re-export formatTime12h from date-helpers so callers can use one import
+export { formatTime12h }
 
 export function isCafeProduct(p: any): boolean {
   if (!p) return false
@@ -202,14 +216,4 @@ export function getDeliveryPin(orderId: string): string {
   return pin.toString()
 }
 
-export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371 // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c // Returns distance in km
-}
+// Distance helper moved to @/lib/distance — use getDistanceKm instead

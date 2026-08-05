@@ -20,7 +20,6 @@ export function PWARegistration() {
           .then((reg) => {
             // Force check update on registration
             reg.update()
-            console.log('ServiceWorker registered with scope: ', reg.scope)
           })
           .catch((err) => {
             console.error('ServiceWorker registration failed: ', err)

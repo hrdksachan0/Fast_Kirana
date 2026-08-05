@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { AccountDashboard } from '@/components/account/account-dashboard'
+import { getLast10Digits } from '@/lib/phone'
 
 export const revalidate = 0 // Account details are fully dynamic
 
@@ -13,7 +14,7 @@ export default async function AccountPage() {
 
   const sessionId = session.user.id || ''
   const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
-  const sessionPhone = (session.user as any).phone ? (session.user as any).phone.replace(/\D/g, '') : ''
+  const sessionPhone = (session.user as any).phone ? getLast10Digits((session.user as any).phone) : ''
 
   let user = null
   let addresses: any[] = []

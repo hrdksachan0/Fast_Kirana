@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
-import { QueryProvider } from '@/providers/query-provider'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { Navbar } from '@/components/layout/navbar'
@@ -75,8 +74,7 @@ export const viewport: Viewport = {
   themeColor: '#e20a22',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 3,
 }
 
 export default function RootLayout({
@@ -103,46 +101,44 @@ export default function RootLayout({
         />
       </head>
       <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
-        <QueryProvider>
-          <AuthProvider>
-            <ThemeProvider>
-              <LiveStockProvider>
-                <CartSyncProvider>
-                  <PushNotificationProvider>
-                  <Suspense fallback={null}>
-                    <TopProgressBar />
-                  </Suspense>
-                  {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
-                  <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
-                    <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
-                    <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/8 blur-[120px] animate-float-reverse" />
-                    <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full bg-rose-400/5 blur-[100px] animate-float" />
-                  </div>
+        <AuthProvider>
+          <ThemeProvider>
+            <LiveStockProvider>
+              <CartSyncProvider>
+                <PushNotificationProvider>
+                <Suspense fallback={null}>
+                  <TopProgressBar />
+                </Suspense>
+                {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
+                <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
+                  <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
+                  <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/8 blur-[120px] animate-float-reverse" />
+                  <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full bg-rose-400/5 blur-[100px] animate-float" />
+                </div>
 
-                  <div className="flex flex-col min-h-screen">
-                    <Navbar />
-                    <MainWrapper>
-                      {children}
-                    </MainWrapper>
-                    <Footer />
-                  </div>
-                  <MobileBottomNav />
-                  <CartStickyBar />
-                  <CartDrawer />
-                  <VariantSelectorDrawer />
-                  <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />
-                  <PWARegistration />
-                  <PushNotificationConsent />
-                  <SoftPromptDialog />
-                  <CartConflictDialog />
-                  <SwipeToBack />
+                <div className="flex flex-col min-h-screen">
+                  <Navbar />
+                  <MainWrapper>
+                    {children}
+                  </MainWrapper>
+                  <Footer />
+                </div>
+                <MobileBottomNav />
+                <CartStickyBar />
+                <CartDrawer />
+                <VariantSelectorDrawer />
+                <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />
+                <PWARegistration />
+                <PushNotificationConsent />
+                <SoftPromptDialog />
+                <CartConflictDialog />
+                <SwipeToBack />
 
                 </PushNotificationProvider>
               </CartSyncProvider>
             </LiveStockProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </QueryProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

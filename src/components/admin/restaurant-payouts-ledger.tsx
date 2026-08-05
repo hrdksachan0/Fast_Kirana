@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, IndianRupee, RefreshCw, CheckCircle, Clock, Plus, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
+import { formatDate } from '@/lib/date-helpers'
 
 interface Payout {
   id: string
@@ -120,14 +121,6 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
     } finally {
       setSettling(false)
     }
-  }
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
   }
 
   return (
@@ -285,13 +278,13 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
                 {payouts.map((p) => (
                   <tr key={p.id} className="hover:bg-muted/10 font-medium">
                     <td className="py-3.5 px-2 text-text-muted text-[10px]">
-                      {formatDate(p.createdAt)}
+                      {formatDate(p.createdAt, 'dd MMM yyyy')}
                     </td>
                     <td className="py-3.5 px-2 font-bold text-text-primary text-xs">
                       {p.restaurant?.name || 'All Outlets'}
                     </td>
                     <td className="py-3.5 px-2 font-semibold text-text-primary">
-                      {formatDate(p.startDate)} – {formatDate(p.endDate)}
+                      {formatDate(p.startDate, 'dd MMM yyyy')} – {formatDate(p.endDate, 'dd MMM yyyy')}
                     </td>
                     <td className="py-3.5 px-2 font-black text-text-primary text-sm">
                       {formatPrice(p.amount)}

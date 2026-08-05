@@ -59,7 +59,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
         registration.pushManager.getSubscription().then((subscription) => {
           setIsSubscribed(!!subscription)
         })
-      }).catch(err => console.log('Service worker not ready yet:', err))
+      }).catch(err => {})
     }
 
     const dismissed = localStorage.getItem('push-prompt-dismissed') === 'true'

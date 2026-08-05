@@ -3,7 +3,7 @@
 import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
-import { formatPrice, format12h } from '@/lib/utils'
+import { formatPrice, formatTime12h } from '@/lib/utils'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -278,8 +278,8 @@ export function CartDrawer() {
                 <p className="text-[9px] font-black text-rose-500 mt-1.5 flex items-center gap-1 leading-none">
                   <span>🏪</span> Closed (Timings: {
                     (item.product.category?.slug === 'restaurant')
-                      ? `${format12h(settings.restaurant_open_time)} - ${format12h(settings.restaurant_close_time)}`
-                      : `${format12h(settings.cafe_open_time)} - ${format12h(settings.cafe_close_time)}`
+                      ? `${formatTime12h(settings.restaurant_open_time)} - ${formatTime12h(settings.restaurant_close_time)}`
+                      : `${formatTime12h(settings.cafe_open_time)} - ${formatTime12h(settings.cafe_close_time)}`
                   })
                 </p>
               ) : item.product.stock <= 0 || item.product.isAvailable === false ? (
@@ -667,12 +667,12 @@ export function CartDrawer() {
                     Some items in your cart cannot be ordered now because the kitchen or store is closed.
                     {cafeItems.some(item => isItemClosed(item.product) && item.product.category?.slug === 'restaurant') && (
                       <strong className="block mt-1 font-extrabold text-red-500">
-                        • Restaurant Timings: {format12h(settings.restaurant_open_time)} - {format12h(settings.restaurant_close_time)}
+                        • Restaurant Timings: {formatTime12h(settings.restaurant_open_time)} - {formatTime12h(settings.restaurant_close_time)}
                       </strong>
                     )}
                     {cafeItems.some(item => isItemClosed(item.product) && item.product.category?.slug !== 'restaurant') && (
                       <strong className="block mt-0.5 font-extrabold text-orange-500">
-                        • Cafe Timings: {format12h(settings.cafe_open_time)} - {format12h(settings.cafe_close_time)}
+                        • Cafe Timings: {formatTime12h(settings.cafe_open_time)} - {formatTime12h(settings.cafe_close_time)}
                       </strong>
                     )}
                   </span>

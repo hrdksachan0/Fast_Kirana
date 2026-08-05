@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, ShoppingBag, ArrowLeft, Mail, KeyRound, User, Phone } from 'lucide-react'
+import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 const getRoleRedirect = (role: string, email: string, callbackUrl: string) => {
   switch (role) {
@@ -66,12 +67,12 @@ function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; otp?: string; name?: string; phone?: string }>({})
 
   const isPhoneNumber = (val: string) => {
-    const cleaned = val.replace(/\D/g, '')
+    const cleaned = getLast10Digits(val)
     return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith('91'))
   }
 
   const normalizePhoneNumber = (val: string) => {
-    const cleaned = val.replace(/\D/g, '')
+    const cleaned = getLast10Digits(val)
     if (cleaned.length === 10) return `+91${cleaned}`
     if (cleaned.length === 12 && cleaned.startsWith('91')) return `+${cleaned}`
     return val
@@ -112,7 +113,7 @@ function LoginForm() {
     if (!name.trim()) errs.name = 'Full name is required'
     if (!phone.trim()) {
       errs.phone = 'Mobile number is required'
-    } else if (phone.trim().length < 10) {
+    } else if (!isValidIndianPhone(phone.trim())) {
       errs.phone = 'Mobile number must be at least 10 digits'
     }
     return errs
@@ -494,7 +495,7 @@ function LoginForm() {
                   onChange={(e) => {
                     let val = e.target.value
                     if (loginType === 'WHATSAPP') {
-                      val = val.replace(/\D/g, '').slice(0, 10)
+                      val = getLast10Digits(val).slice(0, 10)
                     }
                     setEmail(val)
                   }}
@@ -650,7 +651,7 @@ function LoginForm() {
                   maxLength={6}
                   placeholder="123456"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => setOtp(getLast10Digits(e.target.value))}
                   className="pl-11 h-12 tracking-[0.6em] text-center font-black text-lg focus:tracking-[0.6em] rounded-xl border-border bg-white/50 dark:bg-black/20 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all placeholder:text-text-muted/40 placeholder:tracking-normal"
                   disabled={isLoading}
                   required
@@ -737,7 +738,7 @@ function LoginForm() {
                     type="tel"
                     placeholder="9876543210"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => setPhone(getLast10Digits(e.target.value))}
                     className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
                     disabled={isLoading}
                     required

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Navigation, Search, X, Loader2, MapPin, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import { getDistanceKm } from '@/lib/distance'
 
 interface LocationData {
   lat: number
@@ -77,19 +78,7 @@ export function FreeMapPicker({
   const [city, setCity] = useState('')
   const [pincode, setPincode] = useState('')
 
-  // Haversine distance calculator
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371
-    const dLat = (lat2 - lat1) * (Math.PI / 180)
-    const dLon = (lon2 - lon1) * (Math.PI / 180)
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  }
-
-  const distanceKm = calculateDistance(storeLat, storeLng, currentLat, currentLng)
+  const distanceKm = getDistanceKm(storeLat, storeLng, currentLat, currentLng)
   const isServiceable = distanceKm <= deliveryRadiusKm
 
   // OpenStreetMap Reverse Geocoding (Free Nominatim API)

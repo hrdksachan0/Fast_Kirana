@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, withRetry } from '@/lib/utils'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import {
   IndianRupee,
@@ -15,21 +15,6 @@ import {
 
 export const revalidate = 0 // Admin dashboard is fully dynamic
 
-async function retryQuery<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
-  let lastError: any;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      console.warn(`Database query failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
-      if (i < retries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw lastError;
-}
 
 export default async function AdminPage() {
   const session = await auth()
@@ -83,7 +68,7 @@ export default async function AdminPage() {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
-    const [todayOrders, todayRevAgg, ...results] = await retryQuery(() => Promise.all([
+    const [todayOrders, todayRevAgg, ...results] = await withRetry(() => Promise.all([
       prisma.order.count({
         where: {
           createdAt: { gte: startOfToday },
@@ -145,7 +130,7 @@ export default async function AdminPage() {
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
 
-    const [fetchedUsers, fetchedAddresses] = await retryQuery(() => Promise.all([
+    const [fetchedUsers, fetchedAddresses] = await withRetry(() => Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
