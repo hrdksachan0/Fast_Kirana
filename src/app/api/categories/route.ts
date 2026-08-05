@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
     // Revalidate category lists cache immediately
     try {
-      revalidateTag('categories', 'max')
+      revalidateTag('categories')
       revalidateStorefront()
     } catch (e) {
       console.error('Failed to trigger category revalidation:', e)

@@ -28,8 +28,8 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
       color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20',
     },
     {
-      title: 'Net Sales',
-      value: formatPrice(stats.netSales ?? stats.revenue ?? 0),
+      title: "Today's Net Sales",
+      value: formatPrice(stats.todaySales || 0),
       icon: TrendingUp,
       color: 'text-teal-600 bg-teal-500/10 border-teal-500/20',
     },

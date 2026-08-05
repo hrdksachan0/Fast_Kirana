@@ -299,6 +299,7 @@ export default async function AdminPage() {
     slug: c.slug,
     imageUrl: c.imageUrl,
     sortOrder: c.sortOrder,
+    parentId: c.parentId || null,
     _count: {
       products: c._count.products,
     },

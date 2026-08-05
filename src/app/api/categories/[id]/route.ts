@@ -60,7 +60,7 @@ export async function PATCH(
 
     // Revalidate category lists cache immediately
     try {
-      revalidateTag('categories', 'max')
+      revalidateTag('categories')
       revalidateStorefront()
     } catch (e) {
       console.error('Failed to trigger category revalidation on patch:', e)
