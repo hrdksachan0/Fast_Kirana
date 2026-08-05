@@ -18,12 +18,6 @@ export interface DashboardStatsCardsProps {
 export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
   const cards = [
     {
-      title: 'Total Revenue',
-      value: formatPrice(stats.revenue || 0),
-      icon: DollarSign,
-      color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20',
-    },
-    {
       title: 'Total Orders',
       value: stats.orderCount || 0,
       icon: ShoppingBag,
@@ -44,7 +38,7 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon
         return (
