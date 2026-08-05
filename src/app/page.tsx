@@ -537,7 +537,7 @@ export default async function Home() {
             "@context": "https://schema.org",
             "@type": "Store",
             "name": "Fast Kirana",
-            "image": "https://www.fastkirana.in/fastkirana_app_icon.png",
+            "image": "https://www.fastkirana.in/brand/fastkirana_app_icon.png",
             "description": "Fast online grocery, daily dairy items, fresh vegetables, and cafe food delivery service in Ghatampur, Kanpur Nagar.",
             "telephone": "+917054470303",
             "url": "https://www.fastkirana.in",

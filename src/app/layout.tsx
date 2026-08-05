@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     siteName: 'Fast Kirana',
     images: [
       {
-        url: '/fastkirana_app_icon.png',
+        url: '/brand/fastkirana_app_icon.png',
         width: 512,
         height: 512,
         alt: 'Fast Kirana Logo',
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Fast Kirana - Fast Grocery Delivery in Ghatampur',
     description: 'Order groceries online and get them delivered in minutes in Ghatampur, Kanpur.',
-    images: ['/fastkirana_app_icon.png'],
+    images: ['/brand/fastkirana_app_icon.png'],
   },
 }
 

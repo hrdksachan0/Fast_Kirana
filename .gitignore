@@ -46,6 +46,9 @@ next-env.d.ts
 /fastkirana-rn
 /fastkirana-android
 
+# python virtual env
+fastapi-backend/venv/
+
 # dev scratch scripts
 scratch/
 scratch-db-test.ts
