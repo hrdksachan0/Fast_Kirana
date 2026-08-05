@@ -1,11 +1,12 @@
 'use client'
 
 import React from 'react'
-import { ShoppingBag, DollarSign, TrendingUp, Zap } from 'lucide-react'
+import { ShoppingBag, IndianRupee, TrendingUp, Zap } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
 export interface DashboardStats {
   todaySales?: number
+  todayOrdersCount?: number
   netSales?: number
   revenue?: number
   orderCount?: number
@@ -23,7 +24,7 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
     {
       title: "Today's Sales",
       value: formatPrice(stats.todaySales || 0),
-      icon: DollarSign,
+      icon: IndianRupee,
       color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20',
     },
     {
@@ -33,8 +34,8 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
       color: 'text-teal-600 bg-teal-500/10 border-teal-500/20',
     },
     {
-      title: 'Total Orders',
-      value: stats.orderCount || 0,
+      title: "Today's Orders",
+      value: stats.todayOrdersCount ?? stats.orderCount ?? 0,
       icon: ShoppingBag,
       color: 'text-blue-600 bg-blue-500/10 border-blue-500/20',
     },

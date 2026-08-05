@@ -76,26 +76,19 @@ export function useCart() {
 
     const storeState = useCartStore.getState()
 
-    const AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
-    const newRestId = (product as any).restaurantId || (product as any).restaurant?.id || null
-    const isNewThirdPartyRest = Boolean(newRestId && newRestId !== AS_RESTAURANT_ID)
+    const getOutletId = (p: any) => (p as any).restaurantId || (p as any).restaurant?.id || null
+    const newRestId = getOutletId(product)
 
     const incompatibleItem = storeState.items.find((item) => {
-      const existRestId = (item.product as any).restaurantId || (item.product as any).restaurant?.id || null
-      const isExistThirdPartyRest = Boolean(existRestId && existRestId !== AS_RESTAURANT_ID)
+      const existRestId = getOutletId(item.product)
 
-      // 1. If both are third-party restaurant items (e.g. Wedson vs another outlet), check if they're from the same restaurant
-      if (isNewThirdPartyRest && isExistThirdPartyRest) {
-        return newRestId !== existRestId
+      // 1. Grocery items (no restaurantId) can mix freely with ANY restaurant outlet or grocery item
+      if (!newRestId || !existRestId) {
+        return false
       }
 
-      // 2. Third-party restaurant items (like Wedson) CANNOT mix with AS Restaurant / Grocery / Beverages / Ice Creams
-      if (isNewThirdPartyRest || isExistThirdPartyRest) {
-        return true
-      }
-
-      // 3. AS Restaurant + Grocery + Beverages + Ice Creams can all mix seamlessly together
-      return false
+      // 2. Different restaurant outlets (e.g. Wedson vs Bal Udyan vs AS Restaurant) CANNOT mix in the same cart
+      return newRestId !== existRestId
     })
 
     if (incompatibleItem) {

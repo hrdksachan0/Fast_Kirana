@@ -160,9 +160,9 @@ export function Navbar() {
 
           if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === true && cOpen === false) {
             triggerHaptic('warning')
-            toast.error('☕ FastKirana Cafe has been temporarily closed by admin.', {
-              duration: 6000,
+            toast.error('🍽️ A.S. Restaurant kitchen has been temporarily closed by admin.', {
               id: 'cafe-closed-alert',
+              duration: 3000,
             })
           }
 

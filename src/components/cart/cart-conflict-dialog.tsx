@@ -43,7 +43,7 @@ export function CartConflictDialog() {
             <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500/20" />
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold text-text-secondary mt-1.5 max-w-[250px] leading-normal">
-            Your cart contains items from a different restaurant or store segment. Adding this item will clear your current cart.
+            Your cart contains dishes from another restaurant outlet. You can order from 1 restaurant at a time (Grocery add-ons are always allowed!). Replace cart items?
           </DialogDescription>
         </DialogHeader>
 

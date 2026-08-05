@@ -6,8 +6,8 @@ import { Metadata } from 'next'
 import { StorefrontClient } from '@/components/home/storefront-client'
 
 export const metadata: Metadata = {
-  title: 'Fast Kirana - Online Grocery & Cafe Delivery in Ghatampur, Kanpur',
-  description: 'Fast Kirana delivers fresh grocery staples, daily dairy items, fruits, vegetables, and hot snacks from Fast Kirana Cafe to your home in Ghatampur, Kanpur in minutes.',
+  title: 'Fast Kirana - Online Grocery & Restaurant Delivery in Ghatampur, Kanpur',
+  description: 'Fast Kirana delivers fresh grocery staples, daily dairy items, fruits, vegetables, and delicious meals from partner restaurants in Ghatampur, Kanpur in minutes.',
   alternates: {
     canonical: 'https://www.fastkirana.in',
   }

@@ -294,39 +294,47 @@ export const HUB_CONFIG = [
   {
     key: 'orders_hub',
     label: 'Orders & Fulfillment',
-    description: 'Live order queue, fulfillment dispatch, pickup & table orders, and historical orders',
+    description: 'Live order queue, dispatch tracking, and real-time ops',
     color: 'from-amber-500/10 to-orange-500/10',
     activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['orders'] as const
+    tabs: ['orders', 'liveops'] as const
   },
   {
     key: 'grocery',
     label: 'Products & Inventory',
-    description: 'Manage products, categories, inward stock, low stock alerts, and bulk pricing updates',
+    description: 'Catalog, categories, stock alerts, inward, bulk updates & CSV import',
     color: 'from-emerald-500/10 to-teal-500/10',
     activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
+    tabs: ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import'] as const
+  },
+  {
+    key: 'food',
+    label: 'Food & Restaurants',
+    description: 'Restaurant kitchen console, outlet management & payouts',
+    color: 'from-orange-500/10 to-red-500/10',
+    activeBorder: 'border-orange-500/60 ring-2 ring-orange-500/20',
+    tabs: ['restaurant-console', 'restaurant-report'] as const
   },
   {
     key: 'insights',
     label: 'Business Intelligence',
-    description: 'Analytics dashboards, sales velocity, reports, restaurant payouts, and AI stock forecasting',
+    description: 'Analytics dashboards, AI forecasting & sales reports',
     color: 'from-blue-500/10 to-cyan-500/10',
     activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['analytics', 'forecast', 'reports', 'restaurant-report'] as const
+    tabs: ['analytics', 'forecast', 'reports'] as const
   },
   {
-    key: 'ops',
-    label: 'Operations',
-    description: 'Real-time liveops tracker, rider COD settlements, and reviews moderation',
+    key: 'people',
+    label: 'Operations & People',
+    description: 'Staff, customers, rider settlements & review moderation',
     color: 'from-indigo-500/10 to-purple-500/10',
     activeBorder: 'border-indigo-500/60 ring-2 ring-indigo-500/20',
-    tabs: ['liveops', 'users', 'rider-cash', 'reviews'] as const
+    tabs: ['users', 'rider-cash', 'reviews'] as const
   },
   {
     key: 'marketing',
-    label: 'Marketing & Config',
-    description: 'Promo banners, campaign coupons, global settings, and push notifications',
+    label: 'Marketing & Settings',
+    description: 'Promo banners, coupons, push notifications & store config',
     color: 'from-rose-500/10 to-pink-500/10',
     activeBorder: 'border-rose-500/60 ring-2 ring-rose-500/20',
     tabs: ['banners', 'flash-deals', 'coupons', 'push-notifications', 'settings'] as const

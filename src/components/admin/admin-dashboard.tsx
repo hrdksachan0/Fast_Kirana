@@ -88,13 +88,16 @@ interface AdminDashboardProps {
   initialOrderCounts?: Record<string, number>
   stats: {
     revenue: number
+    todaySales?: number
+    todayOrdersCount?: number
     orderCount: number
+    activeOrderCount?: number
     userCount: number
     lowStockCount: number
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'csv-import'
 
 export function AdminDashboard({
   initialOrders,
@@ -801,6 +804,11 @@ export function AdminDashboard({
     return (orders || [])
       .filter((o: any) => o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr)
       .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  }, [orders])
+
+  const todayOrdersCount = useMemo(() => {
+    const todayStr = new Date().toDateString()
+    return (orders || []).filter((o: any) => o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr).length
   }, [orders])
 
   const netSales = useMemo(() => {
@@ -2269,6 +2277,7 @@ export function AdminDashboard({
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
+    { key: 'csv-import', label: 'CSV Import', icon: Download },
     { key: 'restaurant-console', label: 'Restaurant Console', icon: Utensils },
   ]
 
@@ -2422,10 +2431,11 @@ export function AdminDashboard({
 
       <DashboardStatsCards
         stats={{
-          todaySales,
-          netSales: netSales || stats.revenue,
-          orderCount: orderTotal,
-          activeOrderCount: liveOrders.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
+          todaySales: stats.todaySales ?? todaySales,
+          todayOrdersCount: stats.todayOrdersCount ?? todayOrdersCount,
+          netSales: stats.revenue || netSales,
+          orderCount: stats.orderCount || orderTotal,
+          activeOrderCount: stats.activeOrderCount ?? liveOrders.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
         }}
       />
 
@@ -5026,6 +5036,19 @@ export function AdminDashboard({
       {activeTab === 'rider-cash' && (
         <div className="animate-fade-in">
           <AdminRiderCash />
+        </div>
+      )}
+
+      {activeTab === 'csv-import' && (
+        <div className="animate-fade-in">
+          <AdminCsvImport
+            categories={categories}
+            onImportComplete={(imported) => {
+              toast.success(`${imported.length} products imported successfully!`)
+              setProducts((prev: any[]) => [...imported, ...prev])
+            }}
+            onClose={() => setActiveTab('products')}
+          />
         </div>
       )}
 

@@ -2,12 +2,14 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { ShoppingBag, Package, TrendingUp, Zap, Ticket } from 'lucide-react'
+import { ShoppingBag, Package, TrendingUp, Zap, Ticket, Utensils, Users } from 'lucide-react'
 
 const HUB_ICONS: Record<string, any> = {
   orders_hub: ShoppingBag,
   grocery: Package,
+  food: Utensils,
   insights: TrendingUp,
+  people: Users,
   ops: Zap,
   marketing: Ticket,
 }
@@ -48,7 +50,7 @@ export function DashboardHubNav({
   return (
     <div className="space-y-4">
       {/* Consolidated Operational Hub Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {hubs.map((hub) => {
           const HubIcon = HUB_ICONS[hub.key] || Package
           const isActive = activeHub === hub.key

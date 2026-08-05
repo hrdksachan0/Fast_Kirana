@@ -100,14 +100,20 @@ export function CartStickyBar() {
           <div className="relative w-8 h-8 rounded-full bg-green-950/40 flex items-center justify-center border border-white/10 shrink-0">
             <ShoppingBag className="h-4 w-4 text-white stroke-[2.2]" />
             {/* Red Notification Badge */}
-            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+            <motion.span 
+              key={totalItems}
+              initial={{ scale: 0.8 }}
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ type: "spring", stiffness: 450, damping: 20 }}
+              className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs tabular-nums"
+            >
               {totalItems}
-            </span>
+            </motion.span>
           </div>
           
           {/* Title & Subtitle Stack */}
           <div className="flex flex-col text-left">
-            <span className="text-xs font-black text-white leading-tight">
+            <span className="text-xs font-black text-white leading-tight tabular-nums">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
             </span>
             <span className="text-[9px] font-bold text-white/80 leading-tight mt-0.5">

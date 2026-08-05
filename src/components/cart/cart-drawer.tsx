@@ -693,7 +693,7 @@ export function CartDrawer() {
                 {/* Collapsible Price Summary */}
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-extrabold uppercase tracking-wider">Total Bill</span>
-                  <span className="text-lg font-black text-zinc-800 dark:text-zinc-100 leading-tight">
+                  <span className="text-lg font-black text-zinc-800 dark:text-zinc-100 leading-tight tabular-nums">
                     {formatPrice(total)}
                   </span>
                   <button
