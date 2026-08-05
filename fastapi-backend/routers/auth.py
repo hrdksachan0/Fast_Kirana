@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
@@ -18,7 +18,7 @@ from utils.jwt import extract_user_from_token, is_token_expired
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # ---------- Auth Dependencies ----------
 # Defined here so other routers can import them from routers.auth
@@ -134,11 +134,11 @@ class MessageResponse(BaseModel):
 # ---------- Helpers ----------
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def generate_otp() -> str:
@@ -209,26 +209,18 @@ async def signup(
         role_value = Role.USER.value
 
     # Create user
-    import traceback
-    try:
-        new_user = User(
-            id=f"c{uuid.uuid4().hex[:24]}",
-            email=email,
-            phone=phone,
-            name=body.name or "",
-            role=role_value,
-            passwordHash=hash_password(body.password),
-            isBlocked=False,
-        )
-        db.add(new_user)
-        await db.commit()
-        await db.refresh(new_user)
-    except Exception as e:
-        tb = traceback.format_exc()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Signup Error: {str(e)}\nTraceback: {tb}"
-        )
+    new_user = User(
+        id=f"c{uuid.uuid4().hex[:24]}",
+        email=email,
+        phone=phone,
+        name=body.name or "",
+        role=role_value,
+        passwordHash=hash_password(body.password),
+        isBlocked=False,
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
 
     return SessionResponse(
         id=new_user.id,
