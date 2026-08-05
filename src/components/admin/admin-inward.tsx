@@ -15,6 +15,7 @@ import {
   HelpCircle
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { formatDate } from '@/lib/date-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Product {
@@ -157,7 +158,7 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
           quantity: parseInt(quantity, 10),
           costPrice: parseFloat(costPrice),
           expiryDate,
-          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          timestamp: formatDate(new Date(), 'hh:mm:ss a')
         },
         ...prev
       ])

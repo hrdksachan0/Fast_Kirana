@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
+import { formatOrderTime } from '@/lib/date-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface RiderCashInfo {
@@ -380,7 +381,7 @@ export function AdminRiderCash() {
                       Received <span className="text-emerald-600 dark:text-emerald-400 font-black">{formatPrice(d.amount)}</span> from {d.riderName}
                     </p>
                     <p className="text-[10px] text-text-muted">
-                      Accepted by {d.adminName} • {new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      Accepted by {d.adminName} • {formatOrderTime(d.createdAt)}
                     </p>
                   </div>
                 </div>

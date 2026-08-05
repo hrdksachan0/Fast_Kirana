@@ -10,10 +10,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { triggerHaptic } from '@/lib/haptic'
 
+import { formatOrderTime, addMinutesTo } from '@/lib/date-helpers'
+
 function getDeliveryETA(): string {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() + 10)
-  return now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const etaDate = addMinutesTo(new Date(), 10)
+  return formatOrderTime(etaDate)
 }
 
 export function CartStickyBar() {

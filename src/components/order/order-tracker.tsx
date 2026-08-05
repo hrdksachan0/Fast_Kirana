@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 import { useRouter } from 'next/navigation'
+import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import {
   Check,
   ShoppingBag,
@@ -748,7 +749,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted/60 px-3.5 py-2 rounded-xl border border-border/50 shadow-2xs">
               <Clock className="h-4 w-4 text-primary" />
-              <span>Placed at: {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span>Placed at: {formatOrderTime(order.createdAt)}</span>
             </div>
             {combinedStatus === 'PENDING' && (
               <button
@@ -806,7 +807,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           )}
           {isScheduled && order.estimatedDelivery && (
             <span className="text-[10px] font-black text-amber-800 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 shrink-0" /> Scheduled: {new Date(order.estimatedDelivery).toLocaleDateString()} {new Date(order.estimatedDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <Clock className="h-3.5 w-3.5 shrink-0" /> Scheduled: {formatDate(order.estimatedDelivery, 'yyyy-MM-dd')} {formatOrderTime(order.estimatedDelivery)}
             </span>
           )}
 

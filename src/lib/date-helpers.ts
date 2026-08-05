@@ -1,6 +1,10 @@
 import { format, formatDistanceToNow, isToday, isTomorrow, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
 
 // --- Time ---
+export function formatDate(date: string | Date, pattern: string): string {
+  return format(new Date(date), pattern)
+}
+
 export function formatOrderTime(date: string | Date): string {
   return format(new Date(date), 'h:mm a')
 }

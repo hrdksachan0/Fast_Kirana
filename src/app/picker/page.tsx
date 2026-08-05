@@ -7,6 +7,7 @@ import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
+import { formatOrderTime } from '@/lib/date-helpers'
 import { 
   Loader2, 
   ShoppingBag, 
@@ -1634,7 +1635,7 @@ export default function PickerDashboard() {
                 <div className="hidden sm:flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/10">
                   <Clock className="h-3 w-3 text-white/70" />
                   <span className="text-[10px] font-mono font-bold text-white/90">
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatOrderTime(currentTime)}
                   </span>
                 </div>
                 <button

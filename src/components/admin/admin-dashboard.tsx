@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
+import { formatOrderTime } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
@@ -7196,25 +7197,25 @@ export function AdminDashboard({
                   <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.createdAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
                     <div className="text-[10px] font-black uppercase">1. Placed</div>
                     <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.createdAt ? new Date(selectedOrderForTracking.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {selectedOrderForTracking.createdAt ? formatOrderTime(selectedOrderForTracking.createdAt) : '—'}
                     </div>
                   </div>
                   <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.confirmedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
                     <div className="text-[10px] font-black uppercase">2. Confirmed</div>
                     <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.confirmedAt ? new Date(selectedOrderForTracking.confirmedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {selectedOrderForTracking.confirmedAt ? formatOrderTime(selectedOrderForTracking.confirmedAt) : '—'}
                     </div>
                   </div>
                   <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.packedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
                     <div className="text-[10px] font-black uppercase">3. Packed</div>
                     <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.packedAt ? new Date(selectedOrderForTracking.packedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {selectedOrderForTracking.packedAt ? formatOrderTime(selectedOrderForTracking.packedAt) : '—'}
                     </div>
                   </div>
                   <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.shippedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
                     <div className="text-[10px] font-black uppercase">4. Dispatched</div>
                     <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.shippedAt ? new Date(selectedOrderForTracking.shippedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {selectedOrderForTracking.shippedAt ? formatOrderTime(selectedOrderForTracking.shippedAt) : '—'}
                     </div>
                   </div>
                 </div>

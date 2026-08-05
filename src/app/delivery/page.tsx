@@ -7,6 +7,7 @@ import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
+import { formatDate, formatOrderTime } from '@/lib/date-helpers'
 import { 
   Loader2, 
   MapPin, 
@@ -49,14 +50,7 @@ function LiveClock() {
   const [time, setTime] = useState<string>('')
   useEffect(() => {
     const tick = () =>
-      setTime(
-        new Date().toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        })
-      )
+      setTime(formatDate(new Date(), 'hh:mm:ss a'))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
@@ -1749,7 +1743,7 @@ export default function DeliveryDashboard() {
                     <div>
                       <span className="text-xs font-mono font-bold text-text-primary block">{order.id}</span>
                       <span className="text-[9px] text-text-muted font-semibold">
-                        Delivered: {new Date(order.updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}
+                        Delivered: {formatOrderTime(order.updatedAt)}
                       </span>
                     </div>
                     <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">

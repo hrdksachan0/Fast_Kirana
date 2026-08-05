@@ -1,3 +1,5 @@
+import { getTotalMinutes } from '@/lib/date-helpers'
+
 /**
  * Utility helper to evaluate if a restaurant/cafe is currently open based on
  * manual isOpen toggle and configured openTime / closeTime operating hours.
@@ -83,7 +85,7 @@ export function checkStoreOperatingStatus(restaurant?: {
   }
 
   const now = new Date()
-  const currentMins = now.getHours() * 60 + now.getMinutes()
+  const currentMins = getTotalMinutes(now)
 
   let isOpenBySchedule = false
 

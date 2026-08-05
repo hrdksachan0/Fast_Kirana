@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Sun, Utensils, Cookie, Moon } from 'lucide-react'
 import { ProductCard } from '@/components/product/product-card'
 import { Product } from '@/types'
+import { getTotalMinutes } from '@/lib/date-helpers'
 
 interface TimeSuggestionsProps {
   products: Product[]
@@ -94,7 +95,7 @@ export function TimeSuggestions({ products }: TimeSuggestionsProps) {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    const hour = new Date().getHours()
+    const hour = Math.floor(getTotalMinutes(new Date()) / 60)
     const config = getTimeConfig(hour)
 
     let filtered = products.filter(config.filterFn)

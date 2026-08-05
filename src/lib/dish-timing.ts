@@ -21,7 +21,7 @@ export function checkDishTimeAvailability(
 
   try {
     const now = new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const currentMinutes = getTotalMinutes(now)
 
     const [startH, startM] = startTime.split(':').map(Number)
     const [endH, endM] = endTime.split(':').map(Number)

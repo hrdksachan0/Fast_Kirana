@@ -11,6 +11,7 @@ import { RestaurantSettingsTab } from '@/components/admin/restaurant-settings-ta
 import { RestaurantCatalogManager } from '@/components/admin/restaurant-catalog-manager'
 import { RestaurantMenuSectionsEditor } from '@/components/admin/restaurant-menu-sections-editor'
 import { useUIStore } from '@/stores/ui-store'
+import { formatDate } from '@/lib/date-helpers'
 
 export default function CafeKitchenPage() {
   const { data: session, status } = useSession()
@@ -105,7 +106,7 @@ export default function CafeKitchenPage() {
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 rounded-xl border border-border/40 text-[11px] font-mono font-bold text-text-secondary select-none shadow-inner">
               <Clock className="h-3.5 w-3.5 text-text-muted" />
-              <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              <span>{formatDate(currentTime, 'hh:mm:ss a')}</span>
             </div>
 
             <button
