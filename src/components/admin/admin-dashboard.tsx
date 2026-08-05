@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { formatOrderTime } from '@/lib/date-helpers'
-import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
+import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES } from '@/lib/constants'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
@@ -90,45 +90,6 @@ interface AdminDashboardProps {
 }
 
 type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console'
-
-const PRODUCT_TEMPLATES = [
-  {
-    id: 'fresh_produce',
-    label: '🥦 Fresh Produce (Fruits & Veggies)',
-    description: 'Fresh fruits, vegetables',
-    categoryName: 'Fresh Fruits & Vegetables',
-    unit: '1 kg',
-    minStock: 15,
-    tags: 'fresh, produce'
-  },
-  {
-    id: 'grocery_essential',
-    label: '🥤 Grocery Essential',
-    description: 'Packaged foods, staples',
-    categoryName: 'Atta, Rice & Dal',
-    unit: '1 pc',
-    minStock: 10,
-    tags: 'essential, grocery'
-  },
-  {
-    id: 'cafe_snack',
-    label: '☕ Cafe Snack',
-    description: 'Fresh cafe items',
-    categoryName: 'FastKirana Cafe',
-    unit: '1 plate',
-    minStock: 5,
-    tags: 'cafe, freshlyprepared'
-  },
-  {
-    id: 'household_personal',
-    label: '🧴 Household Needs',
-    description: 'Soaps, cleaners, detergents',
-    categoryName: 'Household Needs',
-    unit: '1 Pack',
-    minStock: 5,
-    tags: 'cleaning, household'
-  }
-] as const
 
 const HUB_CONFIG = [
   {

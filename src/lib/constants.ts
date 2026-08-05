@@ -251,3 +251,85 @@ export const DEFAULT_RESTAURANT_MENU_SECTIONS: CafeMenuSection[] = [
   }
 ]
 
+export const PRODUCT_TEMPLATES = [
+  {
+    id: 'fresh_produce',
+    label: '🥦 Fresh Produce (Fruits & Veggies)',
+    description: 'Fresh fruits, vegetables',
+    categoryName: 'Fresh Fruits & Vegetables',
+    unit: '1 kg',
+    minStock: 15,
+    tags: 'fresh, produce'
+  },
+  {
+    id: 'grocery_essential',
+    label: '🥤 Grocery Essential',
+    description: 'Packaged foods, staples',
+    categoryName: 'Atta, Rice & Dal',
+    unit: '1 pc',
+    minStock: 10,
+    tags: 'essential, grocery'
+  },
+  {
+    id: 'cafe_snack',
+    label: '☕ Cafe Snack',
+    description: 'Fresh cafe items',
+    categoryName: 'FastKirana Cafe',
+    unit: '1 plate',
+    minStock: 5,
+    tags: 'cafe, freshlyprepared'
+  },
+  {
+    id: 'household_personal',
+    label: '🧴 Household Needs',
+    description: 'Soaps, cleaners, detergents',
+    categoryName: 'Household Needs',
+    unit: '1 Pack',
+    minStock: 5,
+    tags: 'cleaning, household'
+  }
+] as const
+
+export const HUB_CONFIG = [
+  {
+    key: 'orders_hub',
+    label: 'Orders & Fulfillment',
+    description: 'Live order queue, fulfillment dispatch, pickup & table orders, and historical orders',
+    color: 'from-amber-500/10 to-orange-500/10',
+    activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
+    tabs: ['orders'] as const
+  },
+  {
+    key: 'grocery',
+    label: 'Products & Inventory',
+    description: 'Manage products, categories, inward stock, low stock alerts, and bulk pricing updates',
+    color: 'from-emerald-500/10 to-teal-500/10',
+    activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
+    tabs: ['products', 'categories', 'alerts', 'inward', 'bulk-update'] as const
+  },
+  {
+    key: 'insights',
+    label: 'Business Intelligence',
+    description: 'Analytics dashboards, sales velocity, reports, restaurant payouts, and AI stock forecasting',
+    color: 'from-blue-500/10 to-cyan-500/10',
+    activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
+    tabs: ['analytics', 'forecast', 'reports', 'restaurant-report'] as const
+  },
+  {
+    key: 'ops',
+    label: 'Operations',
+    description: 'Real-time liveops tracker, rider COD settlements, and reviews moderation',
+    color: 'from-indigo-500/10 to-purple-500/10',
+    activeBorder: 'border-indigo-500/60 ring-2 ring-indigo-500/20',
+    tabs: ['liveops', 'users', 'rider-cash', 'reviews'] as const
+  },
+  {
+    key: 'marketing',
+    label: 'Marketing & Config',
+    description: 'Promo banners, campaign coupons, global settings, and push notifications',
+    color: 'from-rose-500/10 to-pink-500/10',
+    activeBorder: 'border-rose-500/60 ring-2 ring-rose-500/20',
+    tabs: ['banners', 'flash-deals', 'coupons', 'push-notifications', 'settings'] as const
+  }
+] as const
+
