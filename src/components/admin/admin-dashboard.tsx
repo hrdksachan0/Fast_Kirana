@@ -6,6 +6,8 @@ import { formatOrderTime } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
+import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
+import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
@@ -4872,105 +4874,13 @@ export function AdminDashboard({
               )}
             </div>
 
-            {/* Active Shopping Carts Tracker */}
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-extrabold text-sm text-text-primary flex items-center gap-2">
-                    Active Shopping Carts
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  </h4>
-                  <p className="text-[10px] text-text-secondary mt-0.5">Real-time view of products customers are adding to their carts</p>
-                </div>
-                <button
-                  onClick={() => setCartsRefreshKey(prev => prev + 1)}
-                  disabled={isLoadingCarts}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-text-primary text-xs font-bold rounded-lg border border-border transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-3 w-3 ${isLoadingCarts ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
-
-              {activeCarts.length === 0 ? (
-                <div className="text-center py-8">
-                  <span className="text-2xl">🛒</span>
-                  <p className="text-xs text-text-secondary mt-2">No active customer shopping carts in the last 12 hours.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-border/60 text-xs">
-                    <thead>
-                      <tr className="text-text-secondary font-extrabold border-b border-border/40">
-                        <th className="py-2 px-3 text-left">Customer</th>
-                        <th className="py-2 px-3 text-left">Items in Cart</th>
-                        <th className="py-2 px-3 text-right">Cart Total</th>
-                        <th className="py-2 px-3 text-right">Last Active</th>
-                        <th className="py-2 px-3 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/40 font-medium">
-                      {activeCarts.map(cart => {
-                        const timeAgoMin = Math.floor((new Date().getTime() - new Date(cart.updatedAt).getTime()) / 60000)
-                        let timeString = `${timeAgoMin}m ago`
-                        if (timeAgoMin === 0) timeString = 'Just now'
-                        else if (timeAgoMin >= 60) {
-                          const hours = Math.floor(timeAgoMin / 60)
-                          timeString = `${hours}h ago`
-                        }
-
-                        return (
-                          <tr key={cart.id} className="hover:bg-muted/10 transition-colors">
-                            <td className="py-3 px-3">
-                              <p className="font-extrabold text-text-primary">{cart.userName}</p>
-                              <p className="text-[10px] text-text-secondary mt-0.5">{cart.userPhone} • {cart.userEmail}</p>
-                            </td>
-                            <td className="py-3 px-3 max-w-xs md:max-w-md">
-                              <div className="flex flex-wrap gap-1.5">
-                                {cart.items.map((item: any, idx: number) => (
-                                  <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border/50 rounded-md text-[10px] text-text-primary font-bold">
-                                    {item.productName} 
-                                    {item.selectedVariant && <span className="text-text-muted text-[9px]"> ({item.selectedVariant})</span>}
-                                    <span className="text-primary font-black ml-1">x{item.quantity}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 text-right font-bold text-text-primary">
-                              {formatPrice(cart.subtotal)}
-                            </td>
-                            <td className="py-3 px-3 text-right text-text-secondary font-bold">
-                              {timeString}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <div className="flex flex-col sm:flex-row gap-1.5 justify-center items-center">
-                                <button
-                                  onClick={() => sendCartNotification(cart.userId, cart.userName)}
-                                  className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-                                  title="Send Push Notification Alert to Customer"
-                                >
-                                  🔔 Send Alert
-                                </button>
-                                <button
-                                  onClick={() => openWhatsAppModal(cart.userName, cart.userPhone)}
-                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-                                  title="Send WhatsApp Alert to Customer"
-                                >
-                                  🟢 WhatsApp
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            <LiveCartsPanel
+              activeCarts={activeCarts}
+              isLoadingCarts={isLoadingCarts}
+              onRefresh={() => setCartsRefreshKey((prev) => prev + 1)}
+              onSendCartNotification={sendCartNotification}
+              onOpenWhatsAppModal={openWhatsAppModal}
+            />
           </div>
         )
       })()}
@@ -6200,80 +6110,19 @@ export function AdminDashboard({
         </div>
       )}
 
-      {/* WhatsApp Template Modal */}
-      {whatsappModalOpen && whatsappTargetUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
-            <div className="flex justify-between items-center border-b border-border/60 pb-3">
-              <div>
-                <h4 className="font-extrabold text-text-primary text-base flex items-center gap-1.5">
-                  <span>🟢</span> Send WhatsApp Alert
-                </h4>
-                <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
-                  To: <span className="font-extrabold text-text-primary">{whatsappTargetUser.name}</span> ({whatsappTargetUser.phone})
-                </p>
-              </div>
-              <button 
-                onClick={() => { setWhatsappModalOpen(false); setWhatsappTargetUser(null); }} 
-                className="text-text-secondary hover:text-text-primary p-1 rounded-lg hover:bg-muted cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-text-secondary block">Select a Message Template</label>
-              <div className="space-y-2">
-                {[
-                  "🛒 Cart Waiting (Standard)",
-                  "🎁 Special Offer (Discount code SAVE10)",
-                  "👋 Gentle Reminder (Before stock runs out)"
-                ].map((name, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleTemplateSelect(idx)}
-                    className={`w-full text-left px-3 py-2.5 text-xs rounded-xl border transition-all font-bold cursor-pointer ${
-                      whatsappSelectedTemplateIdx === idx
-                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-muted/10 border-border hover:bg-muted/30 text-text-primary'
-                    }`}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-text-secondary block">Message Preview / Edit</label>
-                <textarea
-                  value={whatsappCustomMessage}
-                  onChange={(e) => setWhatsappCustomMessage(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-emerald-500 font-bold leading-relaxed resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-              <button
-                type="button"
-                onClick={() => { setWhatsappModalOpen(false); setWhatsappTargetUser(null); }}
-                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={sendWhatsAppMessage}
-                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-              >
-                <span>🟢</span> Open WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <WhatsAppAlertModal
+        isOpen={whatsappModalOpen}
+        targetUser={whatsappTargetUser}
+        selectedTemplateIdx={whatsappSelectedTemplateIdx}
+        customMessage={whatsappCustomMessage}
+        onClose={() => {
+          setWhatsappModalOpen(false)
+          setWhatsappTargetUser(null)
+        }}
+        onSelectTemplate={handleTemplateSelect}
+        onCustomMessageChange={setWhatsappCustomMessage}
+        onSendMessage={sendWhatsAppMessage}
+      />
 
       {/* Block Customer Reason Modal */}
       {blockingUser && (
