@@ -454,9 +454,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
 
         {/* Restaurant Outlet Sub-label Identifier */}
         {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
-          <div className="flex items-center gap-1 text-[8.5px] font-extrabold text-red-600 dark:text-red-400 truncate mt-auto">
+          <div className="flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold text-red-600 dark:text-red-400 mt-auto min-w-0 leading-tight">
             <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
-            <span className="truncate">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
+            <span className="truncate tracking-tight">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
           </div>
         )}
       </Link>

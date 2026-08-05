@@ -106,8 +106,8 @@ const getCachedFlashDeals = unstable_cache(
           { restaurantId: null, isFlashDeal: true },
           // Grocery high-discount items (no restaurant link)
           { restaurantId: null, discount: { gt: 10 } },
-          // Beverages & Ice Cream by tag (they live in restaurant category but should show in grocery too)
-          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts'] } }
+          // Beverages, Ice Cream, Desserts & Cakes by tag (show in grocery storefront too)
+          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
         ]
       },
       orderBy: [
@@ -118,7 +118,7 @@ const getCachedFlashDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v3'],
+  ['storefront-flash-deals-v4'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -136,8 +136,8 @@ const getCachedBestSellers = unstable_cache(
               { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
             ]
           },
-          // Beverages & Ice Cream by tag (include even though they have restaurant tag/category)
-          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts'] } }
+          // Beverages, Ice Cream, Desserts & Cakes by tag (include even with restaurant link)
+          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
         ]
       },
       orderBy: [
@@ -148,7 +148,7 @@ const getCachedBestSellers = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v4'],
+  ['storefront-best-sellers-v5'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 

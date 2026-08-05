@@ -582,7 +582,11 @@ export function DealsCurationHub({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
-      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages, ice cream, or desserts
+      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages, ice cream, cakes, or desserts
+      const isCakeOrBakery = product.category?.slug === 'bakery' ||
+        (product.tags && (product.tags.includes('cake') || product.tags.includes('cakes') || product.tags.includes('bakery') || product.tags.includes('pastry'))) ||
+        /cake|pastry|muffin|brownie|waffle/i.test(product.name || '')
+
       const isIceCream = product.category?.slug === 'ice-cream' || 
         (product.tags && (product.tags.includes('ice-cream') || product.tags.includes('desserts'))) ||
         /ice.?cream|kulfi|sundae/i.test(product.name || '')
@@ -591,7 +595,7 @@ export function DealsCurationHub({
         (product.tags && (product.tags.includes('beverages') || product.tags.includes('drinks') || product.tags.includes('chilled') || product.tags.includes('soft-drink'))) ||
         /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza/i.test(product.name || '')
 
-      const isBevOrIce = isIceCream || isBeverage
+      const isBevOrIce = isIceCream || isBeverage || isCakeOrBakery
 
       if (
         !isBevOrIce && (
@@ -604,7 +608,7 @@ export function DealsCurationHub({
         return
       }
 
-      // Override category grouping ONLY for restaurant-tagged items that are beverages or ice creams
+      // Override category grouping ONLY for restaurant-tagged items that are beverages, ice creams, or cakes
       let categoryName = product.category?.name || 'Other Essentials'
       let categorySlug = product.category?.slug || ''
       let sortOrder = product.category?.sortOrder ?? 999
@@ -616,7 +620,11 @@ export function DealsCurationHub({
         Boolean(product.restaurantId)
 
       if (isRestaurantItem) {
-        if (isIceCream) {
+        if (isCakeOrBakery) {
+          categoryName = 'Cakes & Bakery'
+          categorySlug = 'bakery'
+          sortOrder = 49
+        } else if (isIceCream) {
           categoryName = 'Ice Cream'
           categorySlug = 'ice-cream'
           sortOrder = 50

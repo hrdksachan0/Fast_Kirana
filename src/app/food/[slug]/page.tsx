@@ -36,11 +36,24 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
   }
 
   if (isASCafe) {
-    productWhere.OR = [
-      { restaurantId: restaurant.id },
-      { restaurant: { slug: restaurant.slug } },
-      { category: { slug: { in: ['beverages', 'ice-cream', 'cold-beverages', 'hot-beverages', 'desserts', 'cafe', 'fastkirana-cafe'] } } },
-      { tags: { hasSome: ['beverages', 'beverage', 'drinks', 'cold-drinks', 'ice-cream', 'ice cream', 'desserts', 'shake', 'shakes'] } }
+    productWhere.AND = [
+      // Strictly exclude products belonging to another restaurant outlet (like Wedson)
+      {
+        OR: [
+          { restaurantId: null },
+          { restaurantId: restaurant.id },
+          { restaurant: { slug: restaurant.slug } }
+        ]
+      },
+      // Include A.S. Cafe products OR general beverages/ice-cream/shakes/desserts
+      {
+        OR: [
+          { restaurantId: restaurant.id },
+          { restaurant: { slug: restaurant.slug } },
+          { category: { slug: { in: ['beverages', 'ice-cream', 'cold-beverages', 'hot-beverages', 'desserts', 'cafe', 'fastkirana-cafe'] } } },
+          { tags: { hasSome: ['beverages', 'beverage', 'drinks', 'cold-drinks', 'ice-cream', 'ice cream', 'desserts', 'shake', 'shakes'] } }
+        ]
+      }
     ]
   } else {
     productWhere.OR = [
