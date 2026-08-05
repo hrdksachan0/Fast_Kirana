@@ -13,9 +13,9 @@ export interface OrdersTabProps {
   orderSearchQuery: string
   setOrderSearchQuery: (query: string) => void
   orderShopFilter: string
-  setOrderShopFilter: (shop: string) => void
+  setOrderShopFilter: (shop: any) => void
   orderMethodFilter: string
-  setOrderMethodFilter: (method: string) => void
+  setOrderMethodFilter: (method: any) => void
   ordersSubTab: 'active' | 'history'
   setOrdersSubTab: (tab: 'active' | 'history') => void
   updatingOrderId: string | null

@@ -30,7 +30,7 @@ export interface HubNavItem {
 
 export interface DashboardHubNavProps {
   activeHub: string
-  setActiveHub: (hub: string) => void
+  setActiveHub: (hub: any) => void
   activeTab: string
   setActiveTab: (tab: any) => void
   hubs: readonly HubNavItem[]
