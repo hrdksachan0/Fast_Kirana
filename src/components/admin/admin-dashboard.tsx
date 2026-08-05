@@ -5,6 +5,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { formatOrderTime } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
+import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
 import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
 import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
@@ -794,6 +795,19 @@ export function AdminDashboard({
   const [blockingUser, setBlockingUser] = useState<any | null>(null)
   const [blockReasonInput, setBlockReasonInput] = useState('')
   const [isUpdatingBlockStatus, setIsUpdatingBlockStatus] = useState(false)
+
+  const todaySales = useMemo(() => {
+    const todayStr = new Date().toDateString()
+    return (orders || [])
+      .filter((o: any) => o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr)
+      .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  }, [orders])
+
+  const netSales = useMemo(() => {
+    return (orders || [])
+      .filter((o: any) => o.status !== 'CANCELLED')
+      .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  }, [orders])
 
   // Pagination page resets
   useEffect(() => {
@@ -2405,6 +2419,16 @@ export function AdminDashboard({
           </div>
         </motion.div>
       )}
+
+      <DashboardStatsCards
+        stats={{
+          todaySales,
+          netSales: netSales || stats.revenue,
+          orderCount: orderTotal,
+          lowStockCount: stats.lowStockCount || 0,
+          userCount: userTotal,
+        }}
+      />
 
       <DashboardHubNav
         activeHub={activeHub}
