@@ -36,7 +36,8 @@ import {
   SlidersHorizontal,
   FileText,
   Building2,
-  Image,
+  Image as ImageIcon,
+  Sparkles,
   Settings,
   Volume2,
   VolumeX,
@@ -829,7 +830,7 @@ export function AdminDashboard({
 
   // Media Library Modal states
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
-  const [mediaTarget, setMediaTarget] = useState<'newProduct' | 'editProduct' | 'category' | null>(null)
+  const [mediaTarget, setMediaTarget] = useState<'newProduct' | 'editProduct' | 'newCategory' | 'editCategory' | 'category' | null>(null)
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
 
   const mediaLibraryImages = useMemo(() => {
