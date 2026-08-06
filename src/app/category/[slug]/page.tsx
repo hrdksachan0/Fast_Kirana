@@ -146,13 +146,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
-  // Filter products for category view
+  // Filter products for category view: Grocery Beverages vs Restaurant Cafe segregation
   let finalProductsRaw = productsRaw
   if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices') {
     finalProductsRaw = productsRaw.filter((p) => {
-      // Keep all beverages, juices, shakes, coffees, drinks, tea, and sodas
-      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(p.name)
-      return !isFoodMainCourse
+      const pName = (p.name || '').toLowerCase()
+      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+
+      // Prepared restaurant shakes & coffees belong to Restaurant/Cafe -> exclude from Grocery Beverages
+      const isPreparedRestaurantDrink = /shake|smoothie|coffee|frappe|mocktail|latte|cappuccino/i.test(pName) || tags.includes('wedson') || tags.includes('as-restaurant')
+      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(pName)
+
+      return !isPreparedRestaurantDrink && !isFoodMainCourse
     })
   } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
     finalProductsRaw = productsRaw.filter((p) => {

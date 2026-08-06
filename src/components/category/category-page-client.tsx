@@ -237,7 +237,11 @@ function getSubcategories(
         id: 'juices',
         name: 'Fruit Juices & Shakes',
         emoji: '🧃',
-        filterFn: (p) => /juice|real|tropicana|frooti|maaza|slice|appy|paper boat|shake|smoothie/i.test(p.name) || (p.tags && p.tags.some(t => /juice|shake/i.test(t)))
+        filterFn: (p) => {
+          const pName = (p.name || '').toLowerCase()
+          if (/shake|smoothie|coffee|frappe/i.test(pName)) return false
+          return /juice|real|tropicana|frooti|maaza|slice|appy|paper boat/i.test(pName) || (p.tags && p.tags.some(t => /juice/i.test(t)))
+        }
       },
       {
         id: 'energy-drinks',
