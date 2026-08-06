@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
-    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount, todaySalesAgg] = await Promise.all([
+    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount, todaySalesAgg, todayDeliveredSalesAgg] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -129,9 +129,17 @@ export async function GET(request: Request) {
         _sum: { total: true },
         _count: { id: true },
       }),
+      prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfToday },
+          status: 'DELIVERED',
+        },
+        _sum: { total: true },
+      }),
     ])
 
     const todaySales = todaySalesAgg._sum?.total || 0
+    const todayNetSales = todayDeliveredSalesAgg._sum?.total || 0
     const todayOrdersCount = todaySalesAgg._count?.id || 0
 
     const orders = ordersRaw.map((o) => {
@@ -181,6 +189,7 @@ export async function GET(request: Request) {
       page,
       limit,
       todaySales,
+      todayNetSales,
       todayOrdersCount,
       counts: {
         ALL: allCount,

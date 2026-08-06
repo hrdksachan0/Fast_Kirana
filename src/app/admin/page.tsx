@@ -63,12 +63,13 @@ export default async function AdminPage() {
 
   let todayOrdersCount = 0
   let todayRevenue = 0
+  let todayNetRevenue = 0
 
   try {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
-    const [todayOrders, todayRevAgg, ...results] = await withRetry(() => Promise.all([
+    const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await withRetry(() => Promise.all([
       prisma.order.count({
         where: {
           createdAt: { gte: startOfToday },
@@ -78,6 +79,13 @@ export default async function AdminPage() {
         where: {
           createdAt: { gte: startOfToday },
           status: { not: 'CANCELLED' },
+        },
+        _sum: { total: true },
+      }),
+      prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfToday },
+          status: 'DELIVERED',
         },
         _sum: { total: true },
       }),
@@ -115,6 +123,7 @@ export default async function AdminPage() {
 
     todayOrdersCount = todayOrders as number
     todayRevenue = (todayRevAgg as any)._sum?.total || 0
+    todayNetRevenue = (todayDeliveredAgg as any)._sum?.total || 0
     userCount = results[0] as number
     lowStockCount = results[1] as number
     const groupStats = results[2] as any[]
@@ -380,6 +389,7 @@ export default async function AdminPage() {
         stats={{
           revenue,
           todaySales: todayRevenue,
+          netSales: todayNetRevenue,
           todayOrdersCount: todayOrdersCount,
           orderCount: totalOrdersCount,
           activeOrderCount: activeOrdersCount,

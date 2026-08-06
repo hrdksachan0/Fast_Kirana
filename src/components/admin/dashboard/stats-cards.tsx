@@ -29,7 +29,7 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
     },
     {
       title: "Today's Net Sales",
-      value: formatPrice(stats.todaySales || 0),
+      value: formatPrice(stats.netSales || 0),
       icon: TrendingUp,
       color: 'text-teal-600 bg-teal-500/10 border-teal-500/20',
     },

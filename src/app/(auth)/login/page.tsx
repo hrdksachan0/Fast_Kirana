@@ -550,7 +550,7 @@ function LoginForm() {
             </Button>
 
             {/* Toggle Link for Staff/Admin Login */}
-            <div className="flex flex-col items-center gap-2 pt-2.5">
+            <div className="text-center pt-2.5">
               {loginType === 'WHATSAPP' ? (
                 <button
                   type="button"
@@ -559,31 +559,22 @@ function LoginForm() {
                     setEmail('')
                     setErrors({})
                   }}
-                  className="text-[11px] font-black text-primary hover:underline transition-colors cursor-pointer active:scale-98"
+                  className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
                 >
-                  Are you an Admin or Staff? Login with Email →
+                  Are you an Admin or Staff? Login with Email
                 </button>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('admin@fastkirana.com', 'admin123')}
-                    className="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
-                  >
-                    👑 1-Click Admin Login (admin@fastkirana.com)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginType('WHATSAPP')
-                      setEmail('')
-                      setErrors({})
-                    }}
-                    className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
-                  >
-                    Go back to Mobile Login
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginType('WHATSAPP')
+                    setEmail('')
+                    setErrors({})
+                  }}
+                  className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
+                >
+                  Go back to Mobile Login
+                </button>
               )}
             </div>
 
