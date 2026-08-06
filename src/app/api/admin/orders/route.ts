@@ -95,7 +95,10 @@ export async function GET(request: Request) {
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
     const restaurantIds = [...new Set(ordersRaw.map(o => o.restaurantId))].filter(Boolean)
 
-    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount] = await Promise.all([
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount, todaySalesAgg] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -118,7 +121,18 @@ export async function GET(request: Request) {
       prisma.order.count({ where: { ...whereForCounts, status: 'SHIPPED' } }),
       prisma.order.count({ where: { ...whereForCounts, status: 'DELIVERED' } }),
       prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED' } }),
+      prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfToday },
+          status: { not: 'CANCELLED' },
+        },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
     ])
+
+    const todaySales = todaySalesAgg._sum?.total || 0
+    const todayOrdersCount = todaySalesAgg._count?.id || 0
 
     const orders = ordersRaw.map((o) => {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
@@ -166,6 +180,8 @@ export async function GET(request: Request) {
       total,
       page,
       limit,
+      todaySales,
+      todayOrdersCount,
       counts: {
         ALL: allCount,
         PENDING: pendingCount,

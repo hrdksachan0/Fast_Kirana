@@ -163,6 +163,8 @@ export function AdminDashboard({
   const [activeCartsCount, setActiveCartsCount] = useState<number>(0)
   const [isLoadingCarts, setIsLoadingCarts] = useState(false)
   const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
+  const [apiTodaySales, setApiTodaySales] = useState<number | null>(null)
+  const [apiTodayOrdersCount, setApiTodayOrdersCount] = useState<number | null>(null)
 
   // WhatsApp Custom Alert States
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
@@ -842,6 +844,8 @@ export function AdminDashboard({
           const data = await res.json()
           setOrders(data.orders)
           setOrderTotal(data.total)
+          if (typeof data.todaySales === 'number') setApiTodaySales(data.todaySales)
+          if (typeof data.todayOrdersCount === 'number') setApiTodayOrdersCount(data.todayOrdersCount)
           if (data.counts) {
             setOrderCounts(data.counts)
           }
@@ -2432,9 +2436,9 @@ export function AdminDashboard({
 
       <DashboardStatsCards
         stats={{
-          todaySales: stats.todaySales ?? todaySales,
-          todayOrdersCount: stats.todayOrdersCount ?? todayOrdersCount,
-          netSales: stats.revenue || netSales,
+          todaySales: apiTodaySales ?? stats.todaySales ?? todaySales,
+          todayOrdersCount: apiTodayOrdersCount ?? stats.todayOrdersCount ?? todayOrdersCount,
+          netSales: apiTodaySales ?? stats.todaySales ?? netSales,
           orderCount: stats.orderCount || orderTotal,
           activeOrderCount: stats.activeOrderCount ?? liveOrders.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
         }}
