@@ -24,6 +24,7 @@ def generate_id(prefix: str = "ord_") -> str:
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_order(
     payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
