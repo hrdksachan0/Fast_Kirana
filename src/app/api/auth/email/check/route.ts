@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
       // Check if user exists with this phone number (matching both +91 and 10-digit formats)
       const phoneDigits = getLast10Digits(normalizedPhone)
-      const existingUser = await prisma.user.findFirst({
+      const matchingUsers = await prisma.user.findMany({
         where: {
           OR: [
             { phone: normalizedPhone },
@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
         },
         select: { email: true, name: true, phone: true, role: true, passwordHash: true }
       })
+
+      const existingUser = matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
 
       if (existingUser) {
         return ApiResponder.success({

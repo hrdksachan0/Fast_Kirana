@@ -141,7 +141,7 @@ function LoginForm() {
         body: JSON.stringify({ email: normalizedInput }),
       })
 
-      const data = await res.json()
+      const json = await res.json()
 
       if (!res.ok) {
         // If API fails (e.g. DB timeout), check if email looks like a staff email
@@ -156,6 +156,9 @@ function LoginForm() {
         }
         return
       }
+
+      // Extract payload from ApiResponder wrapper { success: true, data: { ... } }
+      const data = json.data || json
 
       // Store role info from response
       setIsWorker(data.isWorker ?? false)
@@ -399,12 +402,13 @@ function LoginForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: normalizePhoneNumber(identifier) }),
         })
-        const checkData = await checkRes.json()
+        const checkJson = await checkRes.json()
         if (!checkRes.ok) {
-          toast.error(checkData.error || 'Failed to check account status')
+          toast.error(checkJson.error || 'Failed to check account status')
           return
         }
 
+        const checkData = checkJson.data || checkJson
         const finalEmail = checkData.email || normalizePhoneNumber(identifier)
         
         const otpRes = await fetch('/api/auth/otp/send', {

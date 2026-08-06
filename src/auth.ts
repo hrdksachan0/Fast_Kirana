@@ -119,7 +119,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         let user = null
         if (isPhone) {
           const rawDigits = cleanPhoneDigits
-          user = await prisma.user.findFirst({
+          const matchingUsers = await prisma.user.findMany({
             where: {
               OR: [
                 { phone: normPhone },
@@ -129,6 +129,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
               ]
             }
           })
+          user = matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
         } else {
           user = await prisma.user.findUnique({
             where: { email: input.toLowerCase() },
