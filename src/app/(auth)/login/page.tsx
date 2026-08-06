@@ -134,16 +134,6 @@ function LoginForm() {
 
     const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
 
-    // EMAIL mode (Staff/Admin) → always go directly to password step, no API call needed
-    if (loginType === 'EMAIL') {
-      setHasPassword(true)
-      setIsWorker(true)
-      setStep('PASSWORD')
-      setIsLoading(false)
-      return
-    }
-
-    // WHATSAPP mode (Customer) → check account via API, then OTP or password
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
@@ -154,11 +144,16 @@ function LoginForm() {
       const data = await res.json()
 
       if (!res.ok) {
-        // API failed (DB timeout, etc.) — fallback: show password field
-        toast.info('Could not check account. Please enter your password to continue.')
-        setHasPassword(true)
-        setIsWorker(true)
-        setStep('PASSWORD')
+        // If API fails (e.g. DB timeout), check if email looks like a staff email
+        const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
+        if (isStaffFormat || loginType === 'EMAIL') {
+          toast.info('Please enter your password to continue.')
+          setHasPassword(true)
+          setIsWorker(true)
+          setStep('PASSWORD')
+        } else {
+          await sendOtp(normalizedInput)
+        }
         return
       }
 
@@ -179,22 +174,22 @@ function LoginForm() {
       }
 
       if (data.isWorker || data.hasPassword) {
-        // Has password or is worker → password step directly (NO OTP required!)
-        if (!data.hasPassword) {
-          toast.error('Your password is not set yet. Please contact your admin.')
-          return
-        }
+        // Staff or user with password → password step directly (NO OTP!)
         setStep('PASSWORD')
       } else {
-        // Customer flow without password → auto-send OTP and go to OTP step
+        // Normal customer → send OTP code!
         await sendOtp(finalEmail)
       }
     } catch {
-      // Network error or complete failure — fallback to password step
-      toast.info('Connection issue. Please enter your password to continue.')
-      setHasPassword(true)
-      setIsWorker(true)
-      setStep('PASSWORD')
+      const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
+      if (isStaffFormat || loginType === 'EMAIL') {
+        toast.info('Please enter your password to continue.')
+        setHasPassword(true)
+        setIsWorker(true)
+        setStep('PASSWORD')
+      } else {
+        await sendOtp(normalizedInput)
+      }
     } finally {
       setIsLoading(false)
     }
