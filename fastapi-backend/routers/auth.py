@@ -280,14 +280,14 @@ async def send_otp(body: OTPRequest):
 
     otp = generate_otp()
 
-    # In development, return OTP directly
-    if os.getenv("NODE_ENV") != "production":
+    # In development or if Fast2SMS API key is missing, return OTP directly
+    if os.getenv("NODE_ENV") != "production" or not os.getenv("FAST2SMS_API_KEY"):
         return MessageResponse(message=f"OTP sent (dev mode): {otp}")
 
     # Production: send via Fast2SMS
     sent = await send_otp_via_fast2sms(phone, otp)
     if not sent:
-        raise HTTPException(status_code=500, detail="Failed to send OTP")
+        raise HTTPException(status_code=500, detail="Failed to send OTP (SMS provider error)")
 
     return MessageResponse(message="OTP sent successfully")
 
