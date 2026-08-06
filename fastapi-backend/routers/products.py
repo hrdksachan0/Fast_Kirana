@@ -121,6 +121,50 @@ async def list_categories(db: AsyncSession = Depends(get_db)):
 
     return categories
 
+@router.get("/search", response_model=List[ProductOut])
+async def search_products(
+    q: Optional[str] = Query(None),
+    query: Optional[str] = Query(None),
+    limit: int = Query(50, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Search products catalog by query string.
+    """
+    search_term = q or query or ""
+    return await list_products(
+        category_id=None,
+        restaurant_id=None,
+        search=search_term,
+        is_available=True,
+        is_flash_deal=None,
+        limit=limit,
+        db=db
+    )
+
+
+@router.get("/search/suggest")
+async def search_suggestions(
+    q: Optional[str] = Query(""),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Autocomplete search suggestions for products and categories.
+    """
+    if not q or len(q.strip()) < 1:
+        return {"suggestions": []}
+
+    search_fmt = f"%{q.strip()}%"
+    stmt = select(Product).where(
+        or_(Product.name.ilike(search_fmt), Product.slug.ilike(search_fmt))
+    ).limit(10)
+    res = await db.execute(stmt)
+    products = res.scalars().all()
+
+    suggestions = [{"name": p.name, "type": "product", "slug": p.slug, "price": p.price} for p in products]
+    return {"query": q, "suggestions": suggestions}
+
+
 @router.get("/{product_id}", response_model=ProductOut)
 async def get_product(product_id: str, db: AsyncSession = Depends(get_db)):
     """

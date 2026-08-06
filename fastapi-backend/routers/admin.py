@@ -183,3 +183,59 @@ async def settle_rider_cash(
         "message": f"Successfully settled {deposit_amount:.2f} cash for rider!",
         "newCashInHand": wallet.cashInHand
     }
+
+
+@router.get("/orders")
+async def get_admin_all_orders(
+    status_filter: Optional[str] = None,
+    limit: int = 50,
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all orders across system for Admin view.
+    """
+    stmt = select(Order).options(selectinload(Order.items), selectinload(Order.user), selectinload(Order.address))
+    if status_filter:
+        stmt = stmt.where(text(f"orders.status::text = '{status_filter}'"))
+    stmt = stmt.order_by(desc(Order.createdAt)).limit(limit)
+
+    res = await db.execute(stmt)
+    orders = res.scalars().all()
+    return orders
+
+
+@router.get("/dashboard")
+async def get_admin_dashboard(
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get Admin dashboard overview statistics.
+    """
+    today_start = datetime.combine(date.today(), datetime.min.time())
+
+    # Total orders today
+    total_orders_stmt = select(func.count(Order.id))
+    total_orders = (await db.execute(total_orders_stmt)).scalar() or 0
+
+    # Total revenue
+    total_rev_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(text("orders.\"paymentStatus\"::text = 'PAID'"))
+    total_revenue = (await db.execute(total_rev_stmt)).scalar() or 0.0
+
+    # Pending orders count
+    pending_stmt = select(func.count(Order.id)).where(text("orders.status::text IN ('PENDING', 'CONFIRMED', 'PREPARING')"))
+    pending_orders = (await db.execute(pending_stmt)).scalar() or 0
+
+    # Total users count
+    total_users_stmt = select(func.count(User.id))
+    total_users = (await db.execute(total_users_stmt)).scalar() or 0
+
+    return {
+        "totalOrders": total_orders,
+        "totalRevenue": float(total_revenue),
+        "pendingOrders": pending_orders,
+        "totalUsers": total_users,
+        "timestamp": datetime.utcnow()
+    }
+
