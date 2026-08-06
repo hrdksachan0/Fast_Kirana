@@ -134,6 +134,15 @@ function LoginForm() {
 
     const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
 
+    // EMAIL mode (Staff / Restaurant Owner / Admin) → always go directly to password step
+    if (loginType === 'EMAIL') {
+      setHasPassword(true)
+      setIsWorker(true)
+      setStep('PASSWORD')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
@@ -146,7 +155,7 @@ function LoginForm() {
       if (!res.ok) {
         // If API fails (e.g. DB timeout), check if email looks like a staff email
         const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
-        if (isStaffFormat || loginType === 'EMAIL') {
+        if (isStaffFormat) {
           toast.info('Please enter your password to continue.')
           setHasPassword(true)
           setIsWorker(true)
@@ -185,7 +194,7 @@ function LoginForm() {
       }
     } catch {
       const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
-      if (isStaffFormat || loginType === 'EMAIL') {
+      if (isStaffFormat) {
         toast.info('Please enter your password to continue.')
         setHasPassword(true)
         setIsWorker(true)
