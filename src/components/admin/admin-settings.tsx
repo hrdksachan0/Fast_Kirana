@@ -475,7 +475,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
             {settingsTab === 'ops' && (
               <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Grocery Mart Control */}
                   <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
                     <div className="space-y-1.5">
@@ -519,106 +519,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                             type="time"
                             value={groceryCloseTime}
                             onChange={(e) => setGroceryCloseTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Cafe Control */}
-                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Control Mode</label>
-                      <select
-                        value={cafeAutoTiming ? 'auto' : 'manual'}
-                        onChange={(e) => setCafeAutoTiming(e.target.value === 'auto')}
-                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                      >
-                        <option value="manual">⚙️ Manual Control</option>
-                        <option value="auto">⏰ Auto-Schedule by Timing</option>
-                      </select>
-                    </div>
-
-                    {!cafeAutoTiming ? (
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Manual Status Override</label>
-                        <select
-                          value={cafeOpen ? 'true' : 'false'}
-                          onChange={(e) => setCafeOpen(e.target.value === 'true')}
-                          className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                        >
-                          <option value="true">🟢 Open (Active)</option>
-                          <option value="false">🔴 Closed (Temporarily)</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Open Time</label>
-                          <input
-                            type="time"
-                            value={cafeOpenTime}
-                            onChange={(e) => setCafeOpenTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Close Time</label>
-                          <input
-                            type="time"
-                            value={cafeCloseTime}
-                            onChange={(e) => setCafeCloseTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Restaurant Control */}
-                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Control Mode</label>
-                      <select
-                        value={restaurantAutoTiming ? 'auto' : 'manual'}
-                        onChange={(e) => setRestaurantAutoTiming(e.target.value === 'auto')}
-                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                      >
-                        <option value="manual">⚙️ Manual Control</option>
-                        <option value="auto">⏰ Auto-Schedule by Timing</option>
-                      </select>
-                    </div>
-
-                    {!restaurantAutoTiming ? (
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Manual Status Override</label>
-                        <select
-                          value={restaurantOpen ? 'true' : 'false'}
-                          onChange={(e) => setRestaurantOpen(e.target.value === 'true')}
-                          className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                        >
-                          <option value="true">🟢 Open (Active)</option>
-                          <option value="false">🔴 Closed (Temporarily)</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Open Time</label>
-                          <input
-                            type="time"
-                            value={restaurantOpenTime}
-                            onChange={(e) => setRestaurantOpenTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Close Time</label>
-                          <input
-                            type="time"
-                            value={restaurantCloseTime}
-                            onChange={(e) => setRestaurantCloseTime(e.target.value)}
                             className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                           />
                         </div>

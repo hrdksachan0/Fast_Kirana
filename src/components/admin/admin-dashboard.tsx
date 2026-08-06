@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { formatPrice, formatAddress } from '@/lib/utils'
+import { formatPrice, formatAddress, formatDisplayEmail } from '@/lib/utils'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
@@ -4370,7 +4370,7 @@ export function AdminDashboard({
                             </div>
                             <div>
                               <div className="font-bold text-text-primary text-[11px]">{r.user.name || 'Anonymous'}</div>
-                              <div className="text-[9px] text-text-muted font-normal">{r.user.email}</div>
+                              <div className="text-[9px] text-text-muted font-normal">{formatDisplayEmail(r.user.email)}</div>
                             </div>
                           </div>
                         </td>
@@ -6208,7 +6208,7 @@ export function AdminDashboard({
                   <span>🚫</span> Block Customer Account
                 </h4>
                 <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
-                  Customer: <span className="font-extrabold text-text-primary">{blockingUser.name || 'Anonymous User'}</span> ({blockingUser.email})
+                  Customer: <span className="font-extrabold text-text-primary">{blockingUser.name || 'Anonymous User'}</span>{formatDisplayEmail(blockingUser.email) ? ` (${formatDisplayEmail(blockingUser.email)})` : ''}
                 </p>
               </div>
               <button 

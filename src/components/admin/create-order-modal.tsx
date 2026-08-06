@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, X, User, MapPin, Plus, Minus, Trash2, Loader2, Check, ShoppingBag, Percent } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatDisplayEmail, formatPhone } from '@/lib/utils'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -636,7 +636,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                               {user.name || 'Anonymous User'}
                             </span>
                             <span className="text-[10px] text-text-muted font-bold block mt-0.5">
-                              {user.email} {user.phone && `• ${user.phone}`}
+                              {[formatDisplayEmail(user.email), user.phone ? formatPhone(user.phone) : null].filter(Boolean).join(' • ') || 'No contact details'}
                             </span>
                           </div>
                           <Check className="h-4 w-4 text-emerald-500 opacity-0 hover:opacity-100" />

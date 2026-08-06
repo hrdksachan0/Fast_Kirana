@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { isCafeProduct, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 import { playCartPop } from '@/lib/audio'
-import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
+import { FREE_DELIVERY_THRESHOLD, getOutletName } from '@/lib/constants'
 
 export function useCart() {
   const items = useCartStore((s) => s.items)
@@ -76,19 +76,20 @@ export function useCart() {
 
     const storeState = useCartStore.getState()
 
-    const getOutletId = (p: any) => (p as any).restaurantId || (p as any).restaurant?.id || null
-    const newRestId = getOutletId(product)
+    const newIsCafe = isCafeProduct(product)
+    const newOutlet = newIsCafe ? getOutletName(product) : null
 
     const incompatibleItem = storeState.items.find((item) => {
-      const existRestId = getOutletId(item.product)
+      const existIsCafe = isCafeProduct(item.product)
 
-      // 1. Grocery items (no restaurantId) can mix freely with ANY restaurant outlet or grocery item
-      if (!newRestId || !existRestId) {
+      // 1. Grocery items can mix freely with ANY restaurant outlet or grocery item
+      if (!newIsCafe || !existIsCafe) {
         return false
       }
 
-      // 2. Different restaurant outlets (e.g. Wedson vs Bal Udyan vs AS Restaurant) CANNOT mix in the same cart
-      return newRestId !== existRestId
+      // 2. Different restaurant outlets (e.g. Wedson vs A.S. Restaurant) CANNOT mix in the same cart
+      const existOutlet = getOutletName(item.product)
+      return newOutlet !== existOutlet
     })
 
     if (incompatibleItem) {

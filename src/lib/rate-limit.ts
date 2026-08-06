@@ -57,7 +57,7 @@ function getClientIp(request: NextRequest): string {
 
 export function rateLimit(options: RateLimitOptions = {}) {
   const { interval = 60_000, limit = 30 } = options
-  const bucketId = `${interval}-${limit}-${Math.random().toString(36).slice(2, 6)}`
+  const bucketId = `rate-limit-${interval}-${limit}`
   const bucket = new Map<string, TokenEntry>()
   tokenBuckets.set(bucketId, bucket)
 

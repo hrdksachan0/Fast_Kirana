@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, Plus, Minus, ArrowRight, Ticket, Loader2, ShoppingBag, ChevronsRight } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
-import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE, MIN_CART_VALUE, getOutletName } from '@/lib/constants'
 import { toast } from 'sonner'
 import { cn, isCafeProduct, isProductStoreClosed } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
@@ -222,7 +222,7 @@ export default function CartPage() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = subtotal < 20
+  const isBelowMinOrder = subtotal < MIN_CART_VALUE
   const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
 
   const handleAutoAdjust = () => {
@@ -404,19 +404,7 @@ export default function CartPage() {
             (() => {
               const groups: Record<string, typeof cafeItems> = {}
               for (const item of cafeItems) {
-                const p = item.product as any
-                let outlet = 'A.S Restaurant'
-
-                if (p.restaurant?.name) {
-                  outlet = p.restaurant.name
-                } else if (p.restaurantName) {
-                  outlet = p.restaurantName
-                } else if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || p.tags?.includes('wedson') || p.tags?.includes('restaurant-kitchen')) {
-                  outlet = 'Wedson Restaurant'
-                } else if (p.restaurantId === 'cms2p1lap0000n0id8alldboy' || p.tags?.includes('as-restaurant') || p.tags?.includes('cafe')) {
-                  outlet = 'A.S Restaurant'
-                }
-
+                const outlet = getOutletName(item.product)
                 if (!groups[outlet]) groups[outlet] = []
                 groups[outlet].push(item)
               }
@@ -477,15 +465,19 @@ export default function CartPage() {
                   placeholder="e.g. WELCOME50"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
+                  disabled={isCouponLoading}
                   className="uppercase h-10 text-xs font-bold"
                 />
                 <Button
                   type="submit"
                   disabled={isCouponLoading || !couponCode.trim()}
-                  className="bg-primary text-white hover:bg-primary/95 text-xs font-bold h-10 px-4"
+                  className="bg-primary text-white hover:bg-primary/95 text-xs font-bold h-10 px-4 min-w-[80px]"
                 >
                   {isCouponLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      Checking
+                    </>
                   ) : (
                     'Apply'
                   )}

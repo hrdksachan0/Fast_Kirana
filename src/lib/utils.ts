@@ -52,6 +52,22 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
   return url
 }
 
+export function isDummyEmail(email: string | null | undefined): boolean {
+  if (!email) return true
+  const lower = email.toLowerCase().trim()
+  return (
+    lower.startsWith('wa-') ||
+    lower.startsWith('user-') ||
+    lower.endsWith('@fastkirana.com') ||
+    lower.endsWith('@fastkirana.in')
+  )
+}
+
+export function formatDisplayEmail(email: string | null | undefined): string {
+  if (!email || isDummyEmail(email)) return ''
+  return email.trim()
+}
+
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return ''
   const trimmed = phone.trim()
@@ -186,25 +202,38 @@ export function getProductLimit(p: any): number {
 
 export function isProductStoreClosed(
   p: any,
-  status: { groceryMartOpen: boolean; cafeOpen: boolean; restaurantOpen: boolean },
+  status: { groceryMartOpen: boolean; cafeOpen?: boolean; restaurantOpen?: boolean },
   categoryStatus?: Record<string, boolean>
 ): boolean {
   if (!p) return !status.groceryMartOpen
+
+  // 1. Check category level status
   const categorySlug = p.category?.slug || p.categorySlug || (typeof p.category === 'string' ? p.category : '')
   const isCatOpen = categoryStatus && categorySlug ? categoryStatus[categorySlug] !== false : true
   if (!isCatOpen) return true
 
   const type = getProductType(p)
-  if (type === 'BYPASS') return !status.groceryMartOpen && !status.cafeOpen && !status.restaurantOpen
 
-  // Check specific restaurant isOpen status if product is linked to an individual restaurant
+  // 2. Check specific restaurant / cafe isOpen status if product is linked to a restaurant object
   const restObj = p.restaurant
   if (restObj && typeof restObj === 'object' && restObj.isOpen !== undefined && restObj.isOpen !== null) {
     if (restObj.isOpen === false || restObj.isOpen === 'false') return true
   }
 
-  if (type === 'RESTAURANT') return !status.restaurantOpen
-  if (type === 'CAFE') return !status.cafeOpen
+  // Check explicit restaurantIsOpen property if attached
+  if (p.restaurantIsOpen === false || p.restaurantIsOpen === 'false') return true
+
+  // 3. For Restaurant and Cafe items: controlled by Manage Restaurant isOpen status & Category status
+  if (type === 'RESTAURANT' || type === 'CAFE') {
+    if (status.restaurantOpen === false || status.cafeOpen === false) return true
+    return false
+  }
+
+  if (type === 'BYPASS') {
+    return !status.groceryMartOpen
+  }
+
+  // 4. Grocery Mart items: controlled by main Mart toggle
   return !status.groceryMartOpen
 }
 export function getDeliveryPin(orderId: string): string {

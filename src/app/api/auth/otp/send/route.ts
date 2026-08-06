@@ -81,9 +81,10 @@ export async function POST(request: NextRequest) {
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      let isSent = await sendWhatsAppOtp(recipientPhone, otp)
+      const isSent = await sendWhatsAppOtp(recipientPhone, otp)
       if (!isSent) {
-        isSent = true
+        console.error('WhatsApp OTP failed for:', recipientPhone)
+        return NextResponse.json({ error: 'Failed to send OTP via WhatsApp. Please try again.' }, { status: 500 })
       }
     } else {
       try {

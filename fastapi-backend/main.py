@@ -8,7 +8,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from config import settings
-from routers import products, delivery, admin, forecast, orders, websockets, auth, cart, addresses, payments
+from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm
 
 # Initialize Sentry Error Monitoring if DSN is set
 if settings.SENTRY_DSN:
@@ -18,7 +18,7 @@ if settings.SENTRY_DSN:
         traces_sample_rate=0.2,
         integrations=[
             StarletteIntegration(transaction_style="endpoint"),
-            FastApiIntegration(at_exit=True),
+            FastApiIntegration(transaction_style="endpoint"),
         ],
     )
 
@@ -26,7 +26,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="High-Performance Python FastAPI Microservice for FastKirana E-Commerce, AI Demand Forecasting, Real-Time WebSockets, & Rider Wallet Ledger.",
     version="2.0.0",
-    docs_url="/docs",
+    docs_url="/docs" if settings.APP_ENV != "production" else "/docs",
     redoc_url="/redoc"
 )
 
@@ -75,6 +75,7 @@ app.include_router(products.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(delivery.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(admin_extended.router, prefix="/api")
 app.include_router(forecast.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
 app.include_router(websockets.router)
@@ -82,6 +83,18 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(cart.router, prefix="/api")
 app.include_router(addresses.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
+app.include_router(restaurant.router)
+app.include_router(restaurant.restaurant_router)
+app.include_router(restaurant.cafe_router)
+app.include_router(restaurant.restaurant_report_router)
+app.include_router(picker.picker_router)
+app.include_router(profile.router)
+app.include_router(store_settings_router.router)
+app.include_router(store_settings_router.location_router, prefix="/api")
+app.include_router(orders_helper.helper_router, prefix="/api")
+app.include_router(products_helper.helper_router, prefix="/api")
+app.include_router(public.router)
+app.include_router(paytm.router)
 
 @app.get("/")
 async def root():

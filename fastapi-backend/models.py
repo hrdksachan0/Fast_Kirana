@@ -304,3 +304,92 @@ class Review(Base):
 
     user = relationship("User", back_populates="reviews")
     product = relationship("Product", back_populates="reviews")
+
+
+class Banner(Base):
+    __tablename__ = "banners"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    title: Mapped[str] = mapped_column(String)
+    subtitle: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    imageUrl: Mapped[str] = mapped_column(String)
+    link: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Store(Base):
+    __tablename__ = "stores"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Restaurant(Base):
+    __tablename__ = "restaurants"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    slug: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    ownerId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)
+    cuisine: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    deliveryTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    minOrder: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Coupon(Base):
+    __tablename__ = "coupons"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    code: Mapped[str] = mapped_column(String, unique=True, index=True)
+    discountType: Mapped[str] = mapped_column(String)  # FLAT / PERCENT
+    value: Mapped[float] = mapped_column(Float)
+    minOrder: Mapped[float] = mapped_column(Float, default=0.0)
+    maxDiscount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    maxUses: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    usedCount: Mapped[int] = mapped_column(Integer, default=0)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    expiresAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    categoryId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    oncePerCustomer: Mapped[bool] = mapped_column(Boolean, default=False)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PayoutRequest(Base):
+    __tablename__ = "payout_requests"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    riderId: Mapped[str] = mapped_column(String, ForeignKey("users.id"), index=True)
+    amount: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String, default="PENDING")  # PENDING, APPROVED, REJECTED
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    approvedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class InventoryLog(Base):
+    __tablename__ = "inventory_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id"), index=True)
+    changeType: Mapped[str] = mapped_column(String)  # IN, OUT, ADJUST
+    quantity: Mapped[int] = mapped_column(Integer)
+    previousStock: Mapped[int] = mapped_column(Integer)
+    newStock: Mapped[int] = mapped_column(Integer)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -4,7 +4,7 @@ import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
 import { formatPrice, formatTime12h } from '@/lib/utils'
-import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, getOutletName } from '@/lib/constants'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ProductImage } from '@/components/product/product-image'
@@ -479,18 +479,7 @@ export function CartDrawer() {
                 (() => {
                   const groups: Record<string, typeof cafeItems> = {}
                   for (const item of cafeItems) {
-                    const p = item.product as any
-                    let outlet = p.restaurant?.name || p.restaurantName || null
-
-                    if (!outlet) {
-                      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-                      if (p.restaurantId === 'cms2p1lyx0001n0idod904lfu' || tags.includes('wedson') || tags.includes('dal-fry')) {
-                        outlet = 'Wedson Restaurant'
-                      } else {
-                        outlet = 'A.S. Restaurant'
-                      }
-                    }
-
+                    const outlet = getOutletName(item.product)
                     if (!groups[outlet]) groups[outlet] = []
                     groups[outlet].push(item)
                   }

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
+import { ApiResponder } from '@/lib/api-response'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 

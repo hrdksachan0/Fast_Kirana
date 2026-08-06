@@ -30,6 +30,12 @@ def clean_async_db_url(url: str) -> str:
 
 async_db_url = clean_async_db_url(settings.DATABASE_URL)
 
+# Use SSL only for cloud databases (Neon, Supabase, etc.)
+# Local PostgreSQL doesn't support SSL by default
+db_url_lower = async_db_url.lower()
+use_ssl = any(host in db_url_lower for host in ["neon.tech", "supabase.co", "aws.neon", "pooler.supabase"])
+connect_args = {"ssl": "require"} if use_ssl else {}
+
 engine = create_async_engine(
     async_db_url,
     echo=False,
@@ -37,7 +43,7 @@ engine = create_async_engine(
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
-    connect_args={"ssl": "require"}
+    connect_args=connect_args
 )
 
 AsyncSessionLocal = async_sessionmaker(

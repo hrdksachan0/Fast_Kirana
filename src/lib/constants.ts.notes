@@ -1,0 +1,30 @@
+/**
+ * Cart page constants - extracted to avoid magic numbers and hardcoded strings
+ */
+
+export const MIN_CART_VALUE = 20  // Minimum cart value for checkout
+export const OUTLET_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
+export const OUTLET_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
+
+export const OUTLET_NAMES: Record<string, string> = {
+  [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
+  [OUTLET_AS_RESTAURANT_ID]: 'A.S Restaurant',
+  'wedson': 'Wedson Restaurant',
+  'as-restaurant': 'A.S Restaurant',
+  'cafe': 'Cafe',
+  'restaurant-kitchen': 'Wedson Restaurant',
+}
+
+/** Get outlet name from product tags/restaurantId */
+export function getOutletName(product: any): string {
+  if (product.restaurant?.name) return product.restaurant.name
+  if (product.restaurantName) return product.restaurantName
+
+  for (const [key, name] of Object.entries(OUTLET_NAMES)) {
+    if (product.restaurantId === key || product.tags?.includes(key)) {
+      return name
+    }
+  }
+
+  return 'Restaurant'
+}

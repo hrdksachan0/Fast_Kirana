@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authLimiter } from '@/lib/rate-limit'
+import { ApiResponder } from '@/lib/api-response'
 import { isValidIndianPhone, normalizePhone, getLast10Digits } from '@/lib/phone'
 
 export async function POST(request: NextRequest) {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     const { email: rawEmail } = await request.json()
 
     if (!rawEmail || typeof rawEmail !== 'string') {
-      return NextResponse.json({ error: 'Identifier is required' }, { status: 400 })
+      return ApiResponder.error('Identifier is required', 400)
     }
 
     const trimmed = rawEmail.trim()
@@ -38,8 +39,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (existingUser) {
-        return NextResponse.json({
-          success: true,
+        return ApiResponder.success({
           exists: true,
           isWorker: existingUser.role !== 'USER',
           hasPassword: !!existingUser.passwordHash,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Validate email format
       if (!trimmed.includes('@')) {
-        return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
+        return ApiResponder.error('Please enter a valid email address or 10-digit mobile number', 400)
       }
     }
 
@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       // New user — treat as customer, needs OTP flow
-      return NextResponse.json({
-        success: true,
+      return ApiResponder.success({
         exists: false,
         isWorker: false,
         hasPassword: false,
@@ -82,8 +81,7 @@ export async function POST(request: NextRequest) {
     const hasPassword = !!user.passwordHash
     const needsProfileSetup = !user.name || !user.phone
 
-    return NextResponse.json({
-      success: true,
+    return ApiResponder.success({
       exists: true,
       isWorker,
       hasPassword,
@@ -93,6 +91,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Email Check API error:', error)
-    return NextResponse.json({ error: 'Failed to verify email registration status' }, { status: 500 })
+    return ApiResponder.error('Failed to verify email registration status', 500)
   }
 }

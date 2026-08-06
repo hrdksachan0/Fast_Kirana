@@ -80,7 +80,7 @@ export function CartStickyBar() {
       whileTap={{ scale: 0.98 }}
       initial={false}
       animate={{
-        bottom: isTabBarVisible ? '90px' : '18px',
+        bottom: isTabBarVisible ? '96px' : '20px',
       }}
       transition={{
         duration: 0.28,

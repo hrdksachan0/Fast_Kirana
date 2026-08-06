@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Download, X, Share } from 'lucide-react'
+import { useUIStore } from '@/stores/ui-store'
 import { useCartStore } from '@/stores/cart-store'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +11,8 @@ export function PWARegistration() {
   const [showBanner, setShowBanner] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
+  const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
+  const hasCartItems = useCartStore((s) => s.items.length > 0)
 
   useEffect(() => {
     // 1. Register Service Worker
@@ -90,14 +93,12 @@ export function PWARegistration() {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
-
-  if (!showBanner) return null
+  if (!showBanner || hasCartItems) return null
 
   return (
     <div className={cn(
-      "fixed left-4 right-4 z-[999] md:hidden animate-slide-in-bottom",
-      hasCartItems ? "bottom-[162px]" : "bottom-[90px]"
+      "fixed left-4 right-4 z-30 md:hidden transition-all duration-300 ease-out",
+      isTabBarVisible ? "bottom-[94px]" : "bottom-[20px]"
     )}>
       <div className="bg-card border border-border/80 p-3.5 rounded-2xl shadow-elevated glass flex flex-col gap-2 relative">
         

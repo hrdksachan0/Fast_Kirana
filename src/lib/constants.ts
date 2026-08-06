@@ -9,6 +9,10 @@ export const FREE_DELIVERY_THRESHOLD = 200
 export const DELIVERY_FEE = 25
 export const TAX_RATE = 0.00 // 0% GST
 
+export const MIN_CART_VALUE = 20  // Minimum cart value for checkout
+export const OUTLET_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
+export const OUTLET_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
+
 export const CATEGORIES = [
   { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', emoji: '🥬' },
   { name: 'Dairy & Breakfast', slug: 'dairy-breakfast', emoji: '🥛' },
@@ -340,4 +344,60 @@ export const HUB_CONFIG = [
     tabs: ['banners', 'flash-deals', 'coupons', 'push-notifications', 'settings'] as const
   }
 ] as const
+
+export const OUTLET_NAMES: Record<string, string> = {
+  [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
+  [OUTLET_AS_RESTAURANT_ID]: 'A.S Restaurant',
+  wedson: 'Wedson Restaurant',
+  'as-restaurant': 'A.S Restaurant',
+  cafe: 'Cafe',
+  'restaurant-kitchen': 'Wedson Restaurant',
+}
+
+export function getOutletName(product: any): string {
+  if (!product) return 'Wedson Restaurant'
+  if (product.restaurant?.name) return product.restaurant.name
+  if (product.restaurantName) return product.restaurantName
+
+  const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
+  const restaurantId = product.restaurantId
+  const pName = (product.name || '').toLowerCase()
+
+  if (restaurantId && OUTLET_NAMES[restaurantId]) return OUTLET_NAMES[restaurantId]
+  for (const tag of tags) {
+    if (OUTLET_NAMES[tag]) return OUTLET_NAMES[tag]
+  }
+
+  if (
+    restaurantId === OUTLET_WEDSON_ID ||
+    restaurantId === 'wedson' ||
+    tags.includes('wedson') ||
+    tags.includes('dal-fry') ||
+    tags.includes('burger') ||
+    tags.includes('pizza') ||
+    tags.includes('chowmein') ||
+    tags.includes('fast-food') ||
+    pName.includes('burger') ||
+    pName.includes('pizza') ||
+    pName.includes('chowmein') ||
+    pName.includes('noodle') ||
+    pName.includes('momos') ||
+    pName.includes('fries') ||
+    pName.includes('roll') ||
+    pName.includes('sandwich') ||
+    pName.includes('pasta') ||
+    pName.includes('manchurian') ||
+    pName.includes('shake') ||
+    pName.includes('mocktail') ||
+    pName.includes('tikki')
+  ) {
+    return 'Wedson Restaurant'
+  }
+
+  if (restaurantId === OUTLET_AS_RESTAURANT_ID || tags.includes('as-restaurant')) {
+    return 'A.S Restaurant'
+  }
+
+  return 'Wedson Restaurant'
+}
 

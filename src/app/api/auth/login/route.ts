@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { isValidIndianPhone, normalizePhone, getLast10Digits } from '@/lib/phone'
+import { authLimiter, otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const limited = await authLimiter.check(request)
+  if (limited) return limited
+
   try {
     const body = await request.json()
     const { email: rawEmail, password, otp, name, phone } = body

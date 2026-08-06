@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -206,4 +206,26 @@ async def get_rider_location(
             "lng": rider.liveLng or 80.1672
         }
     }
+
+
+@router.post("/location")
+async def update_rider_location(
+    data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_delivery),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update rider's live location."""
+    user_id = current_user.get("id") or current_user.get("sub")
+    lat = data.get("lat")
+    lng = data.get("lng")
+    if lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="lat and lng required")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if user:
+        user.liveLat = float(lat)
+        user.liveLng = float(lng)
+        await db.commit()
+    return {"success": True, "lat": user.liveLat, "lng": user.liveLng}
 

@@ -1,27 +1,55 @@
 name: fastkirana_flutter
-description: "Fastkirana 10-Minute Grocery Delivery Mobile App connected to FastAPI Backend"
-publish_to: "none"
+description: FastKirana Mobile App - Grocery & Food Delivery
+
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  http: ^1.2.0
-  provider: ^6.1.2
-  google_fonts: ^6.1.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.2
+
+  # Navigation
+  go_router: ^13.0.1
+
+  # Networking
+  dio: ^5.4.3+1
+  json_annotation: ^4.8.1
+
+  # Local Storage
+  shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.0.0
-  web_socket_channel: ^2.4.1
+
+  # UI
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_staggered_animations: ^1.1.1
+  badges: ^3.1.2
+
+  # Utils
+  intl: ^0.19.0
+  url_launcher: ^6.2.5
+  geolocator: ^10.1.0
+
+  # Notifications
+  flutter_local_notifications: ^17.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^3.0.2
+  build_runner: ^2.4.9
+  json_serializable: ^6.7.4
+  riverpod_generator: ^2.4.0
+  riverpod_lint: ^2.3.10
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
