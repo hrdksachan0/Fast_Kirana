@@ -36,6 +36,22 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+@router.websocket("")
+@router.websocket("/")
+async def root_websocket(websocket: WebSocket):
+    """
+    General WebSocket connection endpoint for real-time broadcasts
+    """
+    await manager.connect(websocket, "general")
+    try:
+        await websocket.send_text(json.dumps({"event": "CONNECTED", "message": "Connected to FastKirana WebSocket Server"}))
+        while True:
+            data = await websocket.receive_text()
+            await websocket.send_text(json.dumps({"event": "ECHO", "data": data}))
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "general")
+
+
 @router.websocket("/orders/{order_id}")
 async def order_tracking_websocket(websocket: WebSocket, order_id: str):
     """
