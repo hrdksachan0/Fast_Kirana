@@ -125,7 +125,7 @@ async def get_cart(
 @router.post("")
 async def sync_cart(
     payload: dict = Body(...),
-    current_user: dict = Depends(require_auth),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -138,11 +138,19 @@ async def sync_cart(
     if not isinstance(items_data, list):
         raise HTTPException(status_code=400, detail="items must be a list")
 
+    if not user_id:
+        return {"success": True, "message": "Guest cart synced", "count": len(items_data), "isGuest": True}
+
     # Get or create cart
     cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
 
     if not cart:
+        # Check user existence to prevent FK constraint failure
+        user_check = await db.execute(select(User).where(User.id == user_id))
+        if not user_check.scalars().first():
+            return {"success": True, "message": "Guest cart synced", "count": len(items_data), "isGuest": True}
+
         cart = Cart(
             id=generate_id("cart_"),
             userId=user_id,
@@ -188,7 +196,7 @@ async def sync_cart(
 @router.post("/add")
 async def add_to_cart(
     payload: dict = Body(...),
-    current_user: dict = Depends(require_auth),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -203,6 +211,9 @@ async def add_to_cart(
 
     if not product_id:
         raise HTTPException(status_code=400, detail="productId is required")
+
+    if not user_id:
+        return {"success": True, "message": "Guest item added to cart", "isGuest": True}
 
     # Verify product exists
     product_result = await db.execute(select(Product).where(Product.id == product_id))

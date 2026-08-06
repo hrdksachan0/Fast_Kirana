@@ -32,6 +32,32 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'fast-kirana-gtm.vercel.app',
+          },
+        ],
+        destination: 'https://www.fastkirana.in/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'fastkirana.in',
+          },
+        ],
+        destination: 'https://www.fastkirana.in/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app';
     return [
