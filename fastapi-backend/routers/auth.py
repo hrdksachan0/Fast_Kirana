@@ -153,6 +153,70 @@ def normalize_phone(phone: str) -> str:
     return digits
 
 
+async def send_whatsapp_otp(phone: str, otp: str) -> bool:
+    """Send OTP using Meta WhatsApp Cloud API."""
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+    template_name = os.getenv("WHATSAPP_TEMPLATE_NAME")
+
+    if not token or not phone_id:
+        return False
+
+    clean_phone = f"91{phone}" if len(phone) == 10 else phone
+    url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    if template_name:
+        components = [
+            {
+                "type": "body",
+                "parameters": [{"type": "text", "text": otp}],
+            }
+        ]
+        if template_name == "verify_otp":
+            components.append({
+                "type": "button",
+                "sub_type": "url",
+                "index": 0,
+                "parameters": [{"type": "text", "text": otp}],
+            })
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": os.getenv("WHATSAPP_TEMPLATE_LANG", "en")},
+                "components": components,
+            },
+        }
+    else:
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_phone,
+            "type": "text",
+            "text": {
+                "body": f"Your FastKirana verification code is: {otp}. Valid for 5 minutes.",
+            },
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            if resp.status_code in [200, 201]:
+                return True
+            print("WhatsApp API Response Error:", resp.status_code, resp.text)
+            return False
+    except Exception as e:
+        print("WhatsApp API Exception:", e)
+        return False
+
+
 async def send_otp_via_fast2sms(phone: str, otp: str) -> bool:
     """Send OTP using Fast2SMS (or any SMS provider)."""
     api_key = os.getenv("FAST2SMS_API_KEY")
@@ -270,8 +334,7 @@ async def login(
 @router.post("/otp/send", response_model=MessageResponse)
 async def send_otp(body: OTPRequest):
     """
-    Send OTP to phone number.
-    In production, uses Fast2SMS. In development, returns OTP in response.
+    Send OTP to phone number via WhatsApp Cloud API (or Fast2SMS / dev mode).
     """
     phone = normalize_phone(body.phone)
 
@@ -280,16 +343,19 @@ async def send_otp(body: OTPRequest):
 
     otp = generate_otp()
 
-    # In development or if Fast2SMS API key is missing, return OTP directly
-    if os.getenv("NODE_ENV") != "production" or not os.getenv("FAST2SMS_API_KEY"):
-        return MessageResponse(message=f"OTP sent (dev mode): {otp}")
+    # 1. Try Meta WhatsApp Cloud API
+    whatsapp_sent = await send_whatsapp_otp(phone, otp)
+    if whatsapp_sent:
+        return MessageResponse(message="OTP sent via WhatsApp successfully")
 
-    # Production: send via Fast2SMS
-    sent = await send_otp_via_fast2sms(phone, otp)
-    if not sent:
-        raise HTTPException(status_code=500, detail="Failed to send OTP (SMS provider error)")
+    # 2. Try Fast2SMS API if key available
+    if os.getenv("FAST2SMS_API_KEY"):
+        sms_sent = await send_otp_via_fast2sms(phone, otp)
+        if sms_sent:
+            return MessageResponse(message="OTP sent via SMS successfully")
 
-    return MessageResponse(message="OTP sent successfully")
+    # 3. Dev / Fallback mode
+    return MessageResponse(message=f"OTP sent (dev mode): {otp}")
 
 
 @router.post("/otp/verify", response_model=SessionResponse)
