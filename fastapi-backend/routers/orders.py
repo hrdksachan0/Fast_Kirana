@@ -13,21 +13,22 @@ from models import (
     OrderStatus, PaymentStatus, PaymentMethod, OrderType, Role
 )
 from schemas import OrderOut
-from routers.auth import get_current_user_from_jwt
+from routers.auth import require_auth
 
 router = APIRouter(prefix="/orders", tags=["Orders & Checkout Engine"])
 
 @router.get("", response_model=List[OrderOut])
 async def list_user_orders(
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Returns user orders with items and companion order details
     """
+    user_id = current_user.get("id") or current_user.get("sub")
     stmt = select(Order).options(
         selectinload(Order.items)
-    ).where(Order.userId == current_user.id).order_by(desc(Order.createdAt)).limit(50)
+    ).where(Order.userId == user_id).order_by(desc(Order.createdAt)).limit(50)
     
     res = await db.execute(stmt)
     return res.scalars().all()
@@ -93,12 +94,14 @@ async def get_order_by_id(
 async def update_order_status(
     order_id: str,
     payload: Dict[str, Any] = Body(...),
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Updates order status, synchronizes companion order status, and updates rider wallet on delivery
     """
+    user_id = current_user.get("id") or current_user.get("sub")
+    user_role = current_user.get("role")
     stmt = select(Order).where(Order.id == order_id)
     res = await db.execute(stmt)
     order = res.scalars().first()
@@ -115,8 +118,8 @@ async def update_order_status(
 
     if "deliveryUserId" in payload:
         order.deliveryUserId = payload["deliveryUserId"]
-    elif current_user.role == Role.DELIVERY and not order.deliveryUserId:
-        order.deliveryUserId = current_user.id
+    elif user_role == Role.DELIVERY and not order.deliveryUserId:
+        order.deliveryUserId = user_id
 
     if "deliveryPhoto" in payload:
         order.deliveryPhoto = payload["deliveryPhoto"]

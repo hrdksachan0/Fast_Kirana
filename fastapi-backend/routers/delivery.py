@@ -13,20 +13,21 @@ router = APIRouter(prefix="/delivery", tags=["Delivery & Rider Wallet"])
 
 @router.get("/wallet")
 async def get_rider_wallet(
-    current_user: User = Depends(require_delivery),
+    current_user: dict = Depends(require_delivery),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Returns real-time rider wallet info, cash capacity, and deposit history
     """
-    stmt = select(RiderWallet).where(RiderWallet.userId == current_user.id)
+    user_id = current_user.get("id") or current_user.get("sub")
+    stmt = select(RiderWallet).where(RiderWallet.userId == user_id)
     res = await db.execute(stmt)
     wallet = res.scalars().first()
 
     if not wallet:
         wallet = RiderWallet(
-            id=f"rw_{current_user.id}",
-            userId=current_user.id,
+            id=f"rw_{user_id}",
+            userId=user_id,
             cashInHand=0.0,
             cashLimit=2000.0,
             totalCollected=0.0,
@@ -41,7 +42,7 @@ async def get_rider_wallet(
 
     # Fetch today's cash deposits
     dep_stmt = select(CashDepositTransaction).where(
-        CashDepositTransaction.riderId == current_user.id
+        CashDepositTransaction.riderId == user_id
     ).order_by(desc(CashDepositTransaction.createdAt)).limit(10)
     dep_res = await db.execute(dep_stmt)
     deposits = dep_res.scalars().all()
@@ -68,14 +69,15 @@ async def get_rider_wallet(
 
 @router.get("/orders")
 async def get_delivery_orders(
-    current_user: User = Depends(require_delivery),
+    current_user: dict = Depends(require_delivery),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Returns delivery orders grouped by combinedId for multi-pickup handling
     """
+    user_id = current_user.get("id") or current_user.get("sub")
     stmt = select(Order).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).where(
-        (Order.deliveryUserId == None) | (Order.deliveryUserId == current_user.id)
+        (Order.deliveryUserId == None) | (Order.deliveryUserId == user_id)
     ).order_by(desc(Order.createdAt)).limit(50)
 
     res = await db.execute(stmt)

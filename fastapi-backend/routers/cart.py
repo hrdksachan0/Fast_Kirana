@@ -8,7 +8,7 @@ import uuid
 
 from database import get_db
 from models import Cart, CartItem, Product, User
-from routers.auth import get_current_user_from_jwt
+from routers.auth import get_current_user, require_auth
 from schemas import ProductOut
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
@@ -18,22 +18,56 @@ def generate_id(prefix: str) -> str:
     return f"{prefix}{uuid.uuid4().hex[:20]}"
 
 
+def get_user_id(user: Optional[dict]) -> Optional[str]:
+    if not user or not isinstance(user, dict):
+        return None
+    return user.get("id") or user.get("sub")
+
+
 @router.get("")
 async def get_cart(
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's cart with items and product details.
     """
+    user_id = get_user_id(current_user)
+    if not user_id:
+        return {
+            "id": None,
+            "userId": None,
+            "items": [],
+            "itemCount": 0,
+            "subtotal": 0.0,
+            "deliveryFee": 0.0,
+            "total": 0.0,
+            "updatedAt": None,
+        }
+
     # Get or create cart
-    result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = result.scalars().first()
 
     if not cart:
+        # Check if user exists in DB before inserting to prevent FK IntegrityError
+        user_check = await db.execute(select(User).where(User.id == user_id))
+        user_obj = user_check.scalars().first()
+        if not user_obj:
+            return {
+                "id": None,
+                "userId": user_id,
+                "items": [],
+                "itemCount": 0,
+                "subtotal": 0.0,
+                "deliveryFee": 0.0,
+                "total": 0.0,
+                "updatedAt": None,
+            }
+
         cart = Cart(
             id=generate_id("cart_"),
-            userId=current_user.id,
+            userId=user_id,
         )
         db.add(cart)
         await db.commit()
@@ -91,26 +125,27 @@ async def get_cart(
 @router.post("")
 async def sync_cart(
     payload: dict = Body(...),
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Full cart sync — replace all items.
     Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}]}
     """
+    user_id = get_user_id(current_user)
     items_data = payload.get("items", [])
 
     if not isinstance(items_data, list):
         raise HTTPException(status_code=400, detail="items must be a list")
 
     # Get or create cart
-    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
 
     if not cart:
         cart = Cart(
             id=generate_id("cart_"),
-            userId=current_user.id,
+            userId=user_id,
         )
         db.add(cart)
         await db.commit()
@@ -120,7 +155,7 @@ async def sync_cart(
     existing_items_result = await db.execute(
         select(CartItem).where(CartItem.cartId == cart.id)
     )
-    existing_items = existing_items.scalars().all()
+    existing_items = existing_items_result.scalars().all()
     for item in existing_items:
         await db.delete(item)
 
@@ -153,13 +188,14 @@ async def sync_cart(
 @router.post("/add")
 async def add_to_cart(
     payload: dict = Body(...),
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Add item to cart or increase quantity if already exists.
     Expected payload: {"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}
     """
+    user_id = get_user_id(current_user)
     product_id = payload.get("productId")
     quantity = int(payload.get("quantity", 1))
     selected_variant = payload.get("selectedVariant")
@@ -178,13 +214,13 @@ async def add_to_cart(
         raise HTTPException(status_code=400, detail="Product is not available")
 
     # Get or create cart
-    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
 
     if not cart:
         cart = Cart(
             id=generate_id("cart_"),
-            userId=current_user.id,
+            userId=user_id,
         )
         db.add(cart)
         await db.commit()
@@ -223,20 +259,21 @@ async def add_to_cart(
 async def update_cart_item(
     item_id: str,
     payload: dict = Body(...),
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Update cart item quantity.
     Expected payload: {"quantity": 2}
     """
+    user_id = get_user_id(current_user)
     quantity = int(payload.get("quantity", 1))
 
     if quantity < 1:
         raise HTTPException(status_code=400, detail="Quantity must be at least 1")
 
     # Get user's cart
-    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
@@ -265,14 +302,15 @@ async def update_cart_item(
 @router.delete("/items/{item_id}")
 async def remove_cart_item(
     item_id: str,
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Remove item from cart.
     """
+    user_id = get_user_id(current_user)
     # Get user's cart
-    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
@@ -294,13 +332,14 @@ async def remove_cart_item(
 
 @router.delete("")
 async def clear_cart(
-    current_user: User = Depends(get_current_user_from_jwt),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Clear all items from cart.
     """
-    cart_result = await db.execute(select(Cart).where(Cart.userId == current_user.id))
+    user_id = get_user_id(current_user)
+    cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
     cart = cart_result.scalars().first()
     if not cart:
         return {"success": True, "message": "Cart already empty"}
@@ -315,3 +354,4 @@ async def clear_cart(
     await db.commit()
 
     return {"success": True, "message": "Cart cleared"}
+
