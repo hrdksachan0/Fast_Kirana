@@ -119,6 +119,7 @@ export default function RootLayout({
                 <div className="flex flex-col min-h-screen">
                   <Navbar />
                   <MainWrapper>
+                    <PWARegistration />
                     {children}
                   </MainWrapper>
                   <Footer />
@@ -128,7 +129,7 @@ export default function RootLayout({
                 <CartDrawer />
                 <VariantSelectorDrawer />
                 <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />
-                <PWARegistration />
+
                 <PushNotificationConsent />
                 <SoftPromptDialog />
                 <CartConflictDialog />

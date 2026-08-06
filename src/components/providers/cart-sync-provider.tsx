@@ -11,18 +11,26 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
   const isInitialMount = useRef(true)
   const [hasInitialSyncCompleted, setHasInitialSyncCompleted] = useState(false)
   const isFetchingServerCart = useRef(false)
+  const [guestId, setGuestId] = useState<string>('')
 
-  // Reset initial sync completed and clear cart if the user logs out
+  // Initialize guest ID token for unauthenticated cart sync tracking
   useEffect(() => {
-    if (status !== 'authenticated') {
-      setHasInitialSyncCompleted(false)
-      useCartStore.getState().clearCart()
+    if (typeof window !== 'undefined') {
+      let gid = localStorage.getItem('fastkirana-guest-id')
+      if (!gid) {
+        gid = 'g_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
+        localStorage.setItem('fastkirana-guest-id', gid)
+      }
+      setGuestId(gid)
     }
-  }, [status])
+  }, [])
 
   // 1. Fetch server cart on login and merge with local cart
   useEffect(() => {
     if (status !== 'authenticated' || !session?.user?.id || hasInitialSyncCompleted || isFetchingServerCart.current) {
+      if (status !== 'authenticated') {
+        setHasInitialSyncCompleted(true)
+      }
       return
     }
 
@@ -48,9 +56,7 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
             for (const item of localItems) {
               const existing = mergedMap.get(item.product.id)
               if (existing) {
-                // Keep the maximum quantity, capped at stock
                 const maxStock = item.product.stock || 99
-                // Using limits defined in the web cart-store (10 for cafe, 5 for grocery)
                 const limit = getProductLimit(item.product)
                 const newQty = Math.min(Math.max(existing.quantity, item.quantity), maxStock, limit)
                 
@@ -65,8 +71,6 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
             }
 
             const finalItems = Array.from(mergedMap.values())
-            
-            // Overwrite local Zustand store with the merged results
             useCartStore.setState({ items: finalItems })
           }
         }
@@ -81,13 +85,12 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
     loadServerCart()
   }, [status, session, hasInitialSyncCompleted])
 
-  // 2. Sync local cart changes back to DB (debounced)
+  // 2. Sync local cart changes back to DB (debounced for both authenticated & guest users)
   useEffect(() => {
-    // DO NOT sync back to DB until the initial sync from DB has completed!
-    // Otherwise, we might overwrite the DB cart with an empty/stale local cart.
-    if (status !== 'authenticated' || !session?.user?.id || !hasInitialSyncCompleted) return
+    // Wait until initial sync check has completed
+    if (status === 'authenticated' && !hasInitialSyncCompleted) return
 
-    const delay = isInitialMount.current ? 800 : 2000
+    const delay = isInitialMount.current ? 800 : 1500
     isInitialMount.current = false
 
     const timer = setTimeout(async () => {
@@ -106,11 +109,16 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
           }
         })
 
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+        if (guestId && status !== 'authenticated') {
+          headers['x-guest-id'] = guestId
+        }
+
         await fetch('/api/cart', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({ items: mappedItems }),
         })
       } catch (err) {
@@ -119,7 +127,7 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [items, session, status, hasInitialSyncCompleted])
+  }, [items, session, status, hasInitialSyncCompleted, guestId])
 
   return <>{children}</>
 }

@@ -80,13 +80,11 @@ export function CartStickyBar() {
       whileTap={{ scale: 0.98 }}
       initial={false}
       animate={{
-        bottom: isTabBarVisible 
-          ? 'calc(100px + env(safe-area-inset-bottom, 0px))' 
-          : 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(86px + env(safe-area-inset-bottom, 0px))',
       }}
       transition={{
         duration: 0.28,
-        ease: [0.16, 1, 0.3, 1], // Smooth 60 FPS cubic-bezier transition
+        ease: [0.16, 1, 0.3, 1],
       }}
       className={cn(
         "gpu-accelerated fixed left-3.5 right-3.5 z-40 bg-[#097925] text-white rounded-[20px] shadow-[0_8px_25px_rgba(9,121,37,0.2)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",

@@ -162,15 +162,15 @@ function LoginForm() {
         }
       }
 
-      if (data.isWorker) {
-        // Worker flow → password step
+      if (data.isWorker || data.hasPassword) {
+        // Has password or is worker → password step directly (NO OTP required!)
         if (!data.hasPassword) {
-          toast.error('Your admin hasn\'t set your password yet. Please contact your admin.')
+          toast.error('Your password is not set yet. Please contact your admin.')
           return
         }
         setStep('PASSWORD')
       } else {
-        // Customer flow → auto-send OTP and go to OTP step
+        // Customer flow without password → auto-send OTP and go to OTP step
         await sendOtp(finalEmail)
       }
     } catch {

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Home, Search, CircleUser, LayoutGrid } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useUIStore } from '@/stores/ui-store'
+import { useCartStore } from '@/stores/cart-store'
 import { cn } from '@/lib/utils'
 
 export function MobileBottomNav() {
@@ -15,6 +16,8 @@ export function MobileBottomNav() {
   const lastScrollY = useRef(0)
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const hasCartItems = useCartStore((s) => s.items.length > 0)
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY || document.documentElement.scrollTop
@@ -23,6 +26,13 @@ export function MobileBottomNav() {
       // Clear any existing idle timeout
       if (idleTimerRef.current) {
         clearTimeout(idleTimerRef.current)
+      }
+
+      // Never hide nav bar when cart has items — prevents ugly floating cart bar
+      if (hasCartItems) {
+        setTabBarVisible(true)
+        lastScrollY.current = currentScrollY
+        return
       }
 
       // Always show near the top of the page
@@ -67,7 +77,7 @@ export function MobileBottomNav() {
         clearTimeout(idleTimerRef.current)
       }
     }
-  }, [setTabBarVisible])
+  }, [setTabBarVisible, hasCartItems])
 
   // Suppress bottom navigation on checkout, cart, order tracking, admin, and worker screens
   if (

@@ -2,17 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { Download, X, Share } from 'lucide-react'
-import { useUIStore } from '@/stores/ui-store'
-import { useCartStore } from '@/stores/cart-store'
-import { cn } from '@/lib/utils'
 
 export function PWARegistration() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showBanner, setShowBanner] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
-  const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
 
   useEffect(() => {
     // 1. Register Service Worker
@@ -21,7 +16,6 @@ export function PWARegistration() {
         navigator.serviceWorker
           .register('/sw.js?v=2')
           .then((reg) => {
-            // Force check update on registration
             reg.update()
           })
           .catch((err) => {
@@ -36,7 +30,7 @@ export function PWARegistration() {
       }
     }
 
-    // 2. Detect standalone mode (if already installed and opened as PWA, do not show banner)
+    // 2. Detect standalone mode
     const isStandalone = 
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true
@@ -52,8 +46,6 @@ export function PWARegistration() {
     if (isDismissed) return
 
     if (ios) {
-      // iOS Safari doesn't support beforeinstallprompt but supports PWA via Add to Home Screen
-      // Show the banner so they can click to get instructions
       setShowBanner(true)
     }
 
@@ -93,80 +85,75 @@ export function PWARegistration() {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
-  if (!showBanner || hasCartItems) return null
+  if (!showBanner) return null
 
+  // iOS instructions modal overlay
+  if (showIOSInstructions) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center md:hidden">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleDismiss} />
+        <div className="relative w-full max-w-md mx-3 mb-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xl animate-slide-up">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100">Install on iOS</h4>
+            <button 
+              onClick={handleDismiss}
+              className="h-7 w-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-700"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="h-6 w-6 rounded-full bg-[#e20a22]/10 text-[#e20a22] flex items-center justify-center text-[11px] font-black shrink-0">1</span>
+              <span>Tap the <span className="inline-flex items-center align-middle text-[#007AFF] font-bold"><Share size={13} className="inline mx-0.5" /> Share</span> button in Safari.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="h-6 w-6 rounded-full bg-[#e20a22]/10 text-[#e20a22] flex items-center justify-center text-[11px] font-black shrink-0">2</span>
+              <span>Scroll down and tap <span className="font-bold text-zinc-900 dark:text-zinc-100">&quot;Add to Home Screen&quot;</span>.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Slim inline smart app banner — NOT fixed/floating, rendered inside page flow
   return (
-    <div 
-      className="fixed left-4 right-4 z-30 md:hidden transition-all duration-300 ease-out pointer-events-auto"
-      style={{
-        bottom: isTabBarVisible 
-          ? 'calc(100px + env(safe-area-inset-bottom, 0px))' 
-          : 'calc(16px + env(safe-area-inset-bottom, 0px))',
-      }}
-    >
-      <div className="bg-card border border-border/80 p-3.5 rounded-2xl shadow-elevated glass flex flex-col gap-2 relative">
+    <div className="md:hidden">
+      <div className="mx-3 mt-1.5 mb-1 flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl px-3 py-2 shadow-sm">
+        {/* App Icon */}
+        <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm">
+          <img src="/icons/icon-192.png" alt="FastKirana" className="object-cover h-full w-full" />
+        </div>
         
-        {/* Banner content */}
-        {!showIOSInstructions ? (
-          <div className="flex items-center gap-3">
-            {/* App Icon */}
-            <div className="relative h-10 w-10 rounded-xl overflow-hidden shrink-0 border border-border shadow-sm">
-              <img src="/icons/icon-192.png" alt="FastKirana Logo" className="object-cover h-full w-full" />
-            </div>
-            
-            {/* Text details */}
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-text-primary tracking-tight">Install FastKirana App</h4>
-              <p className="text-[10px] font-bold text-text-secondary truncate mt-0.5">
-                Get fast delivery & a smoother app experience.
-              </p>
-            </div>
+        {/* Text */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-extrabold text-zinc-900 dark:text-zinc-100 leading-tight">Install FastKirana App</p>
+          <p className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400 truncate leading-tight mt-px">
+            Get fast delivery & a smoother app experience.
+          </p>
+        </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleInstallClick}
-                className="h-8 px-3 rounded-lg bg-[#00b140] hover:bg-accent-dark text-white font-extrabold text-[10px] flex items-center gap-1 transition-colors shrink-0"
-              >
-                <Download size={11} className="stroke-[2.5]" />
-                Install
-              </button>
-              
-              <button 
-                onClick={handleDismiss}
-                className="h-7 w-7 rounded-lg border border-border hover:bg-muted flex items-center justify-center text-text-secondary shrink-0"
-                aria-label="Dismiss banner"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* iOS Instructions UI */
-          <div className="flex flex-col gap-1.5 p-1">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-text-primary">How to install on iOS Safari:</h4>
-              <button 
-                onClick={handleDismiss}
-                className="h-6 w-6 rounded-lg hover:bg-muted flex items-center justify-center text-text-secondary"
-                aria-label="Dismiss banner"
-              >
-                <X size={12} />
-              </button>
-            </div>
-            <div className="text-[10px] font-bold text-text-secondary space-y-1.5 mt-1">
-              <div className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full bg-muted flex items-center justify-center text-[9px] font-black shrink-0">1</span>
-                <span>Tap the <span className="inline-flex items-center align-middle text-primary"><Share size={12} className="inline mx-0.5" /> Share</span> icon in your Safari browser.</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full bg-muted flex items-center justify-center text-[9px] font-black shrink-0">2</span>
-                <span>Scroll down and tap <span className="font-extrabold text-text-primary">"Add to Home Screen"</span>.</span>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Install Button */}
+        <button
+          onClick={handleInstallClick}
+          className="h-7 px-3 rounded-lg bg-[#00b140] hover:bg-[#009935] text-white font-bold text-[10px] flex items-center gap-1 transition-colors shrink-0 active:scale-95"
+        >
+          <Download size={10} className="stroke-[2.5]" />
+          Install
+        </button>
+        
+        {/* Dismiss */}
+        <button 
+          onClick={handleDismiss}
+          className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 shrink-0"
+          aria-label="Dismiss"
+        >
+          <X size={11} />
+        </button>
       </div>
     </div>
   )
 }
+

@@ -122,6 +122,26 @@ async def get_cart(
     }
 
 
+async def get_or_create_guest_user(guest_id: str, db: AsyncSession) -> Optional[User]:
+    clean_id = "".join([c for c in guest_id if c.isalnum() or c in ("_", "-")])[:32]
+    if not clean_id:
+        return None
+    guest_email = f"guest-{clean_id}@fastkirana.com"
+    result = await db.execute(select(User).where(User.email == guest_email))
+    user = result.scalars().first()
+    if not user:
+        user = User(
+            id=generate_id("usr_"),
+            email=guest_email,
+            name=f"Guest Shopper ({clean_id[:6]})",
+            role="USER",
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    return user
+
+
 @router.post("")
 async def sync_cart(
     payload: dict = Body(...),
@@ -129,17 +149,23 @@ async def sync_cart(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Full cart sync — replace all items.
-    Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}]}
+    Full cart sync — replace all items for logged in or guest user.
+    Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}], "guestId": "xxx"}
     """
     user_id = get_user_id(current_user)
+    guest_id = payload.get("guestId") or payload.get("x-guest-id")
     items_data = payload.get("items", [])
 
     if not isinstance(items_data, list):
         raise HTTPException(status_code=400, detail="items must be a list")
 
+    if not user_id and guest_id:
+        guest_user = await get_or_create_guest_user(str(guest_id), db)
+        if guest_user:
+            user_id = guest_user.id
+
     if not user_id:
-        return {"success": True, "message": "Guest cart synced", "count": len(items_data), "isGuest": True}
+        return {"success": True, "message": "No user ID", "count": 0}
 
     # Get or create cart
     cart_result = await db.execute(select(Cart).where(Cart.userId == user_id))
@@ -149,7 +175,7 @@ async def sync_cart(
         # Check user existence to prevent FK constraint failure
         user_check = await db.execute(select(User).where(User.id == user_id))
         if not user_check.scalars().first():
-            return {"success": True, "message": "Guest cart synced", "count": len(items_data), "isGuest": True}
+            return {"success": True, "message": "User not found", "count": 0}
 
         cart = Cart(
             id=generate_id("cart_"),
@@ -175,6 +201,11 @@ async def sync_cart(
         notes = item_data.get("notes")
 
         if not product_id:
+            continue
+
+        # Check product exists
+        product_result = await db.execute(select(Product).where(Product.id == product_id))
+        if not product_result.scalars().first():
             continue
 
         new_item = CartItem(
