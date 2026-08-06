@@ -6,7 +6,7 @@ Validates NextAuth.js JWT tokens using the same AUTH_SECRET.
 import os
 import jwt
 from typing import Optional, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def get_clean_secret(key: str) -> str:
@@ -97,3 +97,16 @@ def is_token_expired(token_payload: Dict[str, Any]) -> bool:
     if not exp:
         return True
     return datetime.now(timezone.utc).timestamp() > (exp - 30)
+
+
+def create_access_token(data: dict, expires_delta: Optional[Any] = None) -> str:
+    """Create a signed JWT token matching NextAuth and FastAPI auth requirements."""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(days=30)
+    to_encode.update({"exp": int(expire.timestamp())})
+    if "id" in to_encode and "sub" not in to_encode:
+        to_encode["sub"] = to_encode["id"]
+    return jwt.encode(to_encode, AUTH_SECRET, algorithm="HS256")

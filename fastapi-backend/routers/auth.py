@@ -14,7 +14,7 @@ import uuid
 
 from database import get_db
 from models import User, Role
-from utils.jwt import extract_user_from_token, is_token_expired
+from utils.jwt import extract_user_from_token, is_token_expired, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -125,6 +125,7 @@ class SessionResponse(BaseModel):
     role: str
     phone: Optional[str]
     assignedRestaurantId: Optional[str] = None
+    token: Optional[str] = None
 
 
 class MessageResponse(BaseModel):
@@ -321,11 +322,47 @@ async def login(
     if not verify_password(body.password, user.passwordHash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    token = create_access_token({
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": role_val,
+        "phone": user.phone,
+        "assignedRestaurantId": user.assignedRestaurantId,
+    })
+
     return SessionResponse(
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role,
+        role=role_val,
+        phone=user.phone,
+        assignedRestaurantId=user.assignedRestaurantId,
+        token=token,
+    )
+
+
+@router.get("/me", response_model=SessionResponse)
+async def get_me(
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current logged in user profile.
+    """
+    user_id = current_user.get("id") or current_user.get("sub")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    return SessionResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=role_val,
         phone=user.phone,
         assignedRestaurantId=user.assignedRestaurantId,
     )
