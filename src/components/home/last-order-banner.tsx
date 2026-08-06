@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { formatPrice } from '@/lib/utils'
 import { Package, ArrowRight, Clock, MapPin, RefreshCw, CheckCircle2, Truck, Sparkles, XCircle } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
+import { useCartStore } from '@/stores/cart-store'
 
 interface LastOrder {
   id: string
@@ -64,6 +65,7 @@ export function LastOrderBanner() {
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
+  const hasCartItems = useCartStore((s) => s.items.length > 0)
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
@@ -129,9 +131,11 @@ export function LastOrderBanner() {
 
   return (
     <div
-      className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[40] transition-all duration-300 pointer-events-auto"
+      className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-35 transition-all duration-300 pointer-events-auto"
       style={{
-        bottom: isTabBarVisible ? '90px' : '18px',
+        bottom: isTabBarVisible 
+          ? (hasCartItems ? '162px' : '96px') 
+          : '20px',
       }}
     >
       <Link

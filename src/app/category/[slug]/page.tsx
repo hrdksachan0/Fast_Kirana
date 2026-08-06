@@ -146,17 +146,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
-  // Filter products for category view: Grocery vs Restaurant/Cafe segregation
+  // Filter products for category view
   let finalProductsRaw = productsRaw
-  const isRestaurantCategory = ['cafe', 'restaurant', 'restaurant-kitchen', 'wedson', 'as-restaurant'].includes(normSlug)
-
-  if (!isRestaurantCategory) {
-    // For Grocery Mart categories (e.g. Beverages, Dairy, Snacks), exclude prepared restaurant items
+  if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices') {
     finalProductsRaw = productsRaw.filter((p) => {
-      if (p.restaurantId || (p as any).restaurantName) return false
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-      if (tags.includes('wedson') || tags.includes('as-restaurant') || tags.includes('restaurant-kitchen')) return false
-      return true
+      // Keep all beverages, juices, shakes, coffees, drinks, tea, and sodas
+      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(p.name)
+      return !isFoodMainCourse
+    })
+  } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
+    finalProductsRaw = productsRaw.filter((p) => {
+      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(p.name)
+      return !isFoodMainCourse
     })
   }
 
