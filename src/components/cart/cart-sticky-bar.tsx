@@ -45,6 +45,12 @@ export function CartStickyBar() {
     return () => window.removeEventListener('cart-bounce', handleBounce)
   }, [])
 
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Suppress sticky cart bar on checkout, cart, tracking, login, and worker consoles to prevent overlay clutter
   const isIgnoredPage = !pathname ||
     pathname === '/cart' ||
@@ -58,7 +64,7 @@ export function CartStickyBar() {
     pathname.startsWith('/cafe-kitchen') ||
     pathname.startsWith('/delivery')
 
-  if (items.length === 0 || isCartOpen || isIgnoredPage) return null
+  if (!mounted || items.length === 0 || isCartOpen || isIgnoredPage) return null
 
   const subtotal = getSubtotal()
   const needsForFreeDelivery = FREE_DELIVERY_THRESHOLD - subtotal

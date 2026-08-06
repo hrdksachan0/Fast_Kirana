@@ -337,6 +337,12 @@ export function CartDrawer() {
     )
   }
 
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Prevent body scroll when drawer is open
   useEffect(() => {
     if (isOpen) {
@@ -346,6 +352,8 @@ export function CartDrawer() {
     }
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
+
+  if (!mounted) return null
 
   return (
     <AnimatePresence>
