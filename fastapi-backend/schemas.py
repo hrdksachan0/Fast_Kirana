@@ -106,6 +106,52 @@ class ProductUpdate(BaseModel):
     barcode: Optional[str] = None
 
 
+class CategoryOut(BaseModel):
+    id: str
+    name: str
+    slug: str
+    imageUrl: Optional[str] = None
+    parentId: Optional[str] = None
+    sortOrder: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class ProductOut(BaseModel):
+    id: str
+    readableId: Optional[int] = None
+    name: str
+    slug: str
+    description: Optional[str] = None
+    imageUrl: Optional[str] = None
+    categoryId: str
+    restaurantId: Optional[str] = None
+    mrp: float
+    price: float
+    discount: float = 0.0
+    unit: str
+    stock: int = 0
+    isAvailable: bool = True
+    tags: Optional[List[str]] = None
+    variants: Optional[List[Dict[str, Any]]] = None
+    minStock: int = 10
+    costPrice: float = 0.0
+    isFlashDeal: bool = False
+    isTopPick: bool = False
+    isBestSeller: bool = False
+    sortOrder: int = 0
+    availableStartTime: Optional[str] = None
+    availableEndTime: Optional[str] = None
+    barcode: Optional[str] = None
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    category: Optional[CategoryOut] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ============================================================
 # ORDER SCHEMAS
 # ============================================================
@@ -139,6 +185,86 @@ class OrderStatusUpdate(BaseModel):
         if v.upper() not in allowed:
             raise ValueError(f'Status must be one of: {", ".join(allowed)}')
         return v.upper()
+
+
+class OrderItemOut(BaseModel):
+    id: str
+    orderId: str
+    productId: Optional[str] = None
+    name: str
+    price: float
+    quantity: int
+    imageUrl: Optional[str] = None
+    selectedVariant: Optional[str] = None
+    costPrice: float = 0.0
+    variants: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OrderOut(BaseModel):
+    id: str
+    readableId: Optional[str] = None
+    userId: str
+    addressId: str
+    combinedId: Optional[str] = None
+    restaurantId: Optional[str] = None
+    orderType: str = "GROCERY"
+    status: str = "PENDING"
+    subtotal: float
+    discount: float = 0.0
+    deliveryFee: float = 0.0
+    taxes: float = 0.0
+    miscFee: float = 0.0
+    total: float
+    paymentMethod: str = "COD"
+    paymentStatus: str = "PENDING"
+    estimatedDelivery: Optional[datetime] = None
+    deliveryPhoto: Optional[str] = None
+    deliveryLat: Optional[float] = None
+    deliveryLng: Optional[float] = None
+    deliveryMethod: str = "DELIVERY"
+    isB2B: bool = False
+    shopName: Optional[str] = None
+    shopPhone: Optional[str] = None
+    storeId: Optional[str] = None
+    couponCode: Optional[str] = None
+    notes: Optional[str] = None
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    confirmedAt: Optional[datetime] = None
+    packedAt: Optional[datetime] = None
+    shippedAt: Optional[datetime] = None
+    deliveredAt: Optional[datetime] = None
+    deliveryUserId: Optional[str] = None
+    assignedPickerId: Optional[str] = None
+    assignedChefId: Optional[str] = None
+    cashSettledToAdmin: bool = False
+    cashSettledAt: Optional[datetime] = None
+    items: List[OrderItemOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class CashDepositRequest(BaseModel):
+    riderId: str = Field(..., min_length=1)
+    amount: float = Field(..., gt=0)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class FinancialSummaryOut(BaseModel):
+    totalRevenue: float = 0.0
+    totalOrders: int = 0
+    totalCOD: float = 0.0
+    totalOnline: float = 0.0
+    cashInHand: float = 0.0
+    cashDeposited: float = 0.0
+
+    class Config:
+        from_attributes = True
 
 
 # ============================================================
