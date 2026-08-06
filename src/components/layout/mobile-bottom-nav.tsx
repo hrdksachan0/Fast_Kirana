@@ -133,9 +133,9 @@ export function MobileBottomNav() {
       }}
       style={{
         pointerEvents: isVisible ? 'auto' : 'none',
-        bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
       }}
-      className="fixed left-1/2 -translate-x-1/2 w-[94%] max-w-[480px] sm:w-[86%] sm:max-w-[580px] z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 h-[64px] rounded-full flex items-center justify-around px-2 py-1 shadow-[0_10px_35px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] md:hidden"
+      className="fixed left-1/2 -translate-x-1/2 w-[92%] max-w-[420px] sm:w-[84%] sm:max-w-[500px] z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 h-[56px] rounded-full flex items-center justify-around px-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] md:hidden"
     >
       {navItems.map((item, idx) => {
         const Icon = item.icon
@@ -145,14 +145,14 @@ export function MobileBottomNav() {
           <Link 
             key={idx} 
             href={item.href} 
-            className="flex-1 flex flex-col justify-center h-full items-center select-none outline-none relative py-0.5"
+            className="flex-1 flex flex-col justify-center h-full items-center select-none outline-none relative py-1"
             suppressHydrationWarning
           >
             <div className="flex flex-col items-center justify-center w-full relative">
-              {/* Icon Container with Red Gradient for Active item */}
+              {/* Icon Container with Red Background for Active item */}
               <div
                 className={cn(
-                  "flex items-center justify-center h-7 w-11 rounded-full transition-all duration-300 active:scale-95",
+                  "flex items-center justify-center h-6 w-10 rounded-full transition-all duration-300 active:scale-95",
                   isActive 
                     ? "bg-[#e20a22] text-white shadow-xs shadow-red-900/20" 
                     : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700"
@@ -160,14 +160,14 @@ export function MobileBottomNav() {
               >
                 <Icon
                   className={cn(
-                    "h-4.5 w-4.5 transition-all duration-300",
+                    "h-4 w-4 transition-all duration-300",
                     isActive ? "stroke-[2.5]" : "stroke-[1.8]"
                   )}
                   fill="none"
                 />
               </div>
               
-              {/* Text Label - guaranteed to fit */}
+              {/* Text Label */}
               <span
                 className={cn(
                   "text-[10px] mt-0.5 font-bold transition-all duration-300 leading-none",

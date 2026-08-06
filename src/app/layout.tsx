@@ -74,7 +74,8 @@ export const viewport: Viewport = {
   themeColor: '#e20a22',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 3,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({
@@ -119,13 +120,13 @@ export default function RootLayout({
                 <div className="flex flex-col min-h-screen">
                   <Navbar />
                   <MainWrapper>
-                    <PWARegistration />
                     {children}
                   </MainWrapper>
                   <Footer />
                 </div>
                 <MobileBottomNav />
                 <CartStickyBar />
+                <PWARegistration />
                 <CartDrawer />
                 <VariantSelectorDrawer />
                 <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />

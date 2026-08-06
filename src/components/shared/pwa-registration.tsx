@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { Download, X, Share } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { useCartStore } from '@/stores/cart-store'
+import { useUIStore } from '@/stores/ui-store'
 
 export function PWARegistration() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showBanner, setShowBanner] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
+  const pathname = usePathname()
+  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
 
   useEffect(() => {
     // 1. Register Service Worker
@@ -85,7 +91,17 @@ export function PWARegistration() {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
-  if (!showBanner) return null
+  if (
+    !showBanner ||
+    !pathname ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/order/') ||
+    pathname.startsWith('/picker') ||
+    pathname.startsWith('/admin') ||
+    pathname === '/cart'
+  ) {
+    return null
+  }
 
   // iOS instructions modal overlay
   if (showIOSInstructions) {
@@ -118,27 +134,33 @@ export function PWARegistration() {
     )
   }
 
-  // Slim inline smart app banner — NOT fixed/floating, rendered inside page flow
+  const bottomOffset = hasCartItems
+    ? 'calc(144px + env(safe-area-inset-bottom, 0px))'
+    : 'calc(82px + env(safe-area-inset-bottom, 0px))'
+
   return (
-    <div className="md:hidden">
-      <div className="mx-3 mt-1.5 mb-1 flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl px-3 py-2 shadow-sm">
+    <div
+      style={{ bottom: isTabBarVisible ? bottomOffset : 'calc(16px + env(safe-area-inset-bottom, 0px))' }}
+      className="fixed left-3.5 right-3.5 z-40 md:hidden transition-all duration-300 pointer-events-auto"
+    >
+      <div className="flex items-center gap-2.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl px-3 py-2 shadow-[0_8px_25px_rgba(0,0,0,0.12)]">
         {/* App Icon */}
-        <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm">
+        <div className="h-8 w-8 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm">
           <img src="/icons/icon-192.png" alt="FastKirana" className="object-cover h-full w-full" />
         </div>
         
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-extrabold text-zinc-900 dark:text-zinc-100 leading-tight">Install FastKirana App</p>
-          <p className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400 truncate leading-tight mt-px">
-            Get fast delivery & a smoother app experience.
+          <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 leading-tight">Install FastKirana App</p>
+          <p className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400 truncate leading-tight mt-0.5">
+            Faster delivery & smoother app experience.
           </p>
         </div>
 
         {/* Install Button */}
         <button
           onClick={handleInstallClick}
-          className="h-7 px-3 rounded-lg bg-[#00b140] hover:bg-[#009935] text-white font-bold text-[10px] flex items-center gap-1 transition-colors shrink-0 active:scale-95"
+          className="h-7 px-3 rounded-lg bg-[#00b140] hover:bg-[#009935] text-white font-extrabold text-[10px] flex items-center gap-1 transition-all shrink-0 active:scale-95 shadow-sm"
         >
           <Download size={10} className="stroke-[2.5]" />
           Install
@@ -156,4 +178,3 @@ export function PWARegistration() {
     </div>
   )
 }
-

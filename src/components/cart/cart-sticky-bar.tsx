@@ -80,7 +80,7 @@ export function CartStickyBar() {
       whileTap={{ scale: 0.98 }}
       initial={false}
       animate={{
-        bottom: 'calc(86px + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
       }}
       transition={{
         duration: 0.28,
