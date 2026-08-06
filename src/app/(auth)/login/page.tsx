@@ -132,6 +132,16 @@ function LoginForm() {
 
     const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
 
+    // EMAIL mode (Staff/Admin) → always go directly to password step, no API call needed
+    if (loginType === 'EMAIL') {
+      setHasPassword(true)
+      setIsWorker(true)
+      setStep('PASSWORD')
+      setIsLoading(false)
+      return
+    }
+
+    // WHATSAPP mode (Customer) → check account via API, then OTP or password
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
@@ -142,7 +152,7 @@ function LoginForm() {
       const data = await res.json()
 
       if (!res.ok) {
-        // API failed (DB timeout, etc.) — fallback: show password field so user can still try to login
+        // API failed (DB timeout, etc.) — fallback: show password field
         toast.info('Could not check account. Please enter your password to continue.')
         setHasPassword(true)
         setIsWorker(true)
