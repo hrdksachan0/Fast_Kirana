@@ -123,9 +123,15 @@ async def list_categories(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{product_id}", response_model=ProductOut)
 async def get_product(product_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Product).options(selectinload(Product.category)).where(Product.id == product_id)
+    """
+    Get single product by ID or Slug
+    """
+    stmt = select(Product).options(selectinload(Product.category)).where(
+        or_(Product.id == product_id, Product.slug == product_id)
+    )
     result = await db.execute(stmt)
     product = result.scalars().first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
