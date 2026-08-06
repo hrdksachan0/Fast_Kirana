@@ -142,7 +142,11 @@ function LoginForm() {
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to check account status')
+        // API failed (DB timeout, etc.) — fallback: show password field so user can still try to login
+        toast.info('Could not check account. Please enter your password to continue.')
+        setHasPassword(true)
+        setIsWorker(true)
+        setStep('PASSWORD')
         return
       }
 
@@ -174,7 +178,11 @@ function LoginForm() {
         await sendOtp(finalEmail)
       }
     } catch {
-      toast.error('Something went wrong. Please try again.')
+      // Network error or complete failure — fallback to password step
+      toast.info('Connection issue. Please enter your password to continue.')
+      setHasPassword(true)
+      setIsWorker(true)
+      setStep('PASSWORD')
     } finally {
       setIsLoading(false)
     }
