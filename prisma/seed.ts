@@ -26,7 +26,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'admin@fastkirana.com' },
-    update: {},
+    update: { passwordHash: adminHash },
     create: {
       name: 'Admin',
       email: 'admin@fastkirana.com',
@@ -38,7 +38,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'chef@fastkirana.com' },
-    update: {},
+    update: { passwordHash: chefHash },
     create: {
       name: 'Chef Kitchener',
       email: 'chef@fastkirana.com',
@@ -50,7 +50,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'picker@fastkirana.com' },
-    update: {},
+    update: { passwordHash: pickerHash },
     create: {
       name: 'Suresh Picker',
       email: 'picker@fastkirana.com',
@@ -62,7 +62,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'delivery@fastkirana.com' },
-    update: {},
+    update: { passwordHash: deliveryHash },
     create: {
       name: 'Ramesh Rider',
       email: 'delivery@fastkirana.com',

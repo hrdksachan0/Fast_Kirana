@@ -30,7 +30,7 @@ export function Footer() {
   const contactAddress = settings.contact_address || 'NH34, Ghatampur, Kanpur Nagar'
 
   return (
-    <footer className="relative bg-[#09090b] text-zinc-400 mt-0 overflow-hidden border-t border-zinc-900/60 pb-[80px] md:pb-12 select-none">
+    <footer className="relative bg-[#09090b] text-zinc-400 mt-0 overflow-hidden border-t border-zinc-900/60 pb-[120px] md:pb-12 select-none">
       
       {/* Apple Liquid Display Ambient Bottom Glow */}
       <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full bg-gradient-to-t from-rose-500/10 via-orange-500/[0.03] to-transparent blur-[120px] pointer-events-none select-none z-0" />

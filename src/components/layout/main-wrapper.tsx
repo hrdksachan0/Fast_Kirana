@@ -10,7 +10,7 @@ export function MainWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <main className={cn(
-      "flex-grow min-h-[calc(100vh-80px)] transition-all duration-300 pb-28 md:pb-0",
+      "flex-grow min-h-[calc(100vh-80px)] transition-all duration-300 pb-32 md:pb-0",
       isStorefrontPage ? "pt-[48px] md:pt-[65px]" : "pt-[96px] md:pt-[80px]"
     )}>
       {children}

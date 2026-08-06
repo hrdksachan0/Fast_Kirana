@@ -123,8 +123,9 @@ export function MobileBottomNav() {
       }}
       style={{
         pointerEvents: isVisible ? 'auto' : 'none',
+        bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
       }}
-      className="fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[94%] max-w-[480px] sm:w-[86%] sm:max-w-[580px] z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 h-[64px] rounded-full flex items-center justify-around px-2 py-1 shadow-[0_10px_35px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] md:hidden"
+      className="fixed left-1/2 -translate-x-1/2 w-[94%] max-w-[480px] sm:w-[86%] sm:max-w-[580px] z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 h-[64px] rounded-full flex items-center justify-around px-2 py-1 shadow-[0_10px_35px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] md:hidden"
     >
       {navItems.map((item, idx) => {
         const Icon = item.icon
