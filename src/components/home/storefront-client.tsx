@@ -73,7 +73,7 @@ export function StorefrontClient({
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-12 mt-3 relative">
+    <div className="w-full min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-28 md:pb-12 mt-3 relative">
       {/* Grocery ambient glow (red) */}
       <AnimatePresence>
         {activeTab === 'grocery' && (
