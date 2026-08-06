@@ -164,7 +164,7 @@ export async function GET(request: Request) {
         updatedAt: new Date(o.updatedAt).toISOString(),
         userName: user.name,
         userEmail: user.email,
-        userPhone: user.phone,
+        userPhone: address?.phone || user.phone || o.shopPhone || null,
         isB2B: o.isB2B,
         deliveryMethod: o.deliveryMethod,
         shopName: o.shopName,

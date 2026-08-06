@@ -1184,7 +1184,7 @@ export default function DeliveryDashboard() {
                           </div>
                           <div>
                             <div className="text-xs font-bold text-text-primary">{order.user.name || 'Customer'}</div>
-                            <div className="text-[10px] text-text-secondary">{formatPhone(order.user.phone) || 'No phone'}</div>
+                            <div className="text-[10px] text-text-secondary">{formatPhone(order.address?.phone || order.user.phone || order.shopPhone) || 'No phone'}</div>
                           </div>
                         </div>
                       </div>
@@ -1207,9 +1207,9 @@ export default function DeliveryDashboard() {
                         </a>
 
                         {/* 2. Call Customer */}
-                        {order.user.phone ? (
+                        {(order.address?.phone || order.user.phone || order.shopPhone) ? (
                           <a
-                            href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
+                            href={`tel:${formatPhone(order.address?.phone || order.user.phone || order.shopPhone).replace(/\s+/g, '')}`}
                             className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
                           >
                             <Phone className="h-4 w-4 text-blue-600" />
@@ -1519,9 +1519,9 @@ export default function DeliveryDashboard() {
                         </a>
 
                         {/* 2. Call Customer */}
-                        {order.user.phone ? (
+                        {(order.address?.phone || order.user.phone || order.shopPhone) ? (
                           <a
-                            href={`tel:${formatPhone(order.user.phone).replace(/\s+/g, '')}`}
+                            href={`tel:${formatPhone(order.address?.phone || order.user.phone || order.shopPhone).replace(/\s+/g, '')}`}
                             className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-xs font-black tracking-tight transition-all active:scale-95 text-center"
                           >
                             <Phone className="h-4 w-4 text-blue-600" />
