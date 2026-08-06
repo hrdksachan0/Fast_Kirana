@@ -164,3 +164,46 @@ async def get_doorstep_qr(
         "paymentStatus": order.paymentStatus,
         "paymentMethod": order.paymentMethod
     }
+
+
+@router.get("/track/{order_id}")
+async def get_rider_location(
+    order_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get live location coordinates and details for assigned delivery partner.
+    """
+    stmt = select(Order).options(selectinload(Order.deliveryUser)).where(Order.id == order_id)
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    rider = order.deliveryUser
+    if not rider:
+        return {
+            "orderId": order.id,
+            "status": order.status,
+            "assigned": False,
+            "rider": None,
+            "location": {"lat": 26.1495, "lng": 80.1672}
+        }
+
+    return {
+        "orderId": order.id,
+        "status": order.status,
+        "assigned": True,
+        "rider": {
+            "id": rider.id,
+            "name": rider.name or "FastKirana Delivery Executive",
+            "phone": rider.phone or "+919696503759",
+            "rating": 4.9
+        },
+        "location": {
+            "lat": rider.liveLat or 26.1495,
+            "lng": rider.liveLng or 80.1672
+        }
+    }
+

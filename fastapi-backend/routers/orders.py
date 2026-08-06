@@ -15,7 +15,139 @@ from models import (
 from schemas import OrderOut
 from routers.auth import require_auth
 
+from models import Cart, CartItem
+
 router = APIRouter(prefix="/orders", tags=["Orders & Checkout Engine"])
+
+def generate_id(prefix: str = "ord_") -> str:
+    return f"{prefix}{uuid.uuid4().hex[:20]}"
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_order(
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new order for current user.
+    Accepts items list or fetches items from user's active cart.
+    """
+    user_id = current_user.get("id") or current_user.get("sub")
+    address_id = payload.get("addressId")
+    payment_method_str = payload.get("paymentMethod", "COD")
+    items_data = payload.get("items", [])
+
+    if not address_id:
+        # Fetch user's default address if not provided
+        addr_stmt = select(Address).where(Address.userId == user_id).order_by(desc(Address.isDefault))
+        addr_res = await db.execute(addr_stmt)
+        user_addr = addr_res.scalars().first()
+        if user_addr:
+            address_id = user_addr.id
+        else:
+            raise HTTPException(status_code=400, detail="addressId is required and user has no saved address")
+
+    # Verify address belongs to user or exists
+    addr_check = await db.execute(select(Address).where(Address.id == address_id))
+    if not addr_check.scalars().first():
+        raise HTTPException(status_code=404, detail="Selected address not found")
+
+    # If items list not passed in body, pull from active cart
+    cart_items_list = []
+    if items_data:
+        for it in items_data:
+            p_id = it.get("productId")
+            qty = int(it.get("quantity", 1))
+            if p_id:
+                p_res = await db.execute(select(Product).where(Product.id == p_id))
+                prod = p_res.scalars().first()
+                if prod:
+                    cart_items_list.append({"product": prod, "quantity": qty, "notes": it.get("notes")})
+    else:
+        cart_res = await db.execute(select(Cart).where(Cart.userId == user_id))
+        cart = cart_res.scalars().first()
+        if cart:
+            ci_res = await db.execute(select(CartItem).where(CartItem.cartId == cart.id))
+            for ci in ci_res.scalars().all():
+                p_res = await db.execute(select(Product).where(Product.id == ci.productId))
+                prod = p_res.scalars().first()
+                if prod:
+                    cart_items_list.append({"product": prod, "quantity": ci.quantity, "notes": ci.notes})
+
+    if not cart_items_list:
+        raise HTTPException(status_code=400, detail="Cart is empty. Please add items to create an order.")
+
+    subtotal = sum(item["product"].price * item["quantity"] for item in cart_items_list)
+    delivery_fee = 0.0 if subtotal >= 299.0 else 30.0
+    misc_fee = 5.0
+    total = subtotal + delivery_fee + misc_fee
+
+    try:
+        pay_method = PaymentMethod(payment_method_str)
+    except ValueError:
+        pay_method = PaymentMethod.COD
+
+    readable_id = f"{random.randint(600000, 999999)}"
+
+    new_order = Order(
+        id=generate_id("cms"),
+        readableId=readable_id,
+        userId=user_id,
+        addressId=address_id,
+        orderType=OrderType.GROCERY,
+        status=OrderStatus.PENDING,
+        subtotal=round(subtotal, 2),
+        discount=0.0,
+        deliveryFee=delivery_fee,
+        taxes=0.0,
+        miscFee=misc_fee,
+        total=round(total, 2),
+        paymentMethod=pay_method,
+        paymentStatus=PaymentStatus.PAID if pay_method != PaymentMethod.COD else PaymentStatus.PENDING,
+        shopName="FastKirana Dark Store",
+        createdAt=datetime.utcnow()
+    )
+    db.add(new_order)
+    await db.commit()
+    await db.refresh(new_order)
+
+    # Insert OrderItems
+    for item in cart_items_list:
+        prod = item["product"]
+        order_item = OrderItem(
+            id=generate_id("ci_"),
+            orderId=new_order.id,
+            productId=prod.id,
+            name=prod.name,
+            price=prod.price,
+            quantity=item["quantity"],
+            imageUrl=prod.imageUrl,
+            costPrice=prod.costPrice or 0.0,
+            notes=item.get("notes")
+        )
+        db.add(order_item)
+
+    # Clear user's active cart after placing order
+    cart_res = await db.execute(select(Cart).where(Cart.userId == user_id))
+    cart = cart_res.scalars().first()
+    if cart:
+        ci_items = await db.execute(select(CartItem).where(CartItem.cartId == cart.id))
+        for ci in ci_items.scalars().all():
+            await db.delete(ci)
+
+    await db.commit()
+    await db.refresh(new_order)
+
+    return {
+        "success": True,
+        "message": "Order created successfully",
+        "orderId": new_order.id,
+        "readableId": new_order.readableId,
+        "total": new_order.total,
+        "status": new_order.status
+    }
+
 
 @router.get("", response_model=List[OrderOut])
 async def list_user_orders(
@@ -167,3 +299,72 @@ async def update_order_status(
     await db.commit()
     await db.refresh(order)
     return {"success": True, "orderId": order.id, "status": order.status}
+
+
+@router.patch("/{order_id}/status")
+async def update_order_status_alias(
+    order_id: str,
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Alias route for PATCH /orders/{order_id}/status
+    """
+    return await update_order_status(order_id=order_id, payload=payload, current_user=current_user, db=db)
+
+
+@router.get("/{order_id}/track")
+async def track_order(
+    order_id: str,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Real-time order tracking details with delivery partner status & ETA.
+    """
+    stmt = select(Order).options(
+        selectinload(Order.items),
+        selectinload(Order.address),
+        selectinload(Order.deliveryUser)
+    ).where(Order.id == order_id)
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    rider_info = None
+    if order.deliveryUser:
+        rider_info = {
+            "id": order.deliveryUser.id,
+            "name": order.deliveryUser.name or "Delivery Executive",
+            "phone": order.deliveryUser.phone,
+            "lat": order.deliveryUser.liveLat or 26.1495,
+            "lng": order.deliveryUser.liveLng or 80.1672
+        }
+
+    status_steps = [
+        {"status": "PENDING", "label": "Order Placed", "completed": True, "time": order.createdAt},
+        {"status": "CONFIRMED", "label": "Order Confirmed", "completed": order.confirmedAt is not None, "time": order.confirmedAt},
+        {"status": "PACKED", "label": "Packing / Preparing", "completed": order.packedAt is not None, "time": order.packedAt},
+        {"status": "SHIPPED", "label": "Out for Delivery", "completed": order.shippedAt is not None or str(order.status) == "SHIPPED", "time": order.shippedAt},
+        {"status": "DELIVERED", "label": "Delivered", "completed": order.deliveredAt is not None or str(order.status) == "DELIVERED", "time": order.deliveredAt}
+    ]
+
+    return {
+        "orderId": order.id,
+        "readableId": order.readableId,
+        "status": order.status,
+        "estimatedDeliveryMinutes": 10 if str(order.status) in ["CONFIRMED", "PACKED", "SHIPPED"] else 0,
+        "rider": rider_info,
+        "shopName": order.shopName,
+        "total": order.total,
+        "steps": status_steps,
+        "address": {
+            "houseNo": order.address.houseNo if order.address else "",
+            "street": order.address.street if order.address else "",
+            "city": order.address.city if order.address else ""
+        } if order.address else None
+    }
+
