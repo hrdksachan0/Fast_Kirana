@@ -611,7 +611,7 @@ export function CartDrawer() {
             </div>
 
             {/* Sticky Footer Area */}
-            <div className="border-t border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-4 pb-6 shrink-0">
+            <div className="border-t border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-4 shrink-0" style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))' }}>
               {/* Expandable Bill details */}
               {showBillDetails && (
                 <div className="mb-4 space-y-2 border-b border-zinc-100 dark:border-zinc-900 pb-3.5 animate-slide-down">
