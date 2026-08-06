@@ -11,15 +11,17 @@ import { Loader2, ShoppingBag, ArrowLeft, Mail, KeyRound, User, Phone } from 'lu
 import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 const getRoleRedirect = (role: string, email: string, callbackUrl: string) => {
-  switch (role) {
-    case 'ADMIN': return '/admin'
-    case 'CHEF':
-      if (email.toLowerCase().startsWith('restaurant')) return '/restaurant-kitchen'
-      return '/cafe-kitchen'
-    case 'PICKER': return '/picker'
-    case 'DELIVERY': return '/delivery'
-    default: return callbackUrl || '/'
-  }
+  const cleanEmail = (email || '').toLowerCase().trim()
+  
+  if (role === 'ADMIN' || cleanEmail.startsWith('admin')) return '/admin'
+  if (cleanEmail.startsWith('restaurant')) return '/restaurant-kitchen'
+  if (role === 'CHEF' || cleanEmail.startsWith('chef')) return '/cafe-kitchen'
+  if (role === 'RESTAURANT_OWNER') return '/restaurant-kitchen'
+  if (role === 'PICKER' || cleanEmail.startsWith('picker')) return '/picker'
+  if (role === 'DELIVERY' || cleanEmail.startsWith('delivery')) return '/delivery'
+  
+  if (callbackUrl && callbackUrl !== '/') return callbackUrl
+  return '/'
 }
 
 function LoginForm() {
@@ -245,7 +247,17 @@ function LoginForm() {
         toast.error('Invalid password. Please try again.')
       } else {
         toast.success('Successfully logged in!')
-        const redirect = getRoleRedirect(userRole, email, callbackUrl)
+        let activeRole = userRole
+        try {
+          const sessRes = await fetch('/api/auth/session')
+          const sessData = await sessRes.json()
+          if (sessData?.user?.role) {
+            activeRole = sessData.user.role
+          }
+        } catch (e) {
+          // ignore
+        }
+        const redirect = getRoleRedirect(activeRole, email, callbackUrl)
         router.push(redirect)
         router.refresh()
       }
@@ -329,7 +341,17 @@ function LoginForm() {
       setIsLoading(false)
     } else {
       toast.success('Successfully logged in!')
-      const redirect = getRoleRedirect(userRole, email, callbackUrl)
+      let activeRole = userRole
+      try {
+        const sessRes = await fetch('/api/auth/session')
+        const sessData = await sessRes.json()
+        if (sessData?.user?.role) {
+          activeRole = sessData.user.role
+        }
+      } catch (e) {
+        // ignore
+      }
+      const redirect = getRoleRedirect(activeRole, email, callbackUrl)
       router.push(redirect)
       router.refresh()
     }
