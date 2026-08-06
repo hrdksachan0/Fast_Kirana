@@ -244,7 +244,6 @@ class OrderItem(Base):
     productId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     name: Mapped[str] = mapped_column(String)
     price: Mapped[float] = mapped_column(Float)
-    mrp: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     quantity: Mapped[int] = mapped_column(Integer)
     imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     selectedVariant: Mapped[Optional[str]] = mapped_column(String, nullable=True)

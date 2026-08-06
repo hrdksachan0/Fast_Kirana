@@ -60,12 +60,12 @@ class ProductOut(ProductBase):
 # --- Order Schemas ---
 class OrderItemOut(BaseModel):
     id: str
-    productId: str
+    productId: Optional[str] = None
     name: str
     price: float
-    mrp: float
+    mrp: Optional[float] = None
     quantity: int
-    image: Optional[str] = None
+    imageUrl: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
