@@ -96,10 +96,14 @@ export function PWARegistration() {
   if (!showBanner || hasCartItems) return null
 
   return (
-    <div className={cn(
-      "fixed left-4 right-4 z-30 md:hidden transition-all duration-300 ease-out",
-      isTabBarVisible ? "bottom-[94px]" : "bottom-[20px]"
-    )}>
+    <div 
+      className="fixed left-4 right-4 z-30 md:hidden transition-all duration-300 ease-out pointer-events-auto"
+      style={{
+        bottom: isTabBarVisible 
+          ? 'calc(100px + env(safe-area-inset-bottom, 0px))' 
+          : 'calc(16px + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
       <div className="bg-card border border-border/80 p-3.5 rounded-2xl shadow-elevated glass flex flex-col gap-2 relative">
         
         {/* Banner content */}

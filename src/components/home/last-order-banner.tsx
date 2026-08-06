@@ -134,8 +134,8 @@ export function LastOrderBanner() {
       className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-35 transition-all duration-300 pointer-events-auto"
       style={{
         bottom: isTabBarVisible 
-          ? (hasCartItems ? '162px' : '96px') 
-          : '20px',
+          ? (hasCartItems ? 'calc(168px + env(safe-area-inset-bottom, 0px))' : 'calc(100px + env(safe-area-inset-bottom, 0px))') 
+          : (hasCartItems ? 'calc(82px + env(safe-area-inset-bottom, 0px))' : 'calc(16px + env(safe-area-inset-bottom, 0px))'),
       }}
     >
       <Link
