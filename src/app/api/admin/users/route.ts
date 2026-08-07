@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit
 
   try {
-    const where: any = {}
+    const where: any = {
+      NOT: {
+        email: { startsWith: 'guest-' }
+      }
+    }
 
     if (role && role !== 'ALL') {
       where.role = role

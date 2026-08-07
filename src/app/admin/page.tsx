@@ -89,7 +89,13 @@ export default async function AdminPage() {
         },
         _sum: { total: true },
       }),
-      prisma.user.count(),
+      prisma.user.count({
+        where: {
+          NOT: {
+            email: { startsWith: 'guest-' }
+          }
+        }
+      }),
       prisma.product.count({
         where: {
           stock: { lt: 15 },
