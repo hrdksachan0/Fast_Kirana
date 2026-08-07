@@ -350,12 +350,12 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         setActiveCategoryTag(prev => {
           if (prev !== currentActiveTag) {
             const categoryTabEl = document.getElementById(`cafe-category-tab-${currentActiveTag}`)
-            if (categoryTabEl) {
-              categoryTabEl.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center'
-              })
+            if (categoryTabEl && categoryTabEl.parentElement) {
+              const container = categoryTabEl.parentElement
+              const containerRect = container.getBoundingClientRect()
+              const tabRect = categoryTabEl.getBoundingClientRect()
+              const scrollLeft = container.scrollLeft + (tabRect.left - containerRect.left) - (containerRect.width / 2) + (tabRect.width / 2)
+              container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' })
             }
             return currentActiveTag
           }

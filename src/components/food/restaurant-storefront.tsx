@@ -301,9 +301,13 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
   // Scroll active tab into view (horizontal tabs for standard restaurants)
   useEffect(() => {
     if (!categoryTabsRef.current) return
-    const activeBtn = categoryTabsRef.current.querySelector(`[data-tag="${activeCategoryTag}"]`)
-    if (activeBtn) {
-      (activeBtn as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    const activeBtn = categoryTabsRef.current.querySelector(`[data-tag="${activeCategoryTag}"]`) as HTMLElement
+    if (activeBtn && categoryTabsRef.current) {
+      const container = categoryTabsRef.current
+      const containerRect = container.getBoundingClientRect()
+      const tabRect = activeBtn.getBoundingClientRect()
+      const scrollLeft = container.scrollLeft + (tabRect.left - containerRect.left) - (containerRect.width / 2) + (tabRect.width / 2)
+      container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' })
     }
   }, [activeCategoryTag])
 
