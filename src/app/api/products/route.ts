@@ -122,26 +122,31 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       const slugs = category.split(',')
-      const isCafeQuery = slugs.some(s => s === 'cafe' || s === 'fastkirana-cafe' || s === 'beverages' || s === 'ice-cream')
+      const isCafeQuery = slugs.some(s => s === 'cafe' || s === 'fastkirana-cafe')
       const isRestaurantQuery = slugs.some(s => s === 'restaurant' || s === 'wedson-restaurant')
 
       if (isCafeQuery) {
         where.OR = [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'hot-beverages', 'cold-beverages', 'beverages', 'drinks', 'shakes', 'mocktails', 'sandwiches', 'burgers', 'pizza', 'rolls', 'chinese', 'pasta', 'snacks', 'desserts', 'bakery', 'south-indian', 'fast-food', 'ice-cream', 'ice_cream', 'food', 'quick-bites', 'coffee', 'tea'] } } },
-          { tags: { hasSome: ['cafe', 'fastkirana-cafe', 'hot-beverage', 'hot-bite', 'sandwiches', 'frankie-rolls', 'chinese', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'south-indian', 'chilled', 'beverages', 'drinks', 'bakery', 'pizza', 'burgers', 'garlic-bread', 'desserts', 'ice-cream', 'tea', 'coffee', 'snack', 'food'] } },
-          { restaurantId: null },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'hot-beverages', 'cold-beverages', 'drinks', 'shakes', 'mocktails', 'sandwiches', 'burgers', 'pizza', 'rolls', 'chinese', 'pasta', 'snacks', 'desserts', 'bakery', 'south-indian', 'fast-food', 'quick-bites', 'coffee', 'tea'] } } },
+          { tags: { hasSome: ['cafe', 'fastkirana-cafe', 'hot-beverage', 'hot-bite', 'sandwiches', 'frankie-rolls', 'chinese', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'south-indian', 'chilled', 'bakery', 'pizza', 'burgers', 'garlic-bread', 'desserts', 'tea', 'coffee', 'food'] } },
         ]
       } else if (isRestaurantQuery) {
         where.OR = [
           { restaurantId: { not: null } },
-          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry', 'beverages', 'ice-cream'] } } },
-          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice', 'beverages', 'beverage', 'drinks', 'ice-cream', 'desserts'] } },
+          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry'] } } },
+          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice'] } },
         ]
       } else {
         where.category = {
           slug: {
             in: slugs,
           },
+        }
+        if (!restaurantId && !restaurantSlug) {
+          where.restaurantId = null
+          where.NOT = [
+            { tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] } }
+          ]
         }
       }
     }

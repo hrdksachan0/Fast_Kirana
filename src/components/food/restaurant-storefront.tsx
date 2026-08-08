@@ -258,56 +258,77 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
   useEffect(() => {
     if (categories.length === 0) return
 
-    let rafId: number
+    const panel = document.getElementById('products-panel')
+
     const handleScroll = () => {
-      cancelAnimationFrame(rafId)
-      rafId = requestAnimationFrame(() => {
-        setIsScrolledPastHero(window.scrollY > 150)
-        if (isClickingTabRef.current) return
+      setIsScrolledPastHero(window.scrollY > 150)
+      if (isClickingTabRef.current) return
 
-        const sectionEls = categories
-          .filter(c => c.tag !== 'all')
-          .map(c => ({
-            tag: c.tag,
-            el: document.getElementById(`section-${c.tag}`),
-          }))
-          .filter(s => s.el)
+      const panelScrollTop = panel ? panel.scrollTop + 80 : window.scrollY + 180
 
-        const scrollTop = window.scrollY + 180
-        let activeTag = 'all'
+      const sectionEls = categories
+        .filter(c => c.tag !== 'all')
+        .map(c => ({
+          tag: c.tag,
+          el: document.getElementById(`section-${c.tag}`),
+        }))
+        .filter(s => s.el)
 
-        for (const section of sectionEls) {
-          if (section.el && section.el.offsetTop <= scrollTop) {
-            activeTag = section.tag
-          }
+      let activeTag = 'all'
+      for (const section of sectionEls) {
+        if (section.el && section.el.offsetTop <= panelScrollTop) {
+          activeTag = section.tag
         }
+      }
 
-        setActiveCategoryTag(activeTag)
-      })
+      setActiveCategoryTag(activeTag)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
+    if (panel) panel.addEventListener('scroll', handleScroll, { passive: true })
+
     return () => {
       window.removeEventListener('scroll', handleScroll)
-      cancelAnimationFrame(rafId)
+      if (panel) panel.removeEventListener('scroll', handleScroll)
     }
   }, [categories])
+
+  // Auto-scroll vertical sidebar just enough to keep active category tab visible without over-scrolling
+  useEffect(() => {
+    if (!activeCategoryTag) return
+    const sidebar = document.getElementById('cafe-sidebar')
+    const activeTabEl = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
+    if (sidebar && activeTabEl) {
+      const containerHeight = sidebar.clientHeight
+      const maxScroll = sidebar.scrollHeight - containerHeight
+      if (maxScroll <= 0) return
+
+      const btnOffsetTop = activeTabEl.offsetTop
+      const btnHeight = activeTabEl.clientHeight
+      const targetScrollTop = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2)
+
+      sidebar.scrollTo({
+        top: Math.max(0, Math.min(targetScrollTop, maxScroll)),
+        behavior: 'smooth'
+      })
+    }
+  }, [activeCategoryTag])
 
   const scrollToSection = (tag: string) => {
     triggerHaptic('light')
     setActiveCategoryTag(tag)
     isClickingTabRef.current = true
 
+    const panel = document.getElementById('products-panel')
     if (tag === 'all') {
+      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       const el = document.getElementById(`section-${tag}`)
-      if (el) {
-        const offset = el.offsetTop - (showStickyBranding ? 120 : 85)
-        window.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' })
+      if (el && panel) {
+        panel.scrollTo({ top: Math.max(0, el.offsetTop - 10), behavior: 'smooth' })
       }
     }
-
     setTimeout(() => { isClickingTabRef.current = false }, 800)
   }
 
@@ -324,34 +345,22 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     }
   }, [activeCategoryTag])
 
-  // Scroll active category tab inside vertical sidebar (#cafe-sidebar) smoothly as user scrolls products
+  // Auto-scroll vertical sidebar just enough to keep active category tab visible without over-scrolling
   useEffect(() => {
     if (!activeCategoryTag) return
     const sidebar = document.getElementById('cafe-sidebar')
     const activeTabEl = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
     if (sidebar && activeTabEl) {
-      const tabTop = activeTabEl.offsetTop
-      const tabHeight = activeTabEl.offsetHeight
-      const sidebarHeight = sidebar.offsetHeight
-      sidebar.scrollTo({
-        top: Math.max(0, tabTop - sidebarHeight / 2 + tabHeight / 2),
-        behavior: 'smooth',
-      })
-    }
-  }, [activeCategoryTag])
-
-  // Auto-scroll vertical sidebar to center active tag button
-  useEffect(() => {
-    if (!activeCategoryTag) return
-    const activeBtn = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
-    const sidebar = document.getElementById(`cafe-sidebar`)
-    if (activeBtn && sidebar) {
       const containerHeight = sidebar.clientHeight
-      const btnOffsetTop = activeBtn.offsetTop
-      const btnHeight = activeBtn.clientHeight
+      const maxScroll = sidebar.scrollHeight - containerHeight
+      if (maxScroll <= 0) return
+
+      const btnOffsetTop = activeTabEl.offsetTop
+      const btnHeight = activeTabEl.clientHeight
       const targetScrollTop = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2)
+
       sidebar.scrollTo({
-        top: Math.max(0, targetScrollTop),
+        top: Math.max(0, Math.min(targetScrollTop, maxScroll)),
         behavior: 'smooth'
       })
     }
@@ -665,9 +674,14 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 <aside 
                   id="cafe-sidebar" 
                   className={cn(
-                    "sticky z-30 w-[88px] min-[375px]:w-[94px] sm:w-[120px] shrink-0 max-h-[calc(100vh-120px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
-                    showStickyBranding ? "top-[110px] sm:top-[120px]" : "top-[66px] sm:top-[74px]"
+                    "sticky z-30 w-[86px] min-[375px]:w-[92px] sm:w-[115px] shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none py-1 pb-4 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
+                    showStickyBranding ? "top-[56px] sm:top-[62px]" : "top-[68px] sm:top-[74px]"
                   )}
+                  style={{
+                    maxHeight: showStickyBranding 
+                      ? 'calc(100vh - 130px)' 
+                      : 'calc(100vh - 145px)',
+                  }}
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag
@@ -719,7 +733,10 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 </aside>
 
                 {/* Right Side Products Container */}
-                <main className="flex-grow min-w-0 space-y-8 pb-40">
+                <main 
+                  id="products-panel" 
+                  className="flex-grow min-w-0 space-y-8 pb-32 overflow-y-auto max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-150px)] scrollbar-none pr-1"
+                >
                   {categories.filter(c => c.tag !== 'all').map(cat => {
                     const isCollapsed = expandedCategories.has(cat.tag)
                     const isExpanded = !isCollapsed || searchQuery !== ''

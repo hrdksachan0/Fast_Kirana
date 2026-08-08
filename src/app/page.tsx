@@ -109,12 +109,13 @@ const getCachedFlashDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
+        NOT: {
+          tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] }
+        },
         OR: [
-          // Grocery flash deals (no restaurant link)
-          { restaurantId: null, isFlashDeal: true },
-          // Grocery high-discount items (no restaurant link)
-          { restaurantId: null, discount: { gt: 10 } },
-          // Beverages, Ice Cream, Desserts & Cakes by tag (show in grocery storefront too)
+          { isFlashDeal: true },
+          { discount: { gt: 10 } },
           { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
         ]
       },
@@ -126,7 +127,7 @@ const getCachedFlashDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v4'],
+  ['storefront-flash-deals-v8'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -135,16 +136,13 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
+        NOT: [
+          { tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] } },
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        ],
         OR: [
-          // Grocery products (no restaurant link, no restaurant tag)
-          {
-            restaurantId: null,
-            NOT: [
-              { tags: { has: 'restaurant' } },
-              { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
-            ]
-          },
-          // Beverages, Ice Cream, Desserts & Cakes by tag (include even with restaurant link)
+          { isBestSeller: true },
           { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
         ]
       },
@@ -156,7 +154,7 @@ const getCachedBestSellers = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v5'],
+  ['storefront-best-sellers-v8'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 

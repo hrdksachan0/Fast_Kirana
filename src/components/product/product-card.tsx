@@ -330,7 +330,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             disabled={wishlistLoading}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             className={cn(
-              "absolute top-1.5 right-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
+              "absolute top-1 right-1 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
               isWishlisted
                 ? "opacity-100 bg-rose-500 text-white shadow-md scale-105"
                 : "opacity-85 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110",

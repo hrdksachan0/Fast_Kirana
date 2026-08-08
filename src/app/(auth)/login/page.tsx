@@ -185,11 +185,11 @@ function LoginForm() {
         }
       }
 
-      if (data.isWorker || data.hasPassword) {
-        // Staff or user with password → password step directly (NO OTP!)
+      if (data.isWorker) {
+        // Staff/Admin/Chef → password step directly
         setStep('PASSWORD')
       } else {
-        // Normal customer → send OTP code!
+        // Normal customer → always send OTP (even if they have a password)
         await sendOtp(finalEmail)
       }
     } catch {
