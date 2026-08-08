@@ -106,6 +106,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Selected address is invalid' }, { status: 400 })
     }
 
+    // Fetch store settings early (needed for pincode check, tax, misc fee, store status)
+    const storeSettings = await prisma.storeSetting.findMany()
+    const settingsMap = storeSettings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
     // Distance-based delivery validation
     let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
 
@@ -180,12 +187,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch store settings for dynamic tax, miscellaneous fee, and store status
-    const storeSettings = await prisma.storeSetting.findMany()
-    const settingsMap = storeSettings.reduce((acc, s) => {
-      acc[s.key] = s.value
-      return acc
-    }, {} as Record<string, string>)
+    // settingsMap already fetched above (before delivery validation)
 
     function getStoreStatus(prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
       const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
