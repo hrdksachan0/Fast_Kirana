@@ -48,25 +48,23 @@ export async function sendOtpEmail(email: string, otp: string) {
   `
 
   if (resend) {
-    try {
-      const resendFrom = fromEmail.includes('@gmail.com') || fromEmail.includes('@yahoo.com') || fromEmail.includes('@outlook.com')
-        ? 'onboarding@resend.dev'
-        : fromEmail
+    const resendFrom = fromEmail.includes('@gmail.com') || fromEmail.includes('@yahoo.com') || fromEmail.includes('@outlook.com')
+      ? 'onboarding@resend.dev'
+      : fromEmail
 
-      const { data, error } = await resend.emails.send({
-        from: resendFrom,
-        to: email,
-        subject: `${otp} is your FastKirana verification code`,
-        html: htmlContent,
-      })
-      
-      if (error) {
-        console.error('Error response from Resend API:', error)
-      }
-    } catch (error) {
-      console.error('Error sending email via Resend:', error)
+    const { data, error } = await resend.emails.send({
+      from: resendFrom,
+      to: email,
+      subject: `${otp} is your FastKirana verification code`,
+      html: htmlContent,
+    })
+    
+    if (error) {
+      console.error('Error response from Resend API:', error)
+      throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`)
     }
   } else {
-    console.warn('Resend is not configured (RESEND_API_KEY missing). Email NOT sent.')
+    console.error('Resend is not configured (RESEND_API_KEY missing). Email NOT sent.')
+    throw new Error('Email service not configured')
   }
 }

@@ -75,10 +75,42 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
-          select: { isBlocked: true, blockReason: true }
+          select: { id: true, isBlocked: true, blockReason: true }
         })
+
         if (dbUser?.isBlocked) {
           return false
+        }
+
+        // Auto-link Google OAuth account if user previously registered via OTP/Email
+        if (account && account.provider && dbUser) {
+          try {
+            const existingAccount = await prisma.account.findFirst({
+              where: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId
+              }
+            })
+
+            if (!existingAccount) {
+              await prisma.account.create({
+                data: {
+                  userId: dbUser.id,
+                  type: account.type || 'oauth',
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                }
+              })
+            }
+          } catch (linkErr) {
+            console.error('Auto account linking notice:', linkErr)
+          }
         }
       }
       return true // allow sign-in

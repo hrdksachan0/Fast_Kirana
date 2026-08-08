@@ -213,9 +213,6 @@ function LoginForm() {
         toast.error(data.error || 'Failed to send OTP code')
       } else {
         toast.success(`Verification code sent to ${formatIdentifierDisplay(emailToUse)}`)
-        if (data.otp) {
-          setTestOtp(data.otp)
-        }
         setStep('OTP')
       }
     } catch {

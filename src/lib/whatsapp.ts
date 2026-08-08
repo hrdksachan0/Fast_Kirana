@@ -22,7 +22,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
   }
 
   // Normalize phone to WhatsApp format (no +, country code included)
-  const cleanPhone = normalizePhone(phone)
+  const cleanPhone = normalizePhone(phone).replace(/^\+/, '')
 
   try {
     let body: any = {
@@ -100,15 +100,15 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
 }
 
 export async function sendWhatsAppOrderAlert(phone: string, textParam: string): Promise<boolean> {
-  const token = process.env.WHATSAPP_TOKEN
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME
+  const token = getCleanEnv('WHATSAPP_TOKEN')
+  const phoneId = getCleanEnv('WHATSAPP_PHONE_NUMBER_ID')
+  const templateName = getCleanEnv('WHATSAPP_ORDER_TEMPLATE_NAME')
 
   if (!token || !phoneId || !templateName) {
     return false
   }
 
-  const cleanPhone = normalizePhone(phone)
+  const cleanPhone = normalizePhone(phone).replace(/^\+/, '')
 
   try {
     const body = {
