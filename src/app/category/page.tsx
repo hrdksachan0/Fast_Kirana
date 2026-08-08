@@ -1,10 +1,18 @@
 import { prisma } from '@/lib/prisma'
 import { CategoriesDirectoryClient } from '@/components/category/categories-directory-client'
 import { Category } from '@/types'
+import { Metadata } from 'next'
 import { Suspense } from 'react'
 
-// Revalidate this page every 24 hours
 export const revalidate = 86400
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: 'All Categories - FastKirana | Grocery, Cafe & Restaurant',
+    description: 'Browse all categories at FastKirana. Fresh groceries, dairy, snacks, beverages, ice cream, bakery, and more delivered fast in Ghatampur, Kanpur.',
+    keywords: ['grocery categories', 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur', 'snacks', 'dairy', 'beverages'],
+  }
+}
 
 async function CategoriesLoader() {
   // Fetch all categories from database

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { STORE_PINCODE, STORE_ADDRESS, STORE_PHONE, GROCERY_PICKUP_ADDRESS, CAFE_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, SERVICE_AREA_NAME } from '@/lib/store-config'
 
 interface AdminSettingsProps {
   onSettingsSaved?: () => void
@@ -41,13 +42,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [taxRate, setTaxRate] = useState('5')
   const [miscFee, setMiscFee] = useState('0')
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
-  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
+  const [contactPhone, setContactPhone] = useState(STORE_PHONE)
   const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
-  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
-  const [groceryPickupAddress, setGroceryPickupAddress] = useState('Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206')
-  const [cafePickupAddress, setCafePickupAddress] = useState('Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206')
-  const [restaurantPickupAddress, setRestaurantPickupAddress] = useState('A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206')
+  const [contactAddress, setContactAddress] = useState(STORE_ADDRESS)
+  const [groceryPickupAddress, setGroceryPickupAddress] = useState(GROCERY_PICKUP_ADDRESS)
+  const [cafePickupAddress, setCafePickupAddress] = useState(CAFE_PICKUP_ADDRESS)
+  const [restaurantPickupAddress, setRestaurantPickupAddress] = useState(RESTAURANT_PICKUP_ADDRESS)
   const [notifyPhone1, setNotifyPhone1] = useState(true)
   const [notifyPhone2, setNotifyPhone2] = useState(true)
   const [groceryFreeDeliveryThreshold, setGroceryFreeDeliveryThreshold] = useState('199')

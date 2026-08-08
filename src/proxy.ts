@@ -1,6 +1,6 @@
-import NextAuth from 'next-auth'
-import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 // Clean environment variables (removes quotes if copy-pasted with quotes)
 const getCleanSecret = (key: string): string => {
@@ -15,15 +15,12 @@ const getCleanSecret = (key: string): string => {
   return val.trim()
 }
 
-const cleanSecret = getCleanSecret('AUTH_SECRET')
+const secret = getCleanSecret('AUTH_SECRET')
 
-const { auth } = NextAuth({
-  ...authConfig,
-  secret: cleanSecret || undefined,
-})
-
-export const proxy = auth((req) => {
-  const isLoggedIn = !!req.auth
+export async function proxy(req: NextRequest) {
+  const token = await getToken({ req, secret: secret || undefined })
+  const isLoggedIn = !!token
+  const userRole = token?.role as string | undefined
   const { nextUrl } = req
 
   // Reconstruct original request domain to bypass NextAuth NEXTAUTH_URL localhost overrides
@@ -35,12 +32,10 @@ export const proxy = auth((req) => {
   const isAuthRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/signup'
   const isAdminRoute = nextUrl.pathname.startsWith('/admin')
 
-
   // Allow API auth routes to go through
   if (isApiAuthRoute) return NextResponse.next()
 
   // Helper to get target console URL for staff roles
-  const userRole = req.auth?.user?.role
   const getStaffConsoleUrl = (role?: string) => {
     if (role === 'RESTAURANT_OWNER' || role === 'CHEF') return '/restaurant-kitchen'
     if (role === 'DELIVERY') return '/delivery'
@@ -65,15 +60,6 @@ export const proxy = auth((req) => {
     return NextResponse.redirect(new URL(staffConsoleUrl, baseUrl))
   }
 
-  // Redirect authenticated users who lack a mobile number to /setup-profile (Disabled to improve signup UX)
-  // const isSetupProfileRoute = nextUrl.pathname === '/setup-profile'
-  // if (isLoggedIn && !isSetupProfileRoute) {
-  //   const userPhone = req.auth?.user?.phone
-  //   if (!userPhone) {
-  //     return NextResponse.redirect(new URL('/setup-profile', baseUrl))
-  //   }
-  // }
-
   // Protect account, checkout, and order routes
   const isProtectedRoute =
     nextUrl.pathname.startsWith('/account') ||
@@ -96,7 +82,6 @@ export const proxy = auth((req) => {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    const userRole = req.auth?.user?.role
     if (userRole !== 'DELIVERY' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
@@ -109,7 +94,6 @@ export const proxy = auth((req) => {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    const userRole = req.auth?.user?.role
     if (userRole !== 'PICKER' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
@@ -122,7 +106,6 @@ export const proxy = auth((req) => {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    const userRole = req.auth?.user?.role
     if (userRole !== 'CHEF' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
@@ -134,14 +117,13 @@ export const proxy = auth((req) => {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    const userRole = req.auth?.user?.role
     if (userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|products/|categories/|icons/).*)'],

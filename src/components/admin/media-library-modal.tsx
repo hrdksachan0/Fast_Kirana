@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { X, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -31,18 +32,30 @@ export default function MediaLibraryModal({
 }: MediaLibraryModalProps) {
   if (!showMediaLibrary) return null
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowMediaLibrary(false)
+    }
+  }, [setShowMediaLibrary])
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="media-library-title"
+      onKeyDown={handleKeyDown}
+    >
       <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <span className="text-xl">🖼️</span>
             <div>
-              <h3 className="font-extrabold text-text-primary text-sm sm:text-base">Media Photo Library</h3>
+              <h3 id="media-library-title" className="font-extrabold text-text-primary text-sm sm:text-base">Media Photo Library</h3>
               <p className="text-[10px] text-text-secondary">Pick any existing photo from past uploads ({filteredMediaImages.length} available)</p>
             </div>
           </div>
-          <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
+          <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer" aria-label="Close media library">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -55,6 +68,7 @@ export default function MediaLibraryModal({
             placeholder="Search photo by product name or keyword (e.g. dal, biryani, paneer)..."
             value={mediaSearchQuery}
             onChange={(e) => setMediaSearchQuery(e.target.value)}
+            aria-label="Search photo library"
             className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
           />
         </div>

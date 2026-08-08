@@ -119,6 +119,7 @@ model User {
   pickerOrders   Order[]   @relation("PickerOrders")
   chefOrders     Order[]   @relation("ChefOrders")
   pushSubscriptions PushSubscription[]
+  wishlistItems WishlistItem[]
   assignedStore  DarkStore? @relation("StoreStaff", fields: [assignedStoreId], references: [id])
   assignedRestaurant Restaurant? @relation("RestaurantStaff", fields: [assignedRestaurantId], references: [id])
   riderWallet    RiderWallet?
@@ -214,6 +215,7 @@ model Product {
   batches      ProductBatch[]
   inventories  StoreInventory[]
   stockLogs    StockLog[]
+  wishlistItems WishlistItem[]
 
   @@index([categoryId])
   @@index([restaurantId])
@@ -264,6 +266,20 @@ model CartItem {
 
   @@unique([cartId, productId, selectedVariant])
   @@map("cart_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("wishlist_items")
 }
 
 model Order {

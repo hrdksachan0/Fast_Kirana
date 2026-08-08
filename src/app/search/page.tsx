@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/product/product-card'
 import { SearchResultsClient } from '@/components/search/search-results-client'
@@ -8,6 +9,21 @@ import { sortProductsByStock } from '@/lib/utils'
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string }>
+}
+
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
+  const { q } = await searchParams
+  const query = q?.trim() || ''
+  if (query) {
+    return {
+      title: `Search results for "${query}" - FastKirana`,
+      description: `Find ${query} and more at FastKirana. Fresh groceries, snacks, dairy and more delivered fast in Ghatampur.`,
+    }
+  }
+  return {
+    title: 'Search - FastKirana',
+    description: 'Search for products at FastKirana. Groceries, snacks, beverages, dairy and more.',
+  }
 }
 
 export const revalidate = 0 // Search is dynamic

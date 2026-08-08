@@ -30,6 +30,7 @@ interface StorefrontClientProps {
   nightProducts: Product[]
   settingsMap: Record<string, string>
   sortRules: Record<string, string>
+  restaurants?: any[]
 }
 
 type ActiveTab = 'grocery' | 'food'
@@ -46,6 +47,7 @@ export function StorefrontClient({
   nightProducts,
   settingsMap,
   sortRules,
+  restaurants,
 }: StorefrontClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -116,7 +118,7 @@ export function StorefrontClient({
 
       {/* Premium Grocery / Food Slider */}
       <div className="flex justify-center mt-6 sm:mt-8 mb-4 sm:mb-5 px-4">
-        <div className="relative flex items-center w-full max-w-[420px] h-[60px] sm:h-[66px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70">
+        <div className="relative flex items-center w-full max-w-[420px] h-[60px] sm:h-[66px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70" role="tablist" aria-label="Store mode">
           <motion.button
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
@@ -125,6 +127,9 @@ export function StorefrontClient({
               "relative z-10 flex items-center justify-center gap-2.5 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent",
               activeTab === 'grocery' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
             )}
+            aria-label="Switch to grocery mode"
+            role="tab"
+            aria-selected={activeTab === 'grocery'}
           >
             {activeTab === 'grocery' && (
               <motion.div
@@ -153,6 +158,9 @@ export function StorefrontClient({
               "relative z-10 flex items-center justify-center gap-2.5 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent",
               activeTab === 'food' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
             )}
+            aria-label="Switch to food mode"
+            role="tab"
+            aria-selected={activeTab === 'food'}
           >
             {activeTab === 'food' && (
               <motion.div
@@ -240,7 +248,7 @@ export function StorefrontClient({
             <FloatingEmojis type="food" />
             {/* Swiggy-style restaurant listing — banner + cards */}
             <FoodBanner />
-            <RestaurantListing />
+            <RestaurantListing initialRestaurants={restaurants} />
           </motion.div>
         )}
       </AnimatePresence>

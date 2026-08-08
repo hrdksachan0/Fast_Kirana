@@ -38,12 +38,24 @@ export function CategoryEditModal({
   setEditingCategory,
   setCategoryEditForm,
 }: CategoryEditModalProps) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setEditingCategory(null)
+    }
+  }, [setEditingCategory])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-edit-title"
+      onKeyDown={handleKeyDown}
+    >
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
         <div className="flex justify-between items-center border-b border-border/60 pb-3">
-          <h4 className="font-extrabold text-text-primary text-base">Edit Category</h4>
-          <button onClick={() => setEditingCategory(null)} className="text-text-secondary hover:text-text-primary">
+          <h4 id="category-edit-title" className="font-extrabold text-text-primary text-base">Edit Category</h4>
+          <button onClick={() => setEditingCategory(null)} className="text-text-secondary hover:text-text-primary" aria-label="Close category edit dialog">
             <X className="h-5 w-5" />
           </button>
         </div>

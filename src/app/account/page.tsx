@@ -1,10 +1,18 @@
 import { redirect } from 'next/navigation'
+import { Metadata } from 'next'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { AccountDashboard } from '@/components/account/account-dashboard'
 import { getLast10Digits } from '@/lib/phone'
 
 export const revalidate = 0 // Account details are fully dynamic
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: 'My Account - FastKirana',
+    description: 'Manage your FastKirana account. View orders, addresses, and profile settings.',
+  }
+}
 
 export default async function AccountPage() {
   const session = await auth()

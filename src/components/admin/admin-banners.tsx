@@ -2,19 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { 
-  Image as ImageIcon, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Check, 
-  X, 
-  Gift, 
-  Sparkles, 
-  Eye, 
-  Loader2, 
-  ArrowUp, 
-  ArrowDown, 
+import { SERVICE_AREA_NAME } from '@/lib/store-config'
+import {
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  Edit2,
+  Check,
+  X,
+  Gift,
+  Sparkles,
+  Eye,
+  Loader2,
+  ArrowUp,
+  ArrowDown,
   Power
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -787,7 +788,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
               <div className="absolute inset-0 flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
                 <div className="text-left space-y-0.5">
                   <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
-                  <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || 'Ghatampur'}</h4>
+                  <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || SERVICE_AREA_NAME}</h4>
                   <p className="text-[9px] text-[#4d4d4d] font-bold line-clamp-1">{description || 'Milk, Fruits, Vegetables, Snacks & more'}</p>
                 </div>
                 <div className="text-2xl pr-2">🛍️</div>

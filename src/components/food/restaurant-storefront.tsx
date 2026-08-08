@@ -579,7 +579,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 {/* Left Vertical Category Sidebar */}
                 <aside 
                   id="cafe-sidebar" 
-                  className="sticky top-[66px] sm:top-[74px] z-30 w-[80px] min-[375px]:w-[85px] sm:w-[110px] shrink-0 max-h-[calc(100vh-145px)] overflow-y-auto scrollbar-none py-1 pb-28 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
+                  className="sticky top-[66px] sm:top-[74px] z-30 w-[85px] min-[375px]:w-[90px] sm:w-[115px] shrink-0 max-h-[calc(100vh-90px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag
@@ -631,7 +631,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 </aside>
 
                 {/* Right Side Products Container */}
-                <main className="flex-grow min-w-0 space-y-6 pb-32">
+                <main className="flex-grow min-w-0 space-y-8 pb-40">
                   {categories.filter(c => c.tag !== 'all').map(cat => {
                     const isCollapsed = expandedCategories.has(cat.tag)
                     const isExpanded = !isCollapsed || searchQuery !== ''
@@ -643,35 +643,33 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                         className="space-y-3 pt-4 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 scroll-mt-24"
                       >
                         <div className="flex items-center justify-between px-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
                               {cat.title} Specials
                             </h4>
+                            <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                              {cat.products.length} items
+                            </span>
                           </div>
                           <button
                             onClick={() => {
                               triggerHaptic('light')
                               toggleCategoryExpand(cat.tag)
                             }}
-                            className="text-[11px] font-black text-orange-600 hover:opacity-85 flex items-center gap-0.5 select-none"
+                            className="text-[11px] font-black text-orange-600 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
                           >
                             <span>{isExpanded ? 'Collapse' : `See All (${cat.products.length})`}</span>
-                            <ChevronRight size={10} strokeWidth={3} className={cn("transition-transform duration-200", isExpanded && "rotate-90")} />
+                            <ChevronRight size={12} strokeWidth={3} className={cn("transition-transform duration-200", isExpanded && "rotate-90")} />
                           </button>
                         </div>
 
                         {isExpanded ? (
-                          /* Expanded: Grid Layout */
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-fade-in">
-                            {cat.products.map((product: any, idx: number) => (
-                              <motion.div
-                                key={product.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.25, delay: idx * 0.03 }}
-                              >
+                          /* Expanded: Full Grid Layout (Top to Bottom) */
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {cat.products.map((product: any) => (
+                              <div key={product.id} className="w-full">
                                 <ProductCard product={product} />
-                              </motion.div>
+                              </div>
                             ))}
                           </div>
                         ) : (

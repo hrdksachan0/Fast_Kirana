@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatOrderTime } from '@/lib/date-helpers'
@@ -64,14 +65,26 @@ export default function OrderTrackingModal({
 }: OrderTrackingModalProps) {
   const order = selectedOrderForTracking
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setSelectedOrderForTracking(null)
+    }
+  }, [setSelectedOrderForTracking])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="order-tracking-title"
+      onKeyDown={handleKeyDown}
+    >
       <div className="bg-card border border-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl space-y-0 my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-5 bg-muted/40 border-b border-border flex items-center justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-extrabold text-base text-text-primary">
+              <h3 id="order-tracking-title" className="font-extrabold text-base text-text-primary">
                 Order #{order?.readableId || order?.id?.slice(0, 8)}
               </h3>
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
@@ -114,6 +127,7 @@ export default function OrderTrackingModal({
           <button
             onClick={() => setSelectedOrderForTracking(null)}
             className="p-1.5 rounded-full hover:bg-muted text-text-secondary transition-colors cursor-pointer text-sm font-bold"
+            aria-label="Close order tracking"
           >
             ✕
           </button>

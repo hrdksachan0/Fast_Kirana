@@ -29,6 +29,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
 
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [isWishlisted, setIsWishlisted] = useState(false)
+
   const timingStatus = useMemo(() => {
     return checkDishTimeAvailability(
       (product as any).availableStartTime,
@@ -111,6 +114,28 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
       })
     })
   }, [isNotifySubscribed, product.id, product.name, subscribe])
+
+  const toggleWishlist = useCallback(async () => {
+    if (wishlistLoading) return
+
+    setWishlistLoading(true)
+    try {
+      const res = await fetch('/api/wishlist', {
+        method: isWishlisted ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id }),
+      })
+
+      if (!res.ok) throw new Error('Failed to update wishlist')
+
+      setIsWishlisted(!isWishlisted)
+      toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist')
+    } catch {
+      toast.error('Failed to update wishlist')
+    } finally {
+      setWishlistLoading(false)
+    }
+  }, [isWishlisted, product.id, wishlistLoading])
 
   const productType = getProductType(product)
   const isCafe = productType === 'CAFE'
@@ -263,12 +288,12 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         )}
 
         {/* Image Container */}
-        <div 
-          ref={imageRef} 
+        <div
+          ref={imageRef}
           className={cn(
             "relative w-full overflow-hidden rounded-2xl bg-muted/15 dark:bg-white/[0.03] flex items-center justify-center shrink-0 border border-border/30",
-            isCompact 
-              ? "h-[75px] min-[375px]:h-[85px] sm:h-[105px]" 
+            isCompact
+              ? "h-[75px] min-[375px]:h-[85px] sm:h-[105px]"
               : "h-[95px] min-[375px]:h-[110px] sm:h-[125px] md:h-[145px]"
           )}
         >
@@ -281,7 +306,41 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             className="h-full w-full object-contain p-1.5 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
           />
 
-          {/* Green Veg Icon Badge for Restaurant Dishes */}
+          {/* Heart / Wishlist Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              toggleWishlist()
+            }}
+            disabled={wishlistLoading}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={cn(
+              "absolute top-1.5 right-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
+              isWishlisted
+                ? "opacity-100 bg-rose-500 text-white shadow-md scale-105"
+                : "opacity-85 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110",
+              wishlistLoading && "opacity-70 cursor-wait"
+            )}
+          >
+            {wishlistLoading ? (
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            ) : (
+              <Heart
+                className={cn(
+                  "h-3.5 w-3.5 transition-all",
+                  isWishlisted && "fill-current"
+                )}
+                strokeWidth={isWishlisted ? 0 : 2.5}
+              />
+            )}
+          </button>
+
+        {/* Green Veg Icon Badge for Restaurant Dishes */}
           {isRestaurant && (
             <div className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center h-3.5 w-3.5 rounded-xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs pointer-events-none select-none" title="Pure Veg Dish">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
@@ -296,7 +355,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 ? "bg-gradient-to-r from-red-600 to-amber-600 shadow-[0_2px_8px_rgba(226,10,34,0.3)]" 
                 : "bg-amber-500/95 shadow-[0_2px_8px_rgba(245,158,11,0.25)]"
             )}>
-              {isRestaurant ? `👨‍🍳 ${((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef'} Special` : '⭐ Bestseller'}
+              {isRestaurant ? ('👨‍🍳 ' + (((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef') + ' Special') : '⭐ Bestseller'}
             </div>
           )}
 
@@ -332,6 +391,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             </motion.div>
           )}
         </div>
+      </Link>
 
         {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Immediately below image container */}
         <div className="flex items-center justify-between gap-1 mt-1.5 mb-1 shrink-0 w-full min-w-0">
@@ -459,7 +519,6 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             <span className="truncate tracking-tight">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
           </div>
         )}
-      </Link>
-    </div>
+      </div>
   )
 }

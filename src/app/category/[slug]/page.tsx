@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { CategoryPageClient } from '@/components/category/category-page-client'
 import { Category, Product } from '@/types'
+import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { sortProductsByStock } from '@/lib/utils'
 
@@ -10,6 +11,22 @@ interface CategoryPageProps {
 }
 
 export const revalidate = 300 // Cache for 5 minutes (saves DB active CPU), purged on-demand when products update
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const category = await prisma.category.findFirst({
+    where: { slug },
+    select: { name: true },
+  }).catch(() => null)
+
+  const name = category?.name || slug.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
+  return {
+    title: `${name} - FastKirana | Online Grocery Delivery`,
+    description: `Buy ${name} online at FastKirana. Fresh products, fast delivery in Ghatampur, Kanpur.`,
+    keywords: [name, 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur'],
+  }
+}
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params

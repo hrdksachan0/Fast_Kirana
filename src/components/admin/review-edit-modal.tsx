@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { X, Loader2 } from 'lucide-react'
 
 interface Review {
@@ -28,12 +29,24 @@ export function ReviewEditModal({
   setEditingReview,
   setReviewEditForm,
 }: ReviewEditModalProps) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setEditingReview(null)
+    }
+  }, [setEditingReview])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="review-edit-title"
+      onKeyDown={handleKeyDown}
+    >
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
         <div className="flex justify-between items-center border-b border-border/60 pb-3">
-          <h4 className="font-extrabold text-text-primary text-base">Edit Review</h4>
-          <button onClick={() => setEditingReview(null)} className="text-text-secondary hover:text-text-primary">
+          <h4 id="review-edit-title" className="font-extrabold text-text-primary text-base">Edit Review</h4>
+          <button onClick={() => setEditingReview(null)} className="text-text-secondary hover:text-text-primary" aria-label="Close review edit dialog">
             <X className="h-5 w-5" />
           </button>
         </div>

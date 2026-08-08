@@ -5,7 +5,7 @@ import { Search, X, User, MapPin, Plus, Minus, Trash2, Loader2, Check, ShoppingB
 import { toast } from 'sonner'
 import { formatPrice, formatDisplayEmail, formatPhone } from '@/lib/utils'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
-import { STORE_PINCODE } from '@/lib/store-config'
+import { STORE_PINCODE, SERVICE_AREA_NAME } from '@/lib/store-config'
 import { useUIStore } from '@/stores/ui-store'
 
 interface CreateOrderModalProps {
@@ -89,7 +89,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [manualArea, setManualArea] = useState('')
   const [manualPincode, setManualPincode] = useState(STORE_PINCODE)
   const [manualPhone, setManualPhone] = useState('')
-  const [manualCity, setManualCity] = useState('Ghatampur')
+  const [manualCity, setManualCity] = useState(SERVICE_AREA_NAME)
 
   // Product selection states
   const [productSearch, setProductSearch] = useState('')
@@ -195,7 +195,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setManualHouseNo('')
     setManualStreet('')
     setManualArea('')
-    setManualPincode('209206')
+    setManualPincode(STORE_PINCODE)
 
     const fetchAddressesAndCart = async () => {
       try {
@@ -460,8 +460,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           toast.error('Please fill in all manual address fields')
           return
         }
-        if (manualPincode.trim() !== '209206') {
-          toast.error('Only pincode 209206 is serviceable for delivery.')
+        if (manualPincode.trim() !== STORE_PINCODE) {
+          toast.error(`Only pincode ${STORE_PINCODE} is serviceable for delivery in ${SERVICE_AREA_NAME}.`)
           return
         }
       } else {

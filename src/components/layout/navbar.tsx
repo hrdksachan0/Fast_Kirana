@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon } from 'lucide-react'
+import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon, Heart } from 'lucide-react'
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { triggerHaptic } from '@/lib/haptic'
 import { playCartPop } from '@/lib/audio'
@@ -476,14 +476,24 @@ export function Navbar() {
                 {session && session.user.role !== 'USER' ? 'My Console' : 'My Account'}
               </span>
             </Link>
-            <Link 
-              href="/account/orders" 
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors" 
+            <Link
+              href="/account/orders"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <ShoppingBag size={18} className="text-zinc-500 dark:text-zinc-400" />
               <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Orders</span>
             </Link>
+            {session && session.user.role === 'USER' && (
+              <Link
+                href="/account/wishlist"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Heart size={18} className="text-rose-500" />
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Wishlist</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

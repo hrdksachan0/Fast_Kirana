@@ -1,6 +1,7 @@
 'use client'
 
 import { X, Loader2 } from 'lucide-react'
+import { useCallback } from 'react'
 import { formatDisplayEmail } from '@/lib/utils'
 
 interface BlockCustomerModalProps {
@@ -20,8 +21,20 @@ export function BlockCustomerModal({
   setBlockReasonInput,
   handleToggleBlock,
 }: BlockCustomerModalProps) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setBlockingUser(null)
+    }
+  }, [setBlockingUser])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="block-customer-title"
+      onKeyDown={handleKeyDown}
+    >
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
         <div className="flex justify-between items-center border-b border-border/60 pb-3">
           <div>
@@ -36,6 +49,7 @@ export function BlockCustomerModal({
           <button
             onClick={() => setBlockingUser(null)}
             className="text-text-secondary hover:text-text-primary p-1 rounded-lg hover:bg-muted cursor-pointer"
+            aria-label="Close block customer dialog"
           >
             <X className="h-5 w-5" />
           </button>

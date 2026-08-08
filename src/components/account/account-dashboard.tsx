@@ -1,14 +1,17 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { formatPrice, formatAddress } from '@/lib/utils'
+import { useCart } from '@/hooks/use-cart'
+import { useCartStore } from '@/stores/cart-store'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2 } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { cn } from '@/lib/utils'
 import { BuyAgainSection } from '@/components/home/buy-again-section'
 import { useSearchParams } from 'next/navigation'
@@ -17,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { triggerHaptic } from '@/lib/haptic'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+import { WishlistClient } from '@/components/account/wishlist-client'
 
 interface AccountDashboardProps {
   user: {
@@ -30,6 +34,7 @@ interface AccountDashboardProps {
 }
 
 export function AccountDashboard({ user, addresses: initialAddresses, orders: initialOrders }: AccountDashboardProps) {
+  const router = useRouter()
   const [addresses, setAddresses] = useState(initialAddresses)
   const [orders, setOrders] = useState(initialOrders)
   const searchParams = useSearchParams()
@@ -44,6 +49,8 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     pincode: '209206',
     isDefault: false
   })
+  const [orderSearchQuery, setOrderSearchQuery] = useState('')
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL')
 
   // Resend countdown timers
   const [emailCountdown, setEmailCountdown] = useState(0)
@@ -458,10 +465,14 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
       {/* Tabs Layout */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-xl mb-6">
+        <TabsList className="grid w-full grid-cols-4 bg-muted p-1 rounded-xl mb-6">
           <TabsTrigger value="orders" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
             <Package className="h-3.5 w-3.5" />
             My Orders
+          </TabsTrigger>
+          <TabsTrigger value="wishlist" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
+            <Heart className="h-3.5 w-3.5" />
+            Wishlist
           </TabsTrigger>
           <TabsTrigger value="addresses" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
             <MapPin className="h-3.5 w-3.5" />
@@ -469,12 +480,37 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           </TabsTrigger>
           <TabsTrigger value="profile" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
             <User className="h-3.5 w-3.5" />
-            Profile Info
+            Profile
           </TabsTrigger>
         </TabsList>
 
         {/* Tab Content: Orders */}
         <TabsContent value="orders" className="space-y-4 animate-fade-in focus-visible:outline-none">
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search orders by ID or item name..."
+                value={orderSearchQuery}
+                onChange={(e) => setOrderSearchQuery(e.target.value)}
+                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+                aria-label="Search orders"
+              />
+            </div>
+            <select
+              value={orderStatusFilter}
+              onChange={(e) => setOrderStatusFilter(e.target.value)}
+              className="bg-muted/20 border border-border px-3 py-2.5 rounded-2xl text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
+              aria-label="Filter orders by status"
+            >
+              <option value="ALL">All Status</option>
+              {Object.entries(ORDER_STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
           {/* Sub-Tabs Bar for Live Orders vs Order History */}
           <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3 overflow-x-auto no-scrollbar">
             <button
@@ -520,11 +556,25 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
           {/* Render Orders Based on Sub-Tab */}
           {(() => {
-            const filteredOrders = orders.filter((ord) =>
+            let filteredOrders = orders.filter((ord) =>
               orderSubTab === 'LIVE'
                 ? !['DELIVERED', 'CANCELLED'].includes(ord.status)
                 : ['DELIVERED', 'CANCELLED'].includes(ord.status)
             )
+
+            // Apply status filter
+            if (orderStatusFilter !== 'ALL') {
+              filteredOrders = filteredOrders.filter((ord) => ord.status === orderStatusFilter)
+            }
+
+            // Apply search filter
+            if (orderSearchQuery.trim()) {
+              const q = orderSearchQuery.toLowerCase().trim()
+              filteredOrders = filteredOrders.filter((ord) =>
+                ord.id.toLowerCase().includes(q) ||
+                ord.items?.some((item: any) => item.name?.toLowerCase().includes(q))
+              )
+            }
 
             if (filteredOrders.length === 0) {
               return (
@@ -571,6 +621,41 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       Track Order
                       <ArrowRight className="h-3 w-3 stroke-[2.8]" />
                     </Link>
+                    {['DELIVERED', 'CANCELLED'].includes(ord.status) && (
+                      <button
+                        onClick={() => {
+                          if (!confirm('Reorder these items? This will clear your current cart.')) return
+                          try {
+                            const { addItem, clearCart } = useCartStore.getState()
+                            clearCart()
+                            for (const item of ord.items || []) {
+                              addItem({
+                                id: item.id,
+                                name: item.name,
+                                slug: '',
+                                imageUrl: item.imageUrl || '',
+                                mrp: item.mrp || item.price,
+                                price: item.price,
+                                discount: 0,
+                                unit: item.unit || '',
+                                stock: 99,
+                                isAvailable: true,
+                                tags: [],
+                                category: undefined,
+                              })
+                            }
+                            toast.success('Items added to cart!')
+                            router.push('/cart')
+                          } catch {
+                            toast.error('Failed to reorder. Please try again.')
+                          }
+                        }}
+                        className="text-[10px] font-black text-white bg-accent hover:bg-accent/90 px-3 py-1.5 rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <ShoppingBag className="h-3 w-3" />
+                        Reorder
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="text-xs font-semibold text-text-secondary flex flex-wrap gap-x-4 gap-y-1">
@@ -586,6 +671,15 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
           {/* One-tap Reorder Buy Again Section */}
           <BuyAgainSection />
+        </TabsContent>
+
+        {/* Tab Content: Wishlist */}
+        <TabsContent value="wishlist" className="animate-fade-in focus-visible:outline-none">
+          <Suspense fallback={<div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>}>
+            <WishlistClient />
+          </Suspense>
         </TabsContent>
 
         {/* Tab Content: Saved Addresses */}
