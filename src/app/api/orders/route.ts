@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
     let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
 
     if (deliveryMethod === 'DELIVERY') {
-      const p = address.pincode.trim()
-      const serviceablePincode = resolvePincode(settingsMap)
-      if (p !== serviceablePincode) {
-        return NextResponse.json({ error: `Selected address is outside our delivery zone. Pincode must be ${serviceablePincode}.` }, { status: 400 })
+      const p = (address.pincode || '').trim().replace(/\s+/g, '')
+      const serviceablePincode = (resolvePincode(settingsMap) || '209206').replace(/\s+/g, '')
+      if (!p || p !== serviceablePincode) {
+        return NextResponse.json({ error: `Selected address is outside our delivery zone. FastKirana delivers strictly to Ghatampur (Pincode: ${serviceablePincode}).` }, { status: 400 })
       }
-      const c = address.city.trim().toLowerCase()
-      if (!c.includes('ghatampur') && !c.includes('kanpur')) {
-        return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
+      const c = (address.city || '').trim().toLowerCase()
+      if (!c.includes('ghatampur')) {
+        return NextResponse.json({ error: 'Selected address city is outside our delivery zone. Delivery is available in Ghatampur only.' }, { status: 400 })
       }
 
       // Calculate distance if address has GPS coordinates
@@ -180,10 +180,6 @@ export async function POST(request: NextRequest) {
             error: `Your location is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from Ghatampur Store.`
           }, { status: 400 })
         }
-      } else {
-        return NextResponse.json({
-          error: 'Please tap "Select Location" on the map to confirm your delivery address is within our 2 km service zone.'
-        }, { status: 400 })
       }
     }
 

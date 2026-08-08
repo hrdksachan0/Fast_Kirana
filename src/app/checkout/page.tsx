@@ -777,7 +777,7 @@ export default function CheckoutPage() {
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod,
-        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        items,
         deliveryMethod,
         scheduledSlot,
         appliedCouponCode,
@@ -884,7 +884,7 @@ export default function CheckoutPage() {
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod,
-        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        items,
         deliveryMethod,
         scheduledSlot,
         appliedCouponCode,

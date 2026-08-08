@@ -125,15 +125,15 @@ function validateAddress(
   storeLng: number,
   maxRadiusKm: number
 ): { valid: boolean; error?: string } {
-  const p = address.pincode.trim()
-  const c = address.city.trim().toLowerCase()
+  const p = (address.pincode || '').trim().replace(/\s+/g, '')
+  const c = (address.city || '').trim().toLowerCase()
 
-  if (p !== DEFAULT_STORE_PINCODE) {
-    return { valid: false, error: `Selected address is outside our delivery zone. FastKirana only delivers to Ghatampur (Pincode: ${DEFAULT_STORE_PINCODE}).` }
+  if (!p || p !== DEFAULT_STORE_PINCODE) {
+    return { valid: false, error: `Selected address is outside our delivery zone. FastKirana delivers strictly to Ghatampur (Pincode: ${DEFAULT_STORE_PINCODE}).` }
   }
 
-  if (!c.includes('ghatampur') && !c.includes('kanpur')) {
-    return { valid: false, error: 'Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.' }
+  if (!c.includes('ghatampur')) {
+    return { valid: false, error: 'Selected address city is outside our delivery zone. Delivery is available in Ghatampur only.' }
   }
 
   const phoneVal = (address.phone || '').trim()

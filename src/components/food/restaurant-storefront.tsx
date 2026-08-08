@@ -579,7 +579,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 {/* Left Vertical Category Sidebar */}
                 <aside 
                   id="cafe-sidebar" 
-                  className="sticky top-[60px] sm:top-[70px] z-30 w-[80px] min-[375px]:w-[85px] sm:w-[110px] shrink-0 max-h-[calc(100vh-80px)] overflow-y-auto scrollbar-none py-1 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
+                  className="sticky top-[66px] sm:top-[74px] z-30 w-[80px] min-[375px]:w-[85px] sm:w-[110px] shrink-0 max-h-[calc(100vh-145px)] overflow-y-auto scrollbar-none py-1 pb-28 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag
@@ -631,7 +631,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 </aside>
 
                 {/* Right Side Products Container */}
-                <main className="flex-grow min-w-0 space-y-6">
+                <main className="flex-grow min-w-0 space-y-6 pb-32">
                   {categories.filter(c => c.tag !== 'all').map(cat => {
                     const isCollapsed = expandedCategories.has(cat.tag)
                     const isExpanded = !isCollapsed || searchQuery !== ''
