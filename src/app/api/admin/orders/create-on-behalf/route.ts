@@ -8,7 +8,7 @@ import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
-import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS } from '@/lib/store-config'
+import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
 import { getProductLimit } from '@/lib/utils'
 import { requireAdmin } from '@/lib/auth-guard'
 
