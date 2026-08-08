@@ -1,9 +1,21 @@
-import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+import { normalizePhone } from '@/lib/phone'
+
+const getCleanEnv = (key: string): string => {
+  let val = process.env[key] || ''
+  val = val.trim()
+  if (val.startsWith('"') && val.endsWith('"')) {
+    val = val.substring(1, val.length - 1)
+  }
+  if (val.startsWith("'") && val.endsWith("'")) {
+    val = val.substring(1, val.length - 1)
+  }
+  return val.trim()
+}
 
 export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boolean> {
-  const token = process.env.WHATSAPP_TOKEN
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const templateName = process.env.WHATSAPP_TEMPLATE_NAME
+  const token = getCleanEnv('WHATSAPP_TOKEN')
+  const phoneId = getCleanEnv('WHATSAPP_PHONE_NUMBER_ID')
+  const templateName = getCleanEnv('WHATSAPP_TEMPLATE_NAME')
 
   if (!token || !phoneId) {
     return false

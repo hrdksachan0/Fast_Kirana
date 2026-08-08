@@ -77,35 +77,27 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 5. Send OTP via WhatsApp or Email
-    let isSent = false
+    // 5. Send OTP via Meta WhatsApp Cloud API or Email
     if (normalizedEmail.startsWith('wa-')) {
       const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
       const recipientPhone = `+91${phoneDigits}`
-      isSent = await sendWhatsAppOtp(recipientPhone, otp)
+      const isSent = await sendWhatsAppOtp(recipientPhone, otp)
 
-      // Fallback if Meta WhatsApp API credentials are not configured or failed
       if (!isSent) {
-        console.warn(`WhatsApp API not configured or failed for ${recipientPhone}. Falling back to dev OTP: ${otp}`)
-        isSent = true
+        console.error('Meta WhatsApp API OTP delivery failed for:', recipientPhone)
+        return NextResponse.json({ error: 'Failed to send OTP via WhatsApp. Please check mobile number and try again.' }, { status: 500 })
       }
     } else {
       try {
         await sendOtpEmail(normalizedEmail, otp)
-        isSent = true
       } catch (err) {
-        console.warn('Email OTP failed, falling back to dev mode:', err)
-        isSent = true
+        console.error('Failed to send OTP email:', err)
+        return NextResponse.json({ error: 'Failed to send verification email. Please try again.' }, { status: 500 })
       }
     }
 
-    const isDev = process.env.NODE_ENV !== 'production' || !process.env.WHATSAPP_TOKEN
-    const responseData: Record<string, any> = { success: true }
-    if (isDev) {
-      responseData.otp = otp
-    }
-
-    return NextResponse.json(responseData)
+    // Strict Production Response: NEVER leak OTP in response payload
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('OTP Send API error:', error)
     return NextResponse.json({ error: 'Failed to send OTP code' }, { status: 500 })
