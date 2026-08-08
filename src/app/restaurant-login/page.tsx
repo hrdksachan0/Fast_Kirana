@@ -51,19 +51,18 @@ export default function RestaurantLoginPage() {
           const restData = await restRes.json()
           const isCafe = restData.slug === 'fastkirana-cafe' || restData.slug?.includes('cafe')
           if (isCafe) {
-            router.push('/cafe-kitchen')
+            window.location.href = '/cafe-kitchen'
           } else {
-            router.push('/restaurant-kitchen')
+            window.location.href = '/restaurant-kitchen'
           }
         } else {
           // Fallback based on email startsWith if no assigned ID
           if (userEmail.toLowerCase().startsWith('restaurant') || userEmail.toLowerCase().startsWith('owner')) {
-            router.push('/restaurant-kitchen')
+            window.location.href = '/restaurant-kitchen'
           } else {
-            router.push('/cafe-kitchen')
+            window.location.href = '/cafe-kitchen'
           }
         }
-        router.refresh()
       } else {
         toast.error('Access Denied. Only registered staff members are allowed to log in here.')
         await signOut({ redirect: false })

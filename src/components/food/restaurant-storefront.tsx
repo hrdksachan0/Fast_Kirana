@@ -303,8 +303,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     } else {
       const el = document.getElementById(`section-${tag}`)
       if (el) {
-        const offset = el.offsetTop - 75
-        window.scrollTo({ top: offset, behavior: 'smooth' })
+        const offset = el.offsetTop - (showStickyBranding ? 120 : 85)
+        window.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' })
       }
     }
 
@@ -553,34 +553,34 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       <AnimatePresence>
         {showStickyBranding && (
           <motion.div
-            initial={{ y: -60, opacity: 0 }}
+            initial={{ y: -70, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -60, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 py-2.5 shadow-md flex items-center justify-between"
+            exit={{ y: -70, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60 px-3.5 sm:px-6 py-2.5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-between transition-all"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() => router.back()}
-                className="p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0 hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer"
+                className="h-8 w-8 rounded-full bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer shadow-2xs border border-zinc-200/50 dark:border-zinc-700/50"
+                aria-label="Go Back"
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft size={16} strokeWidth={2.5} />
               </button>
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                  {restaurant.name.charAt(0)}
+              
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20 overflow-hidden">
+                  {restaurant.image ? (
+                    <Image src={restaurant.image} alt={restaurant.name} fill className="object-cover" />
+                  ) : (
+                    <span>{restaurant.name.charAt(0)}</span>
+                  )}
                 </div>
+
                 <div className="min-w-0">
-                  <h3 className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
+                  <h3 className="text-xs sm:text-base font-extrabold text-zinc-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
                     {restaurant.name}
                   </h3>
-                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 font-bold mt-0.5">
-                    <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
-                      <Star size={10} className="fill-current" /> {restaurant.rating || '4.5'}
-                    </span>
-                    <span>•</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{restaurant.deliveryTime || '20-25 min'}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -594,10 +594,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     window.scrollTo({ top: 120, behavior: 'smooth' })
                   }
                 }}
-                className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100/90 dark:bg-zinc-800/90 hover:bg-orange-500 hover:text-white text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-zinc-700/50 shadow-2xs group text-[11px] font-bold"
                 title="Search Menu"
               >
-                <Search size={16} />
+                <Search size={14} className="group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Search</span>
               </button>
             </div>
           </motion.div>
@@ -664,8 +665,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 <aside 
                   id="cafe-sidebar" 
                   className={cn(
-                    "sticky z-30 w-[92px] min-[375px]:w-[98px] sm:w-[125px] shrink-0 max-h-[calc(100vh-100px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
-                    showStickyBranding ? "top-[60px]" : "top-[66px] sm:top-[74px]"
+                    "sticky z-30 w-[88px] min-[375px]:w-[94px] sm:w-[120px] shrink-0 max-h-[calc(100vh-120px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
+                    showStickyBranding ? "top-[110px] sm:top-[120px]" : "top-[66px] sm:top-[74px]"
                   )}
                 >
                   {categories.map((cat: any) => {

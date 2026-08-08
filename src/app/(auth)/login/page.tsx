@@ -264,9 +264,8 @@ function LoginForm() {
         } catch (e) {
           // ignore
         }
-        const redirect = getRoleRedirect(activeRole, email, callbackUrl)
-        router.push(redirect)
-        router.refresh()
+        const redirectUrl = getRoleRedirect(activeRole, email, callbackUrl)
+        window.location.href = redirectUrl
       }
     } catch {
       toast.error('Authentication failed. Please try again.')
@@ -358,9 +357,8 @@ function LoginForm() {
       } catch (e) {
         // ignore
       }
-      const redirect = getRoleRedirect(activeRole, email, callbackUrl)
-      router.push(redirect)
-      router.refresh()
+      const redirectUrl = getRoleRedirect(activeRole, email, callbackUrl)
+      window.location.href = redirectUrl
     }
   }
 
@@ -399,7 +397,7 @@ function LoginForm() {
           toast.error(res?.error || 'Failed to sign in')
         } else {
           toast.success('Logged in successfully as Admin!')
-          router.replace(getRoleRedirect('ADMIN', identifier, callbackUrl))
+          window.location.href = getRoleRedirect('ADMIN', identifier, callbackUrl)
         }
       } else {
         // Customer Quick OTP login
@@ -446,7 +444,7 @@ function LoginForm() {
             toast.error(signinRes.error)
           } else {
             toast.success('Logged in successfully!')
-            router.replace(callbackUrl)
+            window.location.href = callbackUrl
           }
         } else {
           setStep('OTP')

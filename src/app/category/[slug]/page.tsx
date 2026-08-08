@@ -152,6 +152,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const productsRaw = await prisma.product.findMany({
     where: {
       isAvailable: true,
+      restaurantId: null,
+      NOT: {
+        tags: {
+          hasSome: ['as-restaurant', 'as_restaurant', 'restaurant', 'cafe-dish']
+        }
+      },
       OR: conditions,
     },
     orderBy,
@@ -163,25 +169,26 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
-  // Filter products for category view: Grocery Beverages vs Restaurant Cafe segregation
-  let finalProductsRaw = productsRaw
-  if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices') {
-    finalProductsRaw = productsRaw.filter((p) => {
-      const pName = (p.name || '').toLowerCase()
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+  // Filter products for category view: Exclude restaurant dishes from grocery category pages
+  let finalProductsRaw = productsRaw.filter((p: any) => {
+    if (p.restaurantId) return false
+    const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+    if (tags.some((t: string) => t.includes('restaurant') || t.includes('as-restaurant') || t.includes('as_restaurant'))) {
+      return false
+    }
 
-      // Prepared restaurant shakes & coffees belong to Restaurant/Cafe -> exclude from Grocery Beverages
-      const isPreparedRestaurantDrink = /shake|smoothie|coffee|frappe|mocktail|latte|cappuccino/i.test(pName) || tags.includes('wedson') || tags.includes('as-restaurant')
+    const pName = (p.name || '').toLowerCase()
+    if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices' || normSlug === 'drinks' || normSlug === 'beverage') {
+      const isRestaurantItem = pName.includes('classic cold coffee') || pName.includes('a.s.') || (/shake|smoothie|coffee|frappe|mocktail|latte|cappuccino/i.test(pName) && (p.restaurantId || tags.includes('as-restaurant') || tags.includes('prepared')))
       const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(pName)
-
-      return !isPreparedRestaurantDrink && !isFoodMainCourse
-    })
-  } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
-    finalProductsRaw = productsRaw.filter((p) => {
-      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(p.name)
+      return !isRestaurantItem && !isFoodMainCourse
+    } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
+      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(pName)
       return !isFoodMainCourse
-    })
-  }
+    }
+
+    return true
+  })
 
   // 4. Map product counts list to a lookup map
   const countsMap: Record<string, number> = {}

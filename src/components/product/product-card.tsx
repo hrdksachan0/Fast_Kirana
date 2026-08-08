@@ -330,8 +330,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             disabled={wishlistLoading}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             className={cn(
-              "absolute top-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
-              isRestaurant ? "right-7" : "right-1.5",
+              "absolute top-1.5 right-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
               isWishlisted
                 ? "opacity-100 bg-rose-500 text-white shadow-md scale-105"
                 : "opacity-85 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110",
@@ -353,13 +352,6 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               />
             )}
           </button>
-
-        {/* Green Veg Icon Badge for Restaurant Dishes */}
-          {isRestaurant && (
-            <div className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center h-3.5 w-3.5 rounded-xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs pointer-events-none select-none" title="Pure Veg Dish">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-            </div>
-          )}
 
           {/* Bestseller Tag */}
           {(product.tags?.includes('popular') || product.isBestSeller) && (
@@ -517,14 +509,21 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         </div>
 
         {/* ROW 3: Product Name / Title */}
-        <h3 className={cn(
-          "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors mb-0.5",
-          isCompact 
-            ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
-            : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
-        )}>
-          {product.name}
-        </h3>
+        <div className="flex items-start gap-1 mb-0.5 min-w-0">
+          {isRestaurant && (
+            <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Pure Veg Dish">
+              <div className="h-1 w-1 rounded-full bg-emerald-600" />
+            </div>
+          )}
+          <h3 className={cn(
+            "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors flex-1 min-w-0",
+            isCompact 
+              ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
+              : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
+          )}>
+            {product.name}
+          </h3>
+        </div>
 
         {/* Restaurant Outlet Sub-label Identifier */}
         {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
