@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [] })
     }
 
-    // 1. Fetch details of items in the cart to check their tags/categories
+    // 1. Fetch details of items in the cart to check their tags/categories/restaurant
     const cartProducts = await prisma.product.findMany({
       where: { id: { in: cartProductIds } },
       include: { category: true }
@@ -20,25 +21,42 @@ export async function GET(request: NextRequest) {
 
     const cartTags = new Set(cartProducts.flatMap(p => p.tags || []).map(t => t.toLowerCase()))
 
-    const hasRestaurant = cartProducts.some(p => p.category?.slug === 'restaurant' || p.tags?.includes('restaurant'))
-    const hasCafe = cartProducts.some(p => p.category?.slug === 'cafe' || p.tags?.includes('cafe'))
+    const isASCart = cartProducts.some(p => 
+      p.restaurantId === OUTLET_AS_RESTAURANT_ID || 
+      p.tags?.some(t => ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant'].includes(t.toLowerCase()))
+    )
+    const isWedsonCart = cartProducts.some(p => 
+      p.restaurantId === OUTLET_WEDSON_ID || 
+      p.tags?.some(t => ['wedson', 'wedson-restaurant'].includes(t.toLowerCase()))
+    )
+    const isCafeCategoryCart = cartProducts.some(p => 
+      p.category?.slug === 'cafe' || p.category?.slug === 'fastkirana-cafe' || p.tags?.some(t => ['cafe', 'shakes'].includes(t.toLowerCase()))
+    )
 
-    // Enforce strict separation: Restaurant suggests Restaurant, Cafe suggests Cafe, Grocery suggests Grocery
+    // Enforce strict separation: A.S. Restaurant suggests A.S., Wedson suggests Wedson, Cafe suggests Cafe, Grocery suggests Grocery
     const typeFilter: Prisma.ProductWhereInput = {}
-    if (hasRestaurant) {
+    if (isASCart) {
       typeFilter.OR = [
-        { category: { slug: 'restaurant' } },
-        { tags: { has: 'restaurant' } }
+        { restaurantId: OUTLET_AS_RESTAURANT_ID },
+        { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
+        { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
       ]
-    } else if (hasCafe) {
+    } else if (isWedsonCart) {
       typeFilter.OR = [
-        { category: { slug: { in: ['cafe', 'ice-cream', 'beverages'] } } },
-        { tags: { hasSome: ['cafe', 'ice-cream', 'beverages'] } }
+        { restaurantId: OUTLET_WEDSON_ID },
+        { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
+        { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
+      ]
+    } else if (isCafeCategoryCart) {
+      typeFilter.OR = [
+        { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'ice-cream', 'beverages', 'shakes'] } } },
+        { tags: { hasSome: ['cafe', 'ice-cream', 'beverages', 'shakes', 'mocktails'] } }
       ]
     } else {
-      typeFilter.NOT = [
-        { category: { slug: { in: ['cafe', 'restaurant'] } } },
-        { tags: { hasSome: ['cafe', 'restaurant'] } }
+      // Pure grocery cart: strictly exclude restaurant & cafe products!
+      typeFilter.AND = [
+        { restaurantId: null },
+        { tags: { noneOf: ['as-restaurant', 'as-cafe', 'wedson', 'wedson-restaurant'] } }
       ]
     }
 
@@ -116,10 +134,10 @@ export async function GET(request: NextRequest) {
       // Define tag association mapping
       const targetTags = new Set<string>()
       
-      if (hasRestaurant) {
+      if (isASCart || isWedsonCart) {
         // For restaurant, recommend curries, rotis, naans, biryanis or other restaurant tags
         ['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'].forEach(t => targetTags.add(t))
-      } else if (hasCafe) {
+      } else if (isCafeCategoryCart) {
         if (cartTags.has('burgers') || cartTags.has('burger')) {
           ['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'].forEach(t => targetTags.add(t))
         }

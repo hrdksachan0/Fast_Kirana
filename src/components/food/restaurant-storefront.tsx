@@ -290,7 +290,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     } else {
       const el = document.getElementById(`section-${tag}`)
       if (el) {
-        const offset = el.offsetTop - (isCafe ? 80 : 170)
+        const offset = el.offsetTop - 75
         window.scrollTo({ top: offset, behavior: 'smooth' })
       }
     }
@@ -311,9 +311,9 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     }
   }, [activeCategoryTag])
 
-  // Auto-scroll vertical sidebar (for cafe mode) to center active tag button
+  // Auto-scroll vertical sidebar to center active tag button
   useEffect(() => {
-    if (!isCafe || !activeCategoryTag) return
+    if (!activeCategoryTag) return
     const activeBtn = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
     const sidebar = document.getElementById(`cafe-sidebar`)
     if (activeBtn && sidebar) {
@@ -322,11 +322,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       const btnHeight = activeBtn.clientHeight
       const targetScrollTop = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2)
       sidebar.scrollTo({
-        top: targetScrollTop,
+        top: Math.max(0, targetScrollTop),
         behavior: 'smooth'
       })
     }
-  }, [activeCategoryTag, isCafe])
+  }, [activeCategoryTag])
 
   const totalItems = getTotalItems()
   const subtotal = getSubtotal()
@@ -579,7 +579,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 {/* Left Vertical Category Sidebar */}
                 <aside 
                   id="cafe-sidebar" 
-                  className="sticky top-[70px] z-30 w-[80px] min-[375px]:w-[85px] sm:w-[110px] shrink-0 max-h-[calc(100vh-90px)] overflow-y-auto scrollbar-none py-1 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2"
+                  className="sticky top-[60px] sm:top-[70px] z-30 w-[80px] min-[375px]:w-[85px] sm:w-[110px] shrink-0 max-h-[calc(100vh-80px)] overflow-y-auto scrollbar-none py-1 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag

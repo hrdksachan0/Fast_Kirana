@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { STORE_PINCODE } from '@/lib/store-config'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -73,8 +74,8 @@ export async function GET(request: NextRequest) {
                 types: ['locality']
               },
               {
-                long_name: address.postcode || '209206',
-                short_name: address.postcode || '209206',
+                long_name: address.postcode || STORE_PINCODE,
+                short_name: address.postcode || STORE_PINCODE,
                 types: ['postal_code']
               }
             ]
@@ -113,8 +114,8 @@ export async function GET(request: NextRequest) {
                   types: ['locality']
                 },
                 {
-                  long_name: '209206',
-                  short_name: '209206',
+                  long_name: STORE_PINCODE,
+                  short_name: STORE_PINCODE,
                   types: ['postal_code']
                 }
               ]

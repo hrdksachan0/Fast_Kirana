@@ -5,6 +5,7 @@ import { Search, X, User, MapPin, Plus, Minus, Trash2, Loader2, Check, ShoppingB
 import { toast } from 'sonner'
 import { formatPrice, formatDisplayEmail, formatPhone } from '@/lib/utils'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
+import { STORE_PINCODE } from '@/lib/store-config'
 import { useUIStore } from '@/stores/ui-store'
 
 interface CreateOrderModalProps {
@@ -86,7 +87,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [manualHouseNo, setManualHouseNo] = useState('')
   const [manualStreet, setManualStreet] = useState('')
   const [manualArea, setManualArea] = useState('')
-  const [manualPincode, setManualPincode] = useState('209206')
+  const [manualPincode, setManualPincode] = useState(STORE_PINCODE)
   const [manualPhone, setManualPhone] = useState('')
   const [manualCity, setManualCity] = useState('Ghatampur')
 
@@ -184,7 +185,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       setManualHouseNo('')
       setManualStreet('')
       setManualArea('')
-      setManualPincode('209206')
+      setManualPincode(STORE_PINCODE)
       setManualPhone('')
       return
     }

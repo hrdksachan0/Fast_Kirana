@@ -61,8 +61,8 @@ export const authConfig = {
         if (session.email) token.email = session.email
       }
 
-      // Always keep token role & assignedRestaurantId fresh from DB for role updates
-      if (token.id) {
+      // Only query DB if token.role is missing or during explicit session update trigger
+      if (token.id && (!token.role || trigger === 'update')) {
         try {
           const { prisma } = require('@/lib/prisma')
           const dbUser = await prisma.user.findUnique({

@@ -8,6 +8,7 @@ import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
+import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS } from '@/lib/store-config'
 import { getProductLimit } from '@/lib/utils'
 import { requireAdmin } from '@/lib/auth-guard'
 
@@ -64,13 +65,13 @@ export async function POST(request: Request) {
       const addressSetting = await prisma.storeSetting.findUnique({
         where: { key: 'contact_address' }
       })
-      const defaultPickupAddress = addressSetting?.value || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+      const defaultPickupAddress = addressSetting?.value || GROCERY_PICKUP_ADDRESS
       const addrParts = defaultPickupAddress.split(',').map(p => p.trim())
       const houseNo = addrParts[0] || 'Vikas Medical Store'
       const street = addrParts[1] || 'NH34, Ghatampur'
       const area = addrParts[2] || 'Kanpur Nagar'
       const city = addrParts[3] || 'Kanpur'
-      const pincode = addrParts[4] || '209206'
+      const pincode = addrParts[4] || STORE_PINCODE
 
       let pickupAddress = await prisma.address.findFirst({
         where: { userId: customerId, label: 'STORE_PICKUP' }
@@ -115,23 +116,28 @@ export async function POST(request: Request) {
     // Distance-based delivery validation
     let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
 
+    // Fetch store settings for tax, fees, and status
+    const storeSettings = await prisma.storeSetting.findMany()
+    const settingsMap = storeSettings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
     if (deliveryMethod === 'DELIVERY') {
       const p = address.pincode.trim()
-      const c = address.city.trim().toLowerCase()
-      if (p !== '209206') {
-        return NextResponse.json({ error: 'Selected address is outside our delivery zone. Pincode must be 209206.' }, { status: 400 })
+      const serviceablePincode = resolvePincode(settingsMap)
+      if (p !== serviceablePincode) {
+        return NextResponse.json({ error: `Selected address is outside our delivery zone. Pincode must be ${serviceablePincode}.` }, { status: 400 })
       }
+      const c = address.city.trim().toLowerCase()
       if (!c.includes('ghatampur') && !c.includes('kanpur')) {
         return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
       }
 
       // Calculate distance if address has GPS coordinates
       if (address.lat && address.lng) {
-        // Fetch store coordinates from settings (will be fetched below with other settings)
-        const storeLatSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lat' } })
-        const storeLngSetting = await prisma.storeSetting.findUnique({ where: { key: 'store_lng' } })
-        const storeLat = storeLatSetting?.value ? parseFloat(storeLatSetting.value) : DEFAULT_STORE_LAT
-        const storeLng = storeLngSetting?.value ? parseFloat(storeLngSetting.value) : DEFAULT_STORE_LNG
+        const storeLat = resolveLat(settingsMap)
+        const storeLng = resolveLng(settingsMap)
 
         const distanceKm = getDistanceKm(storeLat, storeLng, address.lat, address.lng)
         deliveryRules = getDeliveryRules(distanceKm)
@@ -143,13 +149,6 @@ export async function POST(request: Request) {
         }
       }
     }
-
-    // Fetch store settings for tax, fees, and status
-    const storeSettings = await prisma.storeSetting.findMany()
-    const settingsMap = storeSettings.reduce((acc, s) => {
-      acc[s.key] = s.value
-      return acc
-    }, {} as Record<string, string>)
 
     function getStoreStatus(prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
       const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'

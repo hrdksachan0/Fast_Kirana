@@ -278,7 +278,10 @@ export default function FeaturedCategoryCard({
       stock: p.stock || p.stockLeft || 10,
       isAvailable: p.isAvailable ?? true,
       tags: p.tags || [],
-      category: p.categoryObj || p.category || null
+      category: p.categoryObj || p.category || null,
+      restaurantId: p.restaurantId || p.restaurant?.id,
+      restaurantName: p.restaurantName || p.restaurant?.name,
+      restaurant: p.restaurant,
     });
   };
 

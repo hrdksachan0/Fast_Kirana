@@ -8,6 +8,25 @@ import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
 import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
 import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
+import { CategoriesTab } from '@/components/admin/categories-tab'
+import { UsersTab } from '@/components/admin/users-tab'
+import { CouponsTab } from '@/components/admin/coupons-tab'
+import { ProductsTab } from '@/components/admin/products-tab'
+import { LiveOpsTab } from '@/components/admin/live-ops-tab'
+import { AnalyticsTab } from '@/components/admin/analytics-tab'
+import { ForecastTab } from '@/components/admin/forecast-tab'
+import { AlertsTab } from '@/components/admin/alerts-tab'
+import { InwardTab } from '@/components/admin/inward-tab'
+import { BulkUpdateTab } from '@/components/admin/bulk-update-tab'
+import { ReportsTab } from '@/components/admin/reports-tab'
+import { RestaurantReportTab } from '@/components/admin/restaurant-report-tab'
+import { BannersTab } from '@/components/admin/banners-tab'
+import { SettingsTab } from '@/components/admin/settings-tab'
+import { PushNotificationsTab } from '@/components/admin/push-notifications-tab'
+import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
+import { RiderCashTab } from '@/components/admin/rider-cash-tab'
+import { CsvImportTab } from '@/components/admin/csv-import-tab'
+import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
@@ -59,24 +78,14 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { CreateOrderModal } from './create-order-modal'
+import ProductEditModal from './product-edit-modal'
+import CategoryEditModal from './category-edit-modal'
+import ReviewEditModal from './review-edit-modal'
+import BlockCustomerModal from './block-customer-modal'
+import OrderTrackingModal from './order-tracking-modal'
+import MediaLibraryModal from './media-library-modal'
 import { AdminSortManager } from './admin-sort-manager'
 import { getLast10Digits } from '@/lib/phone'
-
-const AdminRiderCash = dynamic(() => import('./admin-rider-cash').then((mod) => mod.AdminRiderCash), { ssr: false })
-
-const AdminAnalytics = dynamic(() => import('./admin-analytics').then((mod) => mod.AdminAnalytics), { ssr: false })
-const AdminAlerts = dynamic(() => import('./admin-alerts').then((mod) => mod.AdminAlerts), { ssr: false })
-const AdminBulkUpdate = dynamic(() => import('./admin-bulk-update').then((mod) => mod.AdminBulkUpdate), { ssr: false })
-const AdminReports = dynamic(() => import('./admin-reports').then((mod) => mod.AdminReports), { ssr: false })
-const AdminRestaurantReport = dynamic(() => import('./admin-restaurant-report').then((mod) => mod.AdminRestaurantReport), { ssr: false })
-const AdminInventoryCenter = dynamic(() => import('./admin-inventory-center').then((mod) => mod.AdminInventoryCenter), { ssr: false })
-const AdminBanners = dynamic(() => import('./admin-banners').then((mod) => mod.AdminBanners), { ssr: false })
-const AdminSettings = dynamic(() => import('./admin-settings').then((mod) => mod.AdminSettings), { ssr: false })
-const AdminCsvImport = dynamic(() => import('./admin-csv-import').then((mod) => mod.AdminCsvImport), { ssr: false })
-const AdminPushNotifications = dynamic(() => import('./admin-push-notifications').then((mod) => mod.AdminPushNotifications), { ssr: false })
-const AdminPromotions = dynamic(() => import('./admin-promotions').then((mod) => mod.AdminPromotions), { ssr: false })
-const AdminForecast = dynamic(() => import('./admin-forecast').then((mod) => mod.AdminForecast), { ssr: false })
-const AdminRestaurantConsole = dynamic(() => import('./admin-restaurant-console').then((mod) => mod.AdminRestaurantConsole), { ssr: false })
 
 interface AdminDashboardProps {
   initialOrders?: any[]
@@ -398,8 +407,12 @@ export function AdminDashboard({
 
     connectSSE()
 
-    // Fallback polling every 30 seconds
-    const interval = setInterval(fetchLiveOrdersList, 30000)
+    // Fallback polling every 30 seconds (only if tab is visible)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchLiveOrdersList()
+      }
+    }, 30000)
 
     // Initial load of live orders list
     fetchLiveOrdersList()
@@ -2492,1784 +2505,140 @@ export function AdminDashboard({
       {/* PRODUCTS & INVENTORY TAB */}
       {/* ---------------------------------------------------- */}
       {activeTab === 'products' && (
-        <div className="space-y-6 animate-fade-in">
-          
-          {/* Controls row */}
-          <div className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-4">
-            {/* Row 1: Search & Type & Category Filters */}
-            <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-              <div className="relative w-full md:max-w-md">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search products by name, ID, or barcode..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2.5 w-full text-xs rounded-xl border border-border bg-muted/30 focus:outline-none focus:border-primary font-semibold"
-                />
-              </div>
-              
-              <div className="flex gap-3 w-full md:w-auto">
-                <select
-                  value={selectedTypeFilter}
-                  onChange={(e) => setSelectedTypeFilter(e.target.value as any)}
-                  className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
-                >
-                  <option value="all">All Items (Catalog)</option>
-                  <option value="grocery">Grocery Only 📦</option>
-                  <option value="cafe">Cafe Only ☕</option>
-                  <option value="restaurant">Restaurant Only 🍳</option>
-                </select>
-                <select
-                  value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Row 2: Action Buttons */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-              <button
-                onClick={() => setShowAddProduct(!showAddProduct)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all cursor-pointer"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Add New Product
-              </button>
-              <button
-                onClick={() => setShowSortManager(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-650 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                ⚡ Sort & Position Manager
-              </button>
-              <button
-                onClick={() => { setShowCsvImport(!showCsvImport); setShowExportModal(false); }}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                <FileText className="h-4 w-4" />
-                📥 CSV Import
-              </button>
-              <button
-                onClick={() => { setShowExportModal(!showExportModal); setShowCsvImport(false); }}
-                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                <Download className="h-4 w-4" />
-                📤 Export CSV
-              </button>
-              <button
-                onClick={handleReplenishCsv}
-                className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
-              >
-                <AlertCircle className="h-4 w-4" />
-                ⚠️ Replenish CSV
-              </button>
-            </div>
-          </div>
-
-
-          {/* CSV Export Options Panel */}
-          <AnimatePresence>
-            {showExportModal && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-card p-5 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
-              >
-                <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                  <div>
-                    <h4 className="font-extrabold text-text-primary text-sm">Export Catalog Items</h4>
-                    <p className="text-[10px] text-text-secondary mt-0.5">Select category type to generate and download product CSV sheet.</p>
-                  </div>
-                  <button
-                    onClick={() => setShowExportModal(false)}
-                    className="p-1 rounded-lg hover:bg-muted text-text-secondary hover:text-text-primary cursor-pointer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    disabled={isExporting}
-                    onClick={() => handleExportCsv('all')}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-border bg-muted/20 hover:bg-muted text-text-primary text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    All Catalog Items (All)
-                  </button>
-                  <button
-                    disabled={isExporting}
-                    onClick={() => handleExportCsv('grocery')}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    📦 Grocery Items Only
-                  </button>
-                  <button
-                    disabled={isExporting}
-                    onClick={() => handleExportCsv('cafe')}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    ☕ Cafe Items Only
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* CSV Bulk Import */}
-          <AnimatePresence>
-            {showCsvImport && (
-              <AdminCsvImport
-                categories={categories}
-                onImportComplete={(imported) => {
-                  setProducts([...imported, ...products])
-                  setAllProducts([...imported.map((p: any) => ({ id: p.id, name: p.name, price: p.price, mrp: p.mrp, costPrice: p.costPrice ?? 0, stock: p.stock, minStock: p.minStock, isAvailable: p.isAvailable, tags: p.tags, variants: p.variants, category: { id: p.category?.id, name: p.category?.name, slug: p.category?.slug } })), ...allProducts])
-                }}
-                onClose={() => setShowCsvImport(false)}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Add Product Inline Form */}
-          {showAddProduct && (
-            <form 
-              id="add-product-form-container"
-              onSubmit={handleCreateProduct}
-              className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
-            >
-              <div className="border-b border-border/60 pb-2 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-extrabold text-text-primary text-sm">Add New Product Details</h4>
-                  <p className="text-[10px] text-text-secondary mt-0.5">Define your inventory item specs, MRP and FastKirana pricing.</p>
-                </div>
-                
-                {/* Store / Outlet Selection */}
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Assign to Store / Restaurant Outlet *</label>
-                  <select
-                    value={newProduct.restaurantId}
-                    onChange={(e) => setNewProduct({ ...newProduct, restaurantId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-2xs"
-                  >
-                    <option value="">🛒 General Kirana / Grocery Store</option>
-                    {restaurantsList.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        🍽️ Restaurant: {r.name} ({r.city || 'Outlet'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Preset Product Templates */}
-              <div className="bg-muted/30 border border-border/40 rounded-xl p-3 space-y-2">
-                <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider block">
-                  ⚡ Frictionless Presets (Pre-fill Form):
-                </span>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {PRODUCT_TEMPLATES.map((tmpl) => (
-                    <button
-                      key={tmpl.id}
-                      type="button"
-                      onClick={() => applyProductTemplate(tmpl.id)}
-                      className="flex flex-col items-start p-2 bg-card hover:bg-muted/60 border border-border/50 rounded-xl text-left cursor-pointer transition-colors"
-                    >
-                      <span className="text-[11px] font-black text-text-primary">{tmpl.label}</span>
-                      <span className="text-[9px] text-text-secondary truncate w-full mt-0.5">{tmpl.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Product Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Fresh Red Apple"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                {!newProduct.restaurantId ? (() => {
-                  const currentCat = categories.find(c => c.id === newProduct.categoryId)
-                  const activeParentId = currentCat ? (currentCat.parentId || currentCat.id) : ''
-                  const activeSubId = currentCat && currentCat.parentId ? currentCat.id : ''
-
-                  const parentCategories = categories.filter((c) => {
-                    const slug = (c.slug || '').toLowerCase()
-                    const name = (c.name || '').toLowerCase()
-                    return !c.parentId && slug !== 'cafe' && slug !== 'restaurant' && !name.includes('fastkirana restaurant') && !name.includes('fastkirana cafe')
-                  })
-
-                  const availableSubcategories = activeParentId
-                    ? categories.filter((c) => c.parentId === activeParentId)
-                    : []
-
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 col-span-1 sm:col-span-2">
-                      <div>
-                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Main Category *</label>
-                        <select
-                          required={!newProduct.restaurantId}
-                          value={activeParentId}
-                          onChange={(e) => {
-                            const newParentId = e.target.value
-                            setNewProduct({ ...newProduct, categoryId: newParentId })
-                          }}
-                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
-                        >
-                          <option value="">-- Select Parent Category --</option>
-                          {parentCategories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                          Subcategory {availableSubcategories.length > 0 ? '(Recommended)' : '(Optional)'}
-                        </label>
-                        <select
-                          value={activeSubId}
-                          disabled={!activeParentId || availableSubcategories.length === 0}
-                          onChange={(e) => {
-                            const subId = e.target.value
-                            setNewProduct({ ...newProduct, categoryId: subId || activeParentId })
-                          }}
-                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer disabled:opacity-50"
-                        >
-                          <option value="">
-                            {availableSubcategories.length === 0
-                              ? '(No subcategories created yet)'
-                              : '-- All / Main Category --'}
-                          </option>
-                          {availableSubcategories.map((sub) => (
-                            <option key={sub.id} value={sub.id}>
-                              └ {sub.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )
-                })() : (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
-                    <select
-                      required
-                      value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const sectionValues = RESTAURANT_MENU_SECTIONS.map(s => s.tag);
-                        let cleanTags = newProduct.tags
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
-                        
-                        if (val) {
-                          cleanTags.push(val);
-                        }
-                        if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
-                          cleanTags.push('restaurant');
-                        }
-                        setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-955/15 focus:outline-none focus:border-amber-500 font-extrabold text-amber-600 dark:text-amber-400 cursor-pointer"
-                    >
-                      <option value="" className="text-text-primary font-normal">-- Select Menu Section --</option>
-                      {RESTAURANT_MENU_SECTIONS.map((sec) => (
-                        <option key={sec.tag} value={sec.tag} className="text-text-primary font-semibold">
-                          {sec.emoji} {sec.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Unit Specification</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 1 kg, 12 pcs, 500 ml"
-                    value={newProduct.unit}
-                    onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                {!hasVariantsNew && (
-                  <>
-                    <div>
-                      <label className="text-[10px] font-bold text-text-secondary block mb-1">MRP Price (INR) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required={!hasVariantsNew}
-                        placeholder="e.g. 100"
-                        value={newProduct.mrp}
-                        onChange={(e) => setNewProduct({ ...newProduct, mrp: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-text-secondary block mb-1">FastKirana Discounted Price (INR) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required={!hasVariantsNew}
-                        placeholder="e.g. 80"
-                        value={newProduct.price}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          let calculatedCost = newProduct.costPrice
-                          if (isNewProductCafe || isNewProductRestaurant) {
-                            const marginKey = isNewProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
-                            const marginPercent = parseFloat(settingsMap[marginKey] || '30')
-                            const priceNum = parseFloat(val) || 0
-                            calculatedCost = (priceNum * (1 - marginPercent / 100)).toFixed(2)
-                          }
-                          setNewProduct({ ...newProduct, price: val, costPrice: calculatedCost })
-                        }}
-                        className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                      />
-                    </div>
-
-                    {!newProduct.restaurantId && !isNewProductCafe && !isNewProductRestaurant && (
-                      <div>
-                        <label className="text-[10px] font-bold text-text-secondary block mb-1">Initial Stock Qty *</label>
-                        <input
-                          type="number"
-                          required={!hasVariantsNew && !newProduct.restaurantId}
-                          placeholder="e.g. 50"
-                          value={newProduct.stock}
-                          onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div className="md:col-span-2 border border-border/60 bg-muted/5 p-4 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-text-primary flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={hasVariantsNew}
-                        onChange={(e) => setHasVariantsNew(e.target.checked)}
-                        className="rounded border-border text-primary focus:ring-primary h-4 w-4"
-                      />
-                      This product has multiple size/weight variations (Variants)
-                    </label>
-                  </div>
-
-                  {hasVariantsNew && (
-                    <div className="space-y-3 pt-2 border-t border-border/60">
-                      {newProductVariants.length > 0 && (
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                          {newProductVariants.map((v, idx) => (
-                            <div key={idx} className="flex justify-between items-center bg-card border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                              <span>{v.name} (Price: ₹{v.price}, MRP: ₹{v.mrp}, Cost: ₹{v.costPrice || 0}, Stock: {v.stock})</span>
-                              <button
-                                type="button"
-                                onClick={() => setNewProductVariants(newProductVariants.filter((_, i) => i !== idx))}
-                                className="text-[10px] text-red-500 hover:text-red-600 font-bold cursor-pointer"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-5 gap-2 items-end">
-                        <div>
-                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Variant Name</label>
-                          <input
-                            type="text"
-                            id="new-var-name"
-                            placeholder="e.g. Small, 500g"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold text-text-secondary block mb-1">MRP Price</label>
-                          <input
-                            type="number"
-                            id="new-var-mrp"
-                            placeholder="MRP"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Selling Price</label>
-                          <input
-                            type="number"
-                            id="new-var-price"
-                            placeholder="Selling"
-                            onChange={(e) => {
-                              if (isNewProductCafe || isNewProductRestaurant) {
-                                const costInput = document.getElementById('new-var-cost') as HTMLInputElement
-                                if (costInput) {
-                                  const marginKey = isNewProductCafe ? 'cafe_default_margin' : 'restaurant_default_margin'
-                                  const marginPercent = parseFloat(settingsMap[marginKey] || '30')
-                                  const priceVal = parseFloat(e.target.value) || 0
-                                  costInput.value = (priceVal * (1 - marginPercent / 100)).toFixed(2)
-                                }
-                              }
-                            }}
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Cost Price</label>
-                          <input
-                            type="number"
-                            id="new-var-cost"
-                            placeholder="Cost"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock</label>
-                          <input
-                            type="number"
-                            id="new-var-stock"
-                            placeholder="Qty"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const nameInput = document.getElementById('new-var-name') as HTMLInputElement
-                          const mrpInput = document.getElementById('new-var-mrp') as HTMLInputElement
-                          const priceInput = document.getElementById('new-var-price') as HTMLInputElement
-                          const costInput = document.getElementById('new-var-cost') as HTMLInputElement
-                          const stockInput = document.getElementById('new-var-stock') as HTMLInputElement
-
-                          const name = nameInput.value.trim()
-                          const mrp = mrpInput.value.trim()
-                          const price = priceInput.value.trim()
-                          const costPrice = costInput.value.trim() || '0'
-                          const stock = stockInput.value.trim()
-
-                          if (!name || !mrp || !price || !stock) {
-                            toast.error('Please fill in all variant fields')
-                            return
-                          }
-
-                          const newVars = [...newProductVariants, { name, mrp, price, costPrice, stock }]
-                          newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
-                          setNewProductVariants(newVars)
-                          nameInput.value = ''
-                          mrpInput.value = ''
-                          priceInput.value = ''
-                          costInput.value = ''
-                          stockInput.value = ''
-                        }}
-                        className="w-full py-1.5 text-[10px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
-                      >
-                        + Add Variant Option
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Description</label>
-                  <input
-                    type="text"
-                    placeholder="Product details, origin, health benefits..."
-                    value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Product Photo / Image (Cloudinary)</label>
-                  <input
-                    type="text"
-                    placeholder="Paste image absolute URL..."
-                    value={newProduct.imageUrl}
-                    onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label
-                      htmlFor="new-product-image-file"
-                      className="cursor-pointer px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black rounded-xl border border-primary/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                      {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '📤 Upload File'}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMediaTarget('newProduct')
-                        setShowMediaLibrary(true)
-                      }}
-                      className="px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-black rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-2xs"
-                    >
-                      🖼️ Choose from Photo Library
-                    </button>
-                    <input
-                      id="new-product-image-file"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          handleCloudinaryUpload(file, (url) => {
-                            setNewProduct({ ...newProduct, imageUrl: url })
-                          })
-                        }
-                        e.target.value = ''
-                      }}
-                      className="sr-only"
-                      disabled={isUploading}
-                    />
-                  </div>
-                  {newProduct.imageUrl && (
-                    <div className="h-20 w-20 relative overflow-hidden rounded-xl border border-border bg-white/5 p-1 mt-1">
-                      <img src={newProduct.imageUrl} alt="Preview" className="h-full w-full object-contain" />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. fresh, sweet, healthy"
-                    value={newProduct.tags}
-                    onChange={(e) => setNewProduct({ ...newProduct, tags: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                {!isNewProductCafe && !isNewProductRestaurant && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Stock Alert Level</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 10"
-                      value={newProduct.minStock}
-                      onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-                )}
-                {!isNewProductCafe && !isNewProductRestaurant && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Barcode (EAN/UPC)</label>
-                    <input
-                      type="text"
-                      placeholder="Scan or enter barcode"
-                      value={newProduct.barcode}
-                      onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Cost Price (INR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g. 60"
-                    value={newProduct.costPrice}
-                    onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Aisle/Shelf Location</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Aisle 2-B"
-                    value={newProduct.location}
-                    onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                  </div>
-
-
-                {!isNewProductCafe && !isNewProductRestaurant && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Expiry Date</label>
-                    <input
-                      type="date"
-                      value={newProduct.expiryDate}
-                      onChange={(e) => setNewProduct({ ...newProduct, expiryDate: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-                )}
-
-                <div className="md:col-span-3 flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-border/40">
-                  <span className="text-[10px] font-extrabold text-text-secondary block w-full">Quick Tags / Smart Features</span>
-                  
-                  {/* Common tags (always visible) */}
-                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('popular')}
-                      onChange={(e) => toggleTag('new', 'popular', e.target.checked)}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <span>🔥 Trending (Popular)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')}
-                      onChange={(e) => toggleTag('new', 'cafe', e.target.checked)}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <span>☕ Cafe Item</span>
-                  </label>
-
-                  {/* Cafe specific tags */}
-                  {isNewProductCafe ? (
-                    <>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('sandwiches')}
-                          onChange={(e) => toggleTag('new', 'sandwiches', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🥪 Cafe: Sandwiches</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('italian-pasta')}
-                          onChange={(e) => toggleTag('new', 'italian-pasta', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🍝 Cafe: Italian Pasta</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('bombay-bites')}
-                          onChange={(e) => toggleTag('new', 'bombay-bites', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🥪 Cafe: Bombay Bites</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('rice-dishes')}
-                          onChange={(e) => toggleTag('new', 'rice-dishes', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🍚 Cafe: Rice Dishes</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('shakes')}
-                          onChange={(e) => toggleTag('new', 'shakes', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🥤 Cafe: Shakes</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('mocktails')}
-                          onChange={(e) => toggleTag('new', 'mocktails', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🍹 Cafe: Mocktails</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cold-coffee')}
-                          onChange={(e) => toggleTag('new', 'cold-coffee', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🧋 Cafe: Cold Coffee</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('frankie-rolls')}
-                          onChange={(e) => toggleTag('new', 'frankie-rolls', e.target.checked)}
-                          className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
-                        />
-                        <span>🌯 Cafe: Frankie Rolls</span>
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-beverage')}
-                          onChange={(e) => toggleTag('new', 'hot-beverage', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>☕ Hot Beverage</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-bite')}
-                          onChange={(e) => toggleTag('new', 'hot-bite', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🥟 Hot Bite / Snack</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('chinese')}
-                          onChange={(e) => toggleTag('new', 'chinese', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🥡 Chinese</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('south-indian')}
-                          onChange={(e) => toggleTag('new', 'south-indian', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🍛 South Indian</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('breakfast')}
-                          onChange={(e) => toggleTag('new', 'breakfast', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🍳 Breakfast Essential</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('snacks')}
-                          onChange={(e) => toggleTag('new', 'snacks', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🍿 Snacks</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('dairy')}
-                          onChange={(e) => toggleTag('new', 'dairy', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🥛 Dairy</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('staples')}
-                          onChange={(e) => toggleTag('new', 'staples', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🌾 Staples</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('beverages')}
-                          onChange={(e) => toggleTag('new', 'beverages', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🥤 Beverages</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
-                        <input
-                          type="checkbox"
-                          checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
-                          onChange={(e) => toggleTag('new', 'late-night', e.target.checked)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                        />
-                        <span>🌙 Late Night Craving</span>
-                      </label>
-                    </>
-                  )}
-                </div>
-
-                {/* Custom Tag Creator */}
-                <div className="md:col-span-3 pt-3 border-t border-border/20 flex flex-col gap-2">
-                  <span className="text-[10px] font-extrabold text-text-secondary block">Custom Tags Creator</span>
-                  <div className="flex gap-2 max-w-sm">
-                    <input
-                      type="text"
-                      placeholder="Type custom tag (e.g. sugar-free, organic)"
-                      value={newCustomTag}
-                      onChange={(e) => setNewCustomTag(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleCreateCustomTag('new', newCustomTag);
-                        }
-                      }}
-                      className="flex-1 px-3 py-1.5 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleCreateCustomTag('new', newCustomTag)}
-                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black rounded-xl border border-primary/20 transition-all"
-                    >
-                      Add Tag
-                    </button>
-                  </div>
-                  {newProduct.tags.trim() && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {newProduct.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
-                        <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold text-text-primary">
-                          <span>{tag}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleTag('new', tag, false)}
-                            className="text-text-muted hover:text-rose-500 font-extrabold text-[9px] ml-0.5"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-5 border-t border-border/20">
-                <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Promotional Highlight Placements</p>
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="isAvailable"
-                      checked={newProduct.isAvailable}
-                      onChange={(e) => setNewProduct({ ...newProduct, isAvailable: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="isAvailable" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      Immediately Available for Sale
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="isFlashDeal"
-                      checked={newProduct.isFlashDeal}
-                      onChange={(e) => setNewProduct({ ...newProduct, isFlashDeal: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="isFlashDeal" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      ⚡ Flash Deal
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="isTopPick"
-                      checked={newProduct.isTopPick}
-                      onChange={(e) => setNewProduct({ ...newProduct, isTopPick: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="isTopPick" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      ⭐ Top Pick
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="isBestSeller"
-                      checked={newProduct.isBestSeller}
-                      onChange={(e) => setNewProduct({ ...newProduct, isBestSeller: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="isBestSeller" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      🏆 Best Seller
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Display Priority / Sort Order */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Display Priority / Sort Order</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 100 for top, -50 for bottom"
-                  value={newProduct.sortOrder}
-                  onChange={(e) => setNewProduct({ ...newProduct, sortOrder: e.target.value })}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-text-primary"
-                />
-                <p className="text-[9px] text-text-muted mt-0.5">Higher numbers display first/on top. Lower numbers display last. Default is 0.</p>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddProduct(false)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingProduct}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all shadow-sm"
-                >
-                  {isCreatingProduct ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Add Item'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Products Inventory List */}
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
-            <h3 className="font-extrabold text-text-primary text-base mb-4">Stock Levels & Pricing</h3>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                    <th className="py-3 px-4">Item</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4 w-[110px]">MRP (₹)</th>
-                    <th className="py-3 px-4 w-[110px]">Price (₹)</th>
-                    <th className="py-3 px-4 w-[90px]">Stock</th>
-                    <th className="py-3 px-4 w-[110px]">Location</th>
-                    <th className="py-3 px-4 w-[100px] text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 font-semibold">
-                  {filteredProducts.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-10 text-text-secondary">
-                        No products found matching your search.
-                      </td>
-                    </tr>
-
-                  ) : (
-                    filteredProducts.map((p) => {
-                      const isLowStock = p.stock < 15
-                      
-                      return (
-                        <tr key={p.id} className="hover:bg-muted/30">
-                          {/* Item Info */}
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl h-9 w-9 bg-muted/60 flex items-center justify-center rounded-lg border">
-                                {p.imageUrl && p.imageUrl.length < 5 ? p.imageUrl : '📦'}
-                              </span>
-                              <div>
-                                <div className="font-bold text-text-primary">{p.name}</div>
-                                <div className="text-[10px] text-text-muted font-normal flex items-center gap-1.5">
-                                  <span>{p.unit}</span>
-                                  {p.barcode && (
-                                    <span className="text-[9px] bg-blue-500/10 text-blue-600 dark:text-blue-450 px-1 py-0.5 rounded font-mono">
-                                      {p.barcode}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Category */}
-                          <td className="py-3 px-4">
-                            <span className="bg-muted px-2 py-0.5 border border-border/80 text-[10px] text-text-secondary rounded font-bold uppercase tracking-wider">
-                              {p.category.name}
-                            </span>
-                          </td>
-
-                          {/* MRP */}
-                          <td className="py-3 px-4 text-text-secondary">
-                            <span>₹{p.mrp}</span>
-                          </td>
-
-                          {/* price */}
-                          <td className="py-3 px-4">
-                            <span className="text-accent font-extrabold">₹{p.price}</span>
-                          </td>
-
-                          {/* Stock */}
-                          <td className="py-3 px-4">
-                            {p.category?.slug === 'cafe' ? (
-                              <span className="text-text-muted font-normal italic">N/A (Unlimited)</span>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <span className={`font-bold ${isLowStock ? 'text-discount font-extrabold' : 'text-text-primary'}`}>
-                                  {p.stock}
-                                </span>
-                                {isLowStock && (
-                                  <span title="Low stock warning">
-                                    <AlertCircle className="h-3.5 w-3.5 text-discount" />
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleProductAvailability(p.id, p.isAvailable)}
-                              className={`px-2.5 py-0.5 rounded-full text-[9px] font-black transition-all border cursor-pointer hover:scale-105 active:scale-95 ${
-                                p.isAvailable 
-                                  ? 'bg-accent/15 text-accent border-accent/30 hover:bg-accent/25' 
-                                  : 'bg-muted text-text-muted border-border hover:bg-muted/80'
-                              }`}
-                              title={p.isAvailable ? "Click to Disable Product" : "Click to Enable Product"}
-                            >
-                              {p.isAvailable ? 'Active ✓' : 'Disabled ✗'}
-                            </button>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => handleDuplicateProduct(p)}
-                                className="px-2.5 py-1 border border-border bg-blue-500/5 hover:bg-blue-500/10 text-[10px] font-bold rounded-lg text-blue-600 dark:text-blue-400 transition-all"
-                                title="Duplicate / Copy Product"
-                              >
-                                Copy
-                              </button>
-                              <button
-                                onClick={() => startEditingProduct(p)}
-                                className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProduct(p.id)}
-                                className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors"
-                              >
-                                <Trash className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {renderPagination(productPage, productTotal, 10, setProductPage)}
-          </div>
-
-        </div>
+        <ProductsTab
+          products={products}
+          categories={categories}
+          restaurantsList={restaurantsList}
+          settingsMap={settingsMap}
+          filteredProducts={filteredProducts}
+          searchQuery={searchQuery}
+          selectedTypeFilter={selectedTypeFilter}
+          selectedCategoryFilter={selectedCategoryFilter}
+          showAddProduct={showAddProduct}
+          showSortManager={showSortManager}
+          showCsvImport={showCsvImport}
+          showExportModal={showExportModal}
+          isExporting={isExporting}
+          isCreatingProduct={isCreatingProduct}
+          newProduct={newProduct}
+          newProductType={newProductType}
+          editProductType={editProductType}
+          newProductVariants={newProductVariants}
+          editProductVariants={editProductVariants}
+          hasVariantsNew={hasVariantsNew}
+          hasVariantsEdit={hasVariantsEdit}
+          newCustomTag={newCustomTag}
+          editCustomTag={editCustomTag}
+          isUploading={isUploading}
+          productPage={productPage}
+          productTotal={productTotal}
+          editingProduct={editingProduct}
+          savingProductId={savingProductId}
+          setShowAddProduct={setShowAddProduct}
+          setShowSortManager={setShowSortManager}
+          setShowCsvImport={setShowCsvImport}
+          setShowExportModal={setShowExportModal}
+          setNewProduct={setNewProduct}
+          setNewProductType={setNewProductType}
+          setEditProductType={setEditProductType}
+          setNewProductVariants={setNewProductVariants}
+          setEditProductVariants={setEditProductVariants}
+          setHasVariantsNew={setHasVariantsNew}
+          setHasVariantsEdit={setHasVariantsEdit}
+          setNewCustomTag={setNewCustomTag}
+          setEditingProduct={setEditingProduct}
+          setProductPage={setProductPage}
+          setMediaTarget={setMediaTarget}
+          setShowMediaLibrary={setShowMediaLibrary}
+          setSearchQuery={setSearchQuery}
+          setSelectedTypeFilter={setSelectedTypeFilter}
+          setSelectedCategoryFilter={setSelectedCategoryFilter}
+          setProducts={setProducts}
+          setAllProducts={setAllProducts}
+          handleNewProductTypeChange={handleNewProductTypeChange}
+          handleEditProductTypeChange={handleEditProductTypeChange}
+          applyProductTemplate={applyProductTemplate}
+          toggleTag={toggleTag}
+          handleCreateCustomTag={handleCreateCustomTag}
+          handleCreateProduct={handleCreateProduct}
+          handleToggleProductAvailability={handleToggleProductAvailability}
+          handleDeleteProduct={handleDeleteProduct}
+          startEditingProduct={startEditingProduct}
+          handleDuplicateProduct={handleDuplicateProduct}
+          handleCloudinaryUpload={handleCloudinaryUpload}
+          handleExportCsv={handleExportCsv}
+          handleReplenishCsv={handleReplenishCsv}
+          renderPagination={renderPagination}
+        />
       )}
 
       {/* ---------------------------------------------------- */}
       {/* CATEGORIES TAB */}
       {/* ---------------------------------------------------- */}
       {activeTab === 'categories' && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Controls header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-5 rounded-2xl border border-border shadow-sm">
-            <div>
-              <h3 className="font-extrabold text-text-primary text-base flex items-center gap-2">
-                <span>📁 Grocery Categories &amp; Subcategories</span>
-                <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
-                  {categories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant').length} Total
-                </span>
-              </h3>
-              <p className="text-xs text-text-secondary mt-0.5">
-                Create main categories and nested subcategories, upload category photos or select from photo library.
-              </p>
-            </div>
-            
-            <button
-              onClick={() => {
-                setShowAddCategory(!showAddCategory)
-                setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: '' })
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all shadow-xs cursor-pointer active:scale-98"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>{showAddCategory ? 'Close Form' : 'Add Category / Subcategory'}</span>
-            </button>
-          </div>
-
-          {/* Add Category / Subcategory Form */}
-          {showAddCategory && (
-            <form 
-              onSubmit={handleCreateCategory}
-              className="bg-card p-6 border border-border rounded-2xl shadow-md space-y-5 max-w-xl animate-slide-up"
-            >
-              <div className="border-b border-border/60 pb-3 flex justify-between items-center">
-                <h4 className="font-extrabold text-text-primary text-sm">Create Category / Subcategory</h4>
-                <span className="text-[10px] text-text-muted font-mono">POST /api/categories</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category / Subcategory Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Fresh Milk or Chocolates & Sweets"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (Select for Subcategory)</label>
-                  <select
-                    value={newCategory.parentId}
-                    onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold cursor-pointer"
-                  >
-                    <option value="">📁 None (Main Root Category)</option>
-                    {categories
-                      .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && !c.parentId)
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          🏷️ Subcategory of: {c.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Photo / Icon</label>
-                  <div className="flex flex-col sm:flex-row items-center gap-3 bg-muted/10 p-3.5 rounded-xl border border-dashed border-border/80">
-                    <div className="relative h-14 w-14 bg-card border flex items-center justify-center rounded-xl overflow-hidden shrink-0 shadow-2xs">
-                      {newCategory.imageUrl && (newCategory.imageUrl.startsWith('data:image/') || newCategory.imageUrl.startsWith('/') || newCategory.imageUrl.startsWith('http')) ? (
-                        <img src={newCategory.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                      ) : newCategory.imageUrl && newCategory.imageUrl.length < 5 ? (
-                        <span className="text-2xl">{newCategory.imageUrl}</span>
-                      ) : (
-                        <span className="text-xl text-text-secondary">📦</span>
-                      )}
-                      
-                      {newCategory.imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setNewCategory({ ...newCategory, imageUrl: '' })}
-                          className="absolute -top-1 -right-1 bg-discount text-white rounded-full p-0.5 shadow hover:bg-discount/90 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 w-full space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <label
-                          htmlFor="new-category-image-file"
-                          className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all inline-flex items-center gap-1"
-                        >
-                          <ImageIcon className="h-3 w-3" />
-                          Upload Photo
-                        </label>
-                        <input
-                          id="new-category-image-file"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            handleImageFileChange('new', e)
-                            e.target.value = ''
-                          }}
-                          className="sr-only"
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMediaTarget('newCategory')
-                            setShowMediaLibrary(true)
-                          }}
-                          className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-lg border border-amber-500/20 transition-all inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Sparkles className="h-3 w-3" />
-                          Pick from Photo Library
-                        </button>
-                      </div>
-                      
-                      <input
-                        type="text"
-                        placeholder="Or type Emoji icon (e.g. 🍫 or 🥛)"
-                        value={newCategory.imageUrl.startsWith('data:image/') || newCategory.imageUrl.startsWith('http') ? '' : newCategory.imageUrl}
-                        onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
-                        className="w-full px-3 py-1.5 text-[11px] rounded-lg border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 10"
-                    value={newCategory.sortOrder}
-                    onChange={(e) => setNewCategory({ ...newCategory, sortOrder: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddCategory(false)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCategory}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/95 transition-all shadow-xs cursor-pointer active:scale-98"
-                >
-                  {isCreatingCategory ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Save Category / Subcategory'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Edit Category Modal */}
-          {editingCategory && (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <form 
-                onSubmit={saveCategoryChanges}
-                className="bg-card p-6 border border-border rounded-3xl shadow-xl space-y-5 max-w-lg w-full animate-scale-in"
-              >
-                <div className="border-b border-border/60 pb-3 flex justify-between items-center">
-                  <div>
-                    <h4 className="font-black text-text-primary text-base">Edit Category / Subcategory</h4>
-                    <p className="text-[10px] text-text-muted">ID: {editingCategory.id}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingCategory(null)}
-                    className="text-text-secondary hover:text-text-primary p-1 cursor-pointer"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={categoryEditForm.name}
-                      onChange={(e) => setCategoryEditForm({ ...categoryEditForm, name: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (Select for Subcategory)</label>
-                    <select
-                      value={categoryEditForm.parentId}
-                      onChange={(e) => setCategoryEditForm({ ...categoryEditForm, parentId: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold cursor-pointer"
-                    >
-                      <option value="">📁 None (Main Root Category)</option>
-                      {categories
-                        .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && !c.parentId && c.id !== editingCategory.id)
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            🏷️ Subcategory of: {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Photo / Icon</label>
-                    <div className="flex items-center gap-3 bg-muted/10 p-3 rounded-xl border border-dashed border-border/80">
-                      <div className="relative h-14 w-14 bg-card border flex items-center justify-center rounded-xl overflow-hidden shrink-0 shadow-2xs">
-                        {categoryEditForm.imageUrl && (categoryEditForm.imageUrl.startsWith('data:image/') || categoryEditForm.imageUrl.startsWith('/') || categoryEditForm.imageUrl.startsWith('http')) ? (
-                          <img src={categoryEditForm.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                        ) : categoryEditForm.imageUrl && categoryEditForm.imageUrl.length < 5 ? (
-                          <span className="text-2xl">{categoryEditForm.imageUrl}</span>
-                        ) : (
-                          <span className="text-xl text-text-secondary">📦</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label
-                            htmlFor="edit-category-image-file"
-                            className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all inline-flex items-center gap-1"
-                          >
-                            <ImageIcon className="h-3 w-3" />
-                            Upload Photo
-                          </label>
-                          <input
-                            id="edit-category-image-file"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              handleImageFileChange('edit', e)
-                              e.target.value = ''
-                            }}
-                            className="sr-only"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMediaTarget('editCategory')
-                              setShowMediaLibrary(true)
-                            }}
-                            className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-lg border border-amber-500/20 transition-all inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Sparkles className="h-3 w-3" />
-                            Pick from Photo Library
-                          </button>
-                        </div>
-                        
-                        <input
-                          type="text"
-                          placeholder="Or type Emoji (e.g. 🍫)"
-                          value={categoryEditForm.imageUrl.startsWith('data:image/') || categoryEditForm.imageUrl.startsWith('http') ? '' : categoryEditForm.imageUrl}
-                          onChange={(e) => setCategoryEditForm({ ...categoryEditForm, imageUrl: e.target.value })}
-                          className="w-full px-3 py-1.5 text-[11px] rounded-lg border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
-                    <input
-                      type="number"
-                      value={categoryEditForm.sortOrder}
-                      onChange={(e) => setCategoryEditForm({ ...categoryEditForm, sortOrder: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setEditingCategory(null)}
-                    className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingCategoryId === editingCategory.id}
-                    className="flex items-center gap-1.5 px-5 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/95 transition-all shadow-xs cursor-pointer active:scale-98"
-                  >
-                    {savingCategoryId === editingCategory.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Categories & Subcategories Tree List Table */}
-          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm overflow-hidden space-y-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                    <th className="py-3 px-4">Photo / Icon</th>
-                    <th className="py-3 px-4">Category Name</th>
-                    <th className="py-3 px-4">Hierarchy Type</th>
-                    <th className="py-3 px-4">Slug Identifier</th>
-                    <th className="py-3 px-4 text-center">Sort Order</th>
-                    <th className="py-3 px-4 text-center">Items Stocked</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-                  {categories
-                    .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
-                    .map((c) => {
-                      const isSub = Boolean(c.parentId)
-                      const parentCat = isSub ? categories.find(p => p.id === c.parentId) : null
-
-                      return (
-                        <tr key={c.id} className={`hover:bg-muted/30 ${isSub ? 'bg-muted/10' : ''}`}>
-                          <td className="py-3 px-4">
-                            <span className="h-9 w-9 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shadow-2xs">
-                              {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
-                                <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
-                              ) : c.imageUrl && c.imageUrl.length < 5 ? (
-                                <span className="text-lg">{c.imageUrl}</span>
-                              ) : (
-                                <span className="text-base">📦</span>
-                              )}
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5">
-                              {isSub && <span className="text-text-muted font-mono font-bold text-xs">└──</span>}
-                              <span className={`font-black ${isSub ? 'text-xs text-text-primary' : 'text-sm text-text-primary'}`}>
-                                {c.name}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            {isSub ? (
-                              <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-500/20">
-                                🏷️ Subcategory {parentCat ? `(${parentCat.name})` : ''}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-500/20">
-                                📁 Main Category
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
-                          <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
-                          
-                          <td className="py-3 px-4 text-center">
-                            <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                              {c._count?.products || 0} Products
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {!isSub && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: c.id })
-                                    setShowAddCategory(true)
-                                  }}
-                                  className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
-                                  title="Add subcategory to this parent"
-                                >
-                                  + Sub
-                                </button>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() => startEditingCategory(c)}
-                                className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all cursor-pointer"
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteCategory(c.id)}
-                                disabled={deletingCategoryId === c.id}
-                                className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
-                              >
-                                {deletingCategoryId === c.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Trash className="h-3.5 w-3.5" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <CategoriesTab
+          categories={categories}
+          newCategory={newCategory}
+          showAddCategory={showAddCategory}
+          editingCategory={editingCategory}
+          savingCategoryId={savingCategoryId}
+          deletingCategoryId={deletingCategoryId}
+          categoryEditForm={categoryEditForm}
+          isCreatingCategory={isCreatingCategory}
+          showMediaLibrary={showMediaLibrary}
+          mediaTarget={mediaTarget}
+          mediaSearchQuery={mediaSearchQuery}
+          setNewCategory={setNewCategory}
+          setShowAddCategory={setShowAddCategory}
+          setEditingCategory={setEditingCategory}
+          setCategoryEditForm={setCategoryEditForm}
+          setSavingCategoryId={setSavingCategoryId}
+          setDeletingCategoryId={setDeletingCategoryId}
+          setMediaTarget={setMediaTarget}
+          setShowMediaLibrary={setShowMediaLibrary}
+          handleCreateCategory={handleCreateCategory}
+          handleDeleteCategory={handleDeleteCategory}
+          saveCategoryChanges={saveCategoryChanges}
+          startEditingCategory={startEditingCategory}
+          handleImageFileChange={handleImageFileChange}
+        />
       )}
 
       {/* ---------------------------------------------------- */}
       {/* CUSTOMERS / USERS TAB */}
       {/* ---------------------------------------------------- */}
       {activeTab === 'users' && (
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-5 border-b border-border/40 pb-4">
-            <div className="flex items-center justify-between w-full md:w-auto">
-              <div>
-                <h3 className="font-extrabold text-text-primary text-base">Customer Accounts</h3>
-                <p className="text-[10px] text-text-secondary mt-0.5">Access user profiles and check transaction frequencies.</p>
-              </div>
-              <button
-                onClick={handleExportCustomersCsv}
-                disabled={isExportingUsers}
-                className="ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 shrink-0"
-              >
-                <Download className="h-3.5 w-3.5" />
-                {isExportingUsers ? 'Exporting...' : '📥 Export Customers'}
-              </button>
-            </div>
-            
-            {/* Search and Filters */}
-            <div className="flex gap-2 w-full md:w-auto flex-1 justify-end max-w-lg">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search customers by name, email, phone..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 w-full text-[10px] rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                />
-              </div>
-              <select
-                value={userRoleFilter}
-                onChange={(e) => setUserRoleFilter(e.target.value)}
-                className="px-3 py-1.5 text-[10px] rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Roles</option>
-                <option value="USER">Customers</option>
-                <option value="PICKER">Pickers</option>
-                <option value="CHEF">Chefs</option>
-                <option value="DELIVERY">Riders</option>
-                <option value="ADMIN">Admins</option>
-              </select>
-              <select
-                value={userStatusFilter}
-                onChange={(e) => setUserStatusFilter(e.target.value)}
-                className="px-3 py-1.5 text-[10px] rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">🟢 Active Only</option>
-                <option value="BLOCKED">🔴 Blocked Only</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                  <th className="py-3 px-4">Name</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Phone</th>
-                  <th className="py-3 px-4 text-center">Role</th>
-                  <th className="py-3 px-4 text-center">Account Status</th>
-                  <th className="py-3 px-4 text-center">Password</th>
-                  <th className="py-3 px-4 text-center">Orders Placed</th>
-                  <th className="py-3 px-4 text-center">Joined Date</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-muted/30">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]">
-                          {u.name?.charAt(0) || 'U'}
-                        </div>
-                        <span className="font-bold">{u.name || 'Anonymous User'}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-medium text-text-secondary">{u.email}</td>
-                    <td className="py-3 px-4 font-mono">
-                      {editingPhoneUserId === u.id ? (
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            placeholder="+91..."
-                            value={phoneInput}
-                            onChange={(e) => setPhoneInput(e.target.value)}
-                            className="w-28 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
-                          />
-                          <button
-                            onClick={() => handleUserPhoneSave(u.id)}
-                            disabled={savingPhoneId === u.id}
-                            className="px-2 py-1 text-[10px] bg-emerald-600 text-white rounded-md font-bold hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
-                          >
-                            {savingPhoneId === u.id ? '...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingPhoneUserId(null)
-                              setPhoneInput('')
-                            }}
-                            className="px-1.5 py-1 text-[10px] text-text-muted hover:text-text-primary cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-text-muted">{u.phone || 'N/A'}</span>
-                          <button
-                            onClick={() => {
-                              setEditingPhoneUserId(u.id)
-                              setPhoneInput(u.phone || '')
-                            }}
-                            className="text-[10px] text-primary hover:underline font-bold opacity-80 hover:opacity-100 cursor-pointer"
-                            title="Edit Phone Number"
-                          >
-                            ✏️ Edit
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleUserRoleChange(u.id, e.target.value)}
-                        disabled={updatingUserRoleId === u.id}
-                        className="bg-muted px-2 py-1 rounded-lg border text-[11px] font-bold text-text-primary focus:outline-none cursor-pointer"
-                      >
-                        <option value="USER">Customer (USER)</option>
-                        <option value="PICKER">Grocery Picker</option>
-                        <option value="CHEF">Cafe Chef</option>
-                        <option value="DELIVERY">Delivery Rider</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {u.isBlocked ? (
-                        <div className="flex flex-col items-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-500/10 text-rose-600 border border-rose-500/20" title={u.blockReason ? `Reason: ${u.blockReason}` : undefined}>
-                            🔴 Blocked
-                          </span>
-                          {u.blockReason && (
-                            <span className="text-[8px] text-rose-500/80 max-w-[120px] truncate mt-0.5 font-medium" title={u.blockReason}>
-                              {u.blockReason}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                          🟢 Active
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {settingPasswordUserId === u.id ? (
-                        <div className="flex items-center gap-1.5 justify-center">
-                          <input
-                            type="password"
-                            placeholder="Min 6 chars"
-                            value={passwordInput}
-                            onChange={(e) => setPasswordInput(e.target.value)}
-                            className="w-24 px-2 py-1 text-[11px] border border-border rounded-lg bg-muted/30 focus:outline-none focus:border-primary font-medium"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleSetPassword(u.id)}
-                            disabled={savingPasswordId === u.id}
-                            className="p-1 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
-                          >
-                            {savingPasswordId === u.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => { setSettingPasswordUserId(null); setPasswordInput('') }}
-                            className="p-1 bg-muted text-text-secondary rounded-md hover:bg-muted/80 transition-colors"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setSettingPasswordUserId(u.id); setPasswordInput('') }}
-                          className="px-2.5 py-1 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
-                        >
-                          🔑 {u.passwordHash ? 'Change Password' : 'Set Password'}
-                        </button>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="font-bold bg-muted px-2 py-0.5 rounded border text-[10px]">
-                        {u._count?.orders || 0} orders
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-text-muted font-medium">
-                      {formatDate(u.createdAt, 'd MMM yyyy')}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {u.role === 'ADMIN' ? (
-                        <span className="text-[10px] text-text-muted italic">Admin</span>
-                      ) : u.isBlocked ? (
-                        <button
-                          onClick={() => handleToggleBlock(u, false)}
-                          disabled={isUpdatingBlockStatus}
-                          className="px-2.5 py-1 text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20 rounded-lg transition-colors cursor-pointer active:scale-95"
-                        >
-                          Unblock
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setBlockingUser(u)
-                            setBlockReasonInput('')
-                          }}
-                          disabled={isUpdatingBlockStatus}
-                          className="px-2.5 py-1 text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 rounded-lg transition-colors cursor-pointer active:scale-95"
-                        >
-                          Block
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {renderPagination(userPage, userTotal, 10, setUserPage)}
-        </div>
+        <UsersTab
+          users={users}
+          userPage={userPage}
+          userTotal={userTotal}
+          userSearch={userSearch}
+          userRoleFilter={userRoleFilter}
+          userStatusFilter={userStatusFilter}
+          isExportingUsers={isExportingUsers}
+          editingPhoneUserId={editingPhoneUserId}
+          phoneInput={phoneInput}
+          savingPhoneId={savingPhoneId}
+          settingPasswordUserId={settingPasswordUserId}
+          passwordInput={passwordInput}
+          savingPasswordId={savingPasswordId}
+          isUpdatingBlockStatus={isUpdatingBlockStatus}
+          setUserPage={setUserPage}
+          setUserSearch={setUserSearch}
+          setUserRoleFilter={setUserRoleFilter}
+          setUserStatusFilter={setUserStatusFilter}
+          setEditingPhoneUserId={setEditingPhoneUserId}
+          setPhoneInput={setPhoneInput}
+          setSettingPasswordUserId={setSettingPasswordUserId}
+          setPasswordInput={setPasswordInput}
+          handleExportCustomersCsv={handleExportCustomersCsv}
+          handleUserPhoneSave={handleUserPhoneSave}
+          handleUserRoleChange={handleUserRoleChange}
+          handleSetPassword={handleSetPassword}
+          handleToggleBlock={handleToggleBlock}
+          onRequestBlock={setBlockingUser}
+          renderPagination={renderPagination}
+        />
       )}
 
       {/* ---------------------------------------------------- */}
@@ -4437,625 +2806,156 @@ export function AdminDashboard({
       {/* ---------------------------------------------------- */}
       {/* COUPONS / OFFERS TAB */}
       {/* ---------------------------------------------------- */}
+      {/* COUPONS TAB */}
+      {/* ---------------------------------------------------- */}
       {activeTab === 'coupons' && (
-        <div className="space-y-6 animate-fade-in">
-          
-          {/* Coupons header */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
-            <div>
-              <h3 className="font-extrabold text-text-primary text-base">Offers & Coupons</h3>
-              <p className="text-[10px] text-text-secondary mt-0.5">
-                Create, edit and manage promotional discount codes for customers
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-xl">
-                <Ticket className="h-4 w-4 text-purple-500" />
-                <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                  {coupons.filter((c: any) => c.isActive).length} active / {coupons.length} total
-                </span>
-              </div>
-              <button
-                onClick={() => setShowAddCoupon(!showAddCoupon)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all"
-              >
-                <PlusCircle className="h-4 w-4" />
-                New Coupon
-              </button>
-            </div>
-          </div>
-
-          {/* Add Coupon Form */}
-          {showAddCoupon && (
-            <form
-              onSubmit={handleCreateCoupon}
-              className="bg-card p-6 border border-border rounded-2xl shadow-sm space-y-4 animate-slide-up"
-            >
-              <div className="border-b border-border/60 pb-2">
-                <h4 className="font-extrabold text-text-primary text-sm">Create New Coupon</h4>
-                <p className="text-[10px] text-text-secondary mt-0.5">Configure discount code, type, and usage limits</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Coupon Code *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. SAVE20, WELCOME50"
-                    value={newCoupon.code}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold uppercase tracking-wider"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Discount Type *</label>
-                  <select
-                    value={newCoupon.discountType}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, discountType: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="PERCENT">Percentage (%)</option>
-                    <option value="FLAT">Flat Amount (₹)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                    Discount Value * {newCoupon.discountType === 'PERCENT' ? '(%)' : '(₹)'}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder={newCoupon.discountType === 'PERCENT' ? 'e.g. 20' : 'e.g. 50'}
-                    value={newCoupon.value}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, value: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Order Value (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g. 200"
-                    value={newCoupon.minOrder}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, minOrder: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Max Discount Cap (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g. 100"
-                    value={newCoupon.maxDiscount}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, maxDiscount: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Max Total Uses</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 100 (leave blank for unlimited)"
-                    value={newCoupon.maxUses}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, maxUses: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={newCoupon.expiresAt}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, expiresAt: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Restricted Category (Optional)</label>
-                  <select
-                    value={newCoupon.categoryId}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="">All Categories (No restriction)</option>
-                    {categories.map((cat: any) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="couponActive"
-                      checked={newCoupon.isActive}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, isActive: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="couponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      Activate Immediately
-                    </label>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="oncePerCustomer"
-                      checked={newCoupon.oncePerCustomer}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, oncePerCustomer: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="oncePerCustomer" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      Limit to once per customer
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddCoupon(false)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCoupon}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all shadow-sm"
-                >
-                  {isCreatingCoupon ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Coupon'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Coupons List */}
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
-            <h3 className="font-extrabold text-text-primary text-base mb-4">All Coupons</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                    <th className="py-3 px-4">Code</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Value</th>
-                    <th className="py-3 px-4">Min Order</th>
-                    <th className="py-3 px-4">Max Discount</th>
-                    <th className="py-3 px-4 text-center">Usage</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4">Expires</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 font-semibold">
-                  {isLoadingCoupons ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-10 text-text-secondary">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
-                        Loading coupons...
-                      </td>
-                    </tr>
-                  ) : coupons.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-10 text-text-secondary">
-                        <Ticket className="h-8 w-8 mx-auto mb-2 text-text-muted" />
-                        No coupons created yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    coupons.map((c: any) => {
-                      const isExpired = c.expiresAt && new Date(c.expiresAt) < new Date()
-                      
-                      return (
-                        <tr key={c.id} className={`hover:bg-muted/30 ${isExpired ? 'opacity-60' : ''}`}>
-                          {/* Code */}
-                          <td className="py-3 px-4">
-                            <span className="font-mono font-black text-[11px] bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-lg border border-purple-500/20">
-                              {c.code}
-                            </span>
-                          </td>
-
-                          {/* Type */}
-                          <td className="py-3 px-4">
-                            <span className="flex items-center gap-1 text-[11px]">
-                              {c.discountType === 'PERCENT' ? (
-                                <><Percent className="h-3 w-3 text-blue-500" /> Percent</>
-                              ) : (
-                                <><IndianRupee className="h-3 w-3 text-accent" /> Flat</>
-                              )}
-                            </span>
-                          </td>
-
-                          {/* Value */}
-                          <td className="py-3 px-4">
-                            <span className="font-extrabold text-accent">
-                              {c.discountType === 'PERCENT' ? `${c.value}%` : `₹${c.value}`}
-                            </span>
-                          </td>
-
-                          {/* Min Order */}
-                          <td className="py-3 px-4">
-                            <span className="text-text-secondary">₹{c.minOrder}</span>
-                          </td>
-
-                          {/* Max Discount */}
-                          <td className="py-3 px-4">
-                            <span className="text-text-secondary">
-                              {c.maxDiscount ? `₹${c.maxDiscount}` : '—'}
-                            </span>
-                          </td>
-
-                          {/* Usage */}
-                          <td className="py-3 px-4 text-center">
-                            <span className="bg-muted px-2 py-0.5 rounded border text-[10px] font-bold">
-                              {c.usedCount}{c.maxUses ? ` / ${c.maxUses}` : ' / ∞'}
-                            </span>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3 px-4 text-center">
-                            <button
-                              onClick={() => handleToggleCoupon(c.id, c.isActive)}
-                              disabled={savingCouponId === c.id}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold cursor-pointer transition-all ${
-                                c.isActive
-                                  ? 'bg-accent/15 text-accent border border-accent/20 hover:bg-accent/25'
-                                  : 'bg-muted text-text-muted border border-border hover:bg-muted/80'
-                              }`}
-                            >
-                              {savingCouponId === c.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : c.isActive ? (
-                                <ToggleRight className="h-3 w-3" />
-                              ) : (
-                                <ToggleLeft className="h-3 w-3" />
-                              )}
-                              {c.isActive ? 'Active' : 'Disabled'}
-                            </button>
-                          </td>
-
-                          {/* Expires */}
-                          <td className="py-3 px-4">
-                            <span className={`text-[10px] font-medium ${isExpired ? 'text-discount font-bold' : 'text-text-muted'}`}>
-                              {c.expiresAt
-                                ? formatDate(c.expiresAt, 'd MMM yyyy')
-                                : 'Never'}
-                              {isExpired && ' (Expired)'}
-                            </span>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => startEditingCoupon(c)}
-                                className="p-1.5 border border-border hover:bg-muted text-text-secondary rounded-lg transition-colors"
-                                title="Edit coupon"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCoupon(c.id)}
-                                disabled={deletingCouponId === c.id}
-                                className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors"
-                                title="Delete coupon"
-                              >
-                                {deletingCouponId === c.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Trash className="h-3.5 w-3.5" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
+        <CouponsTab
+          coupons={coupons}
+          categories={categories}
+          showAddCoupon={showAddCoupon}
+          isCreatingCoupon={isCreatingCoupon}
+          isLoadingCoupons={isLoadingCoupons}
+          savingCouponId={savingCouponId}
+          deletingCouponId={deletingCouponId}
+          newCoupon={newCoupon}
+          editingCoupon={editingCoupon}
+          couponEditForm={couponEditForm}
+          setShowAddCoupon={setShowAddCoupon}
+          setNewCoupon={setNewCoupon}
+          setEditingCoupon={setEditingCoupon}
+          setCouponEditForm={setCouponEditForm}
+          handleCreateCoupon={handleCreateCoupon}
+          saveCouponChanges={saveCouponChanges}
+          handleToggleCoupon={handleToggleCoupon}
+          handleDeleteCoupon={handleDeleteCoupon}
+          startEditingCoupon={startEditingCoupon}
+        />
       )}
 
-      {activeTab === 'liveops' && (() => {
-        const pickTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && !o.restaurantId && o.orderType !== 'RESTAURANT')
-        const prepTimeOrders = liveOrders.filter(o => o.confirmedAt && o.packedAt && (!!o.restaurantId || o.orderType === 'RESTAURANT'))
-        const deliveryTimeOrders = liveOrders.filter(o => o.shippedAt && o.deliveredAt)
-
-        const avgPickTime = pickTimeOrders.length > 0 
-          ? Math.round(pickTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0) / pickTimeOrders.length / 60000)
-          : 0
-        const avgPrepTime = prepTimeOrders.length > 0 
-          ? Math.round(prepTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0) / prepTimeOrders.length / 60000)
-          : 0
-        const avgDeliveryTime = deliveryTimeOrders.length > 0 
-          ? Math.round(deliveryTimeOrders.reduce((sum, o) => sum + (new Date(o.deliveredAt).getTime() - new Date(o.shippedAt).getTime()), 0) / deliveryTimeOrders.length / 60000)
-          : 0
-
-        const pendingCount = liveOrders.filter(o => o.status === 'PENDING').length
-        const confirmedCount = liveOrders.filter(o => o.status === 'CONFIRMED').length
-        const packedCount = liveOrders.filter(o => o.status === 'PACKED').length
-        const shippedCount = liveOrders.filter(o => o.status === 'SHIPPED').length
-        const deliveredCount = liveOrders.filter(o => o.status === 'DELIVERED').length
-
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[
-                { label: 'Placed (New)', count: pendingCount, color: 'border-blue-500/30 text-blue-600 bg-blue-500/5' },
-                { label: 'In Picking/Prep', count: confirmedCount, color: 'border-amber-500/30 text-amber-600 bg-amber-500/5' },
-                { label: 'Packed & Ready', count: packedCount, color: 'border-emerald-500/30 text-emerald-600 bg-emerald-500/5' },
-                { label: 'Out for Delivery', count: shippedCount, color: 'border-purple-500/30 text-purple-600 bg-purple-500/5' },
-                { label: 'Delivered', count: deliveredCount, color: 'border-zinc-500/30 text-zinc-600 bg-zinc-500/5' },
-              ].map(stat => (
-                <div key={stat.label} className={`border rounded-2xl p-4 shadow-sm text-center ${stat.color} bg-card`}>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85 block">{stat.label}</span>
-                  <span className="text-xl md:text-2xl font-black mt-1 block">{stat.count}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-extrabold text-sm text-text-primary">Avg Picking Speed</h4>
-                  <ShoppingBag className="h-4 w-4 text-blue-500" />
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-text-primary">{avgPickTime || '—'}</span>
-                  <span className="text-xs font-bold text-text-secondary">minutes</span>
-                </div>
-                <p className="text-[10px] text-text-secondary font-medium">Avg duration between picker confirming order & packing it</p>
-              </div>
-
-              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-extrabold text-sm text-text-primary">Avg Cafe Prep Speed</h4>
-                  <Utensils className="h-4 w-4 text-orange-500" />
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-text-primary">{avgPrepTime || '—'}</span>
-                  <span className="text-xs font-bold text-text-secondary">minutes</span>
-                </div>
-                <p className="text-[10px] text-text-secondary font-medium">Avg preparation time for cafe food items</p>
-              </div>
-
-              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-extrabold text-sm text-text-primary">Avg Rider Dispatch Time</h4>
-                  <Clock className="h-4 w-4 text-rose-500" />
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-text-primary">{avgDeliveryTime || '—'}</span>
-                  <span className="text-xs font-bold text-text-secondary">minutes</span>
-                </div>
-                <p className="text-[10px] text-text-secondary font-medium">Avg transit duration from store pickup to customer doorstep</p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <h4 className="font-extrabold text-sm text-text-primary mb-3">SLA Alert Stream</h4>
-              {delayedOrders.length === 0 ? (
-                <p className="text-xs text-text-secondary text-center py-6">All orders are running well within their SLA (10m Grocery / 30m Restaurant).</p>
-              ) : (
-                <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
-                  {delayedOrders.map(order => {
-                    const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
-                    const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
-                    const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
-                    
-                    const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)
-                    const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
-
-                    return (
-                      <div key={order.id} className="flex justify-between items-center p-3 rounded-xl border border-rose-500/10 bg-rose-500/5 text-xs">
-                        <div>
-                          <p className="font-bold text-rose-600 flex items-center gap-1.5">
-                            Order #{order.readableId || order.id.slice(0, 8)}
-                            {fifoRank && (
-                              <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
-                                fifoRank === 1 
-                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
-                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
-                              }`}>
-                                {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-[10px] text-text-secondary mt-0.5 font-medium">
-                            Status: <span className="font-bold uppercase">{order.status}</span> • Customer: {order.userName || order.userEmail}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 font-black text-rose-700 animate-pulse">
-                          {delayMin}m delay
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            <LiveCartsPanel
-              activeCarts={activeCarts}
-              isLoadingCarts={isLoadingCarts}
-              onRefresh={() => setCartsRefreshKey((prev) => prev + 1)}
-              onSendCartNotification={sendCartNotification}
-              onOpenWhatsAppModal={openWhatsAppModal}
-            />
-          </div>
-        )
-      })()}
+      {activeTab === 'liveops' && (
+        <LiveOpsTab
+          liveOrders={liveOrders}
+          livePendingOrders={livePendingOrders}
+          delayedOrders={delayedOrders}
+          activeCarts={activeCarts}
+          isLoadingCarts={isLoadingCarts}
+          cartsRefreshKey={cartsRefreshKey}
+          setCartsRefreshKey={setCartsRefreshKey}
+          sendCartNotification={sendCartNotification}
+          openWhatsAppModal={openWhatsAppModal}
+        />
+      )}
 
       {activeTab === 'analytics' && (
-        <div className="animate-fade-in">
-          <AdminAnalytics
-            products={allProducts}
-            orders={liveOrders}
-            categories={categories}
-            stats={{
-              revenue: stats.revenue,
-              orderCount: stats.orderCount,
-              lowStockCount: stats.lowStockCount
-            }}
-          />
-        </div>
+        <AnalyticsTab
+          products={allProducts}
+          orders={liveOrders}
+          categories={categories}
+          stats={{
+            revenue: stats.revenue,
+            orderCount: stats.orderCount,
+            lowStockCount: stats.lowStockCount
+          }}
+        />
       )}
 
       {activeTab === 'forecast' && (
-        <div className="animate-fade-in">
-          <AdminForecast
-            categories={categories}
-            onRestockCompleted={async () => {
-              try {
-                const res = await fetch('/api/products?limit=1000')
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data.products) {
-                    setProducts(data.products)
-                    setAllProducts(data.products)
-                  }
+        <ForecastTab
+          categories={categories}
+          onRestockCompleted={async () => {
+            try {
+              const res = await fetch('/api/products?limit=1000')
+              if (res.ok) {
+                const data = await res.json()
+                if (data.products) {
+                  setProducts(data.products)
+                  setAllProducts(data.products)
                 }
-              } catch (err) {
-                console.error(err)
               }
-            }}
-          />
-        </div>
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+        />
       )}
 
       {activeTab === 'alerts' && (
-        <div className="animate-fade-in">
-          <AdminAlerts
-            onProductUpdated={async () => {
-              try {
-                const res = await fetch('/api/products?limit=1000')
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data.products) {
-                    setProducts(data.products)
-                    setAllProducts(data.products)
-                  }
+        <AlertsTab
+          onProductUpdated={async () => {
+            try {
+              const res = await fetch('/api/products?limit=1000')
+              if (res.ok) {
+                const data = await res.json()
+                if (data.products) {
+                  setProducts(data.products)
+                  setAllProducts(data.products)
                 }
-              } catch (err) {
-                console.error(err)
               }
-            }}
-          />
-        </div>
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+        />
       )}
 
       {activeTab === 'inward' && (
-        <div className="animate-fade-in">
-          <AdminInventoryCenter />
-        </div>
+        <InwardTab />
       )}
 
       {activeTab === 'bulk-update' && (
-        <div className="animate-fade-in">
-          <AdminBulkUpdate
-            categories={categories}
-            onUpdateCompleted={async () => {
-              try {
-                const res = await fetch('/api/products?limit=1000')
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data.products) {
-                    setProducts(data.products)
-                    setAllProducts(data.products)
-                  }
+        <BulkUpdateTab
+          categories={categories}
+          onUpdateCompleted={async () => {
+            try {
+              const res = await fetch('/api/products?limit=1000')
+              if (res.ok) {
+                const data = await res.json()
+                if (data.products) {
+                  setProducts(data.products)
+                  setAllProducts(data.products)
                 }
-              } catch (err) {
-                console.error(err)
               }
-            }}
-          />
-        </div>
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+        />
       )}
 
       {activeTab === 'reports' && (
-        <div className="animate-fade-in">
-          <AdminReports />
-        </div>
+        <ReportsTab />
       )}
 
       {activeTab === 'restaurant-report' && (
-        <div className="animate-fade-in">
-          <AdminRestaurantReport />
-        </div>
+        <RestaurantReportTab />
       )}
 
       {activeTab === 'banners' && (
-        <div className="animate-fade-in">
-          <AdminBanners categories={categories} products={allProducts} />
-        </div>
+        <BannersTab categories={categories} products={allProducts} />
       )}
 
       {activeTab === 'settings' && (
-        <div className="animate-fade-in">
-          <AdminSettings onSettingsSaved={fetchSettings} />
-        </div>
+        <SettingsTab onSettingsSaved={fetchSettings} />
       )}
 
       {activeTab === 'push-notifications' && (
-        <div className="animate-fade-in">
-          <AdminPushNotifications />
-        </div>
+        <PushNotificationsTab />
       )}
 
       {activeTab === 'flash-deals' && (
-        <div className="animate-fade-in">
-          <AdminPromotions />
-        </div>
+        <FlashDealsTab />
       )}
 
       {activeTab === 'rider-cash' && (
-        <div className="animate-fade-in">
-          <AdminRiderCash />
-        </div>
+        <RiderCashTab />
       )}
 
       {activeTab === 'csv-import' && (
-        <div className="animate-fade-in">
-          <AdminCsvImport
-            categories={categories}
-            onImportComplete={(imported) => {
-              toast.success(`${imported.length} products imported successfully!`)
-              setProducts((prev: any[]) => [...imported, ...prev])
-            }}
-            onClose={() => setActiveTab('products')}
-          />
-        </div>
+        <CsvImportTab categories={categories} />
       )}
 
       {activeTab === 'restaurant-console' && (
-        <div className="animate-fade-in">
-          <AdminRestaurantConsole />
-        </div>
+        <RestaurantConsoleTab />
       )}
 
         </motion.div>
@@ -5063,8 +2963,37 @@ export function AdminDashboard({
 
       {/* Product Edit Modal */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-scale-up space-y-4">
+        <ProductEditModal
+          editingProduct={editingProduct}
+          productEditForm={productEditForm}
+          saveProductChanges={saveProductChanges}
+          setEditingProduct={setEditingProduct}
+          setProductEditForm={setProductEditForm}
+          setHasVariantsEdit={setHasVariantsEdit}
+          setEditProductVariants={setEditProductVariants}
+          setNewCustomTag={setNewCustomTag}
+          setShowMediaLibrary={setShowMediaLibrary}
+          setMediaTarget={setMediaTarget}
+          handleCloudinaryUpload={handleCloudinaryUpload}
+          handleCreateCustomTag={handleCreateCustomTag}
+          toggleTag={toggleTag}
+          savingProductId={savingProductId}
+          isUploading={isUploading}
+          isEditProductCafe={isEditProductCafe}
+          isEditProductRestaurant={isEditProductRestaurant}
+          restaurantsList={restaurantsList}
+          categories={categories}
+          settingsMap={settingsMap}
+          editProductVariants={editProductVariants}
+          newCustomTag={newCustomTag}
+          RESTAURANT_MENU_SECTIONS={RESTAURANT_MENU_SECTIONS}
+          PRESET_KITCHEN_PHOTOS={PRESET_KITCHEN_PHOTOS}
+        />
+      )}
+
+      {/* Category Edit Modal */}
+      {false && (
+        <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-scale-up space-y-4">
             <div className="flex justify-between items-center border-b border-border/60 pb-3">
               <h4 className="font-extrabold text-text-primary text-base">Edit Product: {editingProduct.name}</h4>
               <button onClick={() => setEditingProduct(null)} className="text-text-secondary hover:text-text-primary">
@@ -5836,361 +3765,34 @@ export function AdminDashboard({
               </div>
             </form>
           </div>
-        </div>
       )}
 
-      {/* Category Edit Modal */}
       {editingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
-            <div className="flex justify-between items-center border-b border-border/60 pb-3">
-              <h4 className="font-extrabold text-text-primary text-base">Edit Category</h4>
-              <button onClick={() => setEditingCategory(null)} className="text-text-secondary hover:text-text-primary">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={saveCategoryChanges} className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={categoryEditForm.name}
-                    onChange={(e) => setCategoryEditForm({ ...categoryEditForm, name: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Image / Icon</label>
-                  <div className="flex items-center gap-3 bg-muted/10 p-3 rounded-xl border border-dashed border-border/80">
-                    <div className="relative h-12 w-12 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shrink-0">
-                      {categoryEditForm.imageUrl && (categoryEditForm.imageUrl.startsWith('data:image/') || categoryEditForm.imageUrl.startsWith('/') || categoryEditForm.imageUrl.startsWith('http')) ? (
-                        <img src={categoryEditForm.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                      ) : categoryEditForm.imageUrl && categoryEditForm.imageUrl.length < 5 ? (
-                        <span className="text-xl">{categoryEditForm.imageUrl}</span>
-                      ) : (
-                        <span className="text-lg text-text-secondary">📁</span>
-                      )}
-                      
-                      {categoryEditForm.imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setCategoryEditForm({ ...categoryEditForm, imageUrl: '' })}
-                          className="absolute -top-1 -right-1 bg-discount text-white rounded-full p-0.5 shadow hover:bg-discount/90 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor="edit-category-image-file"
-                          className="cursor-pointer px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/20 transition-all"
-                        >
-                          Upload Photo
-                        </label>
-                        <input
-                          id="edit-category-image-file"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            handleImageFileChange('edit', e)
-                            e.target.value = ''
-                          }}
-                          className="sr-only"
-                        />
-                        <span className="text-[9px] text-text-secondary">Max size 2MB</span>
-                      </div>
-                      
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Or type Emoji (e.g. 🍫)"
-                          value={categoryEditForm.imageUrl.startsWith('data:image/') ? '' : categoryEditForm.imageUrl}
-                          onChange={(e) => setCategoryEditForm({ ...categoryEditForm, imageUrl: e.target.value })}
-                          className="w-full px-2.5 py-1 text-[11px] rounded-lg border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (optional)</label>
-                  <select
-                    value={categoryEditForm.parentId}
-                    onChange={(e) => setCategoryEditForm({ ...categoryEditForm, parentId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="">None (Root Category)</option>
-                    {categories
-                      .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && c.id !== editingCategory.id && !c.parentId)
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
-                  <input
-                    type="number"
-                    value={categoryEditForm.sortOrder}
-                    onChange={(e) => setCategoryEditForm({ ...categoryEditForm, sortOrder: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditingCategory(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingCategoryId === editingCategory.id}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all shadow-sm font-semibold"
-                >
-                  {savingCategoryId === editingCategory.id ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CategoryEditModal
+          editingCategory={editingCategory}
+          categoryEditForm={categoryEditForm}
+          categories={categories}
+          savingCategoryId={savingCategoryId}
+          handleImageFileChange={handleImageFileChange}
+          saveCategoryChanges={saveCategoryChanges}
+          setEditingCategory={setEditingCategory}
+          setCategoryEditForm={setCategoryEditForm}
+        />
       )}
 
       {/* Review Edit Modal */}
       {editingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
-            <div className="flex justify-between items-center border-b border-border/60 pb-3">
-              <h4 className="font-extrabold text-text-primary text-base">Edit Review</h4>
-              <button onClick={() => setEditingReview(null)} className="text-text-secondary hover:text-text-primary">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={saveReviewChanges} className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Rating (1-5 Stars)</label>
-                  <select
-                    value={reviewEditForm.rating}
-                    onChange={(e) => setReviewEditForm({ ...reviewEditForm, rating: parseInt(e.target.value) || 5 })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold"
-                  >
-                    <option value="5">5 Stars ⭐⭐⭐⭐⭐</option>
-                    <option value="4">4 Stars ⭐⭐⭐⭐</option>
-                    <option value="3">3 Stars ⭐⭐⭐</option>
-                    <option value="2">2 Stars ⭐⭐</option>
-                    <option value="1">1 Star ⭐</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Review Comment</label>
-                  <textarea
-                    rows={4}
-                    value={reviewEditForm.comment}
-                    onChange={(e) => setReviewEditForm({ ...reviewEditForm, comment: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditingReview(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingReviewId === editingReview.id}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all shadow-sm font-semibold"
-                >
-                  {savingReviewId === editingReview.id ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ReviewEditModal
+          editingReview={editingReview}
+          reviewEditForm={reviewEditForm}
+          savingReviewId={savingReviewId}
+          saveReviewChanges={saveReviewChanges}
+          setEditingReview={setEditingReview}
+          setReviewEditForm={setReviewEditForm}
+        />
       )}
 
       {/* Coupon Edit Modal */}
-      {editingCoupon && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg p-6 animate-scale-up space-y-4">
-            <div className="flex justify-between items-center border-b border-border/60 pb-3">
-              <h4 className="font-extrabold text-text-primary text-base">Edit Coupon</h4>
-              <button onClick={() => setEditingCoupon(null)} className="text-text-secondary hover:text-text-primary">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={saveCouponChanges} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Coupon Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={couponEditForm.code}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold uppercase tracking-wider"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Discount Type *</label>
-                  <select
-                    value={couponEditForm.discountType}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, discountType: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="PERCENT">Percentage (%)</option>
-                    <option value="FLAT">Flat Amount (₹)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                    Discount Value * {couponEditForm.discountType === 'PERCENT' ? '(%)' : '(₹)'}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={couponEditForm.value}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, value: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Min Order Value (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={couponEditForm.minOrder}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, minOrder: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Max Discount Cap (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={couponEditForm.maxDiscount}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, maxDiscount: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    placeholder="Unlimited"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Max Total Uses</label>
-                  <input
-                    type="number"
-                    value={couponEditForm.maxUses}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, maxUses: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    placeholder="Unlimited"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={couponEditForm.expiresAt}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, expiresAt: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Restricted Category (Optional)</label>
-                  <select
-                    value={couponEditForm.categoryId}
-                    onChange={(e) => setCouponEditForm({ ...couponEditForm, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="">All Categories (No restriction)</option>
-                    {categories.map((cat: any) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-3 pt-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="editCouponActive"
-                      checked={couponEditForm.isActive}
-                      onChange={(e) => setCouponEditForm({ ...couponEditForm, isActive: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="editCouponActive" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      Coupon is Active
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="editOncePerCustomer"
-                      checked={couponEditForm.oncePerCustomer}
-                      onChange={(e) => setCouponEditForm({ ...couponEditForm, oncePerCustomer: e.target.checked })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
-                    />
-                    <label htmlFor="editOncePerCustomer" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                      Limit to once per customer
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditingCoupon(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingCouponId === editingCoupon.id}
-                  className="flex items-center gap-1 px-5 py-2 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent/90 transition-all shadow-sm font-semibold"
-                >
-                  {savingCouponId === editingCoupon.id ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       <WhatsAppAlertModal
         isOpen={whatsappModalOpen}
         targetUser={whatsappTargetUser}
@@ -6205,311 +3807,23 @@ export function AdminDashboard({
         onSendMessage={sendWhatsAppMessage}
       />
 
-      {/* Block Customer Reason Modal */}
       {blockingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale-up space-y-4">
-            <div className="flex justify-between items-center border-b border-border/60 pb-3">
-              <div>
-                <h4 className="font-extrabold text-rose-600 text-base flex items-center gap-1.5">
-                  <span>🚫</span> Block Customer Account
-                </h4>
-                <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
-                  Customer: <span className="font-extrabold text-text-primary">{blockingUser.name || 'Anonymous User'}</span>{formatDisplayEmail(blockingUser.email) ? ` (${formatDisplayEmail(blockingUser.email)})` : ''}
-                </p>
-              </div>
-              <button 
-                onClick={() => setBlockingUser(null)} 
-                className="text-text-secondary hover:text-text-primary p-1 rounded-lg hover:bg-muted cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-text-secondary block">Select or Enter Reason for Blocking</label>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  "Repeated Fake COD Orders",
-                  "Abusive Behavior",
-                  "Fraudulent Account",
-                  "Payment Default / Refusal"
-                ].map((reason, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setBlockReasonInput(reason)}
-                    className={`px-2.5 py-1 text-[10px] rounded-lg border transition-all font-bold cursor-pointer ${
-                      blockReasonInput === reason
-                        ? 'bg-rose-500/10 border-rose-500 text-rose-600 dark:text-rose-400'
-                        : 'bg-muted/10 border-border hover:bg-muted/30 text-text-secondary'
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-text-secondary block">Reason Details (Optional)</label>
-                <textarea
-                  value={blockReasonInput}
-                  onChange={(e) => setBlockReasonInput(e.target.value)}
-                  placeholder="Specify why this account is being blocked..."
-                  rows={3}
-                  className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-rose-500 font-bold leading-relaxed resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-              <button
-                type="button"
-                onClick={() => setBlockingUser(null)}
-                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isUpdatingBlockStatus}
-                onClick={() => handleToggleBlock(blockingUser, true, blockReasonInput)}
-                className="flex items-center gap-1.5 px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
-              >
-                {isUpdatingBlockStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : '🚫 Block Customer'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <BlockCustomerModal
+          blockingUser={blockingUser}
+          blockReasonInput={blockReasonInput}
+          isUpdatingBlockStatus={isUpdatingBlockStatus}
+          setBlockingUser={setBlockingUser}
+          setBlockReasonInput={setBlockReasonInput}
+          handleToggleBlock={handleToggleBlock}
+        />
       )}
 
-      {/* Admin Order Details & Live Tracking Modal */}
       {selectedOrderForTracking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl space-y-0 my-auto animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-5 bg-muted/40 border-b border-border flex items-center justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-extrabold text-base text-text-primary">
-                    Order #{selectedOrderForTracking.readableId || selectedOrderForTracking.id.slice(0, 8)}
-                  </h3>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                    selectedOrderForTracking.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                    selectedOrderForTracking.status === 'SHIPPED' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' :
-                    selectedOrderForTracking.status === 'PACKED' ? 'bg-purple-500/10 text-purple-600 border-purple-500/20' :
-                    selectedOrderForTracking.status === 'CONFIRMED' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                    selectedOrderForTracking.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                    'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                  }`}>
-                    {selectedOrderForTracking.status}
-                  </span>
-
-                  {/* Store Type Badge */}
-                  {selectedOrderForTracking.restaurantId || selectedOrderForTracking.orderType === 'RESTAURANT' ? (
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
-                      🍽️ {selectedOrderForTracking.shopName || 'RESTAURANT KITCHEN'}
-                    </span>
-                  ) : (
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                      🛒 GROCERY STORE
-                    </span>
-                  )}
-
-                  {/* Fulfillment Method Badge */}
-                  {((selectedOrderForTracking.deliveryMethod || '').toUpperCase() === 'SELF_PICKUP' || (selectedOrderForTracking.deliveryMethod || '').toUpperCase() === 'PICKUP' || selectedOrderForTracking.isSelfPickup) ? (
-                    <span className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-purple-600 text-white shadow-xs animate-pulse">
-                      🛍️ SELF PICKUP
-                    </span>
-                  ) : (
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
-                      🛵 HOME DELIVERY
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-text-muted mt-0.5 font-mono">
-                  Placed on {new Date(selectedOrderForTracking.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedOrderForTracking(null)}
-                className="p-1.5 rounded-full hover:bg-muted text-text-secondary transition-colors cursor-pointer text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
-              {/* Tracking Timeline Stepper */}
-              <div className="bg-muted/20 border border-border/60 rounded-2xl p-4 space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-wider text-text-secondary">
-                  📍 Order Progress Timeline & Timestamps
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.createdAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
-                    <div className="text-[10px] font-black uppercase">1. Placed</div>
-                    <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.createdAt ? formatOrderTime(selectedOrderForTracking.createdAt) : '—'}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.confirmedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
-                    <div className="text-[10px] font-black uppercase">2. Confirmed</div>
-                    <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.confirmedAt ? formatOrderTime(selectedOrderForTracking.confirmedAt) : '—'}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.packedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
-                    <div className="text-[10px] font-black uppercase">3. Packed</div>
-                    <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.packedAt ? formatOrderTime(selectedOrderForTracking.packedAt) : '—'}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${selectedOrderForTracking.shippedAt ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted border-border text-text-muted'}`}>
-                    <div className="text-[10px] font-black uppercase">4. Dispatched</div>
-                    <div className="text-[9px] font-mono mt-0.5 font-bold">
-                      {selectedOrderForTracking.shippedAt ? formatOrderTime(selectedOrderForTracking.shippedAt) : '—'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer & Address Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3.5 bg-muted/20 border border-border/60 rounded-2xl space-y-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                    👤 Customer Details
-                  </span>
-                  <div className="font-extrabold text-sm text-text-primary">
-                    {selectedOrderForTracking.userName || 'No Name'}
-                  </div>
-                  <div className="text-xs text-text-muted">{selectedOrderForTracking.userEmail}</div>
-                  {(selectedOrderForTracking.userPhone || selectedOrderForTracking.address?.phone) && (
-                    <a
-                      href={`tel:${selectedOrderForTracking.userPhone || selectedOrderForTracking.address?.phone}`}
-                      className="inline-flex items-center gap-1 text-xs font-black text-primary hover:underline mt-1"
-                    >
-                      📞 {selectedOrderForTracking.userPhone || selectedOrderForTracking.address?.phone}
-                    </a>
-                  )}
-                </div>
-
-                <div className="p-3.5 bg-muted/20 border border-border/60 rounded-2xl space-y-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                    🏠 Delivery Address
-                  </span>
-                  <div className="text-xs font-semibold text-text-primary leading-snug">
-                    {formatAddress(selectedOrderForTracking.address, false)}
-                  </div>
-                  {selectedOrderForTracking.address?.lat && selectedOrderForTracking.address?.lng && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${selectedOrderForTracking.address.lat},${selectedOrderForTracking.address.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 hover:underline mt-1"
-                    >
-                      📍 Open GPS Coordinates on Google Maps
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Staff Assignments */}
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="p-2.5 bg-muted/30 border border-border/50 rounded-xl">
-                  <span className="text-[9px] font-extrabold uppercase text-text-secondary block">🛒 Picker</span>
-                  <span className="font-bold text-text-primary block mt-0.5">{selectedOrderForTracking.assignedPicker?.name || 'Unassigned'}</span>
-                </div>
-                <div className="p-2.5 bg-muted/30 border border-border/50 rounded-xl">
-                  <span className="text-[9px] font-extrabold uppercase text-text-secondary block">🍳 Chef</span>
-                  <span className="font-bold text-text-primary block mt-0.5">{selectedOrderForTracking.assignedChef?.name || 'Unassigned'}</span>
-                </div>
-                <div className="p-2.5 bg-muted/30 border border-border/50 rounded-xl">
-                  <span className="text-[9px] font-extrabold uppercase text-text-secondary block">🛵 Rider</span>
-                  <span className="font-bold text-text-primary block mt-0.5">{selectedOrderForTracking.deliveryUser?.name || 'Unassigned'}</span>
-                </div>
-              </div>
-
-              {/* Items List */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                  🛍️ Ordered Items ({selectedOrderForTracking.items?.length || 0})
-                </span>
-                <div className="divide-y divide-border/40 border border-border/60 rounded-2xl overflow-hidden min-h-[60px]">
-                  {isLoadingOrderItems ? (
-                    <div className="p-4 text-center text-xs font-bold text-text-muted flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      Fetching item details...
-                    </div>
-                  ) : !selectedOrderForTracking.items || selectedOrderForTracking.items.length === 0 ? (
-                    <div className="p-4 text-center text-xs font-bold text-text-muted">
-                      No items recorded for this order.
-                    </div>
-                  ) : (
-                    selectedOrderForTracking.items.map((item: any) => (
-                      <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-card hover:bg-muted/10">
-                        <div className="flex items-center gap-3">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.name} className="w-10 h-10 object-cover rounded-xl border border-border/40" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-sm font-bold">📦</div>
-                          )}
-                          <div>
-                            <div className="font-bold text-xs text-text-primary">{item.name}</div>
-                            {item.selectedVariant && (
-                              <span className="text-[10px] text-text-muted font-medium block">Variant: {item.selectedVariant}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-black text-xs text-text-primary">
-                            {item.quantity} x ₹{item.price} = ₹{item.quantity * item.price}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Payment Summary */}
-              <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
-                    Payment ({selectedOrderForTracking.paymentMethod})
-                  </span>
-                  <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded mt-1 inline-block ${
-                    selectedOrderForTracking.paymentStatus === 'PAID' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                  }`}>
-                    {selectedOrderForTracking.paymentStatus}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-text-muted font-bold block uppercase">Grand Total</span>
-                  <span className="text-lg font-black text-emerald-700 dark:text-emerald-400">
-                    ₹{selectedOrderForTracking.total}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions Footer */}
-            <div className="p-4 bg-muted/40 border-t border-border flex items-center justify-between gap-2">
-              <Link
-                href={`/order/${selectedOrderForTracking.id}/track`}
-                target="_blank"
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-              >
-                🗺️ Open Driver Map Tracker
-              </Link>
-              <button
-                onClick={() => setSelectedOrderForTracking(null)}
-                className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <OrderTrackingModal
+          selectedOrderForTracking={selectedOrderForTracking}
+          isLoadingOrderItems={isLoadingOrderItems}
+          setSelectedOrderForTracking={setSelectedOrderForTracking}
+        />
       )}
 
       <CreateOrderModal
@@ -6526,72 +3840,26 @@ export function AdminDashboard({
         categories={categories}
       />
 
-      {/* 🖼️ Media Library Modal (Photo Selector) */}
-      {showMediaLibrary && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🖼️</span>
-                <div>
-                  <h3 className="font-extrabold text-text-primary text-sm sm:text-base">Media Photo Library</h3>
-                  <p className="text-[10px] text-text-secondary">Pick any existing photo from past uploads ({filteredMediaImages.length} available)</p>
-                </div>
-              </div>
-              <button onClick={() => setShowMediaLibrary(false)} className="text-text-secondary hover:text-text-primary p-1 cursor-pointer">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Search filter input */}
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-              <input
-                type="text"
-                placeholder="Search photo by product name or keyword (e.g. dal, biryani, paneer)..."
-                value={mediaSearchQuery}
-                onChange={(e) => setMediaSearchQuery(e.target.value)}
-                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
-              />
-            </div>
-
-            {/* Photo Grid */}
-            <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 min-h-[250px]">
-              {filteredMediaImages.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-xs font-bold text-text-muted">
-                  No matching images found. Try searching another keyword!
-                </div>
-              ) : (
-                filteredMediaImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      if (mediaTarget === 'newProduct') {
-                        setNewProduct((prev) => ({ ...prev, imageUrl: img.url }))
-                      } else if (mediaTarget === 'editProduct') {
-                        setProductEditForm((prev) => ({ ...prev, imageUrl: img.url }))
-                      } else if (mediaTarget === 'newCategory') {
-                        setNewCategory((prev) => ({ ...prev, imageUrl: img.url }))
-                      } else if (mediaTarget === 'editCategory' || mediaTarget === 'category') {
-                        setCategoryEditForm((prev) => ({ ...prev, imageUrl: img.url }))
-                      }
-                      setShowMediaLibrary(false)
-                      toast.success('Image selected from library! 🖼️')
-                    }}
-                    className="group relative flex flex-col items-center border border-border/50 rounded-2xl p-2 bg-muted/10 hover:bg-primary/10 hover:border-primary transition-all cursor-pointer text-center"
-                  >
-                    <div className="h-16 w-16 relative overflow-hidden rounded-xl bg-white/5 flex items-center justify-center mb-1.5 border border-border/30">
-                      <img src={img.url} alt={img.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform" />
-                    </div>
-                    <span className="text-[9px] font-bold text-text-secondary truncate w-full group-hover:text-primary">{img.name}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <MediaLibraryModal
+        showMediaLibrary={showMediaLibrary}
+        filteredMediaImages={filteredMediaImages}
+        mediaSearchQuery={mediaSearchQuery}
+        mediaTarget={mediaTarget}
+        setShowMediaLibrary={setShowMediaLibrary}
+        setMediaSearchQuery={setMediaSearchQuery}
+        setMediaTarget={setMediaTarget}
+        onSelectImage={(url, target) => {
+          if (target === 'newProduct') {
+            setNewProduct((prev) => ({ ...prev, imageUrl: url }))
+          } else if (target === 'editProduct') {
+            setProductEditForm((prev) => ({ ...prev, imageUrl: url }))
+          } else if (target === 'newCategory') {
+            setNewCategory((prev) => ({ ...prev, imageUrl: url }))
+          } else if (target === 'editCategory' || target === 'category') {
+            setCategoryEditForm((prev) => ({ ...prev, imageUrl: url }))
+          }
+        }}
+      />
     </div>
   )
 }

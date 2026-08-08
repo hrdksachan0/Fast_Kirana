@@ -276,13 +276,6 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
         let { latitude, longitude } = position.coords
         const dist = getDistance(storeLat, storeLng, latitude, longitude)
 
-        // Mock for local testing if far away
-        if (dist > 20) {
-          latitude = storeLat + 0.0035
-          longitude = storeLng + 0.002
-          toast.info('GPS centered on dark store delivery zone for testing!')
-        }
-
         setCurrentLat(latitude)
         setCurrentLng(longitude)
 

@@ -1,29 +1,63 @@
 import { format, formatDistanceToNow, isToday, isTomorrow, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
 
 // --- Time ---
-export function formatDate(date: string | Date, pattern: string): string {
-  return format(new Date(date), pattern)
+export function formatDate(date?: string | Date | null, pattern = 'PP'): string {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    return format(d, pattern)
+  } catch {
+    return ''
+  }
 }
 
-export function formatOrderTime(date: string | Date): string {
-  return format(new Date(date), 'h:mm a')
+export function formatOrderTime(date?: string | Date | null): string {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    return format(d, 'h:mm a')
+  } catch {
+    return ''
+  }
 }
 
-export function formatTime(date: string | Date): string {
-  return format(new Date(date), 'h:mm a')
+export function formatTime(date?: string | Date | null): string {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    return format(d, 'h:mm a')
+  } catch {
+    return ''
+  }
 }
 
 // --- Time + Date context ---
-export function formatDeliveryETA(date: string | Date): string {
-  const d = new Date(date)
-  if (isToday(d)) return `Today, ${format(d, 'h:mm a')}`
-  if (isTomorrow(d)) return `Tomorrow, ${format(d, 'h:mm a')}`
-  return format(d, 'MMM d, h:mm a')
+export function formatDeliveryETA(date?: string | Date | null): string {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    if (isToday(d)) return `Today, ${format(d, 'h:mm a')}`
+    if (isTomorrow(d)) return `Tomorrow, ${format(d, 'h:mm a')}`
+    return format(d, 'MMM d, h:mm a')
+  } catch {
+    return ''
+  }
 }
 
 // --- Relative ---
-export function formatRelativeTime(date: string | Date): string {
-  return formatDistanceToNow(new Date(date), { addSuffix: true })
+export function formatRelativeTime(date?: string | Date | null): string {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    return formatDistanceToNow(d, { addSuffix: true })
+  } catch {
+    return ''
+  }
 }
 
 // --- Date arithmetic ---

@@ -34,7 +34,7 @@ export function OrderConfirmationStatus({
       } catch (err) {
         console.error('Error polling order confirmation status:', err)
       }
-    }, 5000)
+    }, 15000)
 
 
     return () => {

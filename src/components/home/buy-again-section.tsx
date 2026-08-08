@@ -82,6 +82,10 @@ export function BuyAgainSection() {
       stock: item.stock ?? 50,
       isAvailable: item.isAvailable ?? true,
       category: item.category,
+      tags: (item as any).tags,
+      restaurantId: (item as any).restaurantId || (item as any).restaurant?.id,
+      restaurantName: (item as any).restaurantName || (item as any).restaurant?.name,
+      restaurant: (item as any).restaurant,
     })
   }
 

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
 import { Metadata } from 'next'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -29,31 +30,24 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const isASCafe = restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant' || restaurant.id === 'cms2p1lap0000n0id8alldboy'
+  const isASCafe = restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant' || restaurant.id === OUTLET_AS_RESTAURANT_ID
+  const isWedson = restaurant.slug === 'wedson' || restaurant.id === OUTLET_WEDSON_ID || restaurant.slug === 'restaurant-kitchen'
 
   const productWhere: any = {
     isAvailable: true,
   }
 
   if (isASCafe) {
-    productWhere.AND = [
-      // Strictly exclude products belonging to another restaurant outlet (like Wedson)
-      {
-        OR: [
-          { restaurantId: null },
-          { restaurantId: restaurant.id },
-          { restaurant: { slug: restaurant.slug } }
-        ]
-      },
-      // Include A.S. Cafe products OR general beverages/ice-cream/shakes/desserts
-      {
-        OR: [
-          { restaurantId: restaurant.id },
-          { restaurant: { slug: restaurant.slug } },
-          { category: { slug: { in: ['beverages', 'ice-cream', 'cold-beverages', 'hot-beverages', 'desserts', 'cafe', 'fastkirana-cafe'] } } },
-          { tags: { hasSome: ['beverages', 'beverage', 'drinks', 'cold-drinks', 'ice-cream', 'ice cream', 'desserts', 'shake', 'shakes'] } }
-        ]
-      }
+    productWhere.OR = [
+      { restaurantId: restaurant.id },
+      { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
+      { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
+    ]
+  } else if (isWedson) {
+    productWhere.OR = [
+      { restaurantId: restaurant.id },
+      { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
+      { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
     ]
   } else {
     productWhere.OR = [

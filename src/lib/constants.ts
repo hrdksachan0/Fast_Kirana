@@ -356,22 +356,57 @@ export const OUTLET_NAMES: Record<string, string> = {
 
 export function getOutletName(product: any): string {
   if (!product) return 'Wedson Restaurant'
-  if (product.restaurant?.name) return product.restaurant.name
-  if (product.restaurantName) return product.restaurantName
 
+  const rId = product.restaurantId || product.restaurant?.id
+  const rSlug = (product.restaurant?.slug || '').toLowerCase()
+  const rName = (product.restaurantName || product.restaurant?.name || '').toLowerCase()
   const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
-  const restaurantId = product.restaurantId
   const pName = (product.name || '').toLowerCase()
 
-  if (restaurantId && OUTLET_NAMES[restaurantId]) return OUTLET_NAMES[restaurantId]
+  // 1. Explicit A.S. Restaurant / Cafe checks (Highest Priority)
+  if (
+    rId === OUTLET_AS_RESTAURANT_ID ||
+    rId === 'as-restaurant' ||
+    rId === 'as-cafe' ||
+    rSlug === 'as-restaurant' ||
+    rSlug === 'as-cafe' ||
+    rName.includes('a.s') ||
+    rName.includes('as-restaurant') ||
+    rName.includes('as restaurant') ||
+    rName.includes('as cafe') ||
+    tags.some((t: string) => t === 'as-restaurant' || t === 'as-cafe' || t === 'a.s. restaurant' || t === 'a.s restaurant' || t === 'as_restaurant' || t === 'as-cafe-restaurant') ||
+    pName.includes('a.s special') ||
+    pName.includes('a.s. special')
+  ) {
+    return 'A.S Restaurant'
+  }
+
+  // 2. Explicit Wedson Restaurant checks (Second Highest Priority)
+  if (
+    rId === OUTLET_WEDSON_ID ||
+    rId === 'wedson' ||
+    rSlug === 'wedson' ||
+    rSlug === 'restaurant-kitchen' ||
+    rName.includes('wedson') ||
+    tags.some((t: string) => t === 'wedson' || t === 'wedson-restaurant' || t === 'wedson_restaurant')
+  ) {
+    return 'Wedson Restaurant'
+  }
+
+  // 3. Known ID mapping from OUTLET_NAMES
+  if (rId && OUTLET_NAMES[rId]) return OUTLET_NAMES[rId]
+
+  // 4. Known tag mapping from OUTLET_NAMES
   for (const tag of tags) {
     if (OUTLET_NAMES[tag]) return OUTLET_NAMES[tag]
   }
 
+  // 5. If product has a custom restaurant name, return normalized name
+  if (product.restaurant?.name) return product.restaurant.name
+  if (product.restaurantName) return product.restaurantName
+
+  // 6. Generic food fallback for items without explicit restaurant tags/ids
   if (
-    restaurantId === OUTLET_WEDSON_ID ||
-    restaurantId === 'wedson' ||
-    tags.includes('wedson') ||
     tags.includes('dal-fry') ||
     tags.includes('burger') ||
     tags.includes('pizza') ||
@@ -392,10 +427,6 @@ export function getOutletName(product: any): string {
     pName.includes('tikki')
   ) {
     return 'Wedson Restaurant'
-  }
-
-  if (restaurantId === OUTLET_AS_RESTAURANT_ID || tags.includes('as-restaurant')) {
-    return 'A.S Restaurant'
   }
 
   return 'Wedson Restaurant'

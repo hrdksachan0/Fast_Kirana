@@ -291,6 +291,7 @@ export default function PickerDashboard() {
     const INTERVAL = 30
     let elapsed = 0
     const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return
       elapsed++
       setRefreshProgress(Math.max(0, 100 - (elapsed / INTERVAL) * 100))
       if (elapsed >= INTERVAL) {

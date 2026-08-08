@@ -32,7 +32,7 @@ class BrandLogo extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(size * 0.225),
-            boxShadow: AppDesignSystem.shadowMd,
+            boxShadow: AppDesignSystem.shadowCard,
           ),
           child: Icon(
             Icons.shopping_basket_rounded,

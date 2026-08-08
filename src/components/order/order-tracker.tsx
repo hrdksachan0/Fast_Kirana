@@ -415,7 +415,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       } catch {
         // silently ignore polling errors
       }
-    }, 5000)
+    }, 15000)
 
     return () => clearInterval(pollInterval)
   }, [order.id, order.status, compOrder?.id])

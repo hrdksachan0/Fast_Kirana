@@ -502,6 +502,7 @@ export default function DeliveryDashboard() {
     let isCancelled = false
     const id = setInterval(() => {
       if (isCancelled) return
+      if (document.visibilityState !== 'visible') return
       setAutoRefreshCountdown((prev) => {
         if (prev <= 1) {
           fetchOrders(true)
@@ -702,6 +703,8 @@ export default function DeliveryDashboard() {
     (o) => o.status === 'DELIVERED' && isToday(o.deliveredAt || o.updatedAt || o.createdAt)
   )
 
+  const lastLocationPostRef = useRef<number>(0)
+
   // Active coordinate tracking for shipped orders
   useEffect(() => {
     if (rawOutForDelivery.length === 0) return
@@ -711,6 +714,9 @@ export default function DeliveryDashboard() {
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         async (position) => {
+          const now = Date.now()
+          if (now - lastLocationPostRef.current < 15000) return // Throttle to at most once per 15s
+          lastLocationPostRef.current = now
           try {
             await fetch('/api/delivery/location', {
               method: 'POST',
@@ -1744,7 +1750,7 @@ export default function DeliveryDashboard() {
                     <div>
                       <span className="text-xs font-mono font-bold text-text-primary block">{order.id}</span>
                       <span className="text-[9px] text-text-muted font-semibold">
-                        Delivered: {formatOrderTime(order.updatedAt)}
+                        Delivered: {formatOrderTime(order.deliveredAt || order.updatedAt || order.createdAt)}
                       </span>
                     </div>
                     <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">

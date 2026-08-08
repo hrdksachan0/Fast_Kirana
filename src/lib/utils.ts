@@ -82,36 +82,36 @@ export function formatPhone(phone: string | null | undefined): string {
 }
 
 export function formatAddress(
-  addr: { houseNo?: string; street?: string; area?: string; city?: string; pincode?: string } | null | undefined,
+  addr: any,
   includeCityAndPincode = true
 ): string {
   if (!addr) return ''
+  if (typeof addr === 'string') return addr
   const parts: string[] = []
   
-  if (addr.houseNo && addr.houseNo !== '.' && addr.houseNo.toLowerCase() !== 'n/a' && addr.houseNo.toLowerCase() !== 'ghatampur') {
+  if (addr.houseNo && addr.houseNo !== '.' && String(addr.houseNo).toLowerCase() !== 'n/a' && String(addr.houseNo).toLowerCase() !== 'ghatampur') {
     parts.push(`House No ${addr.houseNo}`)
   }
   
-  if (addr.street && addr.street !== '.' && addr.street.toLowerCase() !== 'n/a') {
-    parts.push(addr.street)
+  if (addr.street && addr.street !== '.' && String(addr.street).toLowerCase() !== 'n/a') {
+    parts.push(String(addr.street))
   }
   
-  if (addr.area && addr.area !== '.' && addr.area.toLowerCase() !== 'n/a' && addr.area.toLowerCase() !== 'ghatampur') {
-    parts.push(addr.area)
+  if (addr.area && addr.area !== '.' && String(addr.area).toLowerCase() !== 'n/a' && String(addr.area).toLowerCase() !== 'ghatampur') {
+    parts.push(String(addr.area))
   }
   
   if (includeCityAndPincode) {
-    if (addr.city && addr.city !== '.' && addr.city.toLowerCase() !== 'n/a') {
-      // Only include city if it is not already present in the street string (case-insensitive)
-      const streetLower = addr.street ? addr.street.toLowerCase() : ''
-      const cityLower = addr.city.toLowerCase()
+    if (addr.city && addr.city !== '.' && String(addr.city).toLowerCase() !== 'n/a') {
+      const streetLower = addr.street ? String(addr.street).toLowerCase() : ''
+      const cityLower = String(addr.city).toLowerCase()
       if (!streetLower.includes(cityLower)) {
-        parts.push(addr.city)
+        parts.push(String(addr.city))
       }
     }
     
-    if (addr.pincode && addr.pincode !== '.' && addr.pincode.toLowerCase() !== 'n/a') {
-      parts.push(addr.pincode)
+    if (addr.pincode && addr.pincode !== '.' && String(addr.pincode).toLowerCase() !== 'n/a') {
+      parts.push(String(addr.pincode))
     }
   }
   

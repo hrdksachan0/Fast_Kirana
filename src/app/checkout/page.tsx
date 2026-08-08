@@ -32,6 +32,25 @@ import MapPicker from '@/components/shared/map-picker'
 import { getDistanceKm, getDeliveryRules } from '@/lib/distance'
 import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import { formatTime12h, isNearClosing } from '@/lib/date-helpers'
+import {
+  validateCheckoutEligibility,
+  buildOrderPayload,
+  resolveStoreLat,
+  resolveStoreLng,
+  resolveStorePincode,
+  resolveStorePhone,
+  resolveStoreAddress,
+  resolveShopName,
+  resolveMinOrder,
+  DEFAULT_STORE_PINCODE,
+  DEFAULT_STORE_LAT,
+  DEFAULT_STORE_LNG,
+  DEFAULT_CONTACT_PHONE,
+  DEFAULT_CONTACT_ADDRESS,
+  DEFAULT_SHOP_NAME,
+  DEFAULT_MIN_ORDER,
+  DEFAULT_DELIVERY_RADIUS_KM,
+} from '@/lib/checkout'
 
 interface SlideToOrderProps {
   onConfirm: () => void
@@ -82,15 +101,15 @@ export default function CheckoutPage() {
 
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
-  const [deliveryRadius, setDeliveryRadius] = useState(5.0)
-  const [storeLat, setStoreLat] = useState(26.1534185)
-  const [storeLng, setStoreLng] = useState(80.1714024)
+  const [deliveryRadius, setDeliveryRadius] = useState(DEFAULT_DELIVERY_RADIUS_KM)
+  const [storeLat, setStoreLat] = useState(DEFAULT_STORE_LAT)
+  const [storeLng, setStoreLng] = useState(DEFAULT_STORE_LNG)
   const [onlyCod, setOnlyCod] = useState(false)
   const [taxRate, setTaxRate] = useState(0.00)
   const [miscFee, setMiscFee] = useState(0.0)
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
-  const [contactPhone, setContactPhone] = useState('+91 70544 70303')
-  const [contactAddress, setContactAddress] = useState('NH34, Ghatampur, Kanpur Nagar')
+  const [contactPhone, setContactPhone] = useState(DEFAULT_CONTACT_PHONE)
+  const [contactAddress, setContactAddress] = useState(DEFAULT_CONTACT_ADDRESS)
   const [groceryPickupAddress, setGroceryPickupAddress] = useState('')
   const [cafePickupAddress, setCafePickupAddress] = useState('')
   const [restaurantPickupAddress, setRestaurantPickupAddress] = useState('')
@@ -261,7 +280,7 @@ export default function CheckoutPage() {
     street: '',
     area: '.',
     city: 'Ghatampur',
-    pincode: '209206',
+    pincode: DEFAULT_STORE_PINCODE,
     phone: '',
     isDefault: false,
     lat: null,
@@ -302,28 +321,8 @@ export default function CheckoutPage() {
         
         // Calculate distance from store
         const dist = getDistanceKm(storeLat, storeLng, latitude, longitude)
-        
-        // If developer testing from far away (> 20 km), automatically mock to nearby (2.5 km away)
-        if (dist > 20) {
-          toast.warning(`Detected GPS is ${dist.toFixed(0)} km away. Mocking to 2.5 km for local testing!`)
-          latitude = storeLat + 0.015
-          longitude = storeLng + 0.015
-          toast.dismiss(toastId)
-          setIsDetectingLocation(false)
-          setAddressForm(prev => ({
-            ...prev,
-            label: prev.label || 'Home',
-            houseNo: '.',
-            street: 'Vikas Medical Store, NH34, Ghatampur',
-            area: '.',
-            city: 'Ghatampur',
-            pincode: '209206',
-            lat: latitude,
-            lng: longitude,
-          }))
-          toast.success('Location detected and filled (Kanpur NH34 mock)!')
-          return
-        } else if (dist > deliveryRadius) {
+
+        if (dist > deliveryRadius) {
           toast.dismiss(toastId)
           setIsDetectingLocation(false)
           toast.error(`Detected location is outside our delivery zone (${dist.toFixed(1)} km away). If you are ordering for home, please type your Ghatampur address manually.`, { duration: 6000 })
@@ -345,7 +344,7 @@ export default function CheckoutPage() {
               let route = ''
               let sublocality = ''
               let city = 'Ghatampur'
-              let postcode = '209206'
+              let postcode = DEFAULT_STORE_PINCODE
               
               addressComponents.forEach((comp: any) => {
                 if (comp.types.includes('route')) {
@@ -376,7 +375,7 @@ export default function CheckoutPage() {
                 street: streetName || 'Detected Location',
                 area: '.',
                 city: city || 'Ghatampur',
-                pincode: postcode || '209206',
+                pincode: postcode || DEFAULT_STORE_PINCODE,
                 lat: latitude,
                 lng: longitude,
               }))
@@ -615,8 +614,9 @@ export default function CheckoutPage() {
       return
     }
 
-    if (cleanPincode !== '209206') {
-      toast.error('FastKirana only delivers to Ghatampur area (Pincode: 209206)')
+    const serviceablePincode = resolveStorePincode(storeSettingsMap)
+    if (cleanPincode !== serviceablePincode) {
+      toast.error(`FastKirana only delivers to pincode ${serviceablePincode}.`)
       return
     }
 
@@ -697,7 +697,7 @@ export default function CheckoutPage() {
           street: '',
           area: '.',
           city: 'Ghatampur',
-          pincode: '209206',
+          pincode: DEFAULT_STORE_PINCODE,
           phone: addressForm.phone, // keep phone number for convenience
           isDefault: false,
           lat: null,
@@ -723,7 +723,7 @@ export default function CheckoutPage() {
       street: addr.street || '',
       area: addr.area || '.',
       city: addr.city || 'Ghatampur',
-      pincode: addr.pincode || '209206',
+      pincode: addr.pincode || DEFAULT_STORE_PINCODE,
       phone: addr.phone || '',
       isDefault: addr.isDefault || false,
       lat: addr.lat || null,
@@ -742,7 +742,7 @@ export default function CheckoutPage() {
       street: '',
       area: '.',
       city: 'Ghatampur',
-      pincode: '209206',
+      pincode: DEFAULT_STORE_PINCODE,
       phone: '',
       isDefault: false,
       lat: null,
@@ -752,102 +752,40 @@ export default function CheckoutPage() {
 
   // Place Order
   const handlePlaceOrder = async () => {
-    if (deliveryMethod === 'DELIVERY' && !selectedAddressId && addresses.length === 0) {
-      toast.error('Please select a delivery address')
-      return
-    }
-
     setIsPlacingOrder(true)
     try {
-      if (deliveryMethod === 'DELIVERY') {
-        const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
-        const selectedAddr = addresses.find((a) => a.id === targetId)
-        if (selectedAddr) {
-          const p = selectedAddr.pincode.trim()
-          const c = selectedAddr.city.trim().toLowerCase()
-          if (p !== '209206') {
-            triggerHaptic('warning')
-            toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
-            setIsPlacingOrder(false)
-            return
-          }
-          if (!c.includes('ghatampur') && !c.includes('kanpur')) {
-            triggerHaptic('warning')
-            toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
-            setIsPlacingOrder(false)
-            return
-          }
-          const phoneVal = (selectedAddr.phone || '').trim()
-          const cleanPhone = getLast10Digits(phoneVal)
-          if (!isValidIndianPhone(cleanPhone)) {
-            triggerHaptic('warning')
-            toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
-            setIsPlacingOrder(false)
-            return
-          }
-
-          // Distance checks
-          if (selectedAddr.lat && selectedAddr.lng) {
-            const dist = getDistanceKm(storeLat, storeLng, selectedAddr.lat, selectedAddr.lng)
-            const rules = getDeliveryRules(dist)
-            if (!rules.isServiceable) {
-              triggerHaptic('warning')
-              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 3 km.`)
-              setIsPlacingOrder(false)
-              return
-            }
-          }
-        }
-      }
-      // Fetch settings to check store status
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
-      const settings = await settingsRes.json()
-      
-      const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
-      const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
-      const hasGrocery = items.some((item) => {
-        const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
-        const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
-        return !isC && !isR
+      const settings: SettingsMap = await settingsRes.json()
+
+      const validation = await validateCheckoutEligibility({
+        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        addresses,
+        selectedAddressId,
+        deliveryMethod,
+        settings,
       })
-      
-      if (hasGrocery && settings.grocery_mart_open === 'false') {
+
+      if (!validation.valid) {
         triggerHaptic('warning')
-        toast.error('Grocery Mart is temporarily closed. Please remove grocery items to checkout.')
-        setIsPlacingOrder(false)
-        return
-      }
-      
-      if (hasCafe && settings.cafe_open === 'false') {
-        triggerHaptic('warning')
-        toast.error('FastKirana Cafe is temporarily closed. Please remove cafe items to checkout.')
+        toast.error(validation.error!)
         setIsPlacingOrder(false)
         return
       }
 
-      if (hasRestaurant && settings.restaurant_open === 'false') {
-        triggerHaptic('warning')
-        toast.error('Wedson Restaurant is temporarily closed. Please remove restaurant items to checkout.')
-        setIsPlacingOrder(false)
-        return
-      }
+      const payload = buildOrderPayload({
+        finalAddressId: validation.finalAddressId!,
+        paymentMethod,
+        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        deliveryMethod,
+        scheduledSlot,
+        appliedCouponCode,
+        contactPhone,
+      })
 
-      const finalAddressId = deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : (selectedAddressId || (addresses.length > 0 ? addresses[0].id : ''))
-      
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          addressId: finalAddressId,
-          paymentMethod,
-          items,
-          deliveryMethod,
-          isB2B: false,
-          scheduledSlot,
-          shopName: 'FastKirana Dark Store',
-          shopPhone: contactPhone,
-          couponCode: appliedCouponCode || null,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -921,97 +859,40 @@ export default function CheckoutPage() {
   const handlePaytmCheckout = async () => {
     setIsPlacingOrder(true)
     try {
-      // 1. Fetch settings to check store status
+      // 1. Validate checkout eligibility (shared logic)
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
-      const settings = await settingsRes.json()
-      
-      const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
-      const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
-      const hasGrocery = items.some((item) => {
-        const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
-        const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
-        return !isC && !isR
+      const settings: SettingsMap = await settingsRes.json()
+
+      const validation = await validateCheckoutEligibility({
+        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        addresses,
+        selectedAddressId,
+        deliveryMethod,
+        settings,
       })
-      
-      if (hasGrocery && settings.grocery_mart_open === 'false') {
+
+      if (!validation.valid) {
         triggerHaptic('warning')
-        toast.error('Grocery Mart is temporarily closed. Cannot complete checkout.')
-        setIsPlacingOrder(false)
-        return
-      }
-      
-      if (hasCafe && settings.cafe_open === 'false') {
-        triggerHaptic('warning')
-        toast.error('FastKirana Cafe is temporarily closed. Cannot complete checkout.')
+        toast.error(validation.error!)
         setIsPlacingOrder(false)
         return
       }
 
-      if (hasRestaurant && settings.restaurant_open === 'false') {
-        triggerHaptic('warning')
-        toast.error('Wedson Restaurant is temporarily closed. Cannot complete checkout.')
-        setIsPlacingOrder(false)
-        return
-      }
-
-      if (deliveryMethod === 'DELIVERY') {
-        const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
-        const selectedAddr = addresses.find((a) => a.id === targetId)
-        if (selectedAddr) {
-          const p = selectedAddr.pincode.trim()
-          const c = selectedAddr.city.trim().toLowerCase()
-          if (p !== '209206') {
-            triggerHaptic('warning')
-            toast.error('Selected address is outside our delivery zone. Please add/select a Ghatampur address (Pincode: 209206).')
-            setIsPlacingOrder(false)
-            return
-          }
-          if (!c.includes('ghatampur') && !c.includes('kanpur')) {
-            triggerHaptic('warning')
-            toast.error('Selected address city is outside our delivery zone. FastKirana only delivers to Ghatampur / Kanpur.')
-            setIsPlacingOrder(false)
-            return
-          }
-          const phoneVal = (selectedAddr.phone || '').trim()
-          const cleanPhone = getLast10Digits(phoneVal)
-          if (!isValidIndianPhone(cleanPhone)) {
-            triggerHaptic('warning')
-            toast.error('The selected address is missing a valid 10-digit mobile number. Please add a new address with a valid phone number.')
-            setIsPlacingOrder(false)
-            return
-          }
-
-          // Distance checks
-          if (selectedAddr.lat && selectedAddr.lng) {
-            const dist = getDistanceKm(storeLat, storeLng, selectedAddr.lat, selectedAddr.lng)
-            const rules = getDeliveryRules(dist)
-            if (!rules.isServiceable) {
-              triggerHaptic('warning')
-              toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to 3 km.`)
-              setIsPlacingOrder(false)
-              return
-            }
-          }
-        }
-      }
-
-      const finalAddressId = deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : (selectedAddressId || (addresses.length > 0 ? addresses[0].id : ''))
-      
       // 2. Create the order in the database with PENDING payment status
+      const payload = buildOrderPayload({
+        finalAddressId: validation.finalAddressId!,
+        paymentMethod,
+        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        deliveryMethod,
+        scheduledSlot,
+        appliedCouponCode,
+        contactPhone,
+      })
+
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          addressId: finalAddressId,
-          paymentMethod: paymentMethod,
-          items,
-          deliveryMethod,
-          isB2B: false,
-          scheduledSlot,
-          shopName: 'FastKirana Dark Store',
-          shopPhone: contactPhone,
-          couponCode: appliedCouponCode || null,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const orderData = await orderRes.json()

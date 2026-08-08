@@ -6,6 +6,7 @@ import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
 import '../products/product_detail_screen.dart';
 

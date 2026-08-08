@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/category.dart';
+import '../../providers/product_provider.dart';
 import '../../widgets/brand_card.dart';
 import 'category_products_screen.dart';
 

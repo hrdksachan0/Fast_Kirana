@@ -19,17 +19,17 @@ class Address {
 
   Address({
     required this.id,
-    required this.userId,
+    this.userId = '',
     required this.label,
-    required this.houseNo,
-    required this.street,
-    required this.area,
-    required this.city,
+    this.houseNo = '',
+    this.street = '',
+    this.area = '',
+    this.city = '',
     required this.pincode,
     this.phone = '',
     this.latitude,
     this.longitude,
-    required this.isDefault,
+    this.isDefault = false,
   });
 
   factory Address.fromJson(Map<String, dynamic> json) =>

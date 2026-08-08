@@ -505,65 +505,81 @@ export function CartDrawer() {
                 })()
               )}
 
-              {/* Smart Add-on Suggestions */}
+              {/* Smart Add-on Suggestions Horizontal Slider */}
               {recommendations.length > 0 && (
-                <div className="mt-6 border-t border-zinc-100 dark:border-zinc-900 pt-4 space-y-3 pb-4">
-                  <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 px-1">
-                    <span>{cafeItems.length > 0 ? '🥤' : '🛒'}</span>
-                    {cafeItems.length > 0 ? 'Complete your meal!' : 'Frequently bought together'}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="mt-4 border-t border-zinc-100 dark:border-zinc-900 pt-3 space-y-2 pb-2">
+                  <div className="flex items-center justify-between px-1">
+                    <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                      <span>{cafeItems.length > 0 ? '🥤' : '🛒'}</span>
+                      {cafeItems.length > 0 ? 'Complete your meal!' : 'Frequently bought together'}
+                    </h4>
+                    <span className="text-[10px] text-zinc-400 font-bold">Slide for more →</span>
+                  </div>
+
+                  <div 
+                    className="flex gap-2.5 overflow-x-auto scrollbar-none py-1 px-1 select-none"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
                     {recommendations.map((prod) => {
                       const isRecCafe = isCafeProduct(prod)
                       const isRecClosed = isRecCafe ? !cafeOpen : !groceryMartOpen
                       return (
                         <div
                           key={prod.id}
-                          className="flex items-center gap-2 rounded-xl border border-zinc-100 dark:border-zinc-900 bg-zinc-50/20 dark:bg-zinc-900/10 p-2 hover:border-primary/10 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+                          className="w-[155px] min-[375px]:w-[165px] shrink-0 flex flex-col justify-between rounded-xl border border-zinc-150 dark:border-zinc-850 bg-white dark:bg-zinc-900 p-2.5 hover:border-primary/20 transition-all shadow-2xs"
                         >
-                          <div className="h-10 w-10 shrink-0 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-lg overflow-hidden flex items-center justify-center">
-                            <ProductImage
-                              src={prod.imageUrl}
-                              alt={prod.name}
-                              categorySlug={prod.category?.slug}
-                              className="h-full w-full object-contain p-1"
-                            />
+                          <div className="flex items-center gap-2">
+                            <div className="h-11 w-11 shrink-0 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-lg overflow-hidden flex items-center justify-center p-1">
+                              <ProductImage
+                                src={prod.imageUrl}
+                                alt={prod.name}
+                                categorySlug={prod.category?.slug}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10.5px] font-black text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-tight">
+                                {prod.name}
+                              </p>
+                              <p className="text-[9px] text-zinc-400 font-bold mt-0.5">{prod.unit}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0 text-left">
-                            <p className="text-[10px] font-black text-zinc-800 dark:text-zinc-250 line-clamp-2 leading-[1.15] break-words">
-                              {prod.name}
-                            </p>
-                            <p className="text-[9px] text-zinc-500 font-bold mt-0.5">{prod.unit}</p>
-                            <p className="text-[10px] font-black text-primary mt-0.5">
+
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
+                            <span className="text-xs font-black text-primary">
                               {formatPrice(prod.price)}
-                            </p>
+                            </span>
+                            <button
+                              type="button"
+                              disabled={isRecClosed}
+                              onClick={() => {
+                                if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
+                                  setActiveVariantProduct(prod)
+                                } else {
+                                  addItem({
+                                    id: prod.id,
+                                    name: prod.name,
+                                    slug: prod.slug,
+                                    imageUrl: prod.imageUrl,
+                                    mrp: prod.mrp,
+                                    price: prod.price,
+                                    discount: prod.discount,
+                                    unit: prod.unit,
+                                    stock: prod.stock,
+                                    isAvailable: prod.isAvailable ?? true,
+                                    category: prod.category,
+                                    tags: prod.tags,
+                                    restaurantId: (prod as any).restaurantId || (prod as any).restaurant?.id,
+                                    restaurantName: (prod as any).restaurantName || (prod as any).restaurant?.name,
+                                    restaurant: (prod as any).restaurant,
+                                  })
+                                }
+                              }}
+                              className="rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white px-2.5 py-1 text-[10px] font-black transition-colors cursor-pointer disabled:bg-zinc-100 dark:disabled:bg-zinc-800 disabled:text-zinc-400"
+                            >
+                              {isRecClosed ? 'Closed' : (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) ? 'Options' : '+ Add'}
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            disabled={isRecClosed}
-                            onClick={() => {
-                              if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
-                                setActiveVariantProduct(prod)
-                              } else {
-                                addItem({
-                                  id: prod.id,
-                                  name: prod.name,
-                                  slug: prod.slug,
-                                  imageUrl: prod.imageUrl,
-                                  mrp: prod.mrp,
-                                  price: prod.price,
-                                  discount: prod.discount,
-                                  unit: prod.unit,
-                                  stock: prod.stock,
-                                  isAvailable: prod.isAvailable ?? true,
-                                  category: prod.category,
-                                })
-                              }
-                            }}
-                            className="shrink-0 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white px-2 py-1 text-[9px] font-black transition-colors cursor-pointer disabled:bg-zinc-100 dark:disabled:bg-zinc-800 disabled:text-zinc-400 disabled:cursor-not-allowed"
-                          >
-                            {isRecClosed ? 'Closed' : (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) ? 'Options' : '+ Add'}
-                          </button>
                         </div>
                       )
                     })}

@@ -573,7 +573,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             {/* Left Vertical Category Sidebar */}
             <aside 
               id="cafe-menu-categories-anchor" 
-              className="sticky top-[95px] md:top-[60px] z-30 w-[76px] min-[375px]:w-[84px] sm:w-[105px] md:w-[190px] shrink-0 max-h-[calc(100vh-105px)] overflow-y-auto scrollbar-none py-1 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 transition-all duration-300"
+              className="sticky top-[60px] md:top-[60px] z-30 w-[76px] min-[375px]:w-[84px] sm:w-[105px] md:w-[190px] shrink-0 max-h-[calc(100vh-80px)] overflow-y-auto scrollbar-none py-1 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-300"
             >
               <div className="pb-1 px-1 hidden md:block">
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400">

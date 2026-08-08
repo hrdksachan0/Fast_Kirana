@@ -53,6 +53,10 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpe
     stock: resolvedStock,
     isAvailable: resolvedIsAvailable,
     category: product.category,
+    tags: product.tags,
+    restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
+    restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
+    restaurant: (product as any).restaurant,
   }), [product, variant, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable])
 
   const handleAdd = () => {

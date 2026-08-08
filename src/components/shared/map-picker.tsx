@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2, Navigation, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { loadGoogleMapsScript } from '@/lib/google-maps'
+import { DEFAULT_STORE_PINCODE } from '@/lib/checkout'
 
 interface LocationData {
   lat: number
@@ -196,13 +197,6 @@ export default function MapPicker({
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         const dist = R * c
 
-        // Check if user is way too far (mock for local dev check)
-        if (dist > 20) {
-          toast.warning(`Detected GPS is ${dist.toFixed(0)} km away. Centering on Ghatampur!`)
-          latitude = storeLat + 0.015
-          longitude = storeLng + 0.015
-        }
-
         mapInstance.panTo({ lat: latitude, lng: longitude })
         mapInstance.setZoom(17)
         toast.success('Location centered successfully!')
@@ -231,7 +225,7 @@ export default function MapPicker({
         let route = ''
         let sublocality = ''
         let city = 'Ghatampur'
-        let postcode = '209206'
+        let postcode = DEFAULT_STORE_PINCODE
 
         addressComponents.forEach((comp: any) => {
           if (comp.types.includes('route')) {
@@ -261,7 +255,7 @@ export default function MapPicker({
           lng,
           street: streetName || 'Ghatampur Location',
           city: city || 'Ghatampur',
-          pincode: postcode || '209206',
+          pincode: postcode || DEFAULT_STORE_PINCODE,
         })
       }
     } catch (err) {

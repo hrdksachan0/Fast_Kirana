@@ -13,56 +13,80 @@ class OrderDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
-      appBar: AppBar(
-        title: Text('Order Details', style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w700, color: Colors.white,
-        )),
-        backgroundColor: AppDesignSystem.primary,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildOrderHeader(),
-            const SizedBox(height: 16),
-            _buildOrderTimeline(),
-            const SizedBox(height: 16),
-            _buildItemsSection(),
-            const SizedBox(height: 16),
-            _buildBillSummary(),
-          ],
-        ),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            backgroundColor: AppDesignSystem.primary,
+            elevation: 0,
+            title: Text(
+              'Order Details',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildOrderHeader(),
+                const SizedBox(height: 12),
+                _buildOrderTimeline(),
+                const SizedBox(height: 12),
+                _buildItemsSection(),
+                const SizedBox(height: 12),
+                _buildBillSummary(),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildOrderHeader() {
     return BrandCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 order.readableId ?? order.id.substring(0, 8).toUpperCase(),
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.textPrimary,
+                ),
               ),
+              const SizedBox(height: 4),
               Text(
-                order.status.displayName,
-                style: GoogleFonts.poppins(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: AppDesignSystem.primary,
+                Helpers.formatDate(order.createdAt),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppDesignSystem.textSecondary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            Helpers.formatDate(order.createdAt),
-            style: GoogleFonts.poppins(fontSize: 12, color: AppDesignSystem.textSecondary),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppDesignSystem.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              order.status.displayName,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppDesignSystem.primary,
+              ),
+            ),
           ),
         ],
       ),
@@ -72,39 +96,63 @@ class OrderDetailScreen extends StatelessWidget {
   Widget _buildOrderTimeline() {
     final steps = ['Pending', 'Confirmed', 'Packed', 'Shipped', 'Delivered'];
     final currentIndex = steps.indexOf(order.status.displayName);
-
     return BrandCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Order Status', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
+          Text(
+            'Order Status',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             children: List.generate(steps.length, (index) {
               final isActive = index <= currentIndex;
               return Expanded(
                 child: Column(
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: isActive ? AppDesignSystem.primary : AppDesignSystem.borderLight,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isActive ? Icons.check : Icons.circle_outlined,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (index < steps.length - 1)
+                          Positioned(
+                            top: 12,
+                            left: 30,
+                            right: 0,
+                            child: Container(
+                              height: 2,
+                              color: isActive && index < currentIndex
+                                  ? AppDesignSystem.primary
+                                  : AppDesignSystem.borderLight,
+                            ),
+                          ),
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: isActive ? AppDesignSystem.primary : AppDesignSystem.borderLight,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isActive ? Icons.check_rounded : Icons.circle_outlined,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       steps[index],
-                      style: GoogleFonts.poppins(
-                        fontSize: 9,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: isActive ? AppDesignSystem.textPrimary : AppDesignSystem.textTertiary,
+                        color: isActive
+                            ? AppDesignSystem.textPrimary
+                            : AppDesignSystem.textMuted,
                       ),
                     ),
                   ],
@@ -123,7 +171,13 @@ class OrderDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Items', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+          Text(
+            'Items (${order.items!.length})',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
           ...order.items!.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -136,21 +190,36 @@ class OrderDetailScreen extends StatelessWidget {
                     color: AppDesignSystem.borderLight,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.shopping_bag, color: AppDesignSystem.textSecondary),
+                  child: const Icon(Icons.shopping_bag, size: 20, color: AppDesignSystem.textMuted),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-                      Text('Qty: ${item.quantity}', style: GoogleFonts.poppins(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                      Text(
+                        item.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Qty: ${item.quantity}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: AppDesignSystem.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Text(
                   Helpers.formatPrice(item.lineTotal),
-                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -165,37 +234,70 @@ class OrderDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bill Summary', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+          Text(
+            'Bill Details',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
           _buildBillRow('Subtotal', Helpers.formatPrice(order.subtotal)),
-          _buildBillRow('Discount', '-${Helpers.formatPrice(order.discount)}'),
-          _buildBillRow('Delivery Fee', Helpers.formatPrice(order.deliveryFee)),
+          if (order.discount > 0)
+            _buildBillRow('Discount', '-${Helpers.formatPrice(order.discount)}', color: AppDesignSystem.accent),
+          _buildBillRow('Delivery', Helpers.formatPrice(order.deliveryFee)),
           _buildBillRow('Taxes', Helpers.formatPrice(order.taxes)),
-          const Divider(height: 24),
-          _buildBillRow('Total', Helpers.formatPrice(order.total), isBold: true),
-          const SizedBox(height: 8),
+          if (order.miscFee > 0)
+            _buildBillRow('Misc Fee', Helpers.formatPrice(order.miscFee)),
+          const Divider(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                Helpers.formatPrice(order.total),
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           _buildBillRow('Payment Method', order.paymentMethod.displayName),
         ],
       ),
     );
   }
 
-  Widget _buildBillRow(String label, String value, {bool isBold = false}) {
+  Widget _buildBillRow(String label, String value, {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.poppins(
-            fontSize: isBold ? 16 : 13,
-            fontWeight: isBold ? FontWeight.w800 : FontWeight.w400,
-            color: isBold ? AppDesignSystem.textPrimary : AppDesignSystem.textSecondary,
-          )),
-          Text(value, style: GoogleFonts.poppins(
-            fontSize: isBold ? 18 : 13,
-            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-            color: isBold ? AppDesignSystem.primary : AppDesignSystem.textPrimary,
-          )),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppDesignSystem.textSecondary,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color ?? AppDesignSystem.textPrimary,
+            ),
+          ),
         ],
       ),
     );

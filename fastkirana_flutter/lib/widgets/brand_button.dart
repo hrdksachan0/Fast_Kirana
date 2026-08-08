@@ -1,83 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/brand_design_system.dart';
+import '../core/theme/design_system.dart';
 
 class BrandButton extends StatelessWidget {
   final String text;
-  final VoidCallback? onPressed;
+  final VoidCallback onPressed;
+  final bool fullWidth;
   final bool isLoading;
-  final bool isOutlined;
-  final IconData? icon;
   final Color? backgroundColor;
   final Color? textColor;
-  final double? width;
-  final double height;
+  final Color? gradientStart;
+  final Color? gradientEnd;
 
   const BrandButton({
     super.key,
     required this.text,
-    this.onPressed,
+    required this.onPressed,
+    this.fullWidth = true,
     this.isLoading = false,
-    this.isOutlined = false,
-    this.icon,
     this.backgroundColor,
     this.textColor,
-    this.width,
-    this.height = 56,
+    this.gradientStart,
+    this.gradientEnd,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ??
-        (isOutlined ? Colors.transparent : BrandColors.primary);
-    final txtColor = textColor ??
-        (isOutlined ? BrandColors.primary : Colors.white);
+    final effectiveBg = backgroundColor;
+    final effectiveGradient = effectiveBg != null
+        ? null
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              gradientStart ?? AppDesignSystem.primary,
+              gradientEnd ?? AppDesignSystem.primaryDark,
+            ],
+          );
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: width ?? double.infinity,
-      height: height,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bgColor,
-          foregroundColor: txtColor,
-          elevation: isOutlined ? 0 : 4,
-          shadowColor: isOutlined
-              ? Colors.transparent
-              : BrandColors.primary.withOpacity(0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BrandSpacing.buttonRadius),
-            side: isOutlined
-                ? const BorderSide(color: BrandColors.primary, width: 1.5)
-                : BorderSide.none,
-          ),
+    return GestureDetector(
+      onTap: isLoading ? null : onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: fullWidth ? double.infinity : null,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+        decoration: BoxDecoration(
+          color: effectiveBg,
+          gradient: effectiveGradient,
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          boxShadow: AppDesignSystem.shadowSm,
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+        child: Center(
+          child: isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: textColor ?? Colors.white,
                   ),
-                ],
-              ),
+                )
+              : Text(
+                  text,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: textColor ?? Colors.white,
+                  ),
+                ),
+        ),
       ),
     );
   }

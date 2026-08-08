@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
+import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
 import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { sseEmitter } from '@/lib/sse-emitter'
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       const addressSetting = await prisma.storeSetting.findUnique({
         where: { key: 'contact_address' }
       })
-      const defaultPickupAddress = addressSetting?.value || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+      const defaultPickupAddress = addressSetting?.value || GROCERY_PICKUP_ADDRESS
       const addrParts = defaultPickupAddress.split(',').map(p => p.trim())
       const houseNo = addrParts[0] || 'Vikas Medical Store'
       const street = addrParts[1] || 'NH34, Ghatampur'
@@ -110,10 +111,11 @@ export async function POST(request: NextRequest) {
 
     if (deliveryMethod === 'DELIVERY') {
       const p = address.pincode.trim()
-      const c = address.city.trim().toLowerCase()
-      if (p !== '209206') {
-        return NextResponse.json({ error: 'Selected address is outside our delivery zone. Pincode must be 209206.' }, { status: 400 })
+      const serviceablePincode = resolvePincode(settingsMap)
+      if (p !== serviceablePincode) {
+        return NextResponse.json({ error: `Selected address is outside our delivery zone. Pincode must be ${serviceablePincode}.` }, { status: 400 })
       }
+      const c = address.city.trim().toLowerCase()
       if (!c.includes('ghatampur') && !c.includes('kanpur')) {
         return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
       }
@@ -137,7 +139,7 @@ export async function POST(request: NextRequest) {
 
       if (!resolvedLat || !resolvedLng) {
         try {
-          const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || 'Ghatampur'}, ${address.pincode || '209206'}`
+          const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || 'Ghatampur'}, ${address.pincode || STORE_PINCODE}`
           const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           if (apiKey) {
             const geoController = new AbortController()
@@ -617,11 +619,11 @@ export async function POST(request: NextRequest) {
 
           if (orderInfo.type === 'RESTAURANT') {
             label = `STORE_PICKUP_${orderInfo.restaurantId}`
-            defaultPickupAddress = orderInfo.restaurant?.address ? `${orderInfo.restaurant.address}, ${orderInfo.restaurant.city || 'Ghatampur'}` : (settingsMap['restaurant_pickup_address'] || 'A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206')
+            defaultPickupAddress = orderInfo.restaurant?.address ? `${orderInfo.restaurant.address}, ${orderInfo.restaurant.city || 'Ghatampur'}` : (settingsMap['restaurant_pickup_address'] || RESTAURANT_PICKUP_ADDRESS)
             phone = orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854'
           } else {
             label = 'STORE_PICKUP'
-            defaultPickupAddress = settingsMap['grocery_pickup_address'] || 'Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206'
+            defaultPickupAddress = settingsMap['grocery_pickup_address'] || GROCERY_PICKUP_ADDRESS
             phone = defaultSupportPhone
           }
 
@@ -630,7 +632,7 @@ export async function POST(request: NextRequest) {
           const street = addrParts[1] || 'Ghatampur'
           const area = addrParts[2] || 'Kanpur Nagar'
           const city = addrParts[3] || 'Kanpur'
-          const pincode = addrParts[4] || '209206'
+          const pincode = addrParts[4] || STORE_PINCODE
 
           let pickupAddress = await tx.address.findFirst({
             where: { userId, label }
@@ -847,22 +849,8 @@ export async function POST(request: NextRequest) {
       return results
     }, { maxWait: 20000, timeout: 25000 })
 
-    // Perform storefront revalidation and notifications asynchronously in the background
+    // Perform notifications asynchronously in the background
     after(async () => {
-      // Invalidate storefront caches on-demand since stock levels changed
-      try {
-        const uniqueCategorySlugs = new Set(
-          dbProducts.map((p) => p.category?.slug).filter(Boolean)
-        )
-        // Revalidate main pages
-        revalidateStorefront()
-        // Revalidate affected categories
-        for (const catSlug of uniqueCategorySlugs) {
-          revalidateStorefront(catSlug)
-        }
-      } catch (revalErr) {
-        console.error('Failed to revalidate paths after order placement:', revalErr)
-      }
 
       // Emit real-time SSE event for each newly created order and send push notifications to staff roles
       try {

@@ -60,6 +60,10 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
     stock: resolvedStock,
     isAvailable: resolvedIsAvailable,
     category: product.category,
+    tags: product.tags,
+    restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
+    restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
+    restaurant: (product as any).restaurant,
   }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable])
 
   const { subscribe } = usePushNotification()

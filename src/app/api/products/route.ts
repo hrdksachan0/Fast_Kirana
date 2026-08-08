@@ -7,6 +7,7 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { ApiResponder } from '@/lib/api-response'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 
 const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'aalu': ['potato', 'aloo'],
@@ -82,9 +83,37 @@ export async function GET(request: NextRequest) {
     // Filter by restaurant — or exclude restaurant items for grocery context
     const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
     if (restaurantId) {
-      where.restaurantId = restaurantId
+      if (restaurantId === OUTLET_AS_RESTAURANT_ID || restaurantId === 'as-restaurant' || restaurantId === 'as-cafe') {
+        where.OR = [
+          { restaurantId: restaurantId },
+          { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
+          { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
+        ]
+      } else if (restaurantId === OUTLET_WEDSON_ID || restaurantId === 'wedson') {
+        where.OR = [
+          { restaurantId: restaurantId },
+          { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
+          { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
+        ]
+      } else {
+        where.restaurantId = restaurantId
+      }
     } else if (restaurantSlug) {
-      where.restaurant = { slug: restaurantSlug }
+      if (restaurantSlug === 'as-restaurant' || restaurantSlug === 'as-cafe') {
+        where.OR = [
+          { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
+          { restaurantId: OUTLET_AS_RESTAURANT_ID },
+          { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
+        ]
+      } else if (restaurantSlug === 'wedson' || restaurantSlug === 'restaurant-kitchen') {
+        where.OR = [
+          { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
+          { restaurantId: OUTLET_WEDSON_ID },
+          { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
+        ]
+      } else {
+        where.restaurant = { slug: restaurantSlug }
+      }
     } else if (excludeRestaurant || (!isWorker && !category)) {
       // In grocery context (no restaurant specified, no category override), exclude restaurant products
       // This prevents restaurant items from appearing in grocery search, home page, etc.

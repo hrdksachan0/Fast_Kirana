@@ -23,52 +23,81 @@ class OrdersScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
-      appBar: AppBar(
-        title: Text('My Orders', style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w700, color: Colors.white,
-        )),
-        backgroundColor: AppDesignSystem.primary,
-        elevation: 0,
-      ),
-      body: ordersAsync.when(
-        data: (orders) {
-          if (orders.isEmpty) {
-            return _buildEmptyOrders(context);
-          }
-          return RefreshIndicator(
-            onRefresh: () async => ref.refresh(ordersProvider('user_placeholder')),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) => _buildOrderCard(context, orders[index]),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            backgroundColor: AppDesignSystem.surface,
+            elevation: 0,
+            title: Text(
+              'My Orders',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppDesignSystem.textPrimary,
+              ),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
-        ),
+            iconTheme: const IconThemeData(color: AppDesignSystem.textPrimary),
+          ),
+          ordersAsync.when(
+            data: (orders) {
+              if (orders.isEmpty) {
+                return SliverFillRemaining(
+                  child: _buildEmptyOrders(),
+                );
+              }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildOrderCard(context, orders[index]),
+                  childCount: orders.length,
+                ),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => SliverFillRemaining(
+              child: Center(
+                child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyOrders(BuildContext context) {
+  Widget _buildEmptyOrders() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(32),
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
-              color: AppDesignSystem.primary.withOpacity(0.1),
+              color: AppDesignSystem.primary.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.receipt_long_outlined, size: 64, color: AppDesignSystem.primary),
+            child: const Icon(Icons.receipt_long_outlined, size: 60, color: AppDesignSystem.primary),
           ),
           const SizedBox(height: 24),
-          Text('No orders yet', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(
+            'No orders yet',
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppDesignSystem.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Start shopping to see your orders here', style: GoogleFonts.poppins(color: AppDesignSystem.textSecondary)),
+          Text(
+            'Start shopping to see your orders here',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppDesignSystem.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -79,6 +108,7 @@ class OrdersScreen extends ConsumerWidget {
     final statusBg = _getStatusBgColor(order.status);
 
     return BrandCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
         Navigator.push(
           context,
@@ -93,7 +123,10 @@ class OrdersScreen extends ConsumerWidget {
             children: [
               Text(
                 order.readableId ?? order.id.substring(0, 8).toUpperCase(),
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -103,7 +136,7 @@ class OrdersScreen extends ConsumerWidget {
                 ),
                 child: Text(
                   order.status.displayName,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: statusColor,
@@ -112,10 +145,10 @@ class OrdersScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (order.items != null && order.items!.isNotEmpty)
+          if (order.items != null && order.items!.isNotEmpty) ...[
+            const SizedBox(height: 12),
             SizedBox(
-              height: 60,
+              height: 50,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: order.items!.length.clamp(0, 4),
@@ -123,25 +156,28 @@ class OrdersScreen extends ConsumerWidget {
                   final item = order.items![index];
                   return Container(
                     margin: const EdgeInsets.only(right: 8),
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.borderLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: item.imageUrl ?? '',
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => Container(
-                          width: 60,
-                          height: 60,
-                          color: AppDesignSystem.borderLight,
-                          child: const Icon(Icons.shopping_bag),
-                        ),
-                      ),
+                      child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: item.imageUrl!,
+                              fit: BoxFit.cover,
+                              width: 50,
+                              height: 50,
+                            )
+                          : const Icon(Icons.shopping_bag, size: 20, color: AppDesignSystem.textMuted),
                     ),
                   );
                 },
               ),
             ),
+          ],
           const SizedBox(height: 12),
           const Divider(),
           const SizedBox(height: 12),
@@ -150,11 +186,18 @@ class OrdersScreen extends ConsumerWidget {
             children: [
               Text(
                 Helpers.formatDate(order.createdAt),
-                style: GoogleFonts.poppins(fontSize: 12, color: AppDesignSystem.textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppDesignSystem.textSecondary,
+                ),
               ),
               Text(
                 Helpers.formatPrice(order.total),
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.primary),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.primary,
+                ),
               ),
             ],
           ),

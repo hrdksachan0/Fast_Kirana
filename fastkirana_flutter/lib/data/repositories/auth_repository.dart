@@ -10,7 +10,7 @@ class AuthRepository {
     try {
       final response = await dio.post(
         '/api/auth/otp/send',
-        data: {'email': identifier},
+        data: {'phone': identifier, 'email': identifier, 'identifier': identifier},
       );
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
@@ -22,7 +22,7 @@ class AuthRepository {
     try {
       final response = await dio.post(
         '/api/auth/otp/verify',
-        data: {'email': identifier, 'otp': otp},
+        data: {'phone': identifier, 'email': identifier, 'identifier': identifier, 'otp': otp},
       );
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
