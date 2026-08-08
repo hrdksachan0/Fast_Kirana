@@ -34,7 +34,7 @@ interface CategoriesTabProps {
   handleDeleteCategory: (id: string) => Promise<void>
   saveCategoryChanges: (e: React.FormEvent) => Promise<void>
   startEditingCategory: (c: any) => void
-  handleImageFileChange: (target: string, e: React.ChangeEvent<HTMLInputElement>) => void
+  handleImageFileChange: (form: 'new' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
 export function CategoriesTab({

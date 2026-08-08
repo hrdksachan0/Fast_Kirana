@@ -90,6 +90,7 @@ interface ProductsTabProps {
   productTotal: number
   editingProduct: any
   savingProductId: string | null
+  allProducts?: Product[]
   // Setters
   setShowAddProduct: (v: boolean) => void
   setShowSortManager: (v: boolean) => void
@@ -109,6 +110,9 @@ interface ProductsTabProps {
   setShowMediaLibrary: (v: boolean) => void
   setProducts: (v: any[]) => void
   setAllProducts: (v: any[]) => void
+  setSearchQuery: (v: string) => void
+  setSelectedTypeFilter: (v: any) => void
+  setSelectedCategoryFilter: (v: string) => void
   // Handlers
   handleNewProductTypeChange: (type: 'grocery' | 'cafe' | 'restaurant') => void
   handleEditProductTypeChange: (type: 'grocery' | 'cafe' | 'restaurant') => void
@@ -484,19 +488,19 @@ export function ProductsTab({
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Menu Section *</label>
                 <select
                   required
-                  value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
+                  value={RESTAURANT_MENU_SECTIONS.find(sec => newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes(sec.tag))?.tag || ''}
                   onChange={(e) => {
                     const val = e.target.value;
                     const sectionValues = RESTAURANT_MENU_SECTIONS.map(s => s.tag);
                     let cleanTags = newProduct.tags
                       .split(',')
-                      .map(t => t.trim())
-                      .filter(t => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
+                      .map((t: string) => t.trim())
+                      .filter((t: string) => t.length > 0 && !sectionValues.includes(t.toLowerCase()));
 
                     if (val) {
                       cleanTags.push(val);
                     }
-                    if (!cleanTags.map(t => t.toLowerCase()).includes('restaurant')) {
+                    if (!cleanTags.map((t: string) => t.toLowerCase()).includes('restaurant')) {
                       cleanTags.push('restaurant');
                     }
                     setNewProduct({ ...newProduct, tags: cleanTags.join(', ') });
@@ -841,7 +845,7 @@ export function ProductsTab({
               <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('popular')}
+                  checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('popular')}
                   onChange={(e) => toggleTag('new', 'popular', e.target.checked)}
                   className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                 />
@@ -850,7 +854,7 @@ export function ProductsTab({
               <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cafe')}
+                  checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('cafe')}
                   onChange={(e) => toggleTag('new', 'cafe', e.target.checked)}
                   className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                 />
@@ -863,7 +867,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('sandwiches')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('sandwiches')}
                       onChange={(e) => toggleTag('new', 'sandwiches', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -872,7 +876,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('italian-pasta')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('italian-pasta')}
                       onChange={(e) => toggleTag('new', 'italian-pasta', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -881,7 +885,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('bombay-bites')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('bombay-bites')}
                       onChange={(e) => toggleTag('new', 'bombay-bites', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -890,7 +894,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('rice-dishes')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('rice-dishes')}
                       onChange={(e) => toggleTag('new', 'rice-dishes', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -899,7 +903,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('shakes')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('shakes')}
                       onChange={(e) => toggleTag('new', 'shakes', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -908,7 +912,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('mocktails')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('mocktails')}
                       onChange={(e) => toggleTag('new', 'mocktails', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -917,7 +921,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('cold-coffee')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('cold-coffee')}
                       onChange={(e) => toggleTag('new', 'cold-coffee', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -926,7 +930,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('frankie-rolls')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('frankie-rolls')}
                       onChange={(e) => toggleTag('new', 'frankie-rolls', e.target.checked)}
                       className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-border rounded cursor-pointer"
                     />
@@ -938,7 +942,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-beverage')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('hot-beverage')}
                       onChange={(e) => toggleTag('new', 'hot-beverage', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -947,7 +951,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('hot-bite')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('hot-bite')}
                       onChange={(e) => toggleTag('new', 'hot-bite', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -956,7 +960,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('chinese')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('chinese')}
                       onChange={(e) => toggleTag('new', 'chinese', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -965,7 +969,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('south-indian')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('south-indian')}
                       onChange={(e) => toggleTag('new', 'south-indian', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -974,7 +978,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('breakfast')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('breakfast')}
                       onChange={(e) => toggleTag('new', 'breakfast', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -983,7 +987,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('snacks')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('snacks')}
                       onChange={(e) => toggleTag('new', 'snacks', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -992,7 +996,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('dairy')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('dairy')}
                       onChange={(e) => toggleTag('new', 'dairy', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -1001,7 +1005,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('staples')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('staples')}
                       onChange={(e) => toggleTag('new', 'staples', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -1010,7 +1014,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('beverages')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('beverages')}
                       onChange={(e) => toggleTag('new', 'beverages', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -1019,7 +1023,7 @@ export function ProductsTab({
                   <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none animate-fade-in">
                     <input
                       type="checkbox"
-                      checked={newProduct.tags.split(',').map(t => t.trim().toLowerCase()).includes('late-night')}
+                      checked={newProduct.tags.split(',').map((t: string) => t.trim().toLowerCase()).includes('late-night')}
                       onChange={(e) => toggleTag('new', 'late-night', e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                     />
@@ -1056,7 +1060,7 @@ export function ProductsTab({
               </div>
               {newProduct.tags.trim() && (
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {newProduct.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                  {newProduct.tags.split(',').map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
                     <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold text-text-primary">
                       <span>{tag}</span>
                       <button
@@ -1222,7 +1226,7 @@ export function ProductsTab({
                       {/* Category */}
                       <td className="py-3 px-4">
                         <span className="bg-muted px-2 py-0.5 border border-border/80 text-[10px] text-text-secondary rounded font-bold uppercase tracking-wider">
-                          {p.category.name}
+                          {p.category?.name || 'General'}
                         </span>
                       </td>
 

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       // Pure grocery cart: strictly exclude restaurant & cafe products!
       typeFilter.AND = [
         { restaurantId: null },
-        { tags: { noneOf: ['as-restaurant', 'as-cafe', 'wedson', 'wedson-restaurant'] } }
+        { NOT: { tags: { hasSome: ['as-restaurant', 'as-cafe', 'wedson', 'wedson-restaurant'] } } }
       ]
     }
 

@@ -71,7 +71,7 @@ export default function MediaLibraryModal({
                 key={idx}
                 type="button"
                 onClick={() => {
-                  onSelectImage(img.url, mediaTarget)
+                  onSelectImage(img.url, mediaTarget ?? '')
                   setShowMediaLibrary(false)
                   toast.success('Image selected from library! 🖼️')
                 }}

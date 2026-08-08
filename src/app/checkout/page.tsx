@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
+import type { CartItem } from '@/stores/cart-store'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +51,7 @@ import {
   DEFAULT_SHOP_NAME,
   DEFAULT_MIN_ORDER,
   DEFAULT_DELIVERY_RADIUS_KM,
+  type SettingsMap,
 } from '@/lib/checkout'
 
 interface SlideToOrderProps {
