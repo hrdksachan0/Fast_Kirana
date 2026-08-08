@@ -134,15 +134,6 @@ function LoginForm() {
 
     const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
 
-    // EMAIL mode (Staff / Restaurant Owner / Admin) → always go directly to password step
-    if (loginType === 'EMAIL') {
-      setHasPassword(true)
-      setIsWorker(true)
-      setStep('PASSWORD')
-      setIsLoading(false)
-      return
-    }
-
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
@@ -152,9 +143,11 @@ function LoginForm() {
 
       const json = await res.json()
 
+      const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
+      const data = json.data || json
+      const isWorkerUser = data.isWorker || (data.role && data.role !== 'USER') || isStaffFormat
+
       if (!res.ok) {
-        // If API fails (e.g. DB timeout), check if email looks like a staff email
-        const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
         if (isStaffFormat) {
           toast.info('Please enter your password to continue.')
           setHasPassword(true)
@@ -166,12 +159,9 @@ function LoginForm() {
         return
       }
 
-      // Extract payload from ApiResponder wrapper { success: true, data: { ... } }
-      const data = json.data || json
-
       // Store role info from response
-      setIsWorker(data.isWorker ?? false)
-      setHasPassword(data.hasPassword ?? false)
+      setIsWorker(isWorkerUser)
+      setHasPassword(data.hasPassword ?? isWorkerUser)
       setNeedsProfileSetup(data.needsProfileSetup ?? false)
       setUserRole(data.role ?? '')
 
@@ -185,11 +175,11 @@ function LoginForm() {
         }
       }
 
-      if (data.isWorker) {
+      if (isWorkerUser) {
         // Staff/Admin/Chef → password step directly
         setStep('PASSWORD')
       } else {
-        // Normal customer → always send OTP (even if they have a password)
+        // Normal customer (Email or WhatsApp) → always send OTP
         await sendOtp(finalEmail)
       }
     } catch {

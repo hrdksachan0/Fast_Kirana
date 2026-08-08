@@ -243,6 +243,17 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     ]
   }, [products, isVegOnly, searchQuery, restaurant.menuSections])
 
+  const addOnProducts = useMemo(() => {
+    return products.filter((p: any) => {
+      const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
+      return (
+        pTags.some((t: string) =>
+          ['beverages', 'cold-coffee', 'shakes', 'mocktails', 'chilled', 'drinks', 'desserts', 'ice-cream', 'dips', 'sauce'].includes(t)
+        ) || p.price < 99
+      )
+    }).slice(0, 10)
+  }, [products])
+
   const toggleCategoryExpand = (tag: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev)
@@ -790,6 +801,36 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                       </div>
                     )
                   })}
+
+                  {/* Complete Your Meal / Quick Add-ons Section */}
+                  {addOnProducts.length > 0 && (
+                    <div className="mt-8 pt-6 border-t-2 border-dashed border-orange-500/20 dark:border-orange-500/30 space-y-3.5 bg-gradient-to-br from-orange-500/5 via-amber-500/5 to-transparent p-4 rounded-3xl border border-orange-500/10">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🥤</span>
+                            <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
+                              Complete Your Meal
+                            </h4>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-0.5 rounded-full shadow-2xs">
+                              Popular Add-ons
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-0.5 pl-7">
+                            Pair your food with refreshing drinks, shakes & sides
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x snap-mandatory">
+                        {addOnProducts.map((product: any) => (
+                          <div key={product.id} className="w-[145px] min-[375px]:w-[165px] shrink-0 snap-start">
+                            <ProductCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </main>
               </div>
             )}
