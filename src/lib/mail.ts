@@ -1,8 +1,21 @@
 import { Resend } from 'resend'
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+const getCleanEnv = (key: string): string => {
+  let val = process.env[key] || ''
+  val = val.trim()
+  if (val.startsWith('"') && val.endsWith('"')) {
+    val = val.substring(1, val.length - 1)
+  }
+  if (val.startsWith("'") && val.endsWith("'")) {
+    val = val.substring(1, val.length - 1)
+  }
+  return val.trim()
+}
 
-const fromEmail = process.env.EMAIL_FROM || 'FastKirana <onboarding@resend.dev>'
+const resendApiKey = getCleanEnv('RESEND_API_KEY')
+const fromEmail = getCleanEnv('EMAIL_FROM') || 'FastKirana <onboarding@resend.dev>'
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null
 
 export async function sendOtpEmail(email: string, otp: string) {
   const htmlContent = `
