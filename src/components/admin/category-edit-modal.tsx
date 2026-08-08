@@ -28,7 +28,7 @@ interface CategoryEditModalProps {
   setCategoryEditForm: (f: any) => void
 }
 
-export default function CategoryEditModal({
+export function CategoryEditModal({
   editingCategory,
   categoryEditForm,
   categories,

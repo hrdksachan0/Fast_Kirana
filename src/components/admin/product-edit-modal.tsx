@@ -886,3 +886,4 @@ function ProductEditModal({
 }
 
 export default ProductEditModal
+export { ProductEditModal }

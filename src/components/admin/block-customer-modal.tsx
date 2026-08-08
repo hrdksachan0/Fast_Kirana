@@ -12,7 +12,7 @@ interface BlockCustomerModalProps {
   handleToggleBlock: (user: any, block: boolean, reason: string) => void
 }
 
-export default function BlockCustomerModal({
+export function BlockCustomerModal({
   blockingUser,
   blockReasonInput,
   isUpdatingBlockStatus,

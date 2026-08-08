@@ -37,7 +37,7 @@ interface CategoriesTabProps {
   handleImageFileChange: (target: string, e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-export default function CategoriesTab({
+export function CategoriesTab({
   categories,
   newCategory,
   showAddCategory,

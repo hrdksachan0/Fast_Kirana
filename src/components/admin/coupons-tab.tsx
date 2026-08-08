@@ -73,7 +73,7 @@ const emptyNewCoupon: CouponEditForm = {
   oncePerCustomer: false,
 }
 
-export default function CouponsTab({
+export function CouponsTab({
   coupons,
   categories,
   showAddCoupon,

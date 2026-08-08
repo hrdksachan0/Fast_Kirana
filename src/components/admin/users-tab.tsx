@@ -42,7 +42,7 @@ interface UsersTabProps {
   renderPagination: (page: number, total: number, perPage: number, onChange: (p: number) => void) => React.ReactNode
 }
 
-export default function UsersTab({
+export function UsersTab({
   users,
   userPage,
   userTotal,

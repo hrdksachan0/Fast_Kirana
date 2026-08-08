@@ -20,7 +20,7 @@ interface ReviewEditModalProps {
   setReviewEditForm: (f: any) => void
 }
 
-export default function ReviewEditModal({
+export function ReviewEditModal({
   editingReview,
   reviewEditForm,
   savingReviewId,
