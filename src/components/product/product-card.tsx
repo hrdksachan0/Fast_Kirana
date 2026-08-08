@@ -18,11 +18,13 @@ interface ProductCardProps {
   isCompact?: boolean
 }
 
+import { useRouter } from 'next/navigation'
 import { isCafeProduct, cn, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { checkDishTimeAvailability } from '@/lib/dish-timing'
 
 export function ProductCard({ product, isCompact = false }: ProductCardProps) {
+  const router = useRouter()
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
@@ -126,7 +128,18 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         body: JSON.stringify({ productId: product.id }),
       })
 
-      if (!res.ok) throw new Error('Failed to update wishlist')
+      if (!res.ok) {
+        if (res.status === 401) {
+          toast.error('Please log in to save items to your wishlist', {
+            action: {
+              label: 'Login',
+              onClick: () => router.push('/login?callbackUrl=/account/wishlist'),
+            },
+          })
+          return
+        }
+        throw new Error('Failed to update wishlist')
+      }
 
       setIsWishlisted(!isWishlisted)
       toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist')
@@ -317,7 +330,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             disabled={wishlistLoading}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             className={cn(
-              "absolute top-1.5 right-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
+              "absolute top-1.5 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
+              isRestaurant ? "right-7" : "right-1.5",
               isWishlisted
                 ? "opacity-100 bg-rose-500 text-white shadow-md scale-105"
                 : "opacity-85 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110",

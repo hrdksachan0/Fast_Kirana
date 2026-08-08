@@ -56,6 +56,19 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
   const [isVegOnly, setIsVegOnly] = useState(restaurant.isPureVeg || false)
   const [activeCategoryTag, setActiveCategoryTag] = useState<string>('all')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [showStickyBranding, setShowStickyBranding] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 140) {
+        setShowStickyBranding(true)
+      } else {
+        setShowStickyBranding(false)
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
   const isClickingTabRef = useRef(false)
   const categoryTabsRef = useRef<HTMLDivElement>(null)
   const { items, getTotalItems, getSubtotal } = useCart()
@@ -311,6 +324,22 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     }
   }, [activeCategoryTag])
 
+  // Scroll active category tab inside vertical sidebar (#cafe-sidebar) smoothly as user scrolls products
+  useEffect(() => {
+    if (!activeCategoryTag) return
+    const sidebar = document.getElementById('cafe-sidebar')
+    const activeTabEl = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
+    if (sidebar && activeTabEl) {
+      const tabTop = activeTabEl.offsetTop
+      const tabHeight = activeTabEl.offsetHeight
+      const sidebarHeight = sidebar.offsetHeight
+      sidebar.scrollTo({
+        top: Math.max(0, tabTop - sidebarHeight / 2 + tabHeight / 2),
+        behavior: 'smooth',
+      })
+    }
+  }, [activeCategoryTag])
+
   // Auto-scroll vertical sidebar to center active tag button
   useEffect(() => {
     if (!activeCategoryTag) return
@@ -520,6 +549,61 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
         </div>
       )}
 
+      {/* Sticky Top Restaurant Branding Header on Scroll */}
+      <AnimatePresence>
+        {showStickyBranding && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 py-2.5 shadow-md flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                onClick={() => router.back()}
+                className="p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0 hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                  {restaurant.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
+                    {restaurant.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 font-bold mt-0.5">
+                    <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                      <Star size={10} className="fill-current" /> {restaurant.rating || '4.5'}
+                    </span>
+                    <span>•</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{restaurant.deliveryTime || '20-25 min'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  const searchInput = document.getElementById('search-input-box')
+                  if (searchInput) {
+                    searchInput.focus()
+                    window.scrollTo({ top: 120, behavior: 'smooth' })
+                  }
+                }}
+                className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer"
+                title="Search Menu"
+              >
+                <Search size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {activeSubTab === 'menu' ? (
         <>
           {/* Veg Toggle + Info Bar */}
@@ -579,7 +663,10 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 {/* Left Vertical Category Sidebar */}
                 <aside 
                   id="cafe-sidebar" 
-                  className="sticky top-[66px] sm:top-[74px] z-30 w-[85px] min-[375px]:w-[90px] sm:w-[115px] shrink-0 max-h-[calc(100vh-90px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1.5 sm:pr-2 self-start transition-all duration-200"
+                  className={cn(
+                    "sticky z-30 w-[92px] min-[375px]:w-[98px] sm:w-[125px] shrink-0 max-h-[calc(100vh-100px)] overflow-y-auto scrollbar-none py-1 pb-44 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
+                    showStickyBranding ? "top-[60px]" : "top-[66px] sm:top-[74px]"
+                  )}
                 >
                   {categories.map((cat: any) => {
                     const isActive = activeCategoryTag === cat.tag
@@ -622,7 +709,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                             )}
                           </div>
                         </div>
-                        <span className="text-[9px] min-[375px]:text-[9.5px] font-bold leading-[1.2] line-clamp-2 max-w-full">
+                        <span className="text-[9.5px] min-[375px]:text-[10px] sm:text-[11px] font-extrabold leading-[1.15] text-center max-w-full break-words">
                           {cat.title}
                         </span>
                       </button>

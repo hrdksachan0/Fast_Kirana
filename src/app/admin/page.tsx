@@ -18,7 +18,12 @@ export const revalidate = 0 // Admin dashboard is fully dynamic
 
 export default async function AdminPage() {
   const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!session) {
+    redirect('/login?callbackUrl=/admin')
+  }
+
+  const role = session.user?.role?.toUpperCase()
+  if (role !== 'ADMIN') {
     redirect('/')
   }
 

@@ -44,9 +44,17 @@ export async function proxy(req: NextRequest) {
   }
   const staffConsoleUrl = getStaffConsoleUrl(userRole)
 
-  // Redirect logged-in users away from /login and /signup to their console
+  // Redirect logged-in users away from /login and /signup to their console or callbackUrl
   if (isAuthRoute) {
     if (isLoggedIn) {
+      const callbackUrl = nextUrl.searchParams.get('callbackUrl')
+      if (callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')) {
+        return NextResponse.redirect(new URL(callbackUrl, baseUrl))
+      }
+      const roleUpper = userRole?.toUpperCase()
+      if (roleUpper === 'ADMIN') {
+        return NextResponse.redirect(new URL('/admin', baseUrl))
+      }
       if (staffConsoleUrl) {
         return NextResponse.redirect(new URL(staffConsoleUrl, baseUrl))
       }
@@ -117,7 +125,7 @@ export async function proxy(req: NextRequest) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    if (userRole !== 'ADMIN') {
+    if (userRole?.toUpperCase() !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
   }
