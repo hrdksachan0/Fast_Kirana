@@ -78,8 +78,11 @@ export async function POST(request: NextRequest) {
     })
 
     // 5. Send OTP via Meta WhatsApp Cloud API or Email
-    if (normalizedEmail.startsWith('wa-')) {
-      const phoneDigits = normalizedEmail.split('@')[0].replace('wa-', '')
+    const phoneDigits = isPhoneNumber(trimmed)
+      ? getLast10Digits(trimmed)
+      : (normalizedEmail.startsWith('wa-') ? normalizedEmail.split('@')[0].replace('wa-', '') : null)
+
+    if (phoneDigits) {
       const recipientPhone = `+91${phoneDigits}`
       const isSent = await sendWhatsAppOtp(recipientPhone, otp)
 

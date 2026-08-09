@@ -168,13 +168,13 @@ function LoginForm() {
       setUserRole(data.role ?? '')
 
       let finalEmail = normalizedInput
-      if (data.email) {
+      if (data.email && loginType !== 'WHATSAPP') {
         finalEmail = data.email
         setEmail(data.email)
-        if (data.email.startsWith('wa-')) {
-          const phoneDigits = data.email.split('@')[0].replace('wa-', '')
-          setPhone(`+91${phoneDigits}`)
-        }
+      } else if (loginType === 'WHATSAPP') {
+        const phoneDigits = getLast10Digits(normalizedInput)
+        finalEmail = `wa-${phoneDigits}@fastkirana.com`
+        setPhone(`+91${phoneDigits}`)
       }
 
       if (isWorkerUser) {
