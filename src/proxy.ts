@@ -5,7 +5,12 @@ import { getToken } from 'next-auth/jwt'
 const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
 export async function proxy(req: NextRequest) {
-  const token = await getToken({ req, secret: secret || undefined })
+  const isSecure = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https'
+  let token = await getToken({ req, secret: secret || undefined, secureCookie: isSecure })
+  if (!token && isSecure) {
+    token = await getToken({ req, secret: secret || undefined, secureCookie: false })
+  }
+
   const isLoggedIn = !!token
   const userRole = token?.role as string | undefined
   const { nextUrl } = req

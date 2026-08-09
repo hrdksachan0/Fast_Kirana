@@ -8,6 +8,7 @@ import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone
 
 const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
+  trustHost: true,
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
   debug: process.env.NODE_ENV !== 'production',
