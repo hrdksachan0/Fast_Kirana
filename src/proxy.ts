@@ -2,20 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Clean environment variables (removes quotes if copy-pasted with quotes)
-const getCleanSecret = (key: string): string => {
-  let val = process.env[key] || ''
-  val = val.trim()
-  if (val.startsWith('"') && val.endsWith('"')) {
-    val = val.substring(1, val.length - 1)
-  }
-  if (val.startsWith("'") && val.endsWith("'")) {
-    val = val.substring(1, val.length - 1)
-  }
-  return val.trim()
-}
-
-const secret = getCleanSecret('AUTH_SECRET')
+const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
 export async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: secret || undefined })
