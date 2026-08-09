@@ -22,7 +22,6 @@ class MainShell extends ConsumerWidget {
     final screens = const [
       HomeScreen(),
       CategoriesScreen(),
-      CartScreen(),
       OrdersScreen(),
       ProfileScreen(),
     ];
@@ -43,8 +42,8 @@ class MainShell extends ConsumerWidget {
 
     final items = [
       {'icon': Icons.home_outlined, 'activeIcon': Icons.home_rounded, 'label': 'HOME'},
-      {'icon': Icons.search_rounded, 'activeIcon': Icons.search_rounded, 'label': 'SEARCH'},
       {'icon': Icons.grid_view_outlined, 'activeIcon': Icons.grid_view_rounded, 'label': 'CATEGORIES'},
+      {'icon': Icons.receipt_long_outlined, 'activeIcon': Icons.receipt_long_rounded, 'label': 'ORDERS'},
       {'icon': Icons.account_circle_outlined, 'activeIcon': Icons.account_circle_rounded, 'label': 'ACCOUNT'},
     ];
 
