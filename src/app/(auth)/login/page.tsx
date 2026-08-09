@@ -55,6 +55,8 @@ function LoginForm() {
   const [otp, setOtp] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+
+
   
   // Role-based state from /api/auth/email/check
   const [isWorker, setIsWorker] = useState(false)
@@ -334,6 +336,13 @@ function LoginForm() {
       setIsLoading(false)
     } else {
       toast.success('Successfully logged in!')
+      try {
+        sessionStorage.removeItem('fk_login_step')
+        sessionStorage.removeItem('fk_login_email')
+        sessionStorage.removeItem('fk_login_type')
+      } catch (e) {
+        // ignore
+      }
       let activeRole = userRole
       try {
         const sessRes = await fetch('/api/auth/session')

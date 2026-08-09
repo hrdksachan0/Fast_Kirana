@@ -77,7 +77,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
       }
     }
 
-    const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+    let res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -86,7 +86,31 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
       body: JSON.stringify(body),
     })
 
-    const data = await res.json()
+    let data = await res.json()
+
+    // If template send failed, fallback to direct text message for 100% fail-safe delivery
+    if (!res.ok && templateName) {
+      console.warn('Meta WhatsApp template send failed, trying direct text message fallback:', data)
+      const textBody = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: 'text',
+        text: {
+          body: `Your FastKirana verification code is: ${otp}. Valid for 5 minutes.`,
+        },
+      }
+      res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(textBody),
+      })
+      data = await res.json()
+    }
+
     if (!res.ok) {
       console.error('Meta WhatsApp API error response:', data)
       return false

@@ -172,11 +172,11 @@ export function rateLimit(options: RateLimitOptions = {}) {
 
 // ── Pre-configured limiters for different route types ──
 
-/** For auth routes (login, signup): 5 requests per minute */
-export const authLimiter = rateLimit({ interval: 60_000, limit: 5 })
+/** For auth routes (login, signup): 30 requests per minute */
+export const authLimiter = rateLimit({ interval: 60_000, limit: 30 })
 
-/** For OTP send / password reset: 3 requests per hour (prevent spam/brute-force) */
-export const otpLimiter = rateLimit({ interval: 3_600_000, limit: 3 })
+/** For OTP send / password reset: 15 requests per 10 minutes */
+export const otpLimiter = rateLimit({ interval: 600_000, limit: 15 })
 
 /** For general API reads: 60 requests per minute */
 export const apiReadLimiter = rateLimit({ interval: 60_000, limit: 60 })

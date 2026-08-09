@@ -6,24 +6,9 @@ import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
-// Clean environment variables (removes quotes if copy-pasted with quotes)
-const getCleanSecret = (key: string): string => {
-  let val = process.env[key] || ''
-  val = val.trim()
-  if (val.startsWith('"') && val.endsWith('"')) {
-    val = val.substring(1, val.length - 1)
-  }
-  if (val.startsWith("'") && val.endsWith("'")) {
-    val = val.substring(1, val.length - 1)
-  }
-  return val.trim()
-}
-
-const cleanSecret = getCleanSecret('AUTH_SECRET')
-
 const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: cleanSecret || undefined,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
   debug: process.env.NODE_ENV !== 'production',
   logger: {
