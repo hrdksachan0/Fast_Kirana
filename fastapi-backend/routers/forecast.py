@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from database import get_db
-from models import Order, OrderItem, Product
+from models import Order, OrderItem, Product, OrderStatus
 from routers.auth import require_admin
 
 router = APIRouter(prefix="/forecast", tags=["AI Demand Forecasting"])
@@ -23,7 +23,7 @@ async def get_ai_demand_forecast(
     """
     start_date = datetime.utcnow() - timedelta(days=30)
 
-    # Fetch last 30 days completed order items using text cast for enum compatibility
+    # Fetch last 30 days completed order items using standard SQLAlchemy enum comparison
     stmt = select(
         OrderItem.productId,
         OrderItem.name,
@@ -31,7 +31,7 @@ async def get_ai_demand_forecast(
         Order.createdAt
     ).join(Order, OrderItem.orderId == Order.id).where(
         and_(
-            text("orders.status::text = 'DELIVERED'"),
+            Order.status == OrderStatus.DELIVERED,
             Order.createdAt >= start_date
         )
     )

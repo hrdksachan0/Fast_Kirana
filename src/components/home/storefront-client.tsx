@@ -18,6 +18,8 @@ import { ShoppingBag, Utensils } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
+import { FoodEditorialCuration } from '@/components/home/food-editorial-curation'
+
 interface StorefrontClientProps {
   categories: Category[]
   promoBanners: any[]
@@ -246,8 +248,9 @@ export function StorefrontClient({
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
             <FloatingEmojis type="food" />
-            {/* Swiggy-style restaurant listing — banner + cards */}
+            {/* Swiggy-style restaurant listing — banner + editorial curations + cards */}
             <FoodBanner />
+            <FoodEditorialCuration />
             <RestaurantListing initialRestaurants={restaurants} />
           </motion.div>
         )}

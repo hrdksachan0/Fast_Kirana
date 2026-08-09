@@ -22,8 +22,8 @@ async def get_admin_rider_cash_summary(
     """
     today_start = datetime.combine(date.today(), datetime.min.time())
 
-    # 1. Fetch riders using text cast for enum compatibility
-    rider_stmt = select(User).options(selectinload(User.riderWallet)).where(text("users.role::text = 'DELIVERY'"))
+    # 1. Fetch riders using standard SQLAlchemy enum filter
+    rider_stmt = select(User).options(selectinload(User.riderWallet)).where(User.role == Role.DELIVERY)
     rider_res = await db.execute(rider_stmt)
     riders = rider_res.scalars().all()
 
@@ -52,8 +52,8 @@ async def get_admin_rider_cash_summary(
         cod_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
             and_(
                 Order.deliveryUserId == r.id,
-                text("orders.\"paymentMethod\"::text = 'COD'"),
-                text("orders.status::text = 'DELIVERED'"),
+                Order.paymentMethod == PaymentMethod.COD,
+                Order.status == OrderStatus.DELIVERED,
                 Order.createdAt >= today_start
             )
         )
@@ -88,8 +88,8 @@ async def get_admin_rider_cash_summary(
     # 2. Overall Financial Summary Today
     online_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
-            text("orders.\"paymentMethod\"::text != 'COD'"),
-            text("orders.\"paymentStatus\"::text = 'PAID'"),
+            Order.paymentMethod != PaymentMethod.COD,
+            Order.paymentStatus == PaymentStatus.PAID,
             Order.createdAt >= today_start
         )
     )
@@ -97,8 +97,8 @@ async def get_admin_rider_cash_summary(
 
     delivered_cod_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
-            text("orders.\"paymentMethod\"::text = 'COD'"),
-            text("orders.status::text = 'DELIVERED'"),
+            Order.paymentMethod == PaymentMethod.COD,
+            Order.status == OrderStatus.DELIVERED,
             Order.createdAt >= today_start
         )
     )
@@ -106,9 +106,9 @@ async def get_admin_rider_cash_summary(
 
     counter_cash_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
-            text("orders.\"paymentMethod\"::text = 'COD'"),
-            text("orders.status::text = 'DELIVERED'"),
-            Order.deliveryUserId == None,
+            Order.paymentMethod == PaymentMethod.COD,
+            Order.status == OrderStatus.DELIVERED,
+            Order.deliveryUserId.is_(None),
             Order.createdAt >= today_start
         )
     )

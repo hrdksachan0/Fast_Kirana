@@ -113,13 +113,14 @@ export default async function AdminPage() {
         _sum: { total: true },
         _count: { id: true },
       }),
-      prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId"
-        FROM orders o
-        ORDER BY o."createdAt" DESC
-        LIMIT 10
-      ` as Promise<any[]>,
+      prisma.order.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true, phone: true } },
+          address: true,
+        },
+      }),
       prisma.category.findMany({
         include: {
           _count: {
@@ -138,7 +139,7 @@ export default async function AdminPage() {
     userCount = results[0] as number
     lowStockCount = results[1] as number
     const groupStats = results[2] as any[]
-    ordersRaw = results[3] as any[]
+    const recentOrdersList = results[3] as any[]
     categoriesRaw = results[4] as any[]
 
     productsRaw = []
@@ -147,21 +148,7 @@ export default async function AdminPage() {
     usersRaw = []
     allProductsRaw = []
 
-    const userIds = [...new Set(ordersRaw.map(o => o.userId))]
-    const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
-
-    const [fetchedUsers, fetchedAddresses] = await withRetry(() => Promise.all([
-      userIds.length > 0
-        ? (prisma.$queryRaw`
-            SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
-          ` as Promise<any[]>)
-        : [],
-      addressIds.length > 0
-        ? prisma.address.findMany({ where: { id: { in: addressIds } } })
-        : [],
-    ]))
-    allUsers = fetchedUsers
-    allAddresses = fetchedAddresses
+    ordersRaw = recentOrdersList
 
     const statusCountsMap: Record<string, number> = {
       PENDING: 0,
@@ -251,8 +238,8 @@ export default async function AdminPage() {
 
   // Map objects to serializable structures for the client components
   const orders = ordersRaw.map((o) => {
-    const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
-    const address = allAddresses.find(a => a.id === o.addressId) || null
+    const user = o.user || { name: 'Customer', email: '', phone: '' }
+    const address = o.address || null
     return {
       id: o.id,
       status: o.status,
