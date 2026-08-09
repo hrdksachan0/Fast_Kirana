@@ -7,7 +7,9 @@
     "web": "next dev",
     "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "flutter": "cd fastkirana_flutter && flutter run",
+    "flutter:apk": "cd fastkirana_flutter && flutter build apk"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
