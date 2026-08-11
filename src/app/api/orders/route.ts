@@ -1029,50 +1029,65 @@ export async function GET(request: NextRequest) {
       return 'DELIVERED'
     }
 
-    // Customer grouping
+    // Customer grouping (Group by combinedId or creation timestamp within 10 seconds)
     const groupedResult: any[] = []
-    const combinedGroups = new Map<string, any[]>()
+    const processedIds = new Set<string>()
 
     result.forEach((order: any) => {
-      if (order.combinedId) {
-        if (!combinedGroups.has(order.combinedId)) {
-          combinedGroups.set(order.combinedId, [])
-        }
-        combinedGroups.get(order.combinedId)!.push(order)
+      if (processedIds.has(order.id)) return
+
+      // Find all orders that belong to the same combined group
+      const relatedOrders = result.filter((o: any) => {
+        if (processedIds.has(o.id)) return false
+        if (o.id === order.id) return true
+        if (order.combinedId && o.combinedId === order.combinedId) return true
+        // Fallback proximity match: placed within 10 seconds by same user
+        const timeDiff = Math.abs(new Date(o.createdAt).getTime() - new Date(order.createdAt).getTime())
+        return o.userId === order.userId && timeDiff <= 10000
+      })
+
+      relatedOrders.forEach((o: any) => processedIds.add(o.id))
+
+      if (relatedOrders.length === 1) {
+        groupedResult.push(relatedOrders[0])
       } else {
-        groupedResult.push(order)
+        const mainOrder = relatedOrders.find(o => !o.restaurantId) || relatedOrders[0]
+        const statuses = relatedOrders.map(o => o.status)
+        const combinedStatus = getCombinedStatus(statuses)
+
+        const subOrders = relatedOrders.map(o => ({
+          id: o.id,
+          type: o.restaurantId ? 'RESTAURANT' : 'GROCERY',
+          restaurantId: o.restaurantId,
+          status: o.status,
+          total: o.total,
+          itemsCount: o.items?.length || 0
+        }))
+
+        // Deduplicate items if any overlap
+        const itemMap = new Map<string, any>()
+        relatedOrders.flatMap(o => o.items || []).forEach(item => {
+          if (!itemMap.has(item.id)) {
+            itemMap.set(item.id, item)
+          }
+        })
+
+        const mergedOrder = {
+          ...mainOrder,
+          id: mainOrder.id,
+          status: combinedStatus,
+          subtotal: relatedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
+          discount: relatedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
+          deliveryFee: relatedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
+          taxes: relatedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
+          miscFee: relatedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
+          total: relatedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+          items: Array.from(itemMap.values()),
+          isCombined: true,
+          subOrders
+        }
+        groupedResult.push(mergedOrder)
       }
-    })
-
-    combinedGroups.forEach((groupOrders, combinedId) => {
-      const mainOrder = groupOrders.find(o => !o.restaurantId) || groupOrders[0]
-      const statuses = groupOrders.map(o => o.status)
-      const combinedStatus = getCombinedStatus(statuses)
-
-      const subOrders = groupOrders.map(o => ({
-        id: o.id,
-        type: o.restaurantId ? 'RESTAURANT' : 'GROCERY',
-        restaurantId: o.restaurantId,
-        status: o.status,
-        total: o.total,
-        itemsCount: o.items?.length || 0
-      }))
-
-      const mergedOrder = {
-        ...mainOrder,
-        id: mainOrder.id,
-        status: combinedStatus,
-        subtotal: groupOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
-        discount: groupOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
-        deliveryFee: groupOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
-        taxes: groupOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
-        miscFee: groupOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
-        total: groupOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-        items: groupOrders.flatMap(o => o.items || []),
-        isCombined: true,
-        subOrders
-      }
-      groupedResult.push(mergedOrder)
     })
 
     groupedResult.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
