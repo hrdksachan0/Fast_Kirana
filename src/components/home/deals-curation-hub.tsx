@@ -590,7 +590,7 @@ export function DealsCurationHub({
         product.category?.slug === 'fastkirana-restaurant' ||
         product.category?.slug === 'cafe' ||
         product.category?.slug === 'fastkirana-cafe'
-      ) && !/campa|cola|pepsi|sprite|fanta|coke|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza|energy|water/i.test(product.name || '')
+      ) && !/campa|cola|pepsi|sprite|fanta|coke|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|\bdew\b|mountain.?dew|maaza|energy|water/i.test(product.name || '')
 
       if (isClassicColdCoffee || isPreparedDish) {
         return
@@ -602,6 +602,8 @@ export function DealsCurationHub({
 
       const pName = (product.name || '').toLowerCase()
       const pTags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
+      const isPersonalCareOrHousehold = ['personal-care', 'personal_care', 'skincare', 'household', 'beauty'].includes(categorySlug) ||
+        /face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum|soap|shampoo|cleaner|detergent/i.test(pName)
       const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
 
       // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery
@@ -611,10 +613,10 @@ export function DealsCurationHub({
         sortOrder = 6
       }
       // Ensure all packaged beverages (Energy Campa, Coca Cola, Pepsi, Juices, etc.) group cleanly into Beverages section
-      else if (!isChocolateOrBakery) {
+      else if (!isChocolateOrBakery && !isPersonalCareOrHousehold) {
         const isBeverageProduct = categorySlug === 'beverages' || 
           pTags.includes('beverages') || pTags.includes('drinks') || pTags.includes('soft-drink') ||
-          /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
+          /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
 
         if (isBeverageProduct) {
           categoryName = 'Beverages'

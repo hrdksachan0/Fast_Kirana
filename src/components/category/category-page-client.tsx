@@ -233,8 +233,8 @@ function getSubcategories(
         emoji: '🥤',
         filterFn: (p) => {
           const pName = (p.name || '').toLowerCase()
-          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
-          return /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|dew|campa|hell|soda|cold|drink|cola/i.test(pName) || (p.tags && p.tags.some(t => /soda|cola|soft-drink|beverages|drink/i.test(t)))
+          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)) return false
+          return /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|cola/i.test(pName) || (p.tags && p.tags.some(t => /soda|cola|soft-drink|beverages|drink/i.test(t)))
         }
       },
       {
@@ -243,7 +243,7 @@ function getSubcategories(
         emoji: '🧃',
         filterFn: (p) => {
           const pName = (p.name || '').toLowerCase()
-          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
+          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)) return false
           return /juice|real|tropicana|frooti|maaza|slice|appy|paper|coconut|water|shake|smoothie|drink/i.test(pName) || (p.tags && p.tags.some(t => /juice|shake|drink/i.test(t)))
         }
       },

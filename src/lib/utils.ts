@@ -162,7 +162,7 @@ export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROC
     tags.includes('chilled') ||
     tags.includes('soft-drink') ||
     /ice.?cream|kulfi|sundae/i.test(name) ||
-    /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza/i.test(name)
+    /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|\bdew\b|mountain.?dew|maaza/i.test(name)
   ) {
     return 'BYPASS'
   }

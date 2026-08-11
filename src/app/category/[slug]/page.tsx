@@ -178,6 +178,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   let finalProductsRaw = productsRaw.filter((p: any) => {
     const pName = (p.name || '').toLowerCase()
     const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+    const catSlug = (p.category?.slug || '').toLowerCase()
 
     // Exclude Classic Cold Coffee specifically from grocery category view
     if (pName.includes('classic cold coffee')) return false
@@ -187,13 +188,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     if (isHotPreparedFood) return false
 
     if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices' || normSlug === 'drinks' || normSlug === 'beverage') {
-      const isAllowedBeverage = /thums|pepsi|hell|dew|coke|sprite|7up|limca|fanta|mirinda|soda|cold|drink|soft|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName) ||
+      if (['personal-care', 'personal_care', 'skincare', 'household', 'beauty', 'atta-rice-dal'].includes(catSlug)) {
+        return false
+      }
+
+      const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)
+      if (isNonBeverage) return false
+
+      const isAllowedBeverage = /thums|pepsi|hell|\bdew\b|mountain.?dew|coke|sprite|7up|limca|fanta|mirinda|soda|cold|drink|soft|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName) ||
         tags.some((t: string) => /drink|soda|beverage|juice|water/i.test(t)) ||
-        p.category?.slug === 'beverages'
+        catSlug === 'beverages'
 
-      const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)
-
-      return isAllowedBeverage && !isNonBeverage
+      return isAllowedBeverage
     }
 
     return true
@@ -206,14 +212,19 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     const matchCount = allGroceryProducts.filter((p) => {
       const pName = (p.name || '').toLowerCase()
       const pTags = Array.isArray(p.tags) ? p.tags.map(t => t.toLowerCase()) : []
+      const pCatSlug = (p.category?.slug || '').toLowerCase()
 
       if (cSlug === 'beverages') {
-        const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)
+        if (['personal-care', 'personal_care', 'skincare', 'household', 'beauty', 'atta-rice-dal'].includes(pCatSlug)) {
+          return false
+        }
+
+        const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)
         if (isNonBeverage) return false
 
-        return /coke|pepsi|thums.?up|sprite|7up|limca|fanta|mirinda|soda|cold.?drink|soft.?drink|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper.?boat|water|bisleri|kinley|aquafina|sting|red.?bull|monster|hell|charged/i.test(pName) ||
+        return /coke|pepsi|thums.?up|sprite|7up|limca|fanta|mirinda|soda|cold.?drink|soft.?drink|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper.?boat|water|bisleri|kinley|aquafina|sting|red.?bull|monster|hell|charged|\bdew\b|mountain.?dew/i.test(pName) ||
           pTags.some(t => /drink|soda|beverage|juice|water/i.test(t)) ||
-          (p.category && p.category.slug.toLowerCase() === 'beverages')
+          pCatSlug === 'beverages'
       }
 
       if (p.categoryId === cat.id) return true
