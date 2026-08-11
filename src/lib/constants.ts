@@ -56,10 +56,10 @@ export interface CafeMenuSection {
 export const DEFAULT_CAFE_MENU_SECTIONS: CafeMenuSection[] = [
   {
     tag: 'hot-beverage',
-    matchTags: ['hot-beverage', 'tea', 'coffee'],
+    matchTags: ['hot-beverage', 'hot-coffee', 'hot coffee', 'tea', 'chai'],
     title: 'Steaming Hot Brews',
     emoji: '☕',
-    description: 'Chai, coffee, and fresh brewing mixes',
+    description: 'Chai, hot coffee, and fresh brewing mixes',
   },
   {
     tag: 'hot-bite',
