@@ -1130,7 +1130,15 @@ export function RestaurantOrdersConsole() {
                           </span>
                         )}
                       </div>
-                      <p className="text-[9px] text-text-muted mt-0.5">{order.user.name} • {order.deliveryMethod}</p>
+                      <p className="text-[10px] text-text-secondary font-bold mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-black text-text-primary">{order.user?.name || 'Customer'}</span>
+                        <span className="text-text-muted">•</span>
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                          📞 {(order.user as any)?.phone || (order as any).userPhone || (order as any).shopPhone || (order.address as any)?.phone || 'No Phone'}
+                        </span>
+                        <span className="text-text-muted">•</span>
+                        <span className="uppercase font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">{order.deliveryMethod || 'PICKUP'}</span>
+                      </p>
                     </div>
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
                       order.status === 'PENDING' ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-red-100 text-red-700'

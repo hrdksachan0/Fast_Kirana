@@ -359,11 +359,13 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
   // Determine active step index based on order status
   useEffect(() => {
-    const idx = statusSteps.findIndex((s) => s.status === order.status)
+    const currentStatus = order.status
+    const mappedStatus = ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(currentStatus) ? 'SHIPPED' : currentStatus
+    const idx = statusSteps.findIndex((s) => s.status === mappedStatus)
     if (idx !== -1) {
       setActiveStep(idx)
     }
-  }, [order.status])
+  }, [order.status, statusSteps])
 
   const [leafletLoaded, setLeafletLoaded] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -720,9 +722,17 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
               {combinedStatus === 'CANCELLED'
                 ? 'Order Cancelled'
                 : combinedStatus === 'DELIVERED' 
-                ? 'Order Delivered!' 
+                ? (order.deliveryMethod === 'PICKUP' ? 'Order Picked Up!' : 'Order Delivered!') 
                 : order.deliveryMethod === 'PICKUP' 
-                ? 'Order Ready for Pickup!' 
+                ? (
+                    ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status)
+                      ? 'Order Ready for Pickup!'
+                      : order.status === 'PACKED'
+                      ? 'Order Packed & Ready Soon'
+                      : order.status === 'CONFIRMED'
+                      ? 'Order Confirmed & Preparing'
+                      : 'Order Placed for Pickup'
+                  )
                 : isScheduled 
                 ? 'Arriving at Scheduled Time' 
                 : order.status === 'SHIPPED'
@@ -770,7 +780,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             <span className="text-primary font-black">
               {combinedStatus === 'CANCELLED' ? '0%' :
                combinedStatus === 'DELIVERED' ? '100%' :
-               order.status === 'SHIPPED' ? '80%' :
+               ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status) ? '80%' :
                order.status === 'PACKED' ? '60%' :
                order.status === 'CONFIRMED' ? '40%' : '20%'}
             </span>
@@ -786,7 +796,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
               style={{
                 width: combinedStatus === 'CANCELLED' ? '100%' :
                        combinedStatus === 'DELIVERED' ? '100%' :
-                       order.status === 'SHIPPED' ? '80%' :
+                       ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status) ? '80%' :
                        order.status === 'PACKED' ? '60%' :
                        order.status === 'CONFIRMED' ? '40%' : '20%'
               }}

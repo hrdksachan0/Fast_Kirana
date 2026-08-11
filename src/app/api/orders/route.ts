@@ -959,7 +959,7 @@ export async function GET(request: NextRequest) {
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
-               u.name as "userName", u.email as "userEmail"
+               u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         ORDER BY o."createdAt" DESC
@@ -997,13 +997,23 @@ export async function GET(request: NextRequest) {
       ? await prisma.address.findMany({ where: { id: { in: addressIds } } })
       : []
 
-    const result = orders.map(o => ({
-      ...o,
-      userName: o.userName || undefined,
-      userEmail: o.userEmail || undefined,
-      items: allItems.filter(item => item.orderId === o.id),
-      address: allAddresses.find(a => a.id === o.addressId),
-    }))
+    const result = orders.map(o => {
+      const resolvedAddress = allAddresses.find(a => a.id === o.addressId)
+      const resolvedPhone = o.userPhone || o.shopPhone || (resolvedAddress ? (resolvedAddress as any).phone : undefined)
+      return {
+        ...o,
+        userName: o.userName || undefined,
+        userEmail: o.userEmail || undefined,
+        userPhone: resolvedPhone,
+        user: {
+          name: o.userName || 'Customer',
+          email: o.userEmail || '',
+          phone: resolvedPhone || null,
+        },
+        items: allItems.filter(item => item.orderId === o.id),
+        address: resolvedAddress,
+      }
+    })
 
     if (isStaff && all) {
       return NextResponse.json(result)

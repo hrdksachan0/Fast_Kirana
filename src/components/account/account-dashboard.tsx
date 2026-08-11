@@ -12,6 +12,7 @@ import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, 
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { BuyAgainSection } from '@/components/home/buy-again-section'
 import { useSearchParams } from 'next/navigation'
@@ -498,26 +499,53 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         </div>
       </div>
 
-      {/* Tabs Layout */}
+      {/* Sliding Pill Tab Navigation Bar */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-zinc-100 dark:bg-zinc-900/80 p-1.5 rounded-2xl mb-6 border border-zinc-200/60 dark:border-zinc-800/60">
-          <TabsTrigger value="orders" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-            <Package className="h-4 w-4" />
-            My Orders
-          </TabsTrigger>
-          <TabsTrigger value="wishlist" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-            <Heart className="h-4 w-4" />
-            Wishlist
-          </TabsTrigger>
-          <TabsTrigger value="addresses" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-            <MapPin className="h-4 w-4" />
-            Addresses
-          </TabsTrigger>
-          <TabsTrigger value="profile" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-            <User className="h-4 w-4" />
-            Profile
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto no-scrollbar py-1 mb-6">
+          <div className="flex items-center gap-1.5 p-1.5 bg-zinc-100/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-[24px] border border-zinc-200/80 dark:border-zinc-800/80 min-w-max sm:min-w-0">
+            {[
+              { key: 'orders', label: 'My Orders', icon: Package, badge: orders.length },
+              { key: 'wishlist', label: 'Wishlist', icon: Heart },
+              { key: 'addresses', label: 'Addresses', icon: MapPin, badge: addresses.length },
+              { key: 'profile', label: 'Profile', icon: User },
+            ].map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light')
+                    handleTabChange(tab.key)
+                  }}
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-colors cursor-pointer select-none flex-1 justify-center whitespace-nowrap ${
+                    isActive
+                      ? 'text-white'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="accountActiveTabPill"
+                      className="absolute inset-0 bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] rounded-2xl shadow-md shadow-rose-500/25"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <Icon className="h-4 w-4 relative z-10 shrink-0 stroke-[2.5]" />
+                  <span className="relative z-10 tracking-tight">{tab.label}</span>
+                  {tab.badge !== undefined && (
+                    <span className={`relative z-10 px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Tab Content: Orders */}
         <TabsContent value="orders" className="space-y-4 animate-fade-in focus-visible:outline-none">
