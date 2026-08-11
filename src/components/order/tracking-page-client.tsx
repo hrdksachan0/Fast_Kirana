@@ -90,7 +90,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
         setOrder(mapped)
         setError(null)
 
-        // Fetch companion orders (placed within 5s of this order)
+        // Merge companion order into main order for unified single-order tracking
         try {
           const ordersRes = await fetch('/api/orders')
           if (ordersRes.ok) {
@@ -98,57 +98,40 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
             const orderCreatedAt = new Date(data.createdAt).getTime()
             const companion = allOrders.find((o: any) =>
               o.id !== data.id &&
-              Math.abs(new Date(o.createdAt).getTime() - orderCreatedAt) <= 5000
+              (o.combinedId === data.combinedId || Math.abs(new Date(o.createdAt).getTime() - orderCreatedAt) <= 5000)
             )
             if (companion && isMounted) {
               const compRes = await fetch(`/api/orders/${companion.id}`)
               if (compRes.ok) {
                 const compData = await compRes.json()
-                const mappedComp = {
-                  id: compData.id,
-                  status: compData.status,
-                  subtotal: compData.subtotal,
-                  discount: compData.discount,
-                  deliveryFee: compData.deliveryFee,
-                  taxes: compData.taxes,
-                  total: compData.total,
-                  paymentMethod: compData.paymentMethod,
-                  paymentStatus: compData.paymentStatus,
-                  estimatedDelivery: compData.estimatedDelivery ? new Date(compData.estimatedDelivery).toISOString() : null,
-                  deliveryPhoto: compData.deliveryPhoto || null,
-                  deliveryLat: compData.deliveryLat || null,
-                  deliveryLng: compData.deliveryLng || null,
-                  deliveryMethod: compData.deliveryMethod,
-                  isB2B: compData.isB2B,
-                  shopName: compData.shopName,
-                  shopPhone: compData.shopPhone,
-                  createdAt: compData.createdAt ? new Date(compData.createdAt).toISOString() : new Date().toISOString(),
-                  items: (compData.items || []).map((i: any) => ({
-                    id: i.id,
-                    productId: i.productId,
-                    name: i.name,
-                    price: i.price,
-                    quantity: i.quantity,
-                    selectedVariant: i.selectedVariant || null
-                  })),
-                  address: {
-                    label: compData.address?.label || 'Pickup Location',
-                    houseNo: compData.address?.houseNo || '',
-                    street: compData.address?.street || '',
-                    area: compData.address?.area || 'Hub Store',
-                    city: compData.address?.city || 'Kanpur',
-                    pincode: compData.address?.pincode || '209206',
-                    lat: compData.address?.lat || 26.1534185,
-                    lng: compData.address?.lng || 80.1714024,
-                  },
-                  deliveryUser: compData.deliveryUser || null
-                }
-                setCompanionOrder(mappedComp)
+                const compItems = (compData.items || []).map((i: any) => ({
+                  id: i.id,
+                  productId: i.productId,
+                  name: i.name,
+                  price: i.price,
+                  quantity: i.quantity,
+                  selectedVariant: i.selectedVariant || null
+                }))
+                setOrder((prev: any) => {
+                  if (!prev) return prev
+                  const existingItemIds = new Set(prev.items.map((i: any) => i.id))
+                  const newItems = compItems.filter((i: any) => !existingItemIds.has(i.id))
+                  return {
+                    ...prev,
+                    subtotal: (prev.subtotal || 0) + (compData.subtotal || 0),
+                    discount: (prev.discount || 0) + (compData.discount || 0),
+                    deliveryFee: (prev.deliveryFee || 0) + (compData.deliveryFee || 0),
+                    taxes: (prev.taxes || 0) + (compData.taxes || 0),
+                    total: (prev.total || 0) + (compData.total || 0),
+                    items: [...prev.items, ...newItems],
+                    isCombined: true
+                  }
+                })
               }
             }
           }
         } catch {
-          // Companion order is non-critical, ignore errors
+          // Companion order merge is non-critical, ignore errors
         }
       } catch (err: any) {
         console.error('Error fetching order for tracking:', err)

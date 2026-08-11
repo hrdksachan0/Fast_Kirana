@@ -852,27 +852,6 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 </span>
               </div>
 
-              {/* Companion Order Status */}
-              <div className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg leading-none">
-                    {compOrder.shopName?.includes('Cafe') ? '☕' : '🛒'}
-                  </span>
-                  <div>
-                    <div className="text-text-primary font-extrabold text-[11px] truncate max-w-[150px]">{compOrder.shopName || 'FastKirana Cafe'}</div>
-                    <div className="text-[10px] text-text-muted mt-0.5">#{compOrder.readableId || compOrder.id.slice(-6).toUpperCase()} • {compOrder.items.length} items</div>
-                  </div>
-                </div>
-                <span className={cn(
-                  "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
-                  compOrder.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                  compOrder.status === 'CANCELLED' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
-                  compOrder.status === 'SHIPPED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-                  'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                )}>
-                  {compOrder.status}
-                </span>
-              </div>
             </div>
           </div>
         ) : (

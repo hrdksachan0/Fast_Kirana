@@ -82,24 +82,48 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   }
 
   try {
-    // Find other orders placed by the same user within 5 seconds of this order
-    const fiveSecondsAgo = new Date(new Date(order.createdAt).getTime() - 5000)
-    const fiveSecondsAfter = new Date(new Date(order.createdAt).getTime() + 5000)
-    
-    const companionOrders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o.status::text as status, o."shopName", o."createdAt"
-      FROM orders o 
-      WHERE o."userId" = ${order.userId}
-        AND o.id != ${order.id}
-        AND o."createdAt" >= ${fiveSecondsAgo}
-        AND o."createdAt" <= ${fiveSecondsAfter}
-      LIMIT 1
-    `
-    if (companionOrders.length > 0) {
-      companionOrder = companionOrders[0]
+    // If order belongs to a combined order group, merge companion order items and totals for customer view
+    let combinedOrdersToMerge: any[] = []
+    if (order.combinedId) {
+      combinedOrdersToMerge = await prisma.order.findMany({
+        where: { combinedId: order.combinedId },
+        include: { items: true }
+      })
+    } else {
+      const fiveSecondsAgo = new Date(new Date(order.createdAt).getTime() - 5000)
+      const fiveSecondsAfter = new Date(new Date(order.createdAt).getTime() + 5000)
+      combinedOrdersToMerge = await prisma.order.findMany({
+        where: {
+          userId: order.userId,
+          createdAt: { gte: fiveSecondsAgo, lte: fiveSecondsAfter }
+        },
+        include: { items: true }
+      })
+    }
+
+    if (combinedOrdersToMerge.length > 1) {
+      const mergedItems = combinedOrdersToMerge.flatMap(o => o.items)
+      const mergedSubtotal = combinedOrdersToMerge.reduce((sum, o) => sum + (o.subtotal || 0), 0)
+      const mergedDiscount = combinedOrdersToMerge.reduce((sum, o) => sum + (o.discount || 0), 0)
+      const mergedDeliveryFee = combinedOrdersToMerge.reduce((sum, o) => sum + (o.deliveryFee || 0), 0)
+      const mergedTaxes = combinedOrdersToMerge.reduce((sum, o) => sum + (o.taxes || 0), 0)
+      const mergedMiscFee = combinedOrdersToMerge.reduce((sum, o) => sum + (o.miscFee || 0), 0)
+      const mergedTotal = combinedOrdersToMerge.reduce((sum, o) => sum + (o.total || 0), 0)
+
+      order = {
+        ...order,
+        items: mergedItems,
+        subtotal: mergedSubtotal,
+        discount: mergedDiscount,
+        deliveryFee: mergedDeliveryFee,
+        taxes: mergedTaxes,
+        miscFee: mergedMiscFee,
+        total: mergedTotal,
+        isCombined: true
+      }
     }
   } catch (error) {
-    console.warn('Database connection error: failed to fetch companion order', error)
+    console.warn('Database connection error: failed to merge combined order details', error)
   }
 
   // Fetch store settings for dynamic miscFeeLabel
@@ -115,9 +139,6 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     console.warn('Database connection error: failed to fetch miscFeeLabel setting')
   }
 
-  const isCafeOrder = !!order.restaurantId || (order as any).orderType === 'RESTAURANT'
-  const isCompanionCafe = companionOrder ? (!!companionOrder.restaurantId || (companionOrder as any).orderType === 'RESTAURANT') : false
-
   const isScheduled = order.estimatedDelivery && order.createdAt && 
     (new Date(order.estimatedDelivery).getTime() - new Date(order.createdAt).getTime() > 45 * 60 * 1000)
 
@@ -126,28 +147,6 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     <div className="container mx-auto px-3 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6 md:space-y-8 bg-background relative">
       {/* 60fps Canvas Confetti & Chime sound effects */}
       <OrderSuccessEffects />
-
-      {companionOrder && (
-        <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-500 p-4 min-[375px]:p-5 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up relative z-10 border border-white/20">
-          <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-0.5 text-[9px] font-black uppercase tracking-wider">
-              {isCompanionCafe ? '☕ Cafe Order Split' : '📦 Grocery Order Split'}
-            </span>
-            <h3 className="text-sm font-black tracking-tight">Your Order Has Been Split!</h3>
-            <p className="text-[11px] text-white/90 leading-relaxed font-semibold">
-              {isCafeOrder
-                ? 'To ensure your beverages and hot bites are delivered piping hot, we created a separate order for your other grocery items. Track the Grocery order here.'
-                : 'To ensure your beverages and hot bites are delivered piping hot, we created a separate Cafe order for them. Track the Cafe order here.'}
-            </p>
-          </div>
-          <Link
-            href={`/order/${companionOrder.id}`}
-            className="px-5 py-2.5 bg-white hover:bg-white/95 text-rose-600 font-black rounded-2xl text-xs transition-all shrink-0 shadow-lg active:scale-95"
-          >
-            {isCompanionCafe ? 'Track Cafe Order →' : 'Track Grocery Order →'}
-          </Link>
-        </div>
-      )}
 
       {/* Confirmation Success Hero Card (Modern Glassmorphism) */}
       <div className="relative z-10 flex flex-col items-center text-center p-6 min-[375px]:p-8 bg-gradient-to-b from-emerald-500/10 via-card to-card border border-emerald-500/20 dark:border-emerald-500/30 rounded-3xl shadow-xl animate-card-enter overflow-hidden">
