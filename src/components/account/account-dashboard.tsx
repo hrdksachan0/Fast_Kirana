@@ -8,7 +8,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
@@ -51,6 +51,36 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   })
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL')
+  const [reorderOrderModal, setReorderOrderModal] = useState<any | null>(null)
+
+  const executeReorder = (ord: any) => {
+    try {
+      triggerHaptic('medium')
+      const { addItem, clearCart } = useCartStore.getState()
+      clearCart()
+      for (const item of ord.items || []) {
+        addItem({
+          id: item.id || item.productId,
+          name: item.name,
+          slug: '',
+          imageUrl: item.imageUrl || '',
+          mrp: item.mrp || item.price,
+          price: item.price,
+          discount: 0,
+          unit: item.unit || '',
+          stock: 99,
+          isAvailable: true,
+          tags: [],
+          category: undefined,
+        })
+      }
+      toast.success('Items added to cart!')
+      setReorderOrderModal(null)
+      router.push('/cart')
+    } catch {
+      toast.error('Failed to reorder. Please try again.')
+    }
+  }
 
   // Resend countdown timers
   const [emailCountdown, setEmailCountdown] = useState(0)
@@ -404,50 +434,55 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     <div className="w-full max-w-4xl mx-auto space-y-6">
       
       {/* User Welcome Card Banner */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-border bg-card p-6 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-bold">
+      <div className="relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-5 border border-zinc-200/80 dark:border-zinc-800 bg-gradient-to-br from-white via-zinc-50/50 to-rose-50/20 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-5 sm:p-6 rounded-[28px] shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)]">
+        <div className="flex items-center gap-4">
+          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e8153a] via-[#ff2d55] to-[#ff5533] text-white text-xl font-black shadow-md shadow-rose-500/25 ring-4 ring-white dark:ring-zinc-950">
             {user.name?.charAt(0) || 'U'}
           </div>
           <div>
-            <h2 className="text-lg font-black text-text-primary">{user.name || 'User'}</h2>
-            <p className="text-xs text-text-secondary">{formatEmailForDisplay(user.email)}</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-text-primary tracking-tight">{user.name || 'User'}</h2>
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                {user.role === 'ADMIN' ? '👑 Admin' : user.role === 'DELIVERY' ? '🚴 Rider' : 'Member'}
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-text-secondary mt-0.5">{formatEmailForDisplay(user.email)}</p>
           </div>
         </div>
         
         {/* Navigation links for Admin or Delivery Boy */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
           {user.role === 'ADMIN' && (
             <Link href="/admin">
-              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 rounded-xl text-xs h-10 px-4 font-bold">
-                Admin Console
+              <Button variant="outline" className="border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-2xl text-xs h-10 px-4 font-black shadow-sm transition-all active:scale-95">
+                ⚡ Admin Console
               </Button>
             </Link>
           )}
           {user.role === 'PICKER' && (
             <Link href="/picker">
-              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 rounded-xl text-xs h-10 px-4 font-bold">
+              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
                 Picker Console
               </Button>
             </Link>
           )}
           {user.role === 'RESTAURANT_OWNER' && (
             <Link href="/restaurant-kitchen">
-              <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/5 rounded-xl text-xs h-10 px-4 font-bold">
+              <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
                 🏪 Outlet Console
               </Button>
             </Link>
           )}
           {user.role === 'CHEF' && (
             <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'}>
-              <Button variant="outline" className="border-rose-500/30 text-rose-500 hover:bg-rose-500/5 rounded-xl text-xs h-10 px-4 font-bold">
+              <Button variant="outline" className="border-rose-500/30 text-rose-500 hover:bg-rose-500/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
                 Chef Console
               </Button>
             </Link>
           )}
           {user.role === 'DELIVERY' && (
             <Link href="/delivery">
-              <Button variant="outline" className="border-accent/30 text-accent hover:bg-accent/5 rounded-xl text-xs h-10 px-4 font-bold">
+              <Button variant="outline" className="border-accent/30 text-accent hover:bg-accent/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
                 Rider Console
               </Button>
             </Link>
@@ -455,7 +490,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           <Button
             onClick={handleSignOut}
             variant="outline"
-            className="text-danger hover:bg-danger/5 border-danger/25 hover:text-danger hover:border-danger rounded-xl text-xs flex items-center gap-1.5 h-10 px-4"
+            className="text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border-rose-500/20 rounded-2xl text-xs flex items-center gap-1.5 h-10 px-4 font-bold active:scale-95 transition-all"
           >
             <LogOut className="h-4 w-4" />
             Logout
@@ -465,21 +500,21 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
       {/* Tabs Layout */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-muted p-1 rounded-xl mb-6">
-          <TabsTrigger value="orders" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
-            <Package className="h-3.5 w-3.5" />
+        <TabsList className="grid w-full grid-cols-4 bg-zinc-100 dark:bg-zinc-900/80 p-1.5 rounded-2xl mb-6 border border-zinc-200/60 dark:border-zinc-800/60">
+          <TabsTrigger value="orders" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <Package className="h-4 w-4" />
             My Orders
           </TabsTrigger>
-          <TabsTrigger value="wishlist" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
-            <Heart className="h-3.5 w-3.5" />
+          <TabsTrigger value="wishlist" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <Heart className="h-4 w-4" />
             Wishlist
           </TabsTrigger>
-          <TabsTrigger value="addresses" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
-            <MapPin className="h-3.5 w-3.5" />
+          <TabsTrigger value="addresses" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <MapPin className="h-4 w-4" />
             Addresses
           </TabsTrigger>
-          <TabsTrigger value="profile" className="text-xs font-bold rounded-lg py-2 flex items-center gap-1.5 cursor-pointer">
-            <User className="h-3.5 w-3.5" />
+          <TabsTrigger value="profile" className="text-xs font-black rounded-xl py-2.5 flex items-center justify-center gap-1.5 cursor-pointer data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <User className="h-4 w-4" />
             Profile
           </TabsTrigger>
         </TabsList>
@@ -487,22 +522,22 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         {/* Tab Content: Orders */}
         <TabsContent value="orders" className="space-y-4 animate-fade-in focus-visible:outline-none">
           {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2.5">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search orders by ID or item name..."
                 value={orderSearchQuery}
                 onChange={(e) => setOrderSearchQuery(e.target.value)}
-                className="w-full bg-muted/20 border border-border pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-primary font-medium"
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 pl-10 pr-4 py-2.5 rounded-2xl text-xs focus:outline-none focus:border-rose-500 font-semibold shadow-xs"
                 aria-label="Search orders"
               />
             </div>
             <select
               value={orderStatusFilter}
               onChange={(e) => setOrderStatusFilter(e.target.value)}
-              className="bg-muted/20 border border-border px-3 py-2.5 rounded-2xl text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold focus:outline-none focus:border-rose-500 cursor-pointer shadow-xs"
               aria-label="Filter orders by status"
             >
               <option value="ALL">All Status</option>
@@ -512,22 +547,22 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
             </select>
           </div>
           {/* Sub-Tabs Bar for Live Orders vs Order History */}
-          <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 border-b border-zinc-200/60 dark:border-zinc-800/60 pb-3 mb-4 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('light')
                 setOrderSubTab('LIVE')
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
                 orderSubTab === 'LIVE'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-muted/50 text-text-secondary hover:bg-muted'
+                  ? 'bg-gradient-to-r from-[#e8153a] to-[#ff2d55] text-white shadow-md shadow-rose-500/20'
+                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/60'
               }`}
             >
               <span>🔥 Live Active Orders</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                orderSubTab === 'LIVE' ? 'bg-white/20 text-white' : 'bg-muted text-text-secondary font-bold'
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                orderSubTab === 'LIVE' ? 'bg-white/25 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
               }`}>
                 {orders.filter((o) => !['DELIVERED', 'CANCELLED'].includes(o.status)).length}
               </span>
@@ -539,15 +574,15 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                 triggerHaptic('light')
                 setOrderSubTab('HISTORY')
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
                 orderSubTab === 'HISTORY'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-muted/50 text-text-secondary hover:bg-muted'
+                  ? 'bg-gradient-to-r from-[#e8153a] to-[#ff2d55] text-white shadow-md shadow-rose-500/20'
+                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/60'
               }`}
             >
               <span>📜 Order History</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                orderSubTab === 'HISTORY' ? 'bg-white/20 text-white' : 'bg-muted text-text-secondary font-bold'
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                orderSubTab === 'HISTORY' ? 'bg-white/25 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
               }`}>
                 {orders.filter((o) => ['DELIVERED', 'CANCELLED'].includes(o.status)).length}
               </span>
@@ -579,91 +614,69 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
             if (filteredOrders.length === 0) {
               return (
-                <div className="text-center py-12 border border-dashed border-border bg-card rounded-2xl p-6">
-                  <span className="text-4xl mb-2 block">{orderSubTab === 'LIVE' ? '🚀' : '📦'}</span>
-                  <h3 className="text-sm font-bold text-text-primary">
+                <div className="text-center py-14 border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 rounded-3xl p-6">
+                  <span className="text-5xl mb-3 block">{orderSubTab === 'LIVE' ? '🚀' : '📦'}</span>
+                  <h3 className="text-base font-black text-text-primary">
                     {orderSubTab === 'LIVE' ? 'No live active orders right now' : 'No past order history found'}
                   </h3>
-                  <p className="text-xs text-text-secondary mt-1">
+                  <p className="text-xs text-text-secondary mt-1 font-medium max-w-sm mx-auto">
                     {orderSubTab === 'LIVE'
-                      ? 'Place an order now to track your delivery live in real-time!'
-                      : 'Your completed & past orders will appear here.'}
+                      ? 'Place an order now to track your delivery live in real-time with GPS updates!'
+                      : 'Your completed & past orders will appear here for easy one-tap reordering.'}
                   </p>
-                  <Link href="/" className="mt-4 inline-block bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl">
-                    Start Shopping
+                  <Link href="/" className="mt-5 inline-flex items-center gap-2 bg-gradient-to-r from-[#e8153a] to-[#ff2d55] text-white text-xs font-black px-5 py-2.5 rounded-2xl shadow-md shadow-rose-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+                    Start Shopping <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
                   </Link>
                 </div>
               )
             }
 
             return filteredOrders.map((ord) => (
-              <div key={ord.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-3">
+              <div key={ord.id} className="bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] space-y-4 hover:shadow-md transition-all">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-100 dark:border-zinc-900 pb-3.5">
                   <div>
-                    <span className="text-[11px] font-black text-orange-600 dark:text-orange-400 bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 px-2.5 py-0.5 rounded-lg font-mono tracking-wide">
+                    <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-0.5 rounded-lg font-mono tracking-wide">
                       Order #{ord.readableId || (ord.id.length > 12 ? ord.id.slice(-6).toUpperCase() : ord.id)}
                     </span>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs font-bold text-text-primary">
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs font-black text-text-primary">
                         Total: {formatPrice(ord.total)}
                       </span>
                       <span className="text-[10px] text-text-secondary font-medium">•</span>
-                      <span className="text-[10px] text-text-secondary font-medium">
+                      <span className="text-[10px] text-text-secondary font-bold">
                         {ord.items.length} items
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-[10px] font-bold px-2.5 py-0.5 rounded-full", ORDER_STATUS_COLORS[ord.status])}>
+                    <span className={cn("text-[10px] font-black px-3 py-1 rounded-full", ORDER_STATUS_COLORS[ord.status])}>
                       {ORDER_STATUS_LABELS[ord.status]}
                     </span>
                     <Link
                       href={`/order/${ord.id}/track`}
-                      className="text-[10px] font-black text-white bg-primary hover:bg-primary-dark px-3 py-1.5 rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1 select-none cursor-pointer"
+                      className="text-[11px] font-black text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-800 px-3.5 py-1.5 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1 select-none cursor-pointer"
                     >
-                      Track Order
+                      Track
                       <ArrowRight className="h-3 w-3 stroke-[2.8]" />
                     </Link>
                     {['DELIVERED', 'CANCELLED'].includes(ord.status) && (
                       <button
+                        type="button"
                         onClick={() => {
-                          if (!confirm('Reorder these items? This will clear your current cart.')) return
-                          try {
-                            const { addItem, clearCart } = useCartStore.getState()
-                            clearCart()
-                            for (const item of ord.items || []) {
-                              addItem({
-                                id: item.id,
-                                name: item.name,
-                                slug: '',
-                                imageUrl: item.imageUrl || '',
-                                mrp: item.mrp || item.price,
-                                price: item.price,
-                                discount: 0,
-                                unit: item.unit || '',
-                                stock: 99,
-                                isAvailable: true,
-                                tags: [],
-                                category: undefined,
-                              })
-                            }
-                            toast.success('Items added to cart!')
-                            router.push('/cart')
-                          } catch {
-                            toast.error('Failed to reorder. Please try again.')
-                          }
+                          triggerHaptic('light')
+                          setReorderOrderModal(ord)
                         }}
-                        className="text-[10px] font-black text-white bg-accent hover:bg-accent/90 px-3 py-1.5 rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                        className="text-[11px] font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-3.5 py-1.5 rounded-2xl shadow-sm shadow-emerald-600/20 hover:shadow active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer select-none"
                       >
-                        <ShoppingBag className="h-3 w-3" />
+                        <RotateCcw className="h-3.5 w-3.5 stroke-[2.5]" />
                         Reorder
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-text-secondary flex flex-wrap gap-x-4 gap-y-1">
+                <div className="text-xs font-bold text-text-secondary flex flex-wrap gap-x-2 gap-y-1.5">
                   {ord.items.map((item: any) => (
-                    <span key={item.id} className="bg-muted/40 px-2 py-1 rounded-md border border-border/20">
+                    <span key={item.id || item.name} className="bg-zinc-100 dark:bg-zinc-900/80 px-2.5 py-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
                       {item.name} (×{item.quantity})
                     </span>
                   ))}
@@ -1084,6 +1097,79 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Premium Reorder Confirmation Modal */}
+      {reorderOrderModal && (
+        <Dialog open={reorderOrderModal !== null} onOpenChange={(open) => !open && setReorderOrderModal(null)}>
+          <DialogContent className="max-w-[420px] w-[92%] mx-auto rounded-[32px] p-6 border border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+            
+            <DialogHeader className="text-center space-y-2 relative z-10">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
+                <RotateCcw className="h-7 w-7 stroke-[2.5]" />
+              </div>
+              <DialogTitle className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
+                Reorder #{(reorderOrderModal.readableId || reorderOrderModal.id?.slice(-6)).toUpperCase()}?
+              </DialogTitle>
+              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                This will add all {reorderOrderModal.items?.length || 0} items from this order directly into your active cart.
+              </p>
+            </DialogHeader>
+
+            {/* Order Items Preview Card */}
+            <div className="mt-4 max-h-[220px] overflow-y-auto pr-1 space-y-2 scrollbar-none relative z-10">
+              {reorderOrderModal.items?.map((item: any) => (
+                <div
+                  key={item.id || item.name}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800/60"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-base font-bold shadow-xs">
+                      📦
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-zinc-900 dark:text-white line-clamp-1">{item.name}</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                        {formatPrice(item.price)} × {item.quantity}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-lg border border-emerald-500/20">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Price Summary Strip */}
+            <div className="mt-4 p-3.5 rounded-2xl bg-zinc-900 dark:bg-zinc-900 text-white flex items-center justify-between relative z-10">
+              <span className="text-xs font-bold text-zinc-300">Total Reorder Value</span>
+              <span className="text-sm font-black text-emerald-400">{formatPrice(reorderOrderModal.total)}</span>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 mt-5 relative z-10">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setReorderOrderModal(null)}
+                className="flex-1 h-12 rounded-2xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => executeReorder(reorderOrderModal)}
+                className="flex-[1.5] h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="h-4 w-4" />
+                Add All & Checkout
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

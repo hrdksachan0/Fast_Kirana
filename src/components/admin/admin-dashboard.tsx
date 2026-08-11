@@ -2294,7 +2294,7 @@ export function AdminDashboard({
     { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
     { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
-    { key: 'banners', label: 'Promo Banners', icon: Image },
+    { key: 'banners', label: 'Promo Banners', icon: ImageIcon },
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },

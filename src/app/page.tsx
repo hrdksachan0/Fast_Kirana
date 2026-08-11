@@ -111,31 +111,23 @@ const getCachedFlashDeals = unstable_cache(
         isAvailable: true,
         OR: [
           { restaurantId: null },
-          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
-          { tags: { hasSome: ['beverages', 'ice-cream'] } }
+          { category: { slug: { in: ['beverages', 'ice-cream', 'chocolates'] } } },
+          { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
         ],
         NOT: [
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
         ],
-        AND: [
-          {
-            OR: [
-              { isFlashDeal: true },
-              { discount: { gt: 10 } },
-              { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
-            ]
-          }
-        ]
       },
       orderBy: [
         { isFlashDeal: 'desc' },
-        { discount: 'desc' }
+        { discount: 'desc' },
+        { createdAt: 'desc' }
       ],
-      take: 400,
+      take: 500,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v10'],
+  ['storefront-flash-deals-v15'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -146,30 +138,22 @@ const getCachedBestSellers = unstable_cache(
         isAvailable: true,
         OR: [
           { restaurantId: null },
-          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
-          { tags: { hasSome: ['beverages', 'ice-cream'] } }
+          { category: { slug: { in: ['beverages', 'ice-cream', 'chocolates'] } } },
+          { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
         ],
         NOT: [
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
         ],
-        AND: [
-          {
-            OR: [
-              { isBestSeller: true },
-              { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
-            ]
-          }
-        ]
       },
       orderBy: [
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 400,
+      take: 500,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v10'],
+  ['storefront-best-sellers-v15'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -187,11 +171,11 @@ const getCachedBreakfastDeals = unstable_cache(
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 24,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals'],
+  ['storefront-breakfast-deals-v15'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -209,11 +193,11 @@ const getCachedLunchDeals = unstable_cache(
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 24,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals'],
+  ['storefront-lunch-deals-v15'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -223,19 +207,19 @@ const getCachedTeaDeals = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { tags: { hasSome: ['snacks', 'beverages', 'drinks', 'ice-cream', 'chilled'] } },
-          { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream'] } } },
+          { tags: { hasSome: ['snacks', 'beverages', 'drinks', 'ice-cream', 'chilled', 'chocolates'] } },
+          { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates'] } } },
         ],
         NOT: [
           { tags: { has: 'restaurant' } },
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
         ],
       },
-      take: 24,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals'],
+  ['storefront-tea-deals-v15'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -245,19 +229,19 @@ const getCachedNightCravings = unstable_cache(
       where: {
         isAvailable: true,
         OR: [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream', 'snacks-munchies'] } } },
-          { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night'] } }
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream', 'snacks-munchies', 'chocolates'] } } },
+          { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night', 'chocolates'] } }
         ]
       },
       orderBy: [
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 24,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-night-cravings'],
+  ['storefront-night-cravings-v15'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 
