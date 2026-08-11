@@ -56,7 +56,7 @@ export default async function AccountPage() {
 
       // Fetch orders matching targetUserId OR sessionId OR matching phone
       orders = await prisma.$queryRaw`
-        SELECT o.id, o.status::text as status, o.total, o."createdAt"
+        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt"
         FROM orders o 
         WHERE o."userId" = ${targetUserId}
            OR o."userId" = ${sessionId}
@@ -108,6 +108,7 @@ export default async function AccountPage() {
 
   const serializedOrders = orders.map((ord) => ({
     id: ord.id,
+    readableId: ord.readableId ? String(ord.readableId) : null,
     status: ord.status,
     total: ord.total,
     createdAt: ord.createdAt instanceof Date ? ord.createdAt.toISOString() : String(ord.createdAt),

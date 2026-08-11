@@ -75,7 +75,7 @@ export function getDeliveryRules(
       distanceKm,
       minOrder: 20,
       deliveryFee: 25 + surgeFee,
-      freeDeliveryThreshold: 199,
+      freeDeliveryThreshold: 200,
       isServiceable: true,
       zoneName: '0-2 km (Express Zone)',
       surgeFee,

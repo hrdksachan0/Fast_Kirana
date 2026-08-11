@@ -572,6 +572,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
               const q = orderSearchQuery.toLowerCase().trim()
               filteredOrders = filteredOrders.filter((ord) =>
                 ord.id.toLowerCase().includes(q) ||
+                (ord.readableId && String(ord.readableId).toLowerCase().includes(q)) ||
                 ord.items?.some((item: any) => item.name?.toLowerCase().includes(q))
               )
             }
@@ -599,8 +600,10 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
               <div key={ord.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-3">
                   <div>
-                    <span className="text-[10px] text-text-muted font-mono uppercase">Order ID: {ord.id}</span>
-                    <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] font-black text-orange-600 dark:text-orange-400 bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 px-2.5 py-0.5 rounded-lg font-mono tracking-wide">
+                      Order #{ord.readableId || (ord.id.length > 12 ? ord.id.slice(-6).toUpperCase() : ord.id)}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-xs font-bold text-text-primary">
                         Total: {formatPrice(ord.total)}
                       </span>

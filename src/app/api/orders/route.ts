@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null } = await request.json()
+    const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null, packagingOption = 'NORMAL', packagingFee = 0 } = await request.json()
 
     if (!paymentMethod || !items || items.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -476,7 +476,8 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
 
-      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249
+      const defaultThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
+      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : defaultThreshold
       const appliesDeliveryFee = combinedSubtotal < freeDeliveryThreshold
 
       if (appliesDeliveryFee) {
@@ -512,6 +513,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const isPremiumPackaging = packagingOption === 'PREMIUM' || packagingFee === 15
+    const resolvedPackagingFee = isPremiumPackaging ? 15 : 0
+
     for (const rData of restaurantData) {
       const rDiscount = combinedSubtotal > 0 ? (rData.subtotal / combinedSubtotal) * combinedDiscount : 0
       const rTaxes = (rData.subtotal - rDiscount) * serverTaxRate
@@ -519,7 +523,8 @@ export async function POST(request: NextRequest) {
       const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
-      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee
+      const rPackagingFee = (restaurantData.indexOf(rData) === 0) ? resolvedPackagingFee : 0
+      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee + rPackagingFee
 
       ordersToCreate.push({
         type: 'RESTAURANT',
@@ -529,9 +534,10 @@ export async function POST(request: NextRequest) {
         discount: rDiscount,
         deliveryFee: rData.deliveryFee,
         taxes: rTaxes,
-        miscFee: appliedMiscFee,
+        miscFee: appliedMiscFee + rPackagingFee,
         total: rTotal,
         items: rData.items,
+        notes: isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : undefined,
       })
     }
 
@@ -946,7 +952,7 @@ export async function GET(request: NextRequest) {
     if (isStaff && all) {
       // Staff queries all orders with associated customer details
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -965,7 +971,7 @@ export async function GET(request: NextRequest) {
       const sessionPhone = (session.user as any).phone ? getLast10Digits((session.user as any).phone) : ''
 
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId",
+        SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",

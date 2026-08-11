@@ -228,6 +228,8 @@ export function buildOrderPayload(
     scheduledSlot: string
     appliedCouponCode: string | null
     contactPhone: string
+    packagingOption?: 'NORMAL' | 'PREMIUM'
+    packagingFee?: number
   }
 ) {
   return {
@@ -240,5 +242,7 @@ export function buildOrderPayload(
     shopName: DEFAULT_SHOP_NAME,
     shopPhone: ctx.contactPhone,
     couponCode: ctx.appliedCouponCode,
+    packagingOption: ctx.packagingOption || 'NORMAL',
+    packagingFee: ctx.packagingFee || 0,
   }
 }

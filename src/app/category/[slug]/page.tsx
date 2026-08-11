@@ -31,28 +31,39 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
 
-  // 1. Fetch categories, sort setting, and active product counts in parallel
-  const [categoriesRaw, productCounts, sortSetting] = await Promise.all([
+  // 1. Fetch categories, all grocery products, and sort setting in parallel
+  const [categoriesRaw, allGroceryProducts, sortSetting] = await Promise.all([
     prisma.category.findMany({
       where: {
-        slug: { not: 'cafe' },
+        slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant'] },
       },
       orderBy: { sortOrder: 'asc' },
     }).catch(() => []),
-    prisma.product.groupBy({
-      by: ['categoryId'],
+    prisma.product.findMany({
       where: {
         isAvailable: true,
-        restaurantId: null,
-        NOT: {
-          tags: {
-            has: 'restaurant'
+        OR: [
+          { restaurantId: null },
+          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
+          { tags: { hasSome: ['beverages', 'ice-cream'] } }
+        ],
+        NOT: [
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        tags: true,
+        category: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
           }
         }
-      },
-      _count: {
-        id: true,
-      },
+      }
     }).catch(() => []),
     prisma.storeSetting.findUnique({
       where: { key: `category_sort_${slug}` }
@@ -128,7 +139,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   ]
 
   const relatedTagsMap: Record<string, string[]> = {
-    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee'],
+    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee', 'campa', 'energy'],
     'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'desserts', 'dessert', 'kulfi', 'cones', 'tubs', 'sweet', 'sweets'],
     'dairy-breakfast': ['dairy', 'breakfast', 'milk', 'curd', 'paneer', 'butter', 'nashta', 'bread', 'eggs', 'dahi'],
     'snacks-munchies': ['snack', 'snacks', 'namkeen', 'chips', 'biscuits', 'munchies', 'bhujia', 'biscuit'],
@@ -152,12 +163,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const productsRaw = await prisma.product.findMany({
     where: {
       isAvailable: true,
-      restaurantId: null,
-      NOT: {
-        tags: {
-          hasSome: ['as-restaurant', 'as_restaurant', 'restaurant', 'cafe-dish']
-        }
-      },
       OR: conditions,
     },
     orderBy,
@@ -169,31 +174,55 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
-  // Filter products for category view: Exclude restaurant dishes from grocery category pages
+  // Filter products for category view: Exclude Classic Cold Coffee and hot main course meals from grocery category pages
   let finalProductsRaw = productsRaw.filter((p: any) => {
-    if (p.restaurantId) return false
-    const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-    if (tags.some((t: string) => t.includes('restaurant') || t.includes('as-restaurant') || t.includes('as_restaurant'))) {
-      return false
-    }
-
     const pName = (p.name || '').toLowerCase()
+    const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+
+    // Exclude Classic Cold Coffee specifically from grocery category view
+    if (pName.includes('classic cold coffee')) return false
+
+    // Exclude hot restaurant main courses, parathas, pizzas, burgers, biryanis from grocery catalog
+    const isHotPreparedFood = /paratha|naan|roti|biryani|paneer 65|makhani|lababdaar|do pyaaza|kulcha|handi|chaap|pizza|burger|hakkah|manchurian|chilli paneer|tandoori|tikka|dosa|thali/i.test(pName)
+    if (isHotPreparedFood) return false
+
     if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices' || normSlug === 'drinks' || normSlug === 'beverage') {
-      const isRestaurantItem = pName.includes('classic cold coffee') || pName.includes('a.s.') || (/shake|smoothie|coffee|frappe|mocktail|latte|cappuccino/i.test(pName) && (p.restaurantId || tags.includes('as-restaurant') || tags.includes('prepared')))
-      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(pName)
-      return !isRestaurantItem && !isFoodMainCourse
-    } else if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
-      const isFoodMainCourse = /dosa|naan|roti|biryani|paneer|thali|curry|gravy|manchurian|dal|burger|pizza/i.test(pName)
-      return !isFoodMainCourse
+      const isAllowedBeverage = /thums|pepsi|hell|dew|coke|sprite|7up|limca|fanta|mirinda|soda|cold|drink|soft|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName) ||
+        tags.some((t: string) => /drink|soda|beverage|juice|water/i.test(t)) ||
+        p.category?.slug === 'beverages'
+
+      const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)
+
+      return isAllowedBeverage && !isNonBeverage
     }
 
     return true
   })
 
-  // 4. Map product counts list to a lookup map
+  // 4. Compute dynamic sidebar counts map for all categories
   const countsMap: Record<string, number> = {}
-  productCounts.forEach((group) => {
-    countsMap[group.categoryId] = group._count.id
+  categoriesRaw.forEach((cat) => {
+    const cSlug = cat.slug.toLowerCase()
+    const matchCount = allGroceryProducts.filter((p) => {
+      const pName = (p.name || '').toLowerCase()
+      const pTags = Array.isArray(p.tags) ? p.tags.map(t => t.toLowerCase()) : []
+
+      if (cSlug === 'beverages') {
+        const isNonBeverage = /chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)
+        if (isNonBeverage) return false
+
+        return /coke|pepsi|thums.?up|sprite|7up|limca|fanta|mirinda|soda|cold.?drink|soft.?drink|campa|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper.?boat|water|bisleri|kinley|aquafina|sting|red.?bull|monster|hell|charged/i.test(pName) ||
+          pTags.some(t => /drink|soda|beverage|juice|water/i.test(t)) ||
+          (p.category && p.category.slug.toLowerCase() === 'beverages')
+      }
+
+      if (p.categoryId === cat.id) return true
+      if (p.category && p.category.slug.toLowerCase() === cSlug) return true
+      if (pTags.includes(cSlug)) return true
+      return false
+    }).length
+
+    countsMap[cat.id] = matchCount
   })
 
   // 5. Map database categories and products to UI models

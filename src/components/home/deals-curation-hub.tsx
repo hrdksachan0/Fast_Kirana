@@ -582,58 +582,47 @@ export function DealsCurationHub({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
-      // Exclude restaurant dishes from main Grocery home page sections, unless it's beverages, ice cream, cakes, or desserts
-      const isCakeOrBakery = product.category?.slug === 'bakery' ||
-        (product.tags && (product.tags.includes('cake') || product.tags.includes('cakes') || product.tags.includes('bakery') || product.tags.includes('pastry'))) ||
-        /cake|pastry|muffin|brownie|waffle/i.test(product.name || '')
+      // Exclude Classic Cold Coffee and prepared restaurant dishes from Grocery home page sections
+      const isClassicColdCoffee = /classic.?cold.?coffee/i.test(product.name || '')
+      
+      const isPreparedDish = (
+        product.category?.slug === 'restaurant' ||
+        product.category?.slug === 'fastkirana-restaurant' ||
+        product.category?.slug === 'cafe' ||
+        product.category?.slug === 'fastkirana-cafe'
+      ) && !/campa|cola|pepsi|sprite|fanta|coke|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza|energy|water/i.test(product.name || '')
 
-      const isIceCream = product.category?.slug === 'ice-cream' || 
-        (product.tags && (product.tags.includes('ice-cream') || product.tags.includes('desserts'))) ||
-        /ice.?cream|kulfi|sundae/i.test(product.name || '')
-
-      const isBeverage = product.category?.slug === 'beverages' || 
-        (product.tags && (product.tags.includes('beverages') || product.tags.includes('drinks') || product.tags.includes('chilled') || product.tags.includes('soft-drink'))) ||
-        /cola|pepsi|sprite|fanta|coke|campa|shake|juice|soda|nimbu|lassi|cold.?drink|soft.?drink|hell|thumsup|dew|maaza/i.test(product.name || '')
-
-      const isBevOrIce = isIceCream || isBeverage || isCakeOrBakery
-
-      if (
-        !isBevOrIce && (
-          product.restaurantId ||
-          (product.tags && product.tags.includes('restaurant')) ||
-          (product.category?.name && product.category.name.toLowerCase().includes('restaurant')) ||
-          (product.category?.slug && ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'].includes(product.category.slug.toLowerCase()))
-        )
-      ) {
+      if (isClassicColdCoffee || isPreparedDish) {
         return
       }
 
-      // Override category grouping ONLY for restaurant-tagged items that are beverages, ice creams, or cakes
       let categoryName = product.category?.name || 'Other Essentials'
       let categorySlug = product.category?.slug || ''
       let sortOrder = product.category?.sortOrder ?? 999
 
-      const isRestaurantItem = categorySlug === 'restaurant' || 
-        categorySlug === 'fastkirana-restaurant' || 
-        categorySlug === 'cafe' || 
-        categorySlug === 'fastkirana-cafe' ||
-        Boolean(product.restaurantId)
+      const pName = (product.name || '').toLowerCase()
+      const pTags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
+      const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
 
-      if (isRestaurantItem) {
-        if (isCakeOrBakery) {
-          categoryName = 'Cakes & Bakery'
-          categorySlug = 'bakery'
-          sortOrder = 49
-        } else if (isIceCream) {
-          categoryName = 'Ice Cream'
-          categorySlug = 'ice-cream'
-          sortOrder = 50
-        } else if (isBeverage) {
+      // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery
+      if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
+        categoryName = 'Bakery'
+        categorySlug = 'bakery'
+        sortOrder = 6
+      }
+      // Ensure all packaged beverages (Energy Campa, Coca Cola, Pepsi, Juices, etc.) group cleanly into Beverages section
+      else if (!isChocolateOrBakery) {
+        const isBeverageProduct = categorySlug === 'beverages' || 
+          pTags.includes('beverages') || pTags.includes('drinks') || pTags.includes('soft-drink') ||
+          /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
+
+        if (isBeverageProduct) {
           categoryName = 'Beverages'
           categorySlug = 'beverages'
-          sortOrder = 51
+          sortOrder = 5
         }
       }
+
       if (!groups[categoryName]) {
         groups[categoryName] = {
           categoryName,

@@ -243,16 +243,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     ]
   }, [products, isVegOnly, searchQuery, restaurant.menuSections])
 
-  const addOnProducts = useMemo(() => {
-    return products.filter((p: any) => {
-      const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
-      return (
-        pTags.some((t: string) =>
-          ['beverages', 'cold-coffee', 'shakes', 'mocktails', 'chilled', 'drinks', 'desserts', 'ice-cream', 'dips', 'sauce'].includes(t)
-        ) || p.price < 99
-      )
-    }).slice(0, 10)
-  }, [products])
+
 
   const toggleCategoryExpand = (tag: string) => {
     setExpandedCategories(prev => {
@@ -746,39 +737,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     )
                   })}
 
-                  {/* Complete Your Meal / Quick Add-ons Section in Left Sidebar */}
-                  {addOnProducts.length > 0 && (
-                    <div className="mt-5 pt-3.5 border-t border-orange-500/20 dark:border-orange-500/30 space-y-2.5">
-                      {/* Premium Sidebar Header Card */}
-                      <div className="relative overflow-hidden w-full bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-rose-500/15 dark:from-orange-500/25 dark:to-rose-950/30 p-2.5 rounded-2xl border border-orange-500/30 dark:border-orange-500/40 text-center shadow-[0_4px_16px_rgba(249,115,22,0.1)] group">
-                        {/* Glow highlight effect */}
-                        <div className="absolute -top-10 -right-10 w-20 h-20 bg-orange-400/20 rounded-full blur-xl pointer-events-none" />
-                        <div className="relative z-10 flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-1 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-orange-500/20 shadow-2xs">
-                            <Sparkles className="w-2.5 h-2.5 text-orange-500 animate-pulse" />
-                            <span className="text-[8.5px] min-[375px]:text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 leading-tight">
-                              Add-ons
-                            </span>
-                          </div>
-                          <h5 className="text-[9.5px] min-[375px]:text-[10.5px] sm:text-[11.5px] font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight mt-0.5">
-                            Complete Meal
-                          </h5>
-                          <span className="text-[7.5px] min-[375px]:text-[8px] font-bold text-white bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 px-2 py-0.5 rounded-full shadow-xs tracking-tight">
-                            Popular Add-ons
-                          </span>
-                        </div>
-                      </div>
 
-                      {/* Compact Vertical Add-on Cards */}
-                      <div className="space-y-2.5 pt-0.5">
-                        {addOnProducts.map((product: any) => (
-                          <div key={`sidebar-addon-${product.id}`} className="w-full transform transition-transform duration-200 hover:scale-[1.02]">
-                            <ProductCard product={product} isCompact={true} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </aside>
 
                 {/* Right Side Products Container */}
@@ -840,48 +799,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     )
                   })}
 
-                  {/* Complete Your Meal / Quick Add-ons Section under Products */}
-                  {addOnProducts.length > 0 && (
-                    <div className="relative overflow-hidden mt-8 pt-5 pb-5 border-t-2 border-dashed border-orange-500/30 dark:border-orange-500/40 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-rose-500/10 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-rose-950/30 p-4 sm:p-6 rounded-[28px] border border-orange-500/25 dark:border-orange-500/35 shadow-[0_8px_30px_rgba(249,115,22,0.12)] backdrop-blur-md">
-                      {/* Decorative background glows */}
-                      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-orange-500/20 to-amber-500/0 rounded-full blur-2xl pointer-events-none" />
-                      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-gradient-to-tr from-rose-500/15 to-orange-500/0 rounded-full blur-2xl pointer-events-none" />
 
-                      <div className="relative z-10 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-orange-500/15 dark:border-orange-500/25 pb-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-400 text-white shadow-md text-base">
-                                🥤
-                              </span>
-                              <h4 className="text-sm sm:text-base font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
-                                Complete Your Meal
-                              </h4>
-                              <span className="text-[9.5px] font-black uppercase tracking-widest text-white bg-gradient-to-r from-orange-600 via-amber-500 to-rose-600 px-2.5 py-0.5 rounded-full shadow-xs border border-white/20">
-                                Popular Add-ons
-                              </span>
-                            </div>
-                            <p className="text-[11.5px] font-bold text-zinc-600 dark:text-zinc-300 pl-10">
-                              Pair your main dishes with refreshing drinks, chilled coffees, shakes & crispy sides
-                            </p>
-                          </div>
-
-                          <div className="hidden sm:flex items-center gap-1 text-[11px] font-extrabold text-orange-600 dark:text-orange-400 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-orange-500/25 shadow-2xs self-start sm:self-auto">
-                            <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-                            <span>Chef Recommended</span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-3.5 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x snap-mandatory px-0.5">
-                          {addOnProducts.map((product: any) => (
-                            <div key={`main-addon-${product.id}`} className="w-[150px] min-[375px]:w-[170px] sm:w-[190px] shrink-0 snap-start transform transition-transform duration-200 hover:scale-[1.02]">
-                              <ProductCard product={product} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </main>
               </div>
             )}

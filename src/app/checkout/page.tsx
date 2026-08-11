@@ -419,6 +419,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI' | 'CARD' | 'WALLET'>('COD')
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
   const [scheduledSlot, setScheduledSlot] = useState<string>('INSTANT')
+  const [packagingOption, setPackagingOption] = useState<'NORMAL' | 'PREMIUM'>('NORMAL')
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
@@ -516,8 +517,18 @@ export default function CheckoutPage() {
   let cafeDeliveryFee = 0
 
   if (deliveryMethod === 'DELIVERY') {
-    const targetThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249
-    const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
+    const activeThreshold = (groceryCartItems.length > 0 && cafeCartItems.length > 0)
+      ? combinedThreshold
+      : (cafeCartItems.length > 0 ? cafeThreshold : groceryThreshold)
+
+    const targetThreshold = (deliveryRules && deliveryRules.isServiceable)
+      ? deliveryRules.freeDeliveryThreshold
+      : activeThreshold
+
+    const feeToCharge = (deliveryRules && deliveryRules.isServiceable)
+      ? deliveryRules.deliveryFee
+      : deliveryFeeVal
+
     if (adjustedSubtotal < targetThreshold) {
       if (groceryCartItems.length > 0) {
         groceryDeliveryFee = feeToCharge
@@ -539,7 +550,8 @@ export default function CheckoutPage() {
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
   const taxes = Math.max(0, adjustedSubtotal - couponDiscount) * taxRate
-  const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + effectiveMiscFee
+  const packagingFee = (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM' ? 15 : 0
+  const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + effectiveMiscFee + packagingFee
 
   // Fetch Saved Addresses
   useEffect(() => {
@@ -782,6 +794,8 @@ export default function CheckoutPage() {
         scheduledSlot,
         appliedCouponCode,
         contactPhone,
+        packagingOption,
+        packagingFee,
       })
 
       const res = await fetch('/api/orders', {
@@ -889,6 +903,8 @@ export default function CheckoutPage() {
         scheduledSlot,
         appliedCouponCode,
         contactPhone,
+        packagingOption,
+        packagingFee,
       })
 
       const orderRes = await fetch('/api/orders', {
@@ -1469,6 +1485,91 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Food Packaging Option Selection (Only shown when food / cafe items exist in cart) */}
+              {(hasCafeItems || cafeCartItems.length > 0) && (
+                <div className="border-t border-border/40 pt-5 md:pt-6 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                      <span className="text-xl">🍱</span>
+                      <span>Food Packaging Option</span>
+                    </h3>
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      Hot Prepared Food
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Normal Packaging (₹0) */}
+                    <div
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setPackagingOption('NORMAL')
+                      }}
+                      className={cn(
+                        "flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden select-none bg-white dark:bg-zinc-900/50",
+                        packagingOption === 'NORMAL'
+                          ? "border-primary bg-primary/[0.02] shadow-xs"
+                          : "border-border/60 hover:border-primary/40"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
+                        packagingOption === 'NORMAL' ? "border-primary bg-primary" : "border-border"
+                      )}>
+                        {packagingOption === 'NORMAL' && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div className="flex-grow text-xs">
+                        <div className="flex items-center justify-between font-extrabold text-text-primary mb-1">
+                          <span className="flex items-center gap-1.5 text-sm">
+                            <span>📦</span> Normal Packaging
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                            FREE (₹0)
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-text-secondary leading-relaxed font-semibold">
+                          Standard eco-friendly containers & paper bag packaging.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Premium Packaging (₹15) */}
+                    <div
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setPackagingOption('PREMIUM')
+                      }}
+                      className={cn(
+                        "flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden select-none bg-white dark:bg-zinc-900/50",
+                        packagingOption === 'PREMIUM'
+                          ? "border-amber-500 bg-amber-500/[0.04] shadow-xs ring-1 ring-amber-500/20"
+                          : "border-border/60 hover:border-amber-500/40"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
+                        packagingOption === 'PREMIUM' ? "border-amber-500 bg-amber-500" : "border-border"
+                      )}>
+                        {packagingOption === 'PREMIUM' && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div className="flex-grow text-xs">
+                        <div className="flex items-center justify-between font-extrabold text-text-primary mb-1">
+                          <span className="flex items-center gap-1.5 text-sm">
+                            <span>✨</span> Premium Packaging
+                          </span>
+                          <span className="text-amber-600 dark:text-amber-400 font-black text-xs bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20">
+                            +₹15
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-text-secondary leading-relaxed font-semibold">
+                          Insulated thermal pouch + heavy-duty spill-proof boxes & cutlery set.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Integrated Payment Method Selection */}
               <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
                 <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
@@ -1640,15 +1741,24 @@ export default function CheckoutPage() {
                 <span className="text-[9px] text-text-muted">
                   {deliveryMethod === 'PICKUP' 
                     ? 'Store Pickup' 
-                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249)
-                    ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249}+`
-                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249}`}
+                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200))
+                    ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}+`
+                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}`}
                 </span>
               </div>
               <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
                 {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
               </span>
             </div>
+
+            {packagingFee > 0 && (
+              <div className="flex justify-between items-center text-amber-700 dark:text-amber-400 font-extrabold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <span>✨</span> Premium Packaging
+                </span>
+                <span>+₹{packagingFee}</span>
+              </div>
+            )}
 
             {couponDiscount > 0 && (
               <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -1680,10 +1790,10 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249) && (
+                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)) && (
                   <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl text-center mt-2">
                     <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : 249) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
+                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
                     </p>
                   </div>
                 )}

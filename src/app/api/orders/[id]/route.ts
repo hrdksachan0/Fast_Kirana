@@ -234,7 +234,7 @@ export async function PATCH(
 
   try {
     const { id } = await params
-    const { status, deliveryPhoto, deliveryLat, deliveryLng, prepTime } = await request.json()
+    const { status, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy } = await request.json()
 
     if (!status || !VALID_STATUSES.includes(status)) {
       return NextResponse.json({ error: 'Invalid order status' }, { status: 400 })
@@ -363,10 +363,14 @@ export async function PATCH(
         safePhoto = null
       }
 
+      const isOwnerOrOnlinePayment = paymentCollectedBy === 'OWNER' || paymentCollectedBy === 'ONLINE' || isRiderCash === false
+      const newPaymentMethod = isOwnerOrOnlinePayment ? 'ONLINE' : (existingOrder.paymentMethod || 'COD')
+
       await prisma.$executeRaw`
         UPDATE orders 
         SET status = ${status}::"OrderStatus", 
             "paymentStatus" = 'PAID'::"PaymentStatus",
+            "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
             "deliveryPhoto" = ${safePhoto}, 
             "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
             "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
@@ -375,8 +379,9 @@ export async function PATCH(
         WHERE id = ${id}
       `
 
-      // If COD and assigned to a delivery rider, update RiderWallet
-      if (existingOrder.status !== 'DELIVERED' && existingOrder.paymentMethod === 'COD' && existingOrder.deliveryUserId) {
+      // If COD and assigned to a delivery rider, update RiderWallet ONLY if cash was collected by rider
+      const isRiderCashCollected = !isOwnerOrOnlinePayment && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)
+      if (existingOrder.status !== 'DELIVERED' && existingOrder.paymentMethod === 'COD' && isRiderCashCollected && existingOrder.deliveryUserId) {
         try {
           const riderId = existingOrder.deliveryUserId
           const orderTotal = parseFloat(existingOrder.total) || 0

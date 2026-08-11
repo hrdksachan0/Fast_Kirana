@@ -225,29 +225,37 @@ function getSubcategories(
         filterFn: (p) => /chocolate|cadbury|dairy milk|kitkat|munch|5 star|snickers|mithai|sweets/i.test(p.name)
       }
     )
-  } else if (categorySlug === 'beverages' || categorySlug === 'cold-drinks-juices') {
+  } else if (categorySlug === 'beverages' || categorySlug === 'cold-drinks-juices' || categorySlug.includes('beverage') || categorySlug.includes('drink')) {
     list.push(
       {
         id: 'soft-drinks',
         name: 'Soft Drinks & Soda',
         emoji: '🥤',
-        filterFn: (p) => /coke|pepsi|thums up|sprite|7up|limca|fanta|mirinda|soda|cold|drink|beverage/i.test(p.name) || (p.tags && p.tags.some(t => /drink|soda|beverage/i.test(t)))
+        filterFn: (p) => {
+          const pName = (p.name || '').toLowerCase()
+          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
+          return /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|dew|campa|hell|soda|cold|drink|cola/i.test(pName) || (p.tags && p.tags.some(t => /soda|cola|soft-drink|beverages|drink/i.test(t)))
+        }
       },
       {
         id: 'juices',
-        name: 'Fruit Juices & Shakes',
+        name: 'Fruit Juices & Drinks',
         emoji: '🧃',
         filterFn: (p) => {
           const pName = (p.name || '').toLowerCase()
-          if (/shake|smoothie|coffee|frappe/i.test(pName)) return false
-          return /juice|real|tropicana|frooti|maaza|slice|appy|paper boat/i.test(pName) || (p.tags && p.tags.some(t => /juice/i.test(t)))
+          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
+          return /juice|real|tropicana|frooti|maaza|slice|appy|paper|coconut|water|shake|smoothie|drink/i.test(pName) || (p.tags && p.tags.some(t => /juice|shake|drink/i.test(t)))
         }
       },
       {
         id: 'energy-drinks',
-        name: 'Energy Drinks & Water',
+        name: 'Packaged Water & Energy',
         emoji: '⚡',
-        filterFn: (p) => /red bull|monster|sting|hell|charged|water|bisleri|kinley|aquafina/i.test(p.name) || (p.tags && p.tags.some(t => /energy|water/i.test(t)))
+        filterFn: (p) => {
+          const pName = (p.name || '').toLowerCase()
+          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
+          return /water|bisleri|kinley|aquafina|red.?bull|monster|sting|hell|energy|drink/i.test(pName) || (p.tags && p.tags.some(t => /energy|water|drink/i.test(t)))
+        }
       }
     )
   } else if (categorySlug === 'instant-food') {

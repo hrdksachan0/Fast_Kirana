@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   }
 }
 
-// Revalidate home page every 24 hours (on-demand revalidation handles updates)
-export const revalidate = 3600 // 1 hour; on-demand revalidateStorefront() catches the common case faster
+// Revalidate home page dynamically for instant updates
+export const revalidate = 0
 
 const productSelect = {
   id: true,
@@ -66,7 +66,7 @@ const getCachedBanners = unstable_cache(
       orderBy: { sortOrder: 'asc' },
     })
   },
-  ['storefront-banners'],
+  ['storefront-banners-v9'],
   { revalidate: 3600, tags: ['banners'] }
 )
 
@@ -81,7 +81,7 @@ const getCachedCategories = unstable_cache(
       },
     })
   },
-  ['storefront-categories'],
+  ['storefront-categories-v9'],
   { revalidate: 3600, tags: ['categories'] }
 )
 
@@ -100,7 +100,7 @@ const getCachedTrendingOrderItems = unstable_cache(
       take: 12,
     })
   },
-  ['storefront-trending-order-items'],
+  ['storefront-trending-order-items-v9'],
   { revalidate: 3600, tags: ['trending'] }
 )
 
@@ -109,14 +109,22 @@ const getCachedFlashDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        restaurantId: null,
-        NOT: {
-          tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] }
-        },
         OR: [
-          { isFlashDeal: true },
-          { discount: { gt: 10 } },
-          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
+          { restaurantId: null },
+          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
+          { tags: { hasSome: ['beverages', 'ice-cream'] } }
+        ],
+        NOT: [
+          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+        ],
+        AND: [
+          {
+            OR: [
+              { isFlashDeal: true },
+              { discount: { gt: 10 } },
+              { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
+            ]
+          }
         ]
       },
       orderBy: [
@@ -127,7 +135,7 @@ const getCachedFlashDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v8'],
+  ['storefront-flash-deals-v10'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -136,14 +144,21 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        restaurantId: null,
+        OR: [
+          { restaurantId: null },
+          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
+          { tags: { hasSome: ['beverages', 'ice-cream'] } }
+        ],
         NOT: [
-          { tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] } },
           { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
         ],
-        OR: [
-          { isBestSeller: true },
-          { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
+        AND: [
+          {
+            OR: [
+              { isBestSeller: true },
+              { tags: { hasSome: ['beverages', 'ice-cream', 'desserts', 'cake', 'cakes', 'bakery', 'sweets'] } }
+            ]
+          }
         ]
       },
       orderBy: [
@@ -154,7 +169,7 @@ const getCachedBestSellers = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v8'],
+  ['storefront-best-sellers-v10'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 

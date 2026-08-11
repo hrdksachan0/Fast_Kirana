@@ -32,6 +32,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
+  const [storeUpiVpa, setStoreUpiVpa] = useState('7054470303@paytm')
   const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
   const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
   const [storeLat, setStoreLat] = useState('26.1534185')
@@ -126,6 +127,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.restaurant_close_time) setRestaurantCloseTime(data.restaurant_close_time)
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
+        if (data.store_upi_vpa) setStoreUpiVpa(data.store_upi_vpa)
         if (data.cloudinary_cloud_name) setCloudinaryCloudName(data.cloudinary_cloud_name)
         if (data.cloudinary_upload_preset) setCloudinaryUploadPreset(data.cloudinary_upload_preset)
         if (data.store_lat) setStoreLat(data.store_lat)
@@ -178,9 +180,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
         // Parse category statuses
         const catStatusMap: Record<string, boolean> = {}
-        cats.forEach((cat: any) => {
-          catStatusMap[cat.slug] = data[`category_open_${cat.slug}`] !== 'false'
-        })
+        if (Array.isArray(cats)) {
+          setCategories(cats)
+          cats.forEach((cat: any) => {
+            catStatusMap[cat.slug] = data[`category_open_${cat.slug}`] !== 'false'
+          })
+        }
         setCategoryStatuses(catStatusMap)
       } catch (err: any) {
         console.error(err)
@@ -197,7 +202,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !taxRate.trim() || !minOrderValue.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
+    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !storeUpiVpa.trim() || !taxRate.trim() || !minOrderValue.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
         !groceryPickupAddress.trim() || !cafePickupAddress.trim() || !restaurantPickupAddress.trim() ||
         !restaurantCommission.trim() || !restaurantProfitShare.trim() || !restaurantDefaultMargin.trim() ||
         !cafeCommission.trim() || !cafeProfitShare.trim() || !cafeDefaultMargin.trim() ||
@@ -240,6 +245,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           restaurant_close_time: restaurantCloseTime,
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
+          store_upi_vpa: storeUpiVpa.trim(),
           cloudinary_cloud_name: cloudinaryCloudName.trim(),
           cloudinary_upload_preset: cloudinaryUploadPreset.trim(),
           store_lat: storeLat.trim(),
@@ -778,6 +784,24 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       onChange={(e) => setMiscFeeLabel(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                     />
+                  </div>
+
+                  {/* Store UPI VPA / QR Code Handle */}
+                  <div className="space-y-1.5 md:col-span-2 border-t border-border/40 pt-4 mt-2">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                      📱 Store UPI VPA / QR Code Handle (दुकान का UPI ID) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 7054470303@paytm or fastkirana@upi"
+                      value={storeUpiVpa}
+                      onChange={(e) => setStoreUpiVpa(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                    />
+                    <p className="text-[10px] text-text-muted font-medium">
+                      This UPI VPA handle generates the dynamic doorstep QR scanner for riders in the Delivery Console. Change it anytime here.
+                    </p>
                   </div>
                 </div>
 

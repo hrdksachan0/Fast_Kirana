@@ -248,9 +248,8 @@ export function StorefrontClient({
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
             <FloatingEmojis type="food" />
-            {/* Swiggy-style restaurant listing — banner + editorial curations + cards */}
+            {/* Swiggy-style restaurant listing — banner + cards */}
             <FoodBanner />
-            <FoodEditorialCuration />
             <RestaurantListing initialRestaurants={restaurants} />
           </motion.div>
         )}
