@@ -37,8 +37,8 @@ class MainShell extends ConsumerWidget {
   }
 
   Widget _buildBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
-    const primaryRed = Color(0xFFB50017);
-    const textMuted = Color(0xFF9D4852);
+    const primaryGreen = Color(0xFF047857);
+    const textMuted = Color(0xFF6B7280);
 
     final items = [
       {'icon': Icons.home_outlined, 'activeIcon': Icons.home_rounded, 'label': 'HOME'},
@@ -73,7 +73,7 @@ class MainShell extends ConsumerWidget {
                       Icon(
                         isSelected ? (items[index]['activeIcon'] as IconData) : (items[index]['icon'] as IconData),
                         size: 24,
-                        color: isSelected ? primaryRed : textMuted,
+                        color: isSelected ? primaryGreen : textMuted,
                       ),
                       const SizedBox(height: 3),
                       Text(
@@ -81,7 +81,7 @@ class MainShell extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: isSelected ? primaryRed : textMuted,
+                          color: isSelected ? primaryGreen : textMuted,
                           letterSpacing: 0.5,
                         ),
                       ),

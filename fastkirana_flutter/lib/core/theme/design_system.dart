@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class AppDesignSystem {
   // HyperMart Palette (Swiggy / Zepto / Blinkit style fusion)
-  static const Color primary = Color(0xFFE20A22); // HyperMart Red
-  static const Color primaryDark = Color(0xFFB30013);
-  static const Color primaryLight = Color(0xFFFFEDE0);
-  static const Color cafeAccent = Color(0xFFF97316); // Warm Cafe Orange
-  static const Color accent = Color(0xFF00B140); // Savings Green
-  static const Color accentDark = Color(0xFF008F33);
-  static const Color discount = Color(0xFFFF6B35);
+  static const Color primary = Color(0xFF047857); // Grocery Green
+  static const Color primaryDark = Color(0xFF065F46);
+  static const Color primaryLight = Color(0xFF10B981);
+  static const Color cafeAccent = Color(0xFF059669); // Green
+  static const Color accent = Color(0xFF047857); // Green
+  static const Color accentDark = Color(0xFF065F46);
+  static const Color discount = Color(0xFF10B981);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
@@ -50,13 +50,13 @@ class AppDesignSystem {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFE20A22), Color(0xFFFF4D62)],
+    colors: [Color(0xFF047857), Color(0xFF10B981)],
   );
 
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF00B140), Color(0xFF3CC070)],
+    colors: [Color(0xFF047857), Color(0xFF34D399)],
   );
 
   // Shadows

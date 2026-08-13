@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 /// Brand colors matching FastKirana
 class AppColors {
-  static const Color primary = Color(0xFFEA580C);
-  static const Color primaryDark = Color(0xFFC2410C);
-  static const Color primaryLight = Color(0xFFFB923C);
+  static const Color primary = Color(0xFF047857);
+  static const Color primaryDark = Color(0xFF065F46);
+  static const Color primaryLight = Color(0xFF10B981);
 
   static const Color accent = Color(0xFF10B981);
   static const Color accentDark = Color(0xFF047857);

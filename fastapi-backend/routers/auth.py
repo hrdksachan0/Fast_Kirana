@@ -27,17 +27,37 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db)
 ) -> Optional[Dict[str, Any]]:
-    """Extract and validate current user from JWT token."""
-    if not credentials or not credentials.credentials:
-        return None
-    user = extract_user_from_token(credentials.credentials)
-    if not user:
-        return None
-    if is_token_expired(user):
-        return None
-    return user
+    """Extract and validate current user from JWT token, NextAuth session cookie, or x-user-id header."""
+    # 1. Check Bearer Token
+    if credentials and credentials.credentials:
+        user = extract_user_from_token(credentials.credentials)
+        if user and not is_token_expired(user):
+            return user
+
+    # 2. Check NextAuth Session Cookie
+    session_cookie = (
+        request.cookies.get("next-auth.session-token") or
+        request.cookies.get("__Secure-next-auth.session-token") or
+        request.cookies.get("authjs.session-token")
+    )
+    if session_cookie:
+        user = extract_user_from_token(session_cookie)
+        if user and not is_token_expired(user):
+            return user
+
+    # 3. Check X-User-Id header fallback
+    x_user_id = request.headers.get("x-user-id")
+    if x_user_id:
+        res = await db.execute(select(User).where(User.id == x_user_id))
+        db_user = res.scalars().first()
+        if db_user:
+            return {"id": db_user.id, "email": db_user.email, "role": str(db_user.role), "name": db_user.name}
+
+    return None
 
 
 # Alias for backward compatibility

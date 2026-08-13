@@ -110,7 +110,7 @@ export default async function AdminPage() {
       }),
       prisma.order.groupBy({
         by: ['shopName', 'status'],
-        _sum: { total: true },
+        _sum: { total: true, subtotal: true, discount: true },
         _count: { id: true },
       }),
       prisma.order.findMany({
@@ -160,10 +160,11 @@ export default async function AdminPage() {
     }
     
     groupStats.forEach((group: any) => {
-      const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT'
+      const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT' || (group.shopName && group.shopName.toLowerCase().includes('restaurant'))
       
       const count = group._count?.id || 0
-      const sum = group._sum?.total || 0
+      const foodNetSales = (group._sum?.subtotal || 0) - (group._sum?.discount || 0)
+      const sum = isRestaurant && foodNetSales > 0 ? foodNetSales : (group._sum?.total || 0)
 
       if (group.status && statusCountsMap[group.status] !== undefined) {
         statusCountsMap[group.status] += count

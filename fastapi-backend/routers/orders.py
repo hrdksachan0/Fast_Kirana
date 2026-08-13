@@ -150,21 +150,113 @@ async def create_order(
     }
 
 
-@router.get("", response_model=List[OrderOut])
+@router.get("")
+@router.get("/")
 async def list_user_orders(
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Returns user orders with items and companion order details
+    Returns user orders grouped into 1 single unified order for combined grocery + restaurant purchases.
     """
     user_id = current_user.get("id") or current_user.get("sub")
     stmt = select(Order).options(
         selectinload(Order.items)
-    ).where(Order.userId == user_id).order_by(desc(Order.createdAt)).limit(50)
+    ).where(Order.userId == user_id).order_by(desc(Order.createdAt)).limit(100)
     
     res = await db.execute(stmt)
-    return res.scalars().all()
+    raw_orders = res.scalars().all()
+
+    grouped_orders = []
+    processed_ids = set()
+
+    def get_combined_status(statuses: List[str]) -> str:
+        active = [s for s in statuses if s != "CANCELLED"]
+        if not active:
+            return "CANCELLED"
+        if "PENDING" in active:
+            return "PENDING"
+        if "CONFIRMED" in active:
+            return "CONFIRMED"
+        if "PACKED" in active:
+            return "PACKED"
+        if "SHIPPED" in active:
+            return "SHIPPED"
+        return "DELIVERED"
+
+    for ord in raw_orders:
+        if ord.id in processed_ids:
+            continue
+
+        related = []
+        for o in raw_orders:
+            if o.id in processed_ids:
+                continue
+            if o.id == ord.id:
+                related.append(o)
+            elif ord.combinedId and o.combinedId == ord.combinedId:
+                related.append(o)
+            else:
+                time_diff = abs((o.createdAt - ord.createdAt).total_seconds()) if o.createdAt and ord.createdAt else 999
+                if o.userId == ord.userId and time_diff <= 10:
+                    related.append(o)
+
+        for r in related:
+            processed_ids.add(r.id)
+
+        if len(related) == 1:
+            o = related[0]
+            grouped_orders.append({
+                "id": o.id,
+                "readableId": o.readableId,
+                "status": str(o.status.value) if hasattr(o.status, 'value') else str(o.status),
+                "subtotal": o.subtotal or 0.0,
+                "discount": o.discount or 0.0,
+                "deliveryFee": o.deliveryFee or 0.0,
+                "taxes": o.taxes or 0.0,
+                "miscFee": o.miscFee or 0.0,
+                "total": o.total or 0.0,
+                "paymentMethod": str(o.paymentMethod.value) if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
+                "paymentStatus": str(o.paymentStatus.value) if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
+                "deliveryMethod": o.deliveryMethod or "DELIVERY",
+                "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+                "shopName": o.shopName,
+                "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": i.price, "imageUrl": i.imageUrl} for i in o.items],
+                "isCombined": False
+            })
+        else:
+            main_order = next((r for r in related if not r.restaurantId), related[0])
+            statuses = [str(r.status.value) if hasattr(r.status, 'value') else str(r.status) for r in related]
+            combined_status = get_combined_status(statuses)
+
+            all_items = []
+            seen_item_ids = set()
+            for r in related:
+                for i in r.items:
+                    if i.id not in seen_item_ids:
+                        seen_item_ids.add(i.id)
+                        all_items.append({"id": i.id, "name": i.name, "quantity": i.quantity, "price": i.price, "imageUrl": i.imageUrl})
+
+            grouped_orders.append({
+                "id": main_order.id,
+                "readableId": main_order.readableId,
+                "status": combined_status,
+                "subtotal": sum(r.subtotal or 0.0 for r in related),
+                "discount": sum(r.discount or 0.0 for r in related),
+                "deliveryFee": sum(r.deliveryFee or 0.0 for r in related),
+                "taxes": sum(r.taxes or 0.0 for r in related),
+                "miscFee": sum(r.miscFee or 0.0 for r in related),
+                "total": sum(r.total or 0.0 for r in related),
+                "paymentMethod": str(main_order.paymentMethod.value) if hasattr(main_order.paymentMethod, 'value') else str(main_order.paymentMethod),
+                "paymentStatus": str(main_order.paymentStatus.value) if hasattr(main_order.paymentStatus, 'value') else str(main_order.paymentStatus),
+                "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
+                "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
+                "shopName": main_order.shopName,
+                "items": all_items,
+                "isCombined": True
+            })
+
+    return grouped_orders
 
 @router.get("/{order_id}")
 async def get_order_by_id(
