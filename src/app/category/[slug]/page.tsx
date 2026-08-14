@@ -140,7 +140,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   const relatedTagsMap: Record<string, string[]> = {
     'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee', 'campa', 'energy'],
-    'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'desserts', 'dessert', 'kulfi', 'cones', 'tubs', 'sweet', 'sweets'],
+    'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'kulfi', 'cassatta', 'cornetto', 'chocobar', 'icecream', 'amul ice', 'kwality wall', 'havmor', 'vadilal', 'baskin', 'nic ice'],
     'dairy-breakfast': ['dairy', 'breakfast', 'milk', 'curd', 'paneer', 'butter', 'nashta', 'bread', 'eggs', 'dahi'],
     'snacks-munchies': ['snack', 'snacks', 'namkeen', 'chips', 'biscuits', 'munchies', 'bhujia', 'biscuit'],
     'fruits-vegetables': ['fruit', 'fruits', 'vegetable', 'vegetables', 'sabzi', 'pyaz', 'tamatar', 'aalu'],
@@ -186,6 +186,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     // Exclude hot restaurant main courses, parathas, pizzas, burgers, biryanis from grocery catalog
     const isHotPreparedFood = /paratha|naan|roti|biryani|paneer 65|makhani|lababdaar|do pyaaza|kulcha|handi|chaap|pizza|burger|hakkah|manchurian|chilli paneer|tandoori|tikka|dosa|thali/i.test(pName)
     if (isHotPreparedFood) return false
+
+    if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
+      const isNonIceCream = /shampoo|soap|paste|lotion|cleaner|chips|namkeen|biscuit|cookie|atta|rice|dal|tea|coffee|coke|pepsi|sprite|soda|paratha|pizza|burger|oil|ghee|paneer|curd|milkshake/i.test(pName)
+      if (isNonIceCream && !/ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop/i.test(pName)) return false
+
+      const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic|falooda/i.test(pName) ||
+        tags.some((t: string) => /ice.?cream|kulfi|chocobar|cornetto/i.test(t)) ||
+        catSlug === 'ice-cream' || catSlug === 'ice_cream'
+
+      return isIceCream
+    }
 
     if (normSlug === 'beverages' || normSlug === 'cold-drinks-juices' || normSlug === 'drinks' || normSlug === 'beverage') {
       if (['personal-care', 'personal_care', 'skincare', 'household', 'beauty', 'atta-rice-dal'].includes(catSlug)) {

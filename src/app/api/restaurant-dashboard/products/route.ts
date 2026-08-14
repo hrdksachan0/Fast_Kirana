@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, imageUrl, price, mrp, unit, stock, tags, categoryId, variants } = body
 
-    if (!name || !price || !unit || !categoryId) {
+    if (!name || price === undefined || price === null || !unit || !categoryId) {
       return NextResponse.json({ error: 'Missing required fields: name, price, unit, categoryId' }, { status: 400 })
     }
 

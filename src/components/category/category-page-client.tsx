@@ -333,13 +333,31 @@ function getSubcategories(
         id: 'cones-cups',
         name: 'Cones & Cups',
         emoji: '🍦',
-        filterFn: (p) => /cone|cup|cornetto|matka|scoop|single|chocobar|vanilla|chocolate|butterscotch|amul|havmor|kwality|ice/i.test(p.name) || (p.tags && p.tags.some(t => /ice|cone|cup/i.test(t)))
+        filterFn: (p) => {
+          const name = p.name.toLowerCase()
+          const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
+          const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+          const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||
+            tags.some((t: string) => /ice.?cream|kulfi|chocobar|cornetto/i.test(t)) ||
+            catSlug === 'ice-cream' || catSlug === 'ice_cream'
+          if (!isIceCream) return false
+          return /cone|cup|cornetto|matka|scoop|single|chocobar|stick/i.test(name)
+        }
       },
       {
         id: 'tubs-packs',
         name: 'Family Tubs',
         emoji: '🍨',
-        filterFn: (p) => /tub|brick|pack|family|party|1l|750ml|500ml|container|bucket|cream/i.test(p.name) || (p.tags && p.tags.some(t => /tub|pack/i.test(t)))
+        filterFn: (p) => {
+          const name = p.name.toLowerCase()
+          const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
+          const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+          const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||
+            tags.some((t: string) => /ice.?cream|kulfi|chocobar|cornetto/i.test(t)) ||
+            catSlug === 'ice-cream' || catSlug === 'ice_cream'
+          if (!isIceCream) return false
+          return /tub|brick|pack|family|party|1l|750ml|500ml|container|bucket/i.test(name)
+        }
       }
     )
   } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {

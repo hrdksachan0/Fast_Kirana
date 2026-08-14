@@ -10,15 +10,33 @@ class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
 
   static const List<Map<String, String>> fallbackCategories = [
-    {'id': 'cat_veg', 'name': 'Vegetables & Fruits', 'slug': 'fruits-vegetables', 'icon': '🥬'},
+    {'id': 'cat_veg', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables', 'icon': '🥬'},
     {'id': 'cat_dairy', 'name': 'Dairy & Breakfast', 'slug': 'dairy-breakfast', 'icon': '🥛'},
-    {'id': 'cat_instant', 'name': 'Instant Food & Noodles', 'slug': 'instant-food', 'icon': '🍜'},
-    {'id': 'cat_bev', 'name': 'Beverages & Drinks', 'slug': 'beverages', 'icon': '🥤'},
+    {'id': 'cat_instant', 'name': 'Instant Foods', 'slug': 'instant-food', 'icon': '🍜'},
+    {'id': 'cat_bev', 'name': 'Beverages', 'slug': 'beverages', 'icon': '🥤'},
     {'id': 'cat_snacks', 'name': 'Snacks & Munchies', 'slug': 'snacks-munchies', 'icon': '🍿'},
     {'id': 'cat_bakery', 'name': 'Bakery & Biscuits', 'slug': 'bakery-biscuits', 'icon': '🍞'},
-    {'id': 'cat_atta', 'name': 'Atta, Rice & Dal', 'slug': 'atta-rice-dal', 'icon': '🌾'},
+    {'id': 'cat_dryfruits', 'name': 'Dry Fruits & Nuts', 'slug': 'dry-fruits', 'icon': '🥜'},
+    {'id': 'cat_grocery', 'name': 'Grocery Essentials', 'slug': 'grocery-essentials', 'icon': '🫒'},
+    {'id': 'cat_chocos', 'name': 'Chocolates', 'slug': 'chocolates', 'icon': '🍫'},
     {'id': 'cat_personal', 'name': 'Personal Care', 'slug': 'personal-care', 'icon': '🧴'},
-    {'id': 'cat_house', 'name': 'Household Needs', 'slug': 'household', 'icon': '🧹'},
+    {'id': 'cat_house', 'name': 'Home & Cleaning', 'slug': 'household', 'icon': '🧹'},
+    {'id': 'cat_kitchen', 'name': 'Kitchen Needs', 'slug': 'kitchen', 'icon': '🧂'},
+  ];
+
+  static const List<Color> categoryColors = [
+    Color(0xFFDCFCE7),
+    Color(0xFFFFF7ED),
+    Color(0xFFFFE4E6),
+    Color(0xFFE0F2FE),
+    Color(0xFFFFF0F0),
+    Color(0xFFFFF7ED),
+    Color(0xFFFEF3C7),
+    Color(0xFFF0FDF4),
+    Color(0xFFFFF0F0),
+    Color(0xFFE0F2FE),
+    Color(0xFFF0FDF4),
+    Color(0xFFFFF7ED),
   ];
 
   @override
@@ -26,44 +44,58 @@ class CategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF8F8),
+      backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFB50017),
+        backgroundColor: AppDesignSystem.primary,
         elevation: 0,
         title: Text(
-          'Categories',
+          'Explore Categories',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             color: Colors.white,
             fontSize: 18,
           ),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: categoriesAsync.when(
-        data: (categories) => _buildCategoriesGrid(context, categories),
+        data: (categories) {
+          final cats = categories.isEmpty ? _buildFallbackCategories() : categories;
+          return _buildCategoriesGrid(context, cats);
+        },
         loading: () => _buildFallbackGrid(context),
         error: (_, __) => _buildFallbackGrid(context),
       ),
     );
   }
 
-  Widget _buildCategoriesGrid(BuildContext context, List<Category> categories) {
-    if (categories.isEmpty) {
-      return _buildFallbackGrid(context);
-    }
+  List<Category> _buildFallbackCategories() {
+    return fallbackCategories.map<Category>((cat) => Category(
+      id: cat['id']!,
+      name: cat['name']!,
+      slug: cat['slug']!,
+      imageUrl: '',
+      sortOrder: fallbackCategories.indexOf(cat),
+    )).toList();
+  }
 
+  Widget _buildCategoriesGrid(BuildContext context, List<Category> categories) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.9,
+        childAspectRatio: 0.88,
         crossAxisSpacing: 14,
         mainAxisSpacing: 14,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
+        final catIndex = index % fallbackCategories.length;
+        final bgColor = categoryColors[catIndex];
+        final icon = fallbackCategories[catIndex]['icon'] ?? '🛒';
+
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -77,11 +109,11 @@ class CategoriesScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF4E7E8)),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppDesignSystem.borderLight),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -94,11 +126,11 @@ class CategoriesScreen extends ConsumerWidget {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFE4E6),
+                    color: bgColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Center(
-                    child: Text('🛒', style: TextStyle(fontSize: 32)),
+                  child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 32)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -108,17 +140,17 @@ class CategoriesScreen extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C0D0F),
+                    color: AppDesignSystem.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Explore Items →',
+                  'Browse →',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: const Color(0xFFB50017),
+                    color: AppDesignSystem.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -131,90 +163,7 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildFallbackGrid(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.9,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-      ),
-      itemCount: fallbackCategories.length,
-      itemBuilder: (context, index) {
-        final cat = fallbackCategories[index];
-        final mockCat = Category(
-          id: cat['id']!,
-          name: cat['name']!,
-          slug: cat['slug']!,
-          imageUrl: '',
-          sortOrder: index,
-          createdAt: DateTime.now(),
-        );
-
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CategoryProductsScreen(category: mockCat),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF4E7E8)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFE4E6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(cat['icon']!, style: const TextStyle(fontSize: 32)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  cat['name']!,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C0D0F),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Explore Items →',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: const Color(0xFFB50017),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    final fallback = _buildFallbackCategories();
+    return _buildCategoriesGrid(context, fallback);
   }
 }

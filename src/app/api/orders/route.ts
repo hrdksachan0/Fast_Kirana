@@ -520,11 +520,16 @@ export async function POST(request: NextRequest) {
       const rDiscount = combinedSubtotal > 0 ? (rData.subtotal / combinedSubtotal) * combinedDiscount : 0
       const rTaxes = (rData.subtotal - rDiscount) * serverTaxRate
       
-      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0
+      const isFirstRestOrder = restaurantData.indexOf(rData) === 0
+      const rPackagingFee = isFirstRestOrder ? resolvedPackagingFee : 0
+
+      // If Premium Packaging (₹15) is selected, it covers handling fee for food items, so standard serverMiscFee (₹5) is waived
+      const appliedMiscFee = (rPackagingFee > 0)
+        ? rPackagingFee 
+        : ((deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0)
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
-      const rPackagingFee = (restaurantData.indexOf(rData) === 0) ? resolvedPackagingFee : 0
-      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee + rPackagingFee
+      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee
 
       ordersToCreate.push({
         type: 'RESTAURANT',
@@ -534,7 +539,7 @@ export async function POST(request: NextRequest) {
         discount: rDiscount,
         deliveryFee: rData.deliveryFee,
         taxes: rTaxes,
-        miscFee: appliedMiscFee + rPackagingFee,
+        miscFee: appliedMiscFee,
         total: rTotal,
         items: rData.items,
         notes: isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : undefined,

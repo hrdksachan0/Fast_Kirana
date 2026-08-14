@@ -538,19 +538,21 @@ export default function CheckoutPage() {
     }
   }
 
+  const isPremiumPackagingSelected = (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM'
+  const packagingFee = isPremiumPackagingSelected ? 15 : 0
+
   const groceryChargedMisc = groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP'
   const effectiveGroceryMiscFee = groceryChargedMisc ? miscFee : 0
-  const cafeChargedMisc = cafeCartItems.length > 0 && !groceryChargedMisc
+  const cafeChargedMisc = cafeCartItems.length > 0 && !groceryChargedMisc && !isPremiumPackagingSelected
   const effectiveCafeMiscFee = cafeChargedMisc ? miscFee : 0
   const effectiveMiscFee = effectiveGroceryMiscFee + effectiveCafeMiscFee
 
   const groceryTotal = groceryAdjustedSubtotal + groceryDeliveryFee + groceryTaxes + effectiveGroceryMiscFee
-  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + effectiveCafeMiscFee
+  const cafeTotal = cafeAdjustedSubtotal + cafeDeliveryFee + cafeTaxes + effectiveCafeMiscFee + packagingFee
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
   const taxes = Math.max(0, adjustedSubtotal - couponDiscount) * taxRate
-  const packagingFee = (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM' ? 15 : 0
   const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + effectiveMiscFee + packagingFee
 
   // Fetch Saved Addresses

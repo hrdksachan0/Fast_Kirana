@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(d:/flutter/bin/flutter analyze *)",
+      "Bash(d:/flutter/bin/flutter build *)"
+    ]
+  }
+}

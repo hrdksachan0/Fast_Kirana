@@ -43,7 +43,7 @@ class AdminBannersScreen extends StatelessWidget {
                     gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                     borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
                   ),
-                  child: Center(child: Text(b['title'], style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white))),
+                  child: Center(child: Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
                 Expanded(
                   child: Padding(
@@ -51,7 +51,7 @@ class AdminBannersScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(b['title'], style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                        Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                         const SizedBox(height: 4),
                         Text('${b['impressions']} views', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
                         const SizedBox(height: 4),

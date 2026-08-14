@@ -38,6 +38,7 @@ interface Product {
   isAvailable: boolean
   tags: string[]
   unit: string
+  variants?: any[] | null
   availableStartTime?: string | null
   availableEndTime?: string | null
   category?: {
@@ -82,6 +83,14 @@ export function RestaurantCatalogManager() {
   const [availableEndTime, setAvailableEndTime] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Variant States
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variants, setVariants] = useState<{ name: string; price: string; mrp: string; stock: string }[]>([])
+  const [newVarName, setNewVarName] = useState('')
+  const [newVarPrice, setNewVarPrice] = useState('')
+  const [newVarMrp, setNewVarMrp] = useState('')
+  const [newVarStock, setNewVarStock] = useState('999')
 
   // Media Library states
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
@@ -248,6 +257,12 @@ export function RestaurantCatalogManager() {
     setIsVeg(true)
     setAvailableStartTime('')
     setAvailableEndTime('')
+    setHasVariants(false)
+    setVariants([])
+    setNewVarName('')
+    setNewVarPrice('')
+    setNewVarMrp('')
+    setNewVarStock('999')
     setIsFormOpen(true)
   }
 
@@ -269,21 +284,130 @@ export function RestaurantCatalogManager() {
     setIsVeg(!product.tags.includes('non-veg'))
     setAvailableStartTime(product.availableStartTime || '')
     setAvailableEndTime(product.availableEndTime || '')
+
+    const hasVars = Array.isArray(product.variants) && product.variants.length > 0
+    setHasVariants(hasVars)
+    setVariants(
+      hasVars
+        ? (product.variants as any[]).map(v => ({
+            name: v.name || '',
+            price: String(v.price ?? ''),
+            mrp: String(v.mrp ?? v.price ?? ''),
+            stock: String(v.stock ?? '999')
+          }))
+        : []
+    )
+    setNewVarName('')
+    setNewVarPrice('')
+    setNewVarMrp('')
+    setNewVarStock('999')
     setIsFormOpen(true)
+  }
+
+  // Variant Helpers
+  const handleAddVariant = () => {
+    if (!newVarName.trim() || !newVarPrice) {
+      toast.error('Please enter variant name and price')
+      return
+    }
+    const priceVal = parseFloat(newVarPrice)
+    if (isNaN(priceVal) || priceVal < 0) {
+      toast.error('Invalid variant price')
+      return
+    }
+    const mrpVal = newVarMrp ? parseFloat(newVarMrp) : priceVal
+
+    setVariants(prev => [
+      ...prev,
+      {
+        name: newVarName.trim(),
+        price: String(priceVal),
+        mrp: String(mrpVal),
+        stock: newVarStock || '999'
+      }
+    ])
+
+    setNewVarName('')
+    setNewVarPrice('')
+    setNewVarMrp('')
+    setNewVarStock('999')
+    toast.success(`Added variant "${newVarName.trim()}"`)
+  }
+
+  const handleRemoveVariant = (index: number) => {
+    setVariants(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleAddPresetVariants = (presetType: 'portion' | 'size' | 'weight') => {
+    const baseP = parseFloat(price) || 100
+    const baseMrp = parseFloat(mrp) || baseP
+    if (presetType === 'portion') {
+      setVariants([
+        { name: 'Half', price: String(Math.round(baseP * 0.6)), mrp: String(Math.round(baseMrp * 0.6)), stock: '999' },
+        { name: 'Full', price: String(baseP), mrp: String(baseMrp), stock: '999' }
+      ])
+      setHasVariants(true)
+    } else if (presetType === 'size') {
+      setVariants([
+        { name: 'Small', price: String(Math.round(baseP * 0.75)), mrp: String(Math.round(baseMrp * 0.75)), stock: '999' },
+        { name: 'Medium', price: String(baseP), mrp: String(baseMrp), stock: '999' },
+        { name: 'Large', price: String(Math.round(baseP * 1.4)), mrp: String(Math.round(baseMrp * 1.4)), stock: '999' }
+      ])
+      setHasVariants(true)
+    } else if (presetType === 'weight') {
+      setVariants([
+        { name: '250g', price: String(Math.round(baseP * 0.3)), mrp: String(Math.round(baseMrp * 0.3)), stock: '999' },
+        { name: '500g', price: String(Math.round(baseP * 0.55)), mrp: String(Math.round(baseMrp * 0.55)), stock: '999' },
+        { name: '1 kg', price: String(baseP), mrp: String(baseMrp), stock: '999' }
+      ])
+      setHasVariants(true)
+    }
   }
 
   // Handle Form Submit (Add or Edit)
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !price) {
-      toast.error('Please fill all required fields')
+
+    if (!name.trim()) {
+      toast.error('Please enter dish name')
       return
     }
 
+    if (hasVariants) {
+      if (variants.length === 0) {
+        toast.error('Please add at least one variant option or uncheck variants')
+        return
+      }
+    } else {
+      if (!price) {
+        toast.error('Please fill in selling price')
+        return
+      }
+    }
+
     setSubmitting(true)
-    const priceVal = parseFloat(price)
-    const mrpVal = mrp ? parseFloat(mrp) : priceVal
-    const stockVal = parseInt(stock) || 999
+
+    const formattedVariants = hasVariants
+      ? variants.map(v => ({
+          name: v.name.trim(),
+          price: parseFloat(v.price) || 0,
+          mrp: parseFloat(v.mrp) || parseFloat(v.price) || 0,
+          stock: parseInt(v.stock) || 999
+        }))
+      : null
+
+    const priceVal = hasVariants && formattedVariants && formattedVariants.length > 0
+      ? formattedVariants[0].price
+      : parseFloat(price || '0')
+
+    const mrpVal = hasVariants && formattedVariants && formattedVariants.length > 0
+      ? formattedVariants[0].mrp
+      : (mrp ? parseFloat(mrp) : priceVal)
+
+    const stockVal = hasVariants && formattedVariants && formattedVariants.length > 0
+      ? formattedVariants.reduce((sum, v) => sum + (v.stock || 0), 0)
+      : (parseInt(stock) || 999)
+
     const selectedSec = menuSections.find(s => s.tag === selectedSectionTag)
     const tags = [
       selectedSectionTag || 'all',
@@ -307,6 +431,7 @@ export function RestaurantCatalogManager() {
       availableStartTime: availableStartTime.trim() || null,
       availableEndTime: availableEndTime.trim() || null,
       tags,
+      variants: formattedVariants
     }
 
     try {
@@ -581,6 +706,12 @@ export function RestaurantCatalogManager() {
                         </span>
                       )
                     })()}
+
+                    {product.variants && Array.isArray(product.variants) && product.variants.length > 0 && (
+                      <span className="text-[8px] sm:text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md border border-blue-500/20 truncate">
+                        🏷️ {product.variants.length} Variants
+                      </span>
+                    )}
                     
                     {product.stock <= 0 && (
                       <span className="text-[8px] sm:text-[10px] font-black uppercase text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 shrink-0">
@@ -603,6 +734,9 @@ export function RestaurantCatalogManager() {
                   <span className="text-xs sm:text-sm font-black text-text-primary flex items-center leading-none">
                     <IndianRupee className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
                     {product.price}
+                    {product.variants && Array.isArray(product.variants) && product.variants.length > 0 && (
+                      <span className="text-[9px] text-text-muted font-bold ml-1 uppercase">onwards</span>
+                    )}
                   </span>
                 </div>
 
@@ -689,7 +823,7 @@ export function RestaurantCatalogManager() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1">
                     <IndianRupee className="h-3.5 w-3.5" />
-                    Selling Price *
+                    Base Selling Price {hasVariants ? '(Auto)' : '*'}
                   </label>
                   <input
                     type="number"
@@ -697,15 +831,18 @@ export function RestaurantCatalogManager() {
                     value={price}
                     onChange={e => setPrice(e.target.value)}
                     placeholder="e.g. 120"
-                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
-                    required
+                    disabled={hasVariants && variants.length > 0}
+                    className={`w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold ${
+                      hasVariants && variants.length > 0 ? 'opacity-70 cursor-not-allowed bg-muted/70' : ''
+                    }`}
+                    required={!hasVariants}
                   />
                 </div>
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1">
                     <IndianRupee className="h-3.5 w-3.5" />
-                    MRP (Optional)
+                    Base MRP (Optional)
                   </label>
                   <input
                     type="number"
@@ -713,9 +850,129 @@ export function RestaurantCatalogManager() {
                     value={mrp}
                     onChange={e => setMrp(e.target.value)}
                     placeholder="e.g. 150"
-                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold"
+                    disabled={hasVariants && variants.length > 0}
+                    className={`w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold ${
+                      hasVariants && variants.length > 0 ? 'opacity-70 cursor-not-allowed bg-muted/70' : ''
+                    }`}
                   />
                 </div>
+              </div>
+
+              {/* Variants Section */}
+              <div className="space-y-3 bg-blue-500/5 dark:bg-blue-500/10 p-3.5 rounded-2xl border border-blue-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasVariants}
+                      onChange={(e) => {
+                        setHasVariants(e.target.checked)
+                        if (!e.target.checked) setVariants([])
+                      }}
+                      className="rounded border-border text-orange-600 focus:ring-orange-500 h-4 w-4 cursor-pointer"
+                    />
+                    <span>Dish Has Variants (Half/Full, Sizes, Weights)</span>
+                  </label>
+                  <span className="text-[10px] font-extrabold text-text-secondary">
+                    {hasVariants ? `${variants.length} Added` : 'Disabled'}
+                  </span>
+                </div>
+
+                {hasVariants && (
+                  <div className="space-y-3 pt-2.5 border-t border-blue-500/15">
+                    {/* Quick Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-text-secondary">Quick Presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddPresetVariants('portion')}
+                        className="px-2 py-1 bg-card hover:bg-muted border border-border text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        + Half / Full
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddPresetVariants('size')}
+                        className="px-2 py-1 bg-card hover:bg-muted border border-border text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        + Small / Med / Large
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddPresetVariants('weight')}
+                        className="px-2 py-1 bg-card hover:bg-muted border border-border text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        + 250g / 500g / 1kg
+                      </button>
+                    </div>
+
+                    {/* Added Variants List */}
+                    {variants.length > 0 && (
+                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                        {variants.map((v, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-card border border-border/70 px-3 py-2 rounded-xl text-xs font-semibold">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-extrabold text-text-primary truncate">{v.name}</span>
+                              <span className="text-[11px] text-text-muted">
+                                ₹{v.price} {v.mrp && parseFloat(v.mrp) > parseFloat(v.price) ? `(MRP ₹${v.mrp})` : ''}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVariant(idx)}
+                              className="text-[11px] text-rose-500 hover:text-rose-600 font-bold cursor-pointer shrink-0 ml-2 px-2 py-0.5 rounded-md hover:bg-rose-500/10"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Input Row for New Variant */}
+                    <div className="grid grid-cols-12 gap-2 items-end pt-1">
+                      <div className="col-span-4">
+                        <label className="text-[10px] font-black uppercase text-text-muted block mb-1">Variant Name *</label>
+                        <input
+                          type="text"
+                          value={newVarName}
+                          onChange={(e) => setNewVarName(e.target.value)}
+                          placeholder="e.g. Half / Small"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-orange-500 font-semibold"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <label className="text-[10px] font-black uppercase text-text-muted block mb-1">Selling Price *</label>
+                        <input
+                          type="number"
+                          value={newVarPrice}
+                          onChange={(e) => setNewVarPrice(e.target.value)}
+                          placeholder="₹ Price"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-orange-500 font-semibold"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <label className="text-[10px] font-black uppercase text-text-muted block mb-1">MRP Price</label>
+                        <input
+                          type="number"
+                          value={newVarMrp}
+                          onChange={(e) => setNewVarMrp(e.target.value)}
+                          placeholder="₹ MRP"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-orange-500 font-semibold"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <button
+                          type="button"
+                          onClick={handleAddVariant}
+                          className="w-full py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-2xs"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

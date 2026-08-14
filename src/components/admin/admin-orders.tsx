@@ -14,6 +14,20 @@ interface AdminOrdersProps {
 export function AdminOrders({ initialOrders }: AdminOrdersProps) {
   const [orders, setOrders] = useState(initialOrders)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [filterMode, setFilterMode] = useState<'ALL' | 'PREMIUM' | 'COMBINED'>('ALL')
+
+  const premiumCount = orders.filter((o) => o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20).length
+  const combinedCount = orders.filter((o) => !!o.combinedId).length
+
+  const filteredOrders = orders.filter((o) => {
+    if (filterMode === 'PREMIUM') {
+      return o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20
+    }
+    if (filterMode === 'COMBINED') {
+      return !!o.combinedId
+    }
+    return true
+  })
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId)
@@ -39,8 +53,47 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
-      <h3 className="font-extrabold text-text-primary text-base mb-4">Manage Orders</h3>
+    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h3 className="font-extrabold text-text-primary text-base">Manage Orders</h3>
+
+        {/* Quick Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFilterMode('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              filterMode === 'ALL'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-muted/80 text-text-secondary hover:bg-muted'
+            }`}
+          >
+            All Orders ({orders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode('PREMIUM')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              filterMode === 'PREMIUM'
+                ? 'bg-amber-500 text-white shadow-xs'
+                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+            }`}
+          >
+            <span>✨</span> Premium Thermal ({premiumCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode('COMBINED')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              filterMode === 'COMBINED'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20'
+            }`}
+          >
+            <span>🔗</span> Combined ({combinedCount})
+          </button>
+        </div>
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
@@ -55,16 +108,30 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40 font-semibold">
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-10 text-text-secondary">
-                  No orders found.
+                  No {filterMode === 'PREMIUM' ? 'Premium Thermal Packaging' : filterMode === 'COMBINED' ? 'Combined' : ''} orders found.
                 </td>
               </tr>
             ) : (
-              orders.map((o) => (
+              filteredOrders.map((o) => (
                 <tr key={o.id} className="hover:bg-muted/30">
-                  <td className="py-3 px-4 font-mono font-bold text-[10px] truncate max-w-[120px]">{o.id}</td>
+                  <td className="py-3 px-4 font-mono font-bold text-[10px] max-w-[150px]">
+                    <div className="font-extrabold text-text-primary text-xs">
+                      #{o.readableId || (o.id.length > 12 ? o.id.slice(-6).toUpperCase() : o.id)}
+                    </div>
+                    {o.combinedId && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 inline-flex items-center gap-1 mt-1">
+                        🔗 Combined
+                      </span>
+                    )}
+                    {(o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20) && (
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 inline-flex items-center gap-1 mt-1 animate-pulse shadow-2xs">
+                        ✨ Premium Packaging (+₹15)
+                      </span>
+                    )}
+                  </td>
                   <td className="py-3 px-4 truncate max-w-[150px]">
                     <div className="font-bold">{o.userName || 'No Name'}</div>
                     <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
