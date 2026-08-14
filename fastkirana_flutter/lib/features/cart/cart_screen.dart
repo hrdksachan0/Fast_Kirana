@@ -12,9 +12,9 @@ import '../checkout/checkout_screen.dart';
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 
-  static const Color primaryGreen = Color(0xFF047857);
-  static const Color primaryGreenDark = Color(0xFF065F46);
-  static const Color primaryGreenLight = Color(0xFFD1FAE5);
+  static const Color primaryPink = Color(0xFFFF2357);
+  static const Color primaryPinkDark = Color(0xFFE20A22);
+  static const Color primaryPinkLight = Color(0xFFFF6B8A);
   static const Color bgLight = Color(0xFFFAFAFA);
   static const Color textDark = Color(0xFF1A1A2E);
   static const Color textMuted = Color(0xFF6B7280);
@@ -40,7 +40,7 @@ class CartScreen extends ConsumerWidget {
           if (cart.items.isEmpty) return _buildEmptyState(context);
           return _buildCartContent(context, ref, cart);
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: primaryGreen)),
+        loading: () => const Center(child: CircularProgressIndicator(color: primaryPink)),
         error: (_, __) => _buildEmptyState(context),
       ),
     );
@@ -150,10 +150,10 @@ class CartScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: primaryGreenLight,
+                            color: primaryPinkLight,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('${product.discount.toInt()}% OFF', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: primaryGreen)),
+                          child: Text('${product.discount.toInt()}% OFF', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: primaryPink)),
                         ),
                       ],
                     ],
@@ -203,10 +203,10 @@ class CartScreen extends ConsumerWidget {
       child: Container(
         width: 32, height: 32,
         decoration: BoxDecoration(
-          color: primaryGreen.withOpacity(0.08),
+          color: primaryPink.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 16, color: primaryGreen),
+        child: Icon(icon, size: 16, color: primaryPink),
       ),
     );
   }
@@ -271,7 +271,7 @@ class CartScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('To Pay', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: textDark)),
-                      Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: primaryGreen)),
+                      Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: primaryPink)),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -285,7 +285,7 @@ class CartScreen extends ConsumerWidget {
                         ));
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryGreen,
+                        backgroundColor: primaryPink,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -322,7 +322,7 @@ class CartScreen extends ConsumerWidget {
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isGreen ? primaryGreen : textDark,
+              color: isGreen ? primaryPink : textDark,
             ),
           ),
         ],
