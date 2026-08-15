@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../providers/auth_provider.dart';
 import 'address_book_screen.dart';
 import 'wallet_screen.dart';
 import 'wishlist_screen.dart';
@@ -11,15 +12,14 @@ import 'notifications_screen.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const Color primaryGreen = Color(0xFF047857);
-  static const Color primaryGreenDark = Color(0xFF065F46);
-  static const Color primaryGreenLight = Color(0xFFD1FAE5);
   static const Color bgLight = Color(0xFFFAFAFA);
   static const Color textDark = Color(0xFF1A1A2E);
   static const Color textMuted = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(authProvider);
+
     return Scaffold(
       backgroundColor: bgLight,
       body: CustomScrollView(
@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF047857), Color(0xFF10B981)],
+                  colors: [Color(0xFFE20A22), Color(0xFFFF4D62)],
                 ),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
               ),
@@ -40,9 +40,14 @@ class ProfileScreen extends ConsumerWidget {
                 bottom: true,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  child: Column(
-                    children: [
-                      Row(
+                  child: userAsync.when(
+                    data: (user) {
+                      final name = user?.name ?? 'FastKirana User';
+                      final phoneStr = user?.phone;
+                      final phone = phoneStr != null && phoneStr.isNotEmpty ? '+91 $phoneStr' : 'Not set';
+                      final email = user?.email ?? '';
+
+                      return Row(
                         children: [
                           Container(
                             width: 72, height: 72,
@@ -59,8 +64,8 @@ class ProfileScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'FastKirana User',
-                                  style: GoogleFonts.poppins(
+                                  name,
+                                  style: GoogleFonts.inter(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
@@ -71,15 +76,18 @@ class ProfileScreen extends ConsumerWidget {
                                   children: [
                                     const Icon(Icons.location_on, size: 14, color: Colors.white70),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      'Ghatampur Market, Kanpur',
-                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                    Expanded(
+                                      child: Text(
+                                        email.isNotEmpty ? email : 'FastKirana User',
+                                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '+91 98765 43210',
+                                  phone,
                                   style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
                                 ),
                               ],
@@ -96,8 +104,68 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
+                    loading: () => Row(
+                      children: [
+                        Container(
+                          width: 72, height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(36),
+                          ),
+                          child: const Center(
+                            child: SizedBox(width: 24, height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(height: 20, width: 140, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6))),
+                              const SizedBox(height: 8),
+                              Container(height: 14, width: 100, decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(4))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    error: (_, __) => Row(
+                      children: [
+                        Container(
+                          width: 72, height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(36),
+                          ),
+                          child: const Icon(Icons.person_rounded, size: 36, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Guest',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tap to sign in',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -116,13 +184,13 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'My Orders',
-                        style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
+                        style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
                       ),
                       TextButton(
                         onPressed: () {},
                         child: Text(
                           'View All',
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: primaryGreen),
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.primary),
                         ),
                       ),
                     ],
@@ -145,7 +213,7 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Account & Services',
-                    style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
+                    style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
                   ),
                   const SizedBox(height: 14),
                   _buildAccountCard(context),
@@ -163,7 +231,7 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Help & Support',
-                    style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
+                    style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
                   ),
                   const SizedBox(height: 14),
                   _buildHelpCard(context),
@@ -223,10 +291,10 @@ class ProfileScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildOrderStep(Icons.pending_outlined, 'Pending', '2', AppDesignSystem.statusPending, AppDesignSystem.statusPendingText),
-                _buildOrderStep(Icons.confirmation_num_outlined, 'Confirmed', '1', AppDesignSystem.statusConfirmed, AppDesignSystem.statusConfirmedText),
-                _buildOrderStep(Icons.inventory_2_outlined, 'Packed', '1', AppDesignSystem.statusPacked, AppDesignSystem.statusPackedText),
-                _buildOrderStep(Icons.delivery_dining_outlined, 'Delivered', '12', AppDesignSystem.statusDelivered, AppDesignSystem.statusDeliveredText),
+                _buildOrderStep(Icons.pending_outlined, 'Pending', '0', AppDesignSystem.statusPending, AppDesignSystem.statusPendingText),
+                _buildOrderStep(Icons.confirmation_num_outlined, 'Confirmed', '0', AppDesignSystem.statusConfirmed, AppDesignSystem.statusConfirmedText),
+                _buildOrderStep(Icons.inventory_2_outlined, 'Packed', '0', AppDesignSystem.statusPacked, AppDesignSystem.statusPackedText),
+                _buildOrderStep(Icons.delivery_dining_outlined, 'Delivered', '0', AppDesignSystem.statusDelivered, AppDesignSystem.statusDeliveredText),
               ],
             ),
             const SizedBox(height: 16),
@@ -238,13 +306,13 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Quick stats
+            // Quick stats - placeholder until we have real data from orders API
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickStat('Active Orders', '4', Icons.shopping_bag_rounded, primaryGreen),
-                _buildQuickStat('Total Saved', '₹1,250', Icons.savings_rounded, const Color(0xFF10B981)),
-                _buildQuickStat('Total Spent', '₹8,490', Icons.account_balance_wallet_rounded, AppDesignSystem.textSecondary),
+                _buildQuickStat('Active Orders', '0', Icons.shopping_bag_rounded, AppDesignSystem.primary),
+                _buildQuickStat('Total Saved', '₹0', Icons.savings_rounded, const Color(0xFF22C55E)),
+                _buildQuickStat('Total Spent', '₹0', Icons.account_balance_wallet_rounded, AppDesignSystem.textSecondary),
               ],
             ),
           ],
@@ -271,7 +339,7 @@ class ProfileScreen extends ConsumerWidget {
                   margin: const EdgeInsets.all(4),
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: primaryGreen,
+                    color: AppDesignSystem.primary,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -317,16 +385,16 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.favorite_border_rounded,
             iconColor: AppDesignSystem.danger,
             title: 'Wishlist & Favorites',
-            subtitle: '12 items saved',
+            subtitle: null,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen())),
           ),
           _buildDivider(),
           _buildProfileTile(
             context,
             icon: Icons.repeat_rounded,
-            iconColor: primaryGreen,
+            iconColor: AppDesignSystem.primary,
             title: 'Daily Subscriptions',
-            subtitle: '3 active subscriptions',
+            subtitle: null,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
           ),
           _buildDivider(),
@@ -335,7 +403,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.location_on_outlined,
             iconColor: const Color(0xFF3B82F6),
             title: 'My Addresses',
-            subtitle: '2 addresses',
+            subtitle: null,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressBookScreen())),
           ),
           _buildDivider(),
@@ -344,7 +412,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.wallet_outlined,
             iconColor: const Color(0xFFF59E0B),
             title: 'Wallet & Cashbacks',
-            subtitle: '₹250 available',
+            subtitle: null,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
           ),
           _buildDivider(),
@@ -353,7 +421,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.notifications_none_rounded,
             iconColor: const Color(0xFF8B5CF6),
             title: 'Notifications',
-            subtitle: '3 new notifications',
+            subtitle: null,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
           ),
         ],
@@ -376,7 +444,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.headset_mic_rounded,
             iconColor: const Color(0xFF06B6D4),
             title: 'Customer Support',
-            subtitle: 'Chat or call us',
+            subtitle: null,
             onTap: () {},
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -393,16 +461,16 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.help_outline_rounded,
             iconColor: const Color(0xFF6366F1),
             title: 'FAQs',
-            subtitle: 'Frequently asked questions',
+            subtitle: null,
             onTap: () {},
           ),
           _buildDivider(),
           _buildProfileTile(
             context,
             icon: Icons.share_rounded,
-            iconColor: primaryGreen,
+            iconColor: AppDesignSystem.primary,
             title: 'Share App',
-            subtitle: 'Share with friends & family',
+            subtitle: null,
             onTap: () {},
           ),
         ],
@@ -414,7 +482,7 @@ class ProfileScreen extends ConsumerWidget {
     required IconData icon,
     required Color iconColor,
     required String title,
-    required String subtitle,
+    String? subtitle,
     required VoidCallback onTap,
     Widget? trailing,
   }) {
@@ -439,7 +507,10 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
-                  Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
+                  ],
                 ],
               ),
             ),

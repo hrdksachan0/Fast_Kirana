@@ -86,9 +86,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", jakarta.variable)} suppressHydrationWarning>
       <head>
-        <Script
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

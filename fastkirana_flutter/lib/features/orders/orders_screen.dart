@@ -7,6 +7,7 @@ import '../../core/utils/validators.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/brand_card.dart';
 import 'order_detail_screen.dart';
 
@@ -17,13 +18,13 @@ final ordersProvider = FutureProvider.family<List<Order>, String>((ref, userId) 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
 
-  static const Color primaryGreen = Color(0xFF047857);
   static const Color textDark = Color(0xFF1A1A2E);
   static const Color textMuted = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ordersAsync = ref.watch(ordersProvider('user_placeholder'));
+    final userId = ref.watch(currentUserIdProvider) ?? '';
+    final ordersAsync = ref.watch(ordersProvider(userId));
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
@@ -57,7 +58,7 @@ class OrdersScreen extends ConsumerWidget {
               },
               loading: () => const Padding(
                 padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator(color: primaryGreen)),
+                child: Center(child: CircularProgressIndicator(color: AppDesignSystem.primary)),
               ),
               error: (e, _) => _buildEmptyOrders(context, message: 'Error loading orders: $e'),
             ),
@@ -76,11 +77,11 @@ class OrdersScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF047857), Color(0xFF10B981)],
+          colors: [Color(0xFFE20A22), Color(0xFFFF4D62)],
         ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: primaryGreen.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
+          BoxShadow(color: AppDesignSystem.primary.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -245,7 +246,7 @@ class OrdersScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Text(
                         Helpers.formatPrice(order.total),
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: primaryGreen),
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.primary),
                       ),
                     ],
                   ),
@@ -268,10 +269,10 @@ class OrdersScreen extends ConsumerWidget {
             Container(
               width: 120, height: 120,
               decoration: BoxDecoration(
-                color: primaryGreen.withOpacity(0.08),
+                color: AppDesignSystem.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(60),
               ),
-              child: Icon(Icons.receipt_long_outlined, size: 60, color: primaryGreen.withOpacity(0.3)),
+              child: Icon(Icons.receipt_long_outlined, size: 60, color: AppDesignSystem.primary.withOpacity(0.3)),
             ),
             const SizedBox(height: 28),
             Text(

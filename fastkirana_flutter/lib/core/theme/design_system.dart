@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
 class AppDesignSystem {
-  // FastKirana.in Palette (matching website)
-  static const Color primary = Color(0xFFFF2357); // Bright Pink/Red
-  static const Color primaryDark = Color(0xFFE20A22);
-  static const Color primaryLight = Color(0xFFFF6B8A);
-  static const Color cafeAccent = Color(0xFFFE6E00); // Orange accent
-  static const Color accent = Color(0xFFF99C00);
-  static const Color accentDark = Color(0xFFFE6E00);
-  static const Color discount = Color(0xFF10B981); // Green for savings
+  // FastKirana Brand Colors (Matching Web App globals.css: Red #E20A22)
+  static const Color primary = Color(0xFFE20A22);
+  static const Color primaryDark = Color(0xFFB30013);
+  static const Color primaryLight = Color(0xFFFF4D62);
+  static const Color cafeAccent = Color(0xFFF59E0B);
+  static const Color accent = Color(0xFF00B140);
+  static const Color accentDark = Color(0xFF008F33);
+  static const Color discount = Color(0xFFFF6B35);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3080FF);
-  static const Color success = Color(0xFF22C55E);
+  static const Color success = Color(0xFF10B981);
 
   // Status Colors
   static const Color statusPending = Color(0xFFFEF3C7);
@@ -23,8 +23,8 @@ class AppDesignSystem {
   static const Color statusPackedText = Color(0xFF3730A3);
   static const Color statusShipped = Color(0xFFF3E8FF);
   static const Color statusShippedText = Color(0xFF6B21A8);
-  static const Color statusDelivered = Color(0xFFD1FAE5);
-  static const Color statusDeliveredText = Color(0xFF065F46);
+  static const Color statusDelivered = Color(0xFFFFE4E6);
+  static const Color statusDeliveredText = Color(0xFFB30013);
   static const Color statusCancelled = Color(0xFFFEE2E2);
   static const Color statusCancelledText = Color(0xFF991B1B);
 
@@ -50,7 +50,7 @@ class AppDesignSystem {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF2357), Color(0xFFFE6E00)],
+    colors: [Color(0xFFE20A22), Color(0xFFFF4D62)],
   );
 
   static const LinearGradient accentGradient = LinearGradient(

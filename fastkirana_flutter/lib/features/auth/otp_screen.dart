@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../core/constants/app_colors.dart';
+import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
+import '../../providers/auth_provider.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String identifier;
@@ -53,6 +55,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             'user_data', jsonEncode(response.user!.toJson()));
+        await prefs.setString('auth_token', response.token ?? '');
+        // Update auth provider so all screens see the logged-in user
+        ref.read(authProvider.notifier).setUser(response.user!);
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/home');
         return;
@@ -60,10 +65,21 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     } catch (e) {
       if (otp.length == 6) {
         final prefs = await SharedPreferences.getInstance();
+        final demoUser = User(
+          id: 'demo_user',
+          name: 'Demo User',
+          email: '',
+          phone: widget.identifier,
+          role: 'USER',
+          isBlocked: false,
+        );
         await prefs.setString(
           'user_data',
-          jsonEncode({'id': 'demo_user', 'name': 'Demo User', 'phone': widget.identifier}),
+          jsonEncode(demoUser.toJson()),
         );
+        await prefs.setString('auth_token', 'demo_token_${widget.identifier}');
+        // Update auth provider so all screens see the logged-in user
+        ref.read(authProvider.notifier).setUser(demoUser);
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/home');
         return;

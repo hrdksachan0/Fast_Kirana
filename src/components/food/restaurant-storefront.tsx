@@ -161,11 +161,19 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     // Filter out disabled sections (owner can toggle sections off)
     sections = sections.filter((s: any) => !s.disabled)
 
-    // Filter products
+    // Filter products — strictly attach current restaurant so tags/badges never mismatch
     let filteredProducts = products.map((p: any) => ({
       ...p,
-      restaurantId: p.restaurantId || restaurant.id,
-      restaurant: p.restaurant || { id: restaurant.id, name: restaurant.name, slug: restaurant.slug, address: restaurant.address, ownerPhone: restaurant.ownerPhone, isOpen: restaurant.isOpen }
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        slug: restaurant.slug,
+        address: restaurant.address,
+        ownerPhone: restaurant.ownerPhone,
+        isOpen: restaurant.isOpen
+      }
     }))
     if (isVegOnly) {
       filteredProducts = filteredProducts.filter(p =>
@@ -256,17 +264,15 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
   const [isScrolledPastHero, setIsScrolledPastHero] = useState(false)
 
-  // ScrollSpy for active category
+  // ScrollSpy for active category on window scroll
   useEffect(() => {
     if (categories.length === 0) return
-
-    const panel = document.getElementById('products-panel')
 
     const handleScroll = () => {
       setIsScrolledPastHero(window.scrollY > 150)
       if (isClickingTabRef.current) return
 
-      const panelScrollTop = panel ? panel.scrollTop + 80 : window.scrollY + 180
+      const scrollPos = window.scrollY + 180
 
       const sectionEls = categories
         .filter(c => c.tag !== 'all')
@@ -278,7 +284,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
       let activeTag = 'all'
       for (const section of sectionEls) {
-        if (section.el && section.el.offsetTop <= panelScrollTop) {
+        if (section.el && section.el.offsetTop <= scrollPos) {
           activeTag = section.tag
         }
       }
@@ -287,32 +293,27 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-    if (panel) panel.addEventListener('scroll', handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      if (panel) panel.removeEventListener('scroll', handleScroll)
-    }
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [categories])
 
-  // Auto-scroll vertical sidebar just enough to keep active category tab visible without over-scrolling
+  // Smoothly center the active pill in the horizontal strip on scroll
   useEffect(() => {
     if (!activeCategoryTag) return
-    const sidebar = document.getElementById('cafe-sidebar')
-    const activeTabEl = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
-    if (sidebar && activeTabEl) {
-      const containerHeight = sidebar.clientHeight
-      const maxScroll = sidebar.scrollHeight - containerHeight
-      if (maxScroll <= 0) return
+    const mobileSidebar = document.getElementById('mobile-cafe-sidebar')
+    const activeMobileTabEl = document.getElementById(`mobile-category-tab-${activeCategoryTag}`)
+    if (mobileSidebar && activeMobileTabEl) {
+      const containerWidth = mobileSidebar.clientWidth
+      const maxScroll = mobileSidebar.scrollWidth - containerWidth
+      if (maxScroll > 0) {
+        const btnOffsetLeft = activeMobileTabEl.offsetLeft
+        const btnWidth = activeMobileTabEl.clientWidth
+        const targetScrollLeft = btnOffsetLeft - (containerWidth / 2) + (btnWidth / 2)
 
-      const btnOffsetTop = activeTabEl.offsetTop
-      const btnHeight = activeTabEl.clientHeight
-      const targetScrollTop = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2)
-
-      sidebar.scrollTo({
-        top: Math.max(0, Math.min(targetScrollTop, maxScroll)),
-        behavior: 'smooth'
-      })
+        mobileSidebar.scrollTo({
+          left: Math.max(0, Math.min(targetScrollLeft, maxScroll)),
+          behavior: 'smooth'
+        })
+      }
     }
   }, [activeCategoryTag])
 
@@ -321,56 +322,18 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     setActiveCategoryTag(tag)
     isClickingTabRef.current = true
 
-    const panel = document.getElementById('products-panel')
     if (tag === 'all') {
-      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       const el = document.getElementById(`section-${tag}`)
-      if (el && panel) {
-        // Use el.offsetTop relative to the panel's own scroll container
-        const panelRect = panel.getBoundingClientRect()
-        const elRect = el.getBoundingClientRect()
-        const scrollOffset = panel.scrollTop + (elRect.top - panelRect.top) - 10
-        panel.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'smooth' })
+      if (el) {
+        const yOffset = -145
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
       }
     }
     setTimeout(() => { isClickingTabRef.current = false }, 800)
   }
-
-  // Scroll active tab into view (horizontal tabs for standard restaurants)
-  useEffect(() => {
-    if (!categoryTabsRef.current) return
-    const activeBtn = categoryTabsRef.current.querySelector(`[data-tag="${activeCategoryTag}"]`) as HTMLElement
-    if (activeBtn && categoryTabsRef.current) {
-      const container = categoryTabsRef.current
-      const containerRect = container.getBoundingClientRect()
-      const tabRect = activeBtn.getBoundingClientRect()
-      const scrollLeft = container.scrollLeft + (tabRect.left - containerRect.left) - (containerRect.width / 2) + (tabRect.width / 2)
-      container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' })
-    }
-  }, [activeCategoryTag])
-
-  // Auto-scroll vertical sidebar just enough to keep active category tab visible without over-scrolling
-  useEffect(() => {
-    if (!activeCategoryTag) return
-    const sidebar = document.getElementById('cafe-sidebar')
-    const activeTabEl = document.getElementById(`cafe-category-tab-${activeCategoryTag}`)
-    if (sidebar && activeTabEl) {
-      const containerHeight = sidebar.clientHeight
-      const maxScroll = sidebar.scrollHeight - containerHeight
-      if (maxScroll <= 0) return
-
-      const btnOffsetTop = activeTabEl.offsetTop
-      const btnHeight = activeTabEl.clientHeight
-      const targetScrollTop = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2)
-
-      sidebar.scrollTo({
-        top: Math.max(0, Math.min(targetScrollTop, maxScroll)),
-        behavior: 'smooth'
-      })
-    }
-  }, [activeCategoryTag])
 
   const totalItems = getTotalItems()
   const subtotal = getSubtotal()
@@ -382,7 +345,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-20 relative">
       <FloatingEmojis type={isCafe ? 'cafe' : 'food'} />
-      {/* Sticky Header */}
+      {/* Sticky Top Header (Back Button, Name & Search) */}
       <div className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60">
         <div className={cn("mx-auto px-4 h-12 sm:h-14 flex items-center justify-between", isCafe ? "max-w-4xl" : "max-w-3xl")}>
           <button
@@ -497,6 +460,29 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
         )}
       </div>
 
+      {/* Mobile SLA Info Strip */}
+      <div className={cn("mx-auto px-4 py-3 flex items-center justify-between gap-2", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+        <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+          {/* Rating Badge */}
+          {restaurant.rating && (
+            <div className="flex items-center gap-1 bg-emerald-600 text-white px-2.5 py-1 rounded-lg shrink-0">
+              <Star size={12} className="fill-white" />
+              <span className="text-xs font-black tabular-nums">{Number(restaurant.rating).toFixed(1)}</span>
+            </div>
+          )}
+          {/* Delivery Time */}
+          <div className="flex items-center gap-1 text-xs font-bold text-zinc-600 dark:text-zinc-400 shrink-0">
+            <Clock size={13} className="text-zinc-400" />
+            <span>30-40 min</span>
+          </div>
+          {/* Price for two */}
+          <div className="flex items-center gap-1 text-xs font-bold text-zinc-600 dark:text-zinc-400 shrink-0">
+            <span>₹200 for two</span>
+          </div>
+        </div>
+        {/* Share button (optional) */}
+      </div>
+
       {/* Closed Kitchen Operating Hours Banner */}
       {(() => {
         const operatingStatus = checkStoreOperatingStatus(restaurant)
@@ -512,14 +498,14 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       })()}
 
       {/* Menu / Reviews Sub-tabs */}
-      <div className={cn("mx-auto px-4 pt-4 flex gap-4 border-b border-zinc-200 dark:border-zinc-800", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+      <div className={cn("mx-auto px-4 pt-3 pb-1.5 flex gap-5 border-b border-zinc-200 dark:border-zinc-800", isCafe ? "max-w-4xl" : "max-w-3xl")}>
         <button
           onClick={() => { setActiveSubTab('menu'); triggerHaptic('light') }}
           className={cn(
-            "pb-2 text-xs font-black uppercase tracking-wider transition-all border-b-2",
+            "pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer",
             activeSubTab === 'menu'
               ? "border-orange-500 text-orange-500"
-              : "border-transparent text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-250"
+              : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
           )}
         >
           Menu
@@ -527,98 +513,87 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
         <button
           onClick={() => { setActiveSubTab('reviews'); triggerHaptic('light') }}
           className={cn(
-            "pb-2 text-xs font-black uppercase tracking-wider transition-all border-b-2",
+            "pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer",
             activeSubTab === 'reviews'
               ? "border-orange-500 text-orange-500"
-              : "border-transparent text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-250"
+              : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
           )}
         >
           Reviews ({reviews.length})
         </button>
       </div>
 
-      {/* Category Tabs (Sticky) */}
-      {activeSubTab === 'menu' && !isCafe && (
-        <div className="sticky top-12 sm:top-14 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/60 py-2 shadow-2xs">
-          <div
-            ref={categoryTabsRef}
-            className="flex gap-1.5 px-4 overflow-x-auto scrollbar-hide max-w-3xl mx-auto"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {categories.map(cat => (
-              <button
-                key={cat.tag}
-                data-tag={cat.tag}
-                onClick={() => scrollToSection(cat.tag)}
-                className={cn(
-                  "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 whitespace-nowrap",
-                  activeCategoryTag === cat.tag
-                    ? "bg-orange-500 text-white shadow-md shadow-orange-500/25"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                )}
-              >
-                {cat.emoji} {cat.title} ({cat.products.length})
-              </button>
-            ))}
+      {/* Horizontal Visual Category Menu (Rendered Directly Below MENU, Sticks to Top on Scroll, Centers Active Category) */}
+      {activeSubTab === 'menu' && (
+        <div className="sticky top-[48px] sm:top-[56px] z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80 shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.35)] py-2">
+          <div className={cn("mx-auto px-4", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+            <div 
+              id="mobile-cafe-sidebar"
+              className="flex items-center gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-0.5 scroll-smooth"
+            >
+              {categories.map((cat: any) => {
+                const isActive = activeCategoryTag === cat.tag
+                const image = cat.tag === 'all' ? null : (cat.image || getCafeSectionImage(cat.tag))
+
+                return (
+                  <button
+                    key={cat.tag}
+                    id={`mobile-category-tab-${cat.tag}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      scrollToSection(cat.tag)
+                    }}
+                    className={cn(
+                      "group flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-all duration-200 p-0.5 rounded-2xl",
+                      isActive ? "scale-105" : "opacity-75 hover:opacity-100"
+                    )}
+                  >
+                    {/* Circle Image Thumbnail */}
+                    <div 
+                      className={cn(
+                        "relative w-11 h-11 min-[375px]:w-12 min-[375px]:h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
+                        isActive 
+                          ? "border-orange-500 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20" 
+                          : "border-zinc-200 dark:border-zinc-800 hover:border-orange-400/50"
+                      )}
+                    >
+                      <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-850 flex items-center justify-center">
+                        {image ? (
+                          <Image
+                            src={image}
+                            alt={cat.title}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="text-base select-none">{cat.emoji || '🍽️'}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Category Title - Compact Double Line Centered */}
+                    <span 
+                      className={cn(
+                        "text-[9.5px] min-[375px]:text-[10px] font-black tracking-tight text-center line-clamp-2 max-w-[62px] min-[375px]:max-w-[68px] leading-[1.1] h-[22px] min-[375px]:h-[24px] flex items-center justify-center transition-colors px-0.5",
+                        isActive ? "text-orange-600 dark:text-orange-400" : "text-zinc-700 dark:text-zinc-300"
+                      )}
+                    >
+                      {cat.title}
+                    </span>
+
+                    {/* Active Underline Pip */}
+                    <div className={cn(
+                      "h-0.5 rounded-full transition-all duration-300",
+                      isActive ? "w-4 bg-orange-500" : "w-0 bg-transparent"
+                    )} />
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
-
-      {/* Sticky Top Restaurant Branding Header on Scroll */}
-      <AnimatePresence>
-        {showStickyBranding && (
-          <motion.div
-            initial={{ y: -70, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -70, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60 px-3.5 sm:px-6 py-2.5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-between transition-all"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={() => router.back()}
-                className="h-8 w-8 rounded-full bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer shadow-2xs border border-zinc-200/50 dark:border-zinc-700/50"
-                aria-label="Go Back"
-              >
-                <ArrowLeft size={16} strokeWidth={2.5} />
-              </button>
-              
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="relative h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20 overflow-hidden">
-                  {restaurant.image ? (
-                    <Image src={restaurant.image} alt={restaurant.name} fill className="object-cover" />
-                  ) : (
-                    <span>{restaurant.name.charAt(0)}</span>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <h3 className="text-xs sm:text-base font-extrabold text-zinc-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
-                    {restaurant.name}
-                  </h3>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => {
-                  const searchInput = document.getElementById('search-input-box')
-                  if (searchInput) {
-                    searchInput.focus()
-                    window.scrollTo({ top: 120, behavior: 'smooth' })
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100/90 dark:bg-zinc-800/90 hover:bg-orange-500 hover:text-white text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-zinc-700/50 shadow-2xs group text-[11px] font-bold"
-                title="Search Menu"
-              >
-                <Search size={14} className="group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Search</span>
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {activeSubTab === 'menu' ? (
         <>
@@ -674,155 +649,60 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                 </button>
               </div>
             ) : (
-              /* Split Sidebar Layout (for all outlets) */
-              <div className="flex flex-row items-start w-full gap-3 sm:gap-6 mt-2">
-                {/* Left Vertical Category Sidebar */}
-                <aside 
-                  id="cafe-sidebar" 
-                  className={cn(
-                    "sticky z-30 w-[86px] min-[375px]:w-[92px] sm:w-[115px] shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none py-1 pb-4 space-y-1.5 select-none border-r border-zinc-200/60 dark:border-zinc-800/60 pr-1 sm:pr-2 self-start transition-all duration-200",
-                    showStickyBranding ? "top-[56px] sm:top-[62px]" : "top-[68px] sm:top-[74px]"
-                  )}
-                  style={{
-                    maxHeight: showStickyBranding 
-                      ? 'calc(100vh - 130px)' 
-                      : 'calc(100vh - 145px)',
-                  }}
-                >
-                  {categories.map((cat: any) => {
-                    const isActive = activeCategoryTag === cat.tag
-                    const image = cat.tag === 'all' ? null : (cat.image || getCafeSectionImage(cat.tag))
+              <div className="w-full space-y-8 mt-2">
+                {categories.filter(c => c.tag !== 'all').map(cat => {
+                  const isCollapsed = expandedCategories.has(cat.tag)
+                  const isExpanded = !isCollapsed || searchQuery !== ''
 
-                    return (
-                      <button
-                        key={cat.tag}
-                        id={`cafe-category-tab-${cat.tag}`}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          scrollToSection(cat.tag)
-                        }}
-                        className={cn(
-                          "w-full flex flex-col items-center gap-1.5 p-1.5 rounded-2xl transition-all duration-200 text-center outline-none group cursor-pointer border-l-2",
-                          isActive 
-                            ? "bg-orange-500/10 dark:bg-orange-500/15 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-2xs" 
-                            : "border-transparent text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
-                        )}
-                      >
-                        <div 
-                          className={cn(
-                            "relative w-9 h-9 min-[375px]:w-10 min-[375px]:h-10 rounded-full overflow-hidden shrink-0 border transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
-                            isActive 
-                              ? "border-orange-500 scale-105 shadow-2xs" 
-                              : "border-zinc-200 dark:border-zinc-800"
-                          )}
+                  return (
+                    <div 
+                      key={cat.tag} 
+                      id={`section-${cat.tag}`}
+                      className="space-y-3 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 scroll-mt-24"
+                    >
+                      <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
+                            {cat.title} Specials
+                          </h4>
+                          <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                            {cat.products.length} items
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            triggerHaptic('light')
+                            toggleCategoryExpand(cat.tag)
+                          }}
+                          className="text-[11px] font-black text-orange-600 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
                         >
-                          <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-850 flex items-center justify-center">
-                            {image ? (
-                              <Image
-                                src={image}
-                                alt={cat.title}
-                                fill
-                                sizes="40px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <span className="text-base select-none">{cat.emoji || '🍽️'}</span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-[9.5px] min-[375px]:text-[10px] sm:text-[11px] font-extrabold leading-[1.15] text-center max-w-full break-words">
-                          {cat.title}
-                        </span>
-                      </button>
-                    )
-                  })}
-
-
-                </aside>
-
-                {/* Right Side Products Container */}
-                <main 
-                  id="products-panel" 
-                  className="flex-grow min-w-0 space-y-8 pb-16 overflow-y-auto max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-150px)] scrollbar-none pr-1"
-                >
-                  {categories.filter(c => c.tag !== 'all').map(cat => {
-                    const isCollapsed = expandedCategories.has(cat.tag)
-                    const isExpanded = !isCollapsed || searchQuery !== ''
-                    
-                    return (
-                      <div 
-                        key={cat.tag} 
-                        id={`section-${cat.tag}`}
-                        className="space-y-3 pt-4 border-t border-zinc-200/50 dark:border-zinc-800/40 first:border-t-0 scroll-mt-24"
-                      >
-                        <div className="flex items-center justify-between px-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
-                              {cat.title} Specials
-                            </h4>
-                            <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
-                              {cat.products.length} items
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => {
-                              triggerHaptic('light')
-                              toggleCategoryExpand(cat.tag)
-                            }}
-                            className="text-[11px] font-black text-orange-600 hover:opacity-85 flex items-center gap-0.5 select-none cursor-pointer"
-                          >
-                            <span>{isExpanded ? 'Collapse' : `See All (${cat.products.length})`}</span>
-                            <ChevronRight size={12} strokeWidth={3} className={cn("transition-transform duration-200", isExpanded && "rotate-90")} />
-                          </button>
-                        </div>
-
-                        {isExpanded ? (
-                          /* Expanded: Full Grid Layout (Top to Bottom) */
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {cat.products.map((product: any) => (
-                              <div key={product.id} className="w-full">
-                                <ProductCard product={product} />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          /* Collapsed: Horizontal Slider Layout */
-                          <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-3 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
-                            {cat.products.map((product: any) => (
-                              <div key={product.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[200px] shrink-0 snap-start">
-                                <ProductCard product={product} />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                          <span>{isExpanded ? 'Collapse' : `See All (${cat.products.length})`}</span>
+                          <ChevronRight size={12} strokeWidth={3} className={cn("transition-transform duration-200", isExpanded && "rotate-90")} />
+                        </button>
                       </div>
-                    )
-                  })}
 
-
-                </main>
-              </div>
-            )}
-
-            {/* Empty state */}
-            {products.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <span className="text-5xl">🍽️</span>
-                <p className="text-sm font-bold text-zinc-500">Menu not available yet</p>
-                <p className="text-[11px] text-zinc-400">Check back soon!</p>
-              </div>
-            )}
-
-            {searchQuery && categories[0]?.products?.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <span className="text-4xl">🔍</span>
-                <p className="text-sm font-bold text-zinc-500">No items found for &quot;{searchQuery}&quot;</p>
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-[11px] font-bold text-orange-500"
-                >
-                  Clear search
-                </button>
+                      {isExpanded ? (
+                        /* Expanded: Full Grid Layout (Top to Bottom) */
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {cat.products.map((product: any) => (
+                            <div key={product.id} className="w-full">
+                              <ProductCard product={product} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Collapsed: Horizontal Slider Layout */
+                        <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-3 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
+                          {cat.products.map((product: any) => (
+                            <div key={product.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[200px] shrink-0 snap-start">
+                              <ProductCard product={product} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -854,7 +734,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     onClick={() => { setNewRating(s); triggerHaptic('light') }}
                     className="text-yellow-400 p-0.5"
                   >
-                    <Star size={20} className={cn("transition-colors", s <= newRating ? "fill-yellow-400 text-yellow-400" : "text-zinc-350 dark:text-zinc-750")} />
+                    <Star size={20} className={cn("transition-colors", s <= newRating ? "fill-yellow-400 text-yellow-400" : "text-zinc-300 dark:text-zinc-700")} />
                   </button>
                 ))}
               </div>

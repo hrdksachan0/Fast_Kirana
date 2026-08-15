@@ -1,8 +1,3 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'product.g.dart';
-
-@JsonSerializable()
 class Product {
   final String id;
   final String name;
@@ -66,16 +61,118 @@ class Product {
     this.restaurant,
   });
 
-  factory Product.fromJson(Map<String, dynamic> json) =>
-      _$ProductFromJson(json);
-  Map<String, dynamic> toJson() => _$ProductToJson(this);
+  factory Product.fromJson(Map<String, dynamic> json) {
+    List<String> tagsList = [];
+    if (json['tags'] is List) {
+      tagsList = (json['tags'] as List).map((e) => e.toString()).toList();
+    } else if (json['tags'] is String) {
+      tagsList = (json['tags'] as String)
+          .replaceAll('{', '')
+          .replaceAll('}', '')
+          .replaceAll('"', '')
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    DateTime parsedCreated;
+    try {
+      parsedCreated = json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'].toString())
+          : DateTime.now();
+    } catch (_) {
+      parsedCreated = DateTime.now();
+    }
+
+    DateTime? parsedExpiry;
+    if (json['expiryDate'] != null) {
+      try {
+        parsedExpiry = DateTime.parse(json['expiryDate'].toString());
+      } catch (_) {}
+    }
+
+    final mrpVal = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
+    final priceVal = double.tryParse(json['price']?.toString() ?? '0') ?? mrpVal;
+    final discountVal = double.tryParse(json['discount']?.toString() ?? '0') ??
+        (mrpVal > priceVal && mrpVal > 0 ? ((mrpVal - priceVal) / mrpVal * 100) : 0.0);
+
+    return Product(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Product',
+      slug: json['slug']?.toString() ?? '',
+      description: json['description']?.toString(),
+      imageUrl: json['imageUrl']?.toString(),
+      categoryId: json['categoryId']?.toString() ?? '',
+      restaurantId: json['restaurantId']?.toString(),
+      mrp: mrpVal,
+      price: priceVal,
+      discount: discountVal,
+      unit: (json['unit'] != null && json['unit'].toString().trim().isNotEmpty)
+          ? json['unit'].toString()
+          : '1 unit',
+      stock: int.tryParse(json['stock']?.toString() ?? '999') ?? 999,
+      isAvailable: json['isAvailable'] != false,
+      tags: tagsList,
+      variants: json['variants'],
+      minStock: int.tryParse(json['minStock']?.toString() ?? '0') ?? 0,
+      expiryDate: parsedExpiry,
+      costPrice: double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
+      location: json['location']?.toString(),
+      isFlashDeal: json['isFlashDeal'] == true,
+      isTopPick: json['isTopPick'] == true,
+      isBestSeller: json['isBestSeller'] == true,
+      sortOrder: int.tryParse(json['sortOrder']?.toString() ?? '0') ?? 0,
+      availableStartTime: json['availableStartTime']?.toString(),
+      availableEndTime: json['availableEndTime']?.toString(),
+      barcode: json['barcode']?.toString(),
+      createdAt: parsedCreated,
+      category: json['category'] is Map<String, dynamic>
+          ? CategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
+          : null,
+      restaurant: json['restaurant'] is Map<String, dynamic>
+          ? RestaurantInfo.fromJson(json['restaurant'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'slug': slug,
+        'description': description,
+        'imageUrl': imageUrl,
+        'categoryId': categoryId,
+        'restaurantId': restaurantId,
+        'mrp': mrp,
+        'price': price,
+        'discount': discount,
+        'unit': unit,
+        'stock': stock,
+        'isAvailable': isAvailable,
+        'tags': tags,
+        'variants': variants,
+        'minStock': minStock,
+        'expiryDate': expiryDate?.toIso8601String(),
+        'costPrice': costPrice,
+        'location': location,
+        'isFlashDeal': isFlashDeal,
+        'isTopPick': isTopPick,
+        'isBestSeller': isBestSeller,
+        'sortOrder': sortOrder,
+        'availableStartTime': availableStartTime,
+        'availableEndTime': availableEndTime,
+        'barcode': barcode,
+        'createdAt': createdAt.toIso8601String(),
+        'category': category?.toJson(),
+        'restaurant': restaurant?.toJson(),
+      };
 
   bool get isInStock => stock > 0 && isAvailable;
   double get savings => mrp - price;
   int get discountPercentage => discount.toInt();
 }
 
-@JsonSerializable()
 class CategoryInfo {
   final String id;
   final String name;
@@ -89,12 +186,21 @@ class CategoryInfo {
     this.imageUrl,
   });
 
-  factory CategoryInfo.fromJson(Map<String, dynamic> json) =>
-      _$CategoryInfoFromJson(json);
-  Map<String, dynamic> toJson() => _$CategoryInfoToJson(this);
+  factory CategoryInfo.fromJson(Map<String, dynamic> json) => CategoryInfo(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        slug: json['slug']?.toString() ?? '',
+        imageUrl: json['imageUrl']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'slug': slug,
+        'imageUrl': imageUrl,
+      };
 }
 
-@JsonSerializable()
 class RestaurantInfo {
   final String id;
   final String name;
@@ -116,7 +222,25 @@ class RestaurantInfo {
     required this.isOpen,
   });
 
-  factory RestaurantInfo.fromJson(Map<String, dynamic> json) =>
-      _$RestaurantInfoFromJson(json);
-  Map<String, dynamic> toJson() => _$RestaurantInfoToJson(this);
+  factory RestaurantInfo.fromJson(Map<String, dynamic> json) => RestaurantInfo(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        slug: json['slug']?.toString() ?? '',
+        logoUrl: json['logoUrl']?.toString(),
+        bannerUrl: json['bannerUrl']?.toString(),
+        rating: double.tryParse(json['rating']?.toString() ?? '4.5') ?? 4.5,
+        deliveryTime: json['deliveryTime']?.toString() ?? '25-30 min',
+        isOpen: json['isOpen'] != false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'slug': slug,
+        'logoUrl': logoUrl,
+        'bannerUrl': bannerUrl,
+        'rating': rating,
+        'deliveryTime': deliveryTime,
+        'isOpen': isOpen,
+      };
 }

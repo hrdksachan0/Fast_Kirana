@@ -14,7 +14,7 @@ class BrandColors {
   // Accent Colors
   static const Color accent = Color(0xFF10B981); // Savings Green
   static const Color accentLight = Color(0xFF34D399);
-  static const Color accentDark = Color(0xFF047857);
+  static const Color accentDark = Color(0xFF008F33);
 
   // Semantic Colors
   static const Color success = Color(0xFF22C55E);

@@ -1,0 +1,19 @@
+{
+  "plugins": {
+    "serena": {
+      "enabled": true
+    },
+    "context7": {
+      "enabled": true
+    },
+    "coderabbit": {
+      "enabled": true
+    },
+    "world-class-ui": {
+      "enabled": true
+    },
+    "impeccable-ux": {
+      "enabled": true
+    }
+  }
+}

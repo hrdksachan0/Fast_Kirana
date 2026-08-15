@@ -159,8 +159,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
 
           ),
-
-          // Dot indicators
           Positioned(
             bottom: 16,
             left: 0,
@@ -259,34 +257,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ),
 
-          // Rating row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.star_rounded, size: 14, color: AppDesignSystem.warning),
-                      const SizedBox(width: 4),
-                      Text('4.5', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.warning)),
-                    ],
-                  ),
+          // Rating info (available when backend returns review data)
+          if (product.tags.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: product.tags.take(5).map((tag) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.background,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppDesignSystem.border),
                 ),
-                const SizedBox(width: 12),
-                Text('120+ ratings', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
-                const SizedBox(width: 12),
-                Container(width: 1, height: 12, color: AppDesignSystem.divider),
-                const SizedBox(width: 12),
-                Text('1,200+ sold', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
-              ],
+                child: Text(tag, style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+              )).toList(),
             ),
-          ),
+          ],
 
           const SizedBox(height: 20),
 

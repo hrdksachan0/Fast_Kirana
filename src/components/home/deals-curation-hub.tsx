@@ -721,41 +721,41 @@ export function DealsCurationHub({
         </p>
       </div>
 
-      {/* Premium Curation Tab Bar: Redesigned into minimal organic category circles for mobile, sleek pills for desktop */}
-      {/* Mobile view: Circles */}
-      <div className="flex md:hidden items-center gap-6 overflow-x-auto pb-3.5 pt-2 select-none w-full justify-start scroll-smooth snap-x snap-mandatory scrollbar-none px-1">
+      {/* Premium Curation Tab Bar: Sticky on mobile while scrolling through products */}
+      {/* Mobile view: Sticky Category Circles Strip */}
+      <div className="sticky top-[48px] sm:top-[56px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-y border-zinc-200/60 dark:border-zinc-800/60 -mx-4 px-4 py-2 flex md:hidden items-center gap-4 overflow-x-auto select-none w-[calc(100%+2rem)] justify-start scroll-smooth snap-x snap-mandatory scrollbar-none shadow-2xs">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
             <button
               key={c.id}
               onClick={() => setActiveCuration(c.id)}
-              className="group flex flex-col items-center gap-2 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
+              className="group flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
               suppressHydrationWarning
             >
               {/* Clean minimal organic circle */}
               <div
                 className={cn(
-                  'relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
+                  'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
                   isActive
                     ? 'shadow-md border-solid scale-105'
-                    : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
+                    : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 shadow-2xs'
                 )}
-                style={isActive ? { borderColor: c.activeBorderColor, boxShadow: `0 0 16px ${c.activeBorderColor}25` } : {}}
+                style={isActive ? { borderColor: c.activeBorderColor, boxShadow: `0 0 12px ${c.activeBorderColor}30` } : {}}
               >
                 {/* Premium Vector inline SVG icon */}
                 {c.icon && (
-                  <c.icon className="w-[80%] h-[80%] transition-transform duration-500 group-hover:scale-108 group-hover:rotate-2 relative z-10" />
+                  <c.icon className="w-[75%] h-[75%] transition-transform duration-500 group-hover:scale-108 relative z-10" />
                 )}
               </div>
 
               {/* Title Text Centered Below */}
               <span
                 className={cn(
-                  'text-[11px] tracking-tight transition-colors duration-300 max-w-[85px] text-center line-clamp-2 leading-tight h-9 flex items-center justify-center',
+                  'text-[10px] tracking-tight transition-colors duration-300 max-w-[70px] text-center truncate leading-none',
                   isActive
-                    ? 'text-zinc-900 dark:text-white font-extrabold'
-                    : 'text-zinc-500 dark:text-zinc-400 font-medium group-hover:text-zinc-900 dark:group-hover:text-white'
+                    ? 'text-zinc-900 dark:text-white font-black'
+                    : 'text-zinc-500 dark:text-zinc-400 font-bold'
                 )}
                 suppressHydrationWarning
               >
@@ -763,7 +763,7 @@ export function DealsCurationHub({
               </span>
 
               {/* Bottom active underline indicator bar */}
-              <div className="relative h-[3px] w-8 rounded-full overflow-hidden mt-0.5">
+              <div className="relative h-[2px] w-6 rounded-full overflow-hidden">
                 {isActive && (
                   <motion.div
                     layoutId="activeCurationUnderlineMobile"

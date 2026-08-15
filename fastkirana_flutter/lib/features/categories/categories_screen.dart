@@ -9,36 +9,6 @@ import 'category_products_screen.dart';
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
 
-  static const List<Map<String, String>> fallbackCategories = [
-    {'id': 'cat_veg', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables', 'icon': '🥬'},
-    {'id': 'cat_dairy', 'name': 'Dairy & Breakfast', 'slug': 'dairy-breakfast', 'icon': '🥛'},
-    {'id': 'cat_instant', 'name': 'Instant Foods', 'slug': 'instant-food', 'icon': '🍜'},
-    {'id': 'cat_bev', 'name': 'Beverages', 'slug': 'beverages', 'icon': '🥤'},
-    {'id': 'cat_snacks', 'name': 'Snacks & Munchies', 'slug': 'snacks-munchies', 'icon': '🍿'},
-    {'id': 'cat_bakery', 'name': 'Bakery & Biscuits', 'slug': 'bakery-biscuits', 'icon': '🍞'},
-    {'id': 'cat_dryfruits', 'name': 'Dry Fruits & Nuts', 'slug': 'dry-fruits', 'icon': '🥜'},
-    {'id': 'cat_grocery', 'name': 'Grocery Essentials', 'slug': 'grocery-essentials', 'icon': '🫒'},
-    {'id': 'cat_chocos', 'name': 'Chocolates', 'slug': 'chocolates', 'icon': '🍫'},
-    {'id': 'cat_personal', 'name': 'Personal Care', 'slug': 'personal-care', 'icon': '🧴'},
-    {'id': 'cat_house', 'name': 'Home & Cleaning', 'slug': 'household', 'icon': '🧹'},
-    {'id': 'cat_kitchen', 'name': 'Kitchen Needs', 'slug': 'kitchen', 'icon': '🧂'},
-  ];
-
-  static const List<Color> categoryColors = [
-    Color(0xFFDCFCE7),
-    Color(0xFFFFF7ED),
-    Color(0xFFFFE4E6),
-    Color(0xFFE0F2FE),
-    Color(0xFFFFF0F0),
-    Color(0xFFFFF7ED),
-    Color(0xFFFEF3C7),
-    Color(0xFFF0FDF4),
-    Color(0xFFFFF0F0),
-    Color(0xFFE0F2FE),
-    Color(0xFFF0FDF4),
-    Color(0xFFFFF7ED),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -58,28 +28,78 @@ class CategoriesScreen extends ConsumerWidget {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: categoriesAsync.when(
-        data: (categories) {
-          final cats = categories.isEmpty ? _buildFallbackCategories() : categories;
-          return _buildCategoriesGrid(context, cats);
-        },
-        loading: () => _buildFallbackGrid(context),
-        error: (_, __) => _buildFallbackGrid(context),
+      body: RefreshIndicator(
+        color: AppDesignSystem.primary,
+        onRefresh: () async => ref.invalidate(categoriesProvider),
+        child: categoriesAsync.when(
+          data: (categories) {
+            if (categories.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.category_outlined, size: 64, color: Color(0xFFCCCCCC)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No categories available',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pull down to refresh',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return _buildCategoriesGrid(ref, categories);
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppDesignSystem.primary),
+          ),
+          error: (err, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.wifi_off_rounded, size: 56, color: AppDesignSystem.danger),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Could not load categories',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    err.toString(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => ref.invalidate(categoriesProvider),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text('Retry', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppDesignSystem.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  List<Category> _buildFallbackCategories() {
-    return fallbackCategories.map<Category>((cat) => Category(
-      id: cat['id']!,
-      name: cat['name']!,
-      slug: cat['slug']!,
-      imageUrl: '',
-      sortOrder: fallbackCategories.indexOf(cat),
-    )).toList();
-  }
-
-  Widget _buildCategoriesGrid(BuildContext context, List<Category> categories) {
+  Widget _buildCategoriesGrid(WidgetRef ref, List<Category> categories) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
@@ -92,9 +112,8 @@ class CategoriesScreen extends ConsumerWidget {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
-        final catIndex = index % fallbackCategories.length;
-        final bgColor = categoryColors[catIndex];
-        final icon = fallbackCategories[catIndex]['icon'] ?? '🛒';
+        final count = category.productCount ?? 0;
+        final imageUrl = category.imageUrl;
 
         return GestureDetector(
           onTap: () {
@@ -123,15 +142,24 @@ class CategoriesScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 66,
+                  height: 66,
                   decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(16),
+                    color: AppDesignSystem.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(33),
                   ),
-                  child: Center(
-                    child: Text(icon, style: const TextStyle(fontSize: 32)),
-                  ),
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(33),
+                          child: Image.network(
+                            imageUrl,
+                            width: 66,
+                            height: 66,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildCategoryInitial(category.name),
+                          ),
+                        )
+                      : _buildCategoryInitial(category.name),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -147,7 +175,7 @@ class CategoriesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Browse →',
+                  count > 0 ? '$count items' : 'Browse →',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: AppDesignSystem.primary,
@@ -162,8 +190,16 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFallbackGrid(BuildContext context) {
-    final fallback = _buildFallbackCategories();
-    return _buildCategoriesGrid(context, fallback);
+  Widget _buildCategoryInitial(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: GoogleFonts.inter(
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+          color: AppDesignSystem.primary,
+        ),
+      ),
+    );
   }
 }

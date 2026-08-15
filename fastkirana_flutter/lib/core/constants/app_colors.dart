@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Brand colors matching FastKirana
+/// Brand colors matching FastKirana.in (green scheme)
 class AppColors {
-  static const Color primary = Color(0xFF047857);
+  static const Color primary = Color(0xFFE20A22);
   static const Color primaryDark = Color(0xFF065F46);
   static const Color primaryLight = Color(0xFF10B981);
+  static const Color primaryBg = Color(0xFFD1FAE5);
 
-  static const Color accent = Color(0xFF10B981);
-  static const Color accentDark = Color(0xFF047857);
+  static const Color accent = Color(0xFFF59E0B);
+  static const Color accentDark = Color(0xFFD97706);
 
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);

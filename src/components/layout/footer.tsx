@@ -62,8 +62,10 @@ export function Footer() {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="#"
-                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Instagram"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -71,8 +73,10 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="#"
-                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
+                href="https://x.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Twitter"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -80,8 +84,10 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="#"
-                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-450 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-8.5 w-8.5 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white transition-all duration-300 hover:scale-105"
                 aria-label="Facebook"
               >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -95,10 +101,10 @@ export function Footer() {
           <div>
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Shop</h4>
             <ul className="space-y-3">
-              <li><Link href="/category/fruits-vegetables" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Fruits &amp; Vegetables</Link></li>
-              <li><Link href="/category/dairy-breakfast" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Dairy &amp; Breakfast</Link></li>
-              <li><Link href="/category/snacks-munchies" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Snacks</Link></li>
-              <li><Link href="/category/beverages" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Beverages</Link></li>
+              <li><Link href="/category/fruits-vegetables" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Fruits &amp; Vegetables</Link></li>
+              <li><Link href="/category/dairy-breakfast" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Dairy &amp; Breakfast</Link></li>
+              <li><Link href="/category/snacks-munchies" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Snacks</Link></li>
+              <li><Link href="/category/beverages" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Beverages</Link></li>
             </ul>
           </div>
 
@@ -106,10 +112,10 @@ export function Footer() {
           <div>
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Account</h4>
             <ul className="space-y-3">
-              <li><Link href="/account?tab=profile" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Profile</Link></li>
-              <li><Link href="/account?tab=orders" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Orders</Link></li>
-              <li><Link href="/account?tab=addresses" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Saved Addresses</Link></li>
-              <li><Link href="/cart" className="text-xs font-semibold text-zinc-450 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Cart</Link></li>
+              <li><Link href="/account?tab=profile" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Profile</Link></li>
+              <li><Link href="/account?tab=orders" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Orders</Link></li>
+              <li><Link href="/account?tab=addresses" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Saved Addresses</Link></li>
+              <li><Link href="/cart" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Cart</Link></li>
             </ul>
           </div>
 
@@ -117,18 +123,18 @@ export function Footer() {
           <div>
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Contact</h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-400">
                 <Phone size={13} className="shrink-0 text-zinc-500" /> 
                 <span className="hover:text-white transition-colors cursor-pointer">{formatPhone(contactPhone)}</span>
               </li>
-              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-400">
                 <Mail size={13} className="shrink-0 text-zinc-500" /> 
                 <span className="hover:text-white transition-colors cursor-pointer">{contactEmail}</span>
               </li>
-              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450">
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-400">
                 <Clock size={13} className="shrink-0 text-zinc-500" /> {contactTimings}
               </li>
-              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-450 leading-relaxed">
+              <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-400 leading-relaxed">
                 <MapPin size={13} className="shrink-0 text-zinc-500" /> {contactAddress}
               </li>
             </ul>
@@ -137,16 +143,16 @@ export function Footer() {
 
         {/* Footer Bottom Rights */}
         <div className="mt-12 border-t border-white/[0.06] pt-6.5 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-550 select-none">
+          <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 select-none">
             © {new Date().getFullYear()} FastKirana. All rights reserved.
           </p>
-          <p className="text-[11px] font-medium text-zinc-650 dark:text-zinc-550 order-3 md:order-none select-none">
+          <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 order-3 md:order-none select-none">
             We accept: UPI • Cards • COD • Wallets
           </p>
           <div className="flex items-center gap-4.5">
-            <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Privacy Policy</Link>
-            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Terms of Service</Link>
-            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-350 transition-colors">Refund Policy</Link>
+            <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
+            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
+            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>
           </div>
         </div>
       </div>

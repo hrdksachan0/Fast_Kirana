@@ -417,33 +417,6 @@ export default async function Home() {
     console.error('Failed to execute parallel queries on home page:', error)
   }
 
-  // Fallback: If cache returned empty or less than 10 products due to cold start, query database directly
-  if (bestSellersRaw.length < 10 || flashDealsRaw.length < 5 || restaurantsRaw.length === 0 || categoriesRaw.length === 0) {
-    try {
-      const [directCategories, directProducts, directRestaurants] = await Promise.all([
-        prisma.category.findMany({
-          orderBy: { sortOrder: 'asc' },
-          include: { _count: { select: { products: true } } },
-        }),
-        prisma.product.findMany({
-          where: { isAvailable: true },
-          take: 400,
-          select: productSelect,
-        }),
-        prisma.restaurant.findMany({
-          where: { isActive: true },
-          orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
-        }),
-      ])
-      if (categoriesRaw.length === 0) categoriesRaw = directCategories
-      if (bestSellersRaw.length < 10) bestSellersRaw = directProducts.filter(p => !p.restaurantId)
-      if (flashDealsRaw.length < 5) flashDealsRaw = directProducts.filter(p => p.isFlashDeal || p.discount > 10)
-      if (restaurantsRaw.length === 0) restaurantsRaw = directRestaurants
-    } catch (e) {
-      console.error('Fallback query error:', e)
-    }
-  }
-
   // Map database categories to UI schema
   const trendingProductIds = trendingOrderItems.map((item) => item.productId).filter((id): id is string => id !== null)
   let dynamicTopPicks: any[] = []

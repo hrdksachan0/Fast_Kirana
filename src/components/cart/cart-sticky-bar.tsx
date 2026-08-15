@@ -80,52 +80,54 @@ export function CartStickyBar() {
       whileTap={{ scale: 0.98 }}
       initial={false}
       animate={{
-        bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
+        bottom: isTabBarVisible
+          ? 'calc(72px + env(safe-area-inset-bottom, 0px))'
+          : 'calc(12px + env(safe-area-inset-bottom, 0px))',
       }}
       transition={{
         duration: 0.28,
         ease: [0.16, 1, 0.3, 1],
       }}
       className={cn(
-        "gpu-accelerated fixed left-3.5 right-3.5 z-40 bg-[#097925] text-white rounded-[20px] shadow-[0_8px_25px_rgba(9,121,37,0.2)] border border-white/10 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
+        "gpu-accelerated fixed left-3.5 right-3.5 z-40 bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff4742] backdrop-blur-xl text-white rounded-[20px] shadow-[0_8px_24px_rgba(232,21,58,0.35)] border border-red-300/30 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >
-      {/* Top Edge Progress Bar matching the mockup indicator */}
-      <div className="w-full h-1 bg-white/10 overflow-hidden">
+      {/* Top Edge Progress Bar for Free Delivery */}
+      <div className="w-full h-[3px] bg-black/15 overflow-hidden">
         <div
-          className="h-full bg-[#facc15] transition-all duration-500"
+          className="h-full bg-gradient-to-r from-amber-300 via-yellow-300 to-emerald-300 transition-all duration-500 shadow-xs"
           style={{ width: `${deliveryProgress}%` }}
         />
       </div>
 
-      {/* Slimmer Spacing Row */}
-      <div className="px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      {/* Balanced Cart Content Row */}
+      <div className="px-3.5 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
           {/* Shopping Bag Circle Container */}
-          <div className="relative w-8 h-8 rounded-full bg-green-950/40 flex items-center justify-center border border-white/10 shrink-0">
-            <ShoppingBag className="h-4 w-4 text-white stroke-[2.2]" />
-            {/* Red Notification Badge */}
+          <div className="relative w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0 shadow-inner">
+            <ShoppingBag className="h-4 w-4 text-white stroke-[2.4]" />
+            {/* Notification Badge */}
             <motion.span 
               key={totalItems}
-              initial={{ scale: 0.8 }}
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ type: "spring", stiffness: 450, damping: 20 }}
-              className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs tabular-nums"
+              initial={{ scale: 0.7 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 15 }}
+              className="absolute -top-1 -right-1 bg-white text-[#e8153a] text-[8.5px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md tabular-nums border border-red-100"
             >
               {totalItems}
             </motion.span>
           </div>
           
           {/* Title & Subtitle Stack */}
-          <div className="flex flex-col text-left">
-            <span className="text-xs font-black text-white leading-tight tabular-nums">
+          <div className="flex flex-col text-left min-w-0">
+            <span className="text-xs sm:text-[13px] font-black text-white leading-tight tabular-nums drop-shadow-xs truncate">
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
             </span>
-            <span className="text-[9px] font-bold text-white/80 leading-tight mt-0.5">
+            <span className="text-[9px] font-extrabold text-red-100/95 leading-tight truncate mt-0.5">
               {hasFreeDelivery 
-                ? "Free delivery active!" 
-                : `Add ${formatPrice(needsForFreeDelivery)} more for free delivery`}
+                ? "✨ Free delivery unlocked!" 
+                : `Add ${formatPrice(needsForFreeDelivery)} for FREE delivery`}
             </span>
           </div>
         </div>
@@ -137,12 +139,12 @@ export function CartStickyBar() {
             triggerHaptic('light')
             toggleCart()
           }}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="bg-white text-[#097925] font-black text-[10px] tracking-wide px-4 py-1.5 rounded-full flex items-center gap-0.5 shadow-xs transition-all cursor-pointer active:scale-95"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.95 }}
+          className="bg-white text-[#e8153a] hover:bg-red-50 font-black text-[10px] tracking-wide px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer shrink-0"
         >
           <span>VIEW CART</span>
-          <ChevronRight className="h-3 w-3 stroke-[3]" />
+          <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
         </motion.button>
       </div>
     </motion.div>

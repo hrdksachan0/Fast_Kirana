@@ -10,6 +10,8 @@ class Category {
   final String? imageUrl;
   final String? parentId;
   final int sortOrder;
+  @JsonKey(name: '_count')
+  final CategoryCount? count;
 
   Category({
     required this.id,
@@ -18,9 +20,22 @@ class Category {
     this.imageUrl,
     this.parentId,
     required this.sortOrder,
+    this.count,
   });
 
   factory Category.fromJson(Map<String, dynamic> json) =>
       _$CategoryFromJson(json);
   Map<String, dynamic> toJson() => _$CategoryToJson(this);
+
+  int? get productCount => count?.products;
+}
+
+@JsonSerializable()
+class CategoryCount {
+  final int products;
+  CategoryCount({required this.products});
+
+  factory CategoryCount.fromJson(Map<String, dynamic> json) =>
+      _$CategoryCountFromJson(json);
+  Map<String, dynamic> toJson() => _$CategoryCountToJson(this);
 }

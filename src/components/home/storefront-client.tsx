@@ -59,7 +59,7 @@ export function StorefrontClient({
   // Scroll to top on tab change to avoid footer-jump
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'instant' as any })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [activeTab])
 

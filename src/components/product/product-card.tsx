@@ -256,13 +256,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 ease-out cursor-pointer",
+        "group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 ease-out cursor-pointer",
         isRestaurant 
-          ? "border-red-500/25 dark:border-red-500/35 bg-gradient-to-b from-white via-white to-red-50/20 dark:from-zinc-950 dark:to-red-950/20 shadow-2xs hover:shadow-md hover:border-red-500/50"
+          ? "border-zinc-200/70 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-orange-500/40"
           : "border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800",
         isCompact 
-          ? "p-1.5 min-[375px]:p-2 h-[185px] min-[375px]:h-[205px] sm:h-[230px]" 
-          : "p-2 min-[375px]:p-2.5 h-[225px] min-[375px]:h-[245px] sm:h-[265px] md:h-[300px]"
+          ? "p-1.5 min-[375px]:p-2 h-[200px] min-[375px]:h-[220px] sm:h-[240px]" 
+          : "p-2 min-[375px]:p-2.5 h-[235px] min-[375px]:h-[258px] sm:h-[280px]"
       )}
     >
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
@@ -288,7 +288,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         )}
       </AnimatePresence>
 
-      <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0">
+      <Link href={`/product/${product.slug}`} className="relative block shrink-0">
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
@@ -300,14 +300,14 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           </div>
         )}
 
-        {/* Image Container */}
+        {/* Image Container - Larger & Appetizing */}
         <div
           ref={imageRef}
           className={cn(
             "relative w-full overflow-hidden rounded-2xl bg-muted/15 dark:bg-white/[0.03] flex items-center justify-center shrink-0 border border-border/30",
             isCompact
-              ? "h-[75px] min-[375px]:h-[85px] sm:h-[105px]"
-              : "h-[95px] min-[375px]:h-[110px] sm:h-[125px] md:h-[145px]"
+              ? "h-[90px] min-[375px]:h-[105px] sm:h-[120px]"
+              : "h-[118px] min-[375px]:h-[132px] sm:h-[148px] md:h-[165px]"
           )}
         >
           <ProductImage
@@ -315,8 +315,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             alt={product.name}
             categorySlug={categorySlug}
             isBestseller={product.tags?.includes('popular')}
-            width={200}
-            className="h-full w-full object-contain p-1.5 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
+            width={240}
+            className="h-full w-full object-contain p-1 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
           />
 
           {/* Heart / Wishlist Button */}
@@ -403,7 +403,14 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         <div className="flex items-center justify-between gap-1 mt-1.5 mb-1 shrink-0 w-full min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
             {hasVariants ? (
-              <span className="inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap truncate max-w-full leading-tight">
+              <span 
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setActiveVariantProduct(product)
+                }}
+                className="inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap truncate max-w-full leading-tight cursor-pointer active:scale-95 transition-all animate-pulse"
+              >
                 {variantsList.length} Options ▾
               </span>
             ) : (
@@ -422,7 +429,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           )}>
             <AnimatePresence mode="wait">
               {resolvedQuantity === 0 ? (
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                   type="button"
                   onClick={(e) => {
                     if (resolvedStock <= 0 || !resolvedIsAvailable) {
@@ -433,7 +442,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   }}
                   disabled={(isStoreClosed && resolvedStock > 0) || !timingStatus.isAvailableNow}
                   className={cn(
-                    "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
+                    "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
                     isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
                     !timingStatus.isAvailableNow
                       ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-not-allowed shadow-none"
@@ -460,78 +469,88 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                       <Plus className="h-2.5 w-2.5 stroke-[3]" />
                     </>
                   )}
-                </button>
+                </motion.button>
               ) : (
                 <div className={cn(
                   "flex h-full w-full items-center justify-between rounded-lg text-white font-bold shadow-xs overflow-hidden",
                   isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-[#22c55e]"
                 )}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                     onClick={handleDecrement}
                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
                   >
                     <Minus className="h-2.5 w-2.5 stroke-[3]" />
-                  </button>
+                  </motion.button>
                   <span className="shrink-0 flex items-center justify-center font-black select-none text-[9px] min-[375px]:text-[10px]">
                     {quantity}
                   </span>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                     onClick={handleIncrement}
                     disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <Plus className="h-2.5 w-2.5 stroke-[3]" />
-                  </button>
+                  </motion.button>
                 </div>
               )}
             </AnimatePresence>
           </div>
         </div>
 
-        {/* ROW 2: Price & MRP */}
-        <div className="flex items-baseline gap-1.5 flex-wrap leading-none mb-1">
-          <motion.span
-            key={resolvedPrice}
-            className={cn(
-              "font-black text-text-primary block tracking-tight tabular-nums",
-              isCompact 
-                ? "text-[11px] min-[375px]:text-xs sm:text-sm" 
-                : "text-[12px] min-[375px]:text-sm sm:text-base"
+        {/* ROW 2, ROW 3, and Restaurant Outlet wrapped in Link for tap navigation */}
+        <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0 min-w-0">
+          {/* ROW 2: Price & MRP */}
+          <div className="flex items-baseline gap-1.5 flex-wrap leading-none mb-1">
+            <motion.span
+              key={resolvedPrice}
+              initial={{ opacity: 0.5, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className={cn(
+                "font-black text-text-primary block tracking-tight tabular-nums",
+                isCompact 
+                  ? "text-[11px] min-[375px]:text-xs sm:text-sm" 
+                  : "text-[12px] min-[375px]:text-sm sm:text-base"
+              )}
+            >
+              ₹{resolvedPrice}
+            </motion.span>
+            {resolvedMrp > resolvedPrice && (
+              <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold tabular-nums">
+                ₹{resolvedMrp}
+              </span>
             )}
-          >
-            ₹{resolvedPrice}
-          </motion.span>
-          {resolvedMrp > resolvedPrice && (
-            <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold tabular-nums">
-              ₹{resolvedMrp}
-            </span>
-          )}
-        </div>
+          </div>
 
-        {/* ROW 3: Product Name / Title */}
-        <div className="flex items-start gap-1 mb-0.5 min-w-0">
-          {isRestaurant && (
-            <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Pure Veg Dish">
-              <div className="h-1 w-1 rounded-full bg-emerald-600" />
+          {/* ROW 3: Product Name / Title */}
+          <div className="flex items-start gap-1 mb-0.5 min-w-0">
+            {isRestaurant && (
+              <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Pure Veg Dish">
+                <div className="h-1 w-1 rounded-full bg-emerald-600" />
+              </div>
+            )}
+            <h3 className={cn(
+              "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors flex-1 min-w-0",
+              isCompact 
+                ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
+                : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
+            )}>
+              {product.name}
+            </h3>
+          </div>
+
+          {/* Restaurant Outlet Sub-label Identifier */}
+          {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
+            <div className="flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold text-red-600 dark:text-red-400 mt-auto min-w-0 leading-tight">
+              <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
+              <span className="truncate tracking-tight">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
             </div>
           )}
-          <h3 className={cn(
-            "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors flex-1 min-w-0",
-            isCompact 
-              ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
-              : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
-          )}>
-            {product.name}
-          </h3>
-        </div>
-
-        {/* Restaurant Outlet Sub-label Identifier */}
-        {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
-          <div className="flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold text-red-600 dark:text-red-400 mt-auto min-w-0 leading-tight">
-            <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
-            <span className="truncate tracking-tight">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
-          </div>
-        )}
+        </Link>
       </div>
   )
 }

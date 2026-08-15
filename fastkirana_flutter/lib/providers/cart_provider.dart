@@ -3,6 +3,7 @@ import '../data/models/cart.dart';
 import '../data/models/product.dart';
 import '../data/repositories/cart_repository.dart';
 import '../core/network/api_client.dart';
+import 'auth_provider.dart';
 
 final cartRepoProvider = Provider<CartRepository>((ref) {
   return CartRepository(ref.read(dioProvider));
@@ -10,13 +11,20 @@ final cartRepoProvider = Provider<CartRepository>((ref) {
 
 class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   final CartRepository repository;
-  final String userId;
+  final String Function() _getUserId;
 
-  CartNotifier(this.repository, this.userId) : super(const AsyncValue.loading()) {
+  CartNotifier(this.repository, this._getUserId) : super(const AsyncValue.loading()) {
     loadCart();
   }
 
+  Future<void> _reload() async {
+    loadCart();
+  }
+
+  String get _userId => _getUserId();
+
   Future<void> loadCart() async {
+    final userId = _userId;
     try {
       final cart = await repository.getCart(userId);
       state = AsyncValue.data(cart);
@@ -27,6 +35,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> addItem(String productId, int quantity) async {
+    final userId = _userId;
     try {
       await repository.addItem(userId, productId, quantity);
       await loadCart();
@@ -138,7 +147,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   Cart _createMockCart(List<CartItem> items) {
     return Cart(
       id: 'cart_local',
-      userId: userId,
+      userId: _userId,
       items: items,
       couponDiscount: 0,
       createdAt: DateTime.now(),
@@ -147,9 +156,10 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 }
 
+/// Main cart provider — auto-resolves the current user's id from auth state.
+/// Falls back to `'user_placeholder'` when no user is signed in.
 final cartProvider = StateNotifierProvider<CartNotifier, AsyncValue<Cart>>((ref) {
-  return CartNotifier(
-    ref.read(cartRepoProvider),
-    'user_placeholder',
-  );
+  final userId = ref.watch(currentUserIdProvider) ?? 'user_placeholder';
+  final repo = ref.read(cartRepoProvider);
+  return CartNotifier(repo, () => userId);
 });
