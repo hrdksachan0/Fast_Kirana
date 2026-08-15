@@ -544,14 +544,14 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                       scrollToSection(cat.tag)
                     }}
                     className={cn(
-                      "group flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-all duration-200 p-0.5 rounded-2xl",
-                      isActive ? "scale-105" : "opacity-75 hover:opacity-100"
+                      "group flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-all duration-200 py-1 px-1.5 rounded-2xl min-w-[72px] max-w-[76px]",
+                      isActive ? "scale-105" : "opacity-80 hover:opacity-100"
                     )}
                   >
                     {/* Circle Image Thumbnail */}
                     <div 
                       className={cn(
-                        "relative w-11 h-11 min-[375px]:w-12 min-[375px]:h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
+                        "relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
                         isActive 
                           ? "border-orange-500 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20" 
                           : "border-zinc-200 dark:border-zinc-800 hover:border-orange-400/50"
@@ -572,10 +572,10 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                       </div>
                     </div>
 
-                    {/* Category Title - Compact Double Line Centered */}
+                    {/* Category Title - Ample Space, No Overlap */}
                     <span 
                       className={cn(
-                        "text-[9.5px] min-[375px]:text-[10px] font-black tracking-tight text-center line-clamp-2 max-w-[62px] min-[375px]:max-w-[68px] leading-[1.1] h-[22px] min-[375px]:h-[24px] flex items-center justify-center transition-colors px-0.5",
+                        "text-[10px] font-black tracking-tight text-center line-clamp-2 w-full leading-[1.15] min-h-[26px] flex items-center justify-center transition-colors px-0.5",
                         isActive ? "text-orange-600 dark:text-orange-400" : "text-zinc-700 dark:text-zinc-300"
                       )}
                     >

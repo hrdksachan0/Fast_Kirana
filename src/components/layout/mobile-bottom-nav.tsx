@@ -160,8 +160,8 @@ export function MobileBottomNav() {
     >
       {/* 
         =====================================================================
-        ACTIVE INDICATOR: Liquid Morphing / Viscous Gel Flow Animation
-        - Stretches horizontally like a water droplet during fast transitions
+        ACTIVE INDICATOR: Pure Liquid Crystal / Clear Water Droplet Flow
+        - Natural translucent water bubble effect (No red tint in the liquid)
         - Snaps back with liquid jelly elastic bounce
         =====================================================================
       */}
@@ -182,25 +182,25 @@ export function MobileBottomNav() {
             restDelta: 0.001,
           }}
         >
-          {/* Liquid Morphing Pill Pill with Gel Ripple */}
+          {/* Pure Clear Water Droplet Pill with Specular Highlights */}
           <motion.div 
             key={activeIndex}
-            initial={{ scaleX: 1.45, scaleY: 0.75, borderRadius: '40px' }}
-            animate={{ scaleX: 1, scaleY: 1, borderRadius: '22px' }}
+            initial={{ scaleX: 1.4, scaleY: 0.75, borderRadius: '40px' }}
+            animate={{ scaleX: 1, scaleY: 1, borderRadius: '24px' }}
             transition={{
               type: 'spring',
               stiffness: 400,
               damping: 18,
               mass: 0.6,
             }}
-            className="w-12 h-10 rounded-[22px] bg-gradient-to-r from-[#F33B30]/15 via-[#F33B30]/25 to-[#ff5252]/15 flex items-center justify-center shadow-[0_0_20px_rgba(243,59,48,0.28),inset_0_1px_2px_rgba(255,255,255,0.4)] border border-[#F33B30]/30 backdrop-blur-xs relative"
+            className="w-13 h-10.5 rounded-[24px] bg-gradient-to-b from-white/90 via-zinc-100/60 to-zinc-200/40 dark:from-white/15 dark:via-white/10 dark:to-transparent flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1.5px_2px_rgba(255,255,255,0.95),inset_0_-1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] border border-zinc-200/90 dark:border-white/15 backdrop-blur-md relative"
           >
-            {/* Ambient liquid drop center glow */}
+            {/* Water Caustic Light Droplet Highlight */}
             <motion.div 
-              initial={{ scale: 0.3, opacity: 0.8 }}
-              animate={{ scale: [0.8, 1.2, 1], opacity: [0.6, 1, 0.7] }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="absolute w-6 h-6 rounded-full bg-[#F33B30]/25 blur-xs"
+              initial={{ scale: 0.4, opacity: 0.9 }}
+              animate={{ scale: [0.6, 1.1, 1], opacity: [0.7, 1, 0.85] }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="absolute top-1 inset-x-2 h-2 rounded-full bg-gradient-to-b from-white/95 to-transparent blur-[0.5px]"
             />
           </motion.div>
         </motion.div>
@@ -227,35 +227,35 @@ export function MobileBottomNav() {
                 <div className="flex items-center justify-center h-7 w-7 relative">
                   <motion.div
                     animate={{
-                      scale: isActive ? [1, 1.25, 0.95, 1.1] : 1,
-                      y: isActive ? -1 : 0,
+                      scale: isActive ? [1, 1.15, 0.98, 1.05] : 1,
+                      y: isActive ? -0.5 : 0,
                     }}
                     transition={{
                       type: 'spring',
                       stiffness: 500,
-                      damping: 15,
+                      damping: 18,
                     }}
                     className={cn(
                       "flex items-center justify-center transition-all duration-300",
                       isActive
-                        ? "text-[#F33B30] drop-shadow-[0_2px_8px_rgba(243,59,48,0.45)]"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        ? "text-[#F33B30] drop-shadow-[0_1px_4px_rgba(243,59,48,0.3)]"
+                        : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                     )}
                   >
                     <Icon
                       className={cn(
                         "h-5 w-5 transition-all duration-300",
-                        isActive ? "stroke-[2.4]" : "stroke-[1.8]"
+                        isActive ? "stroke-[1.8]" : "stroke-[1.6]"
                       )}
                       fill="none"
                     />
                   </motion.div>
                 </div>
 
-                {/* Text Label - Highlighted in Red on Active */}
+                {/* Text Label - Clean Red Accent on Active */}
                 <motion.span
                   animate={{
-                    scale: isActive ? [1, 1.12, 1.05] : 1,
+                    scale: isActive ? [1, 1.06, 1.02] : 1,
                   }}
                   transition={{
                     type: 'spring',
@@ -263,10 +263,10 @@ export function MobileBottomNav() {
                     damping: 20,
                   }}
                   className={cn(
-                    "text-[9.5px] min-[375px]:text-[10px] mt-0.5 tracking-tight font-black transition-colors duration-300 leading-none",
+                    "text-[9.5px] min-[375px]:text-[10px] mt-0.5 tracking-tight transition-colors duration-300 leading-none",
                     isActive
-                      ? "text-[#F33B30] font-black"
-                      : "text-zinc-500 dark:text-zinc-400 font-bold"
+                      ? "text-[#F33B30] font-bold"
+                      : "text-zinc-400 dark:text-zinc-500 font-medium"
                   )}
                 >
                   {tab.label}
