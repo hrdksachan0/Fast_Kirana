@@ -558,8 +558,22 @@ export async function POST(request: NextRequest) {
       const isCombined = ordersToCreate.length > 1
       const combinedId = isCombined ? `combined_${Math.random().toString(36).substring(2, 11)}_${Date.now().toString(36)}` : null
 
+      // Get single atomic base readableId for this entire checkout
+      const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
+      const baseReadableId = String(seqResult[0].nextval)
+
+      let restIndex = 0
 
       for (const orderInfo of ordersToCreate) {
+        let orderReadableId = baseReadableId
+        if (isCombined) {
+          if (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) {
+            restIndex++
+            orderReadableId = restIndex === 1 ? `${baseReadableId}-R` : `${baseReadableId}-R${restIndex}`
+          } else {
+            orderReadableId = `${baseReadableId}-G`
+          }
+        }
         const orderItemsData = orderInfo.items.map((item: any) => {
           const isVariant = item.product.id.includes('_')
           const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
@@ -676,15 +690,11 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
-        // Get next unique readableId using PostgreSQL sequence atomically
-        const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
-        const nextReadableId = String(seqResult[0].nextval)
-
         // Create order
         const newOrder = await tx.order.create({
           data: {
             userId: userId,
-            readableId: nextReadableId,
+            readableId: orderReadableId,
             addressId: orderAddressId,
             combinedId: combinedId,
             orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
@@ -1075,9 +1085,12 @@ export async function GET(request: NextRequest) {
           }
         })
 
+        const baseReadableId = (mainOrder.readableId || '').replace(/-[GR\d]+$/i, '') || mainOrder.readableId
+
         const mergedOrder = {
           ...mainOrder,
           id: mainOrder.id,
+          readableId: baseReadableId,
           status: combinedStatus,
           subtotal: relatedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
           discount: relatedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),

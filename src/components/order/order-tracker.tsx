@@ -82,7 +82,8 @@ interface OrderAddress {
 
 interface Order {
   id: string
-  readableId?: number
+  readableId?: number | string
+  baseReadableId?: string
   status: string
   subtotal: number
   discount: number
@@ -109,6 +110,11 @@ interface Order {
     phone: string | null
   } | null
   isCombined?: boolean
+  groceryStatus?: string | null
+  groceryItems?: OrderItem[]
+  restaurantStatus?: string | null
+  restaurantName?: string | null
+  restaurantItems?: OrderItem[]
   subOrders?: any[]
 }
 
@@ -696,49 +702,70 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       )}
       
       {/* Premium Visual Delivery Status Card */}
-      <div className="bg-card border border-border/80 p-5 md:p-7 rounded-3xl shadow-lg space-y-6 overflow-hidden relative">
+      <div className="bg-card border border-border/80 p-5 sm:p-7 rounded-3xl shadow-xl space-y-6 overflow-hidden relative">
         {/* Background Decorative Gradient Glow */}
-        <div className="absolute -top-24 -right-24 w-60 h-60 bg-gradient-to-br from-accent/15 via-primary/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-primary/15 via-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/40 pb-5 relative z-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/50 pb-5 relative z-10">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-muted border border-border/60 text-text-primary tracking-tight">
+                #{order.readableId || order.id?.slice(0, 8)}
+              </span>
               <span className={cn(
-                "text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider shadow-2xs flex items-center gap-1",
+                "text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider shadow-2xs flex items-center gap-1.5",
                 combinedStatus === 'CANCELLED'
                   ? "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950/40 border border-red-500/20"
                   : combinedStatus === 'DELIVERED'
                   ? "text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 border border-emerald-500/20"
-                  : "text-accent bg-accent/10 border border-accent/20 animate-pulse"
+                  : order.status === 'SHIPPED'
+                  ? "text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-950/40 border border-blue-500/20"
+                  : "text-amber-700 bg-amber-100 dark:text-amber-400 dark:bg-amber-950/40 border border-amber-500/20"
               )}>
-                {combinedStatus === 'CANCELLED' ? '❌ Order Cancelled' : combinedStatus === 'DELIVERED' ? '✅ Delivered' : '📡 Live Tracking Active'}
+                <span className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  combinedStatus === 'CANCELLED' ? "bg-red-500" :
+                  combinedStatus === 'DELIVERED' ? "bg-emerald-500" :
+                  order.status === 'SHIPPED' ? "bg-blue-500 animate-ping" :
+                  "bg-amber-500 animate-pulse"
+                )} />
+                {combinedStatus === 'CANCELLED' ? 'Cancelled' : 
+                 combinedStatus === 'DELIVERED' ? 'Delivered' : 
+                 order.status === 'SHIPPED' ? 'Out for Delivery' : 
+                 order.status === 'PACKED' ? 'Packed & Ready' : 
+                 order.status === 'CONFIRMED' ? 'Confirmed & Cooking' : 'Order Placed'}
               </span>
-              {(order as any).restaurantName || order.shopName ? (
-                <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+
+              {order.isCombined ? (
+                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                  🔗 Multi-Store Order
+                </span>
+              ) : ((order as any).restaurantName || order.shopName) ? (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
                   🏪 {(order as any).restaurantName || order.shopName}
                 </span>
-              ) : null}
+              ) : (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  🛒 FastKirana DarkStore
+                </span>
+              )}
             </div>
 
-            <h1 className="text-2xl font-black text-text-primary tracking-tight mt-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-text-primary tracking-tight">
               {combinedStatus === 'CANCELLED'
                 ? 'Order Cancelled'
                 : combinedStatus === 'DELIVERED' 
-                ? (order.deliveryMethod === 'PICKUP' ? 'Order Picked Up!' : 'Order Delivered!') 
+                ? (order.deliveryMethod === 'PICKUP' ? 'Order Picked Up! 🎉' : 'Order Delivered! 🎉') 
                 : order.deliveryMethod === 'PICKUP' 
                 ? (
                     ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status)
-                      ? 'Order Ready for Pickup!'
+                      ? 'Ready for Counter Pickup!'
                       : order.status === 'PACKED'
-                      ? 'Order Packed & Ready Soon'
-                      : order.status === 'CONFIRMED'
-                      ? 'Order Confirmed & Preparing'
-                      : 'Order Placed for Pickup'
+                      ? 'Packed & Ready Soon'
+                      : 'Preparing for Pickup'
                   )
-                : isScheduled 
-                ? 'Arriving at Scheduled Time' 
                 : order.status === 'SHIPPED'
-                ? (trackingMetrics?.isArrived ? 'Rider Has Arrived!' : 'Rider On The Way')
+                ? 'Rider On The Way 🛵'
                 : order.status === 'PACKED'
                 ? 'Order Packed & Ready'
                 : order.status === 'CONFIRMED'
@@ -746,28 +773,28 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 : 'Order Placed'}
             </h1>
 
-            {order.status === 'SHIPPED' && trackingMetrics ? (
-              <p className="text-xs font-bold text-accent mt-1 animate-pulse flex items-center gap-1">
-                {trackingMetrics.isArrived ? (
-                  <span>📍 Rider has reached near your doorstep!</span>
-                ) : trackingMetrics.distanceNum >= 0.3 ? (
-                  <span>🚴 Rider is <span className="underline">{trackingMetrics.distance} km</span> away (ETA: ~{trackingMetrics.eta} mins)</span>
-                ) : (
-                  <span>🚴 Rider is heading to your address</span>
-                )}
-              </p>
-            ) : null}
+            <p className="text-xs font-semibold text-text-secondary mt-1">
+              {combinedStatus === 'CANCELLED'
+                ? 'This order has been cancelled.'
+                : combinedStatus === 'DELIVERED'
+                ? 'Thank you for ordering with FastKirana!'
+                : order.status === 'SHIPPED'
+                ? 'Your delivery partner has picked up the order and is on the way.'
+                : order.status === 'PACKED'
+                ? 'Items packed safely. Waiting for rider pickup.'
+                : 'Your order is being freshly prepared with hygiene checks.'}
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary bg-muted/60 px-3.5 py-2 rounded-xl border border-border/50 shadow-2xs">
-              <Clock className="h-4 w-4 text-primary" />
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary bg-muted/50 px-3 py-1.5 rounded-xl border border-border/50">
+              <Clock className="h-3.5 w-3.5 text-primary" />
               <span>Placed at: {formatOrderTime(order.createdAt)}</span>
             </div>
             {combinedStatus === 'PENDING' && (
               <button
                 onClick={handleOpenCustomerEdit}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer border border-primary/20 active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/95 text-white font-black rounded-xl text-xs transition-all shadow-sm cursor-pointer border border-primary/20 active:scale-95"
               >
                 <Edit className="h-3.5 w-3.5" /> Modify Items
               </button>
@@ -775,47 +802,67 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           </div>
         </div>
 
-        {/* Live Step Progress Bar */}
-        <div className="space-y-2 relative z-10">
-          <div className="flex justify-between items-center text-[11px] font-bold text-text-secondary">
-            <span>Overall Order Progress</span>
-            <span className="text-primary font-black">
-              {combinedStatus === 'CANCELLED' ? '0%' :
-               combinedStatus === 'DELIVERED' ? '100%' :
-               ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status) ? '80%' :
-               order.status === 'PACKED' ? '60%' :
-               order.status === 'CONFIRMED' ? '40%' : '20%'}
-            </span>
-          </div>
-          <div className="w-full bg-muted/60 rounded-full h-3 overflow-hidden p-0.5 border border-border/40">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-700 ease-out shadow-sm",
-                combinedStatus === 'CANCELLED' ? 'bg-red-500' :
-                combinedStatus === 'DELIVERED' ? 'bg-emerald-500' :
-                'bg-gradient-to-r from-accent via-primary to-orange-500 animate-pulse'
-              )}
-              style={{
-                width: combinedStatus === 'CANCELLED' ? '100%' :
-                       combinedStatus === 'DELIVERED' ? '100%' :
-                       ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status) ? '80%' :
-                       order.status === 'PACKED' ? '60%' :
-                       order.status === 'CONFIRMED' ? '40%' : '20%'
-              }}
-            />
+        {/* ── Modern 4-Step Timeline Stepper ── */}
+        <div className="py-2 relative z-10">
+          <div className="grid grid-cols-4 gap-2 relative">
+            {[
+              { label: 'Placed', icon: ShoppingBag, stepIdx: 0, activeWhen: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'] },
+              { label: 'Preparing', icon: Package, stepIdx: 1, activeWhen: ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'] },
+              { label: order.deliveryMethod === 'PICKUP' ? 'Ready' : 'On The Way', icon: Truck, stepIdx: 2, activeWhen: ['SHIPPED', 'DELIVERED'] },
+              { label: 'Delivered', icon: CheckCircle2, stepIdx: 3, activeWhen: ['DELIVERED'] },
+            ].map((step, idx) => {
+              const isReached = step.activeWhen.includes(order.status)
+              const isCurrent = (
+                (step.stepIdx === 0 && order.status === 'PENDING') ||
+                (step.stepIdx === 1 && (order.status === 'CONFIRMED' || order.status === 'PACKED')) ||
+                (step.stepIdx === 2 && order.status === 'SHIPPED') ||
+                (step.stepIdx === 3 && order.status === 'DELIVERED')
+              )
+              const StepIcon = step.icon
+
+              return (
+                <div key={idx} className="flex flex-col items-center text-center group">
+                  <div className="w-full flex items-center mb-2">
+                    <div className={cn(
+                      "h-1 w-full rounded-full transition-colors",
+                      idx === 0 ? "invisible" : isReached ? "bg-emerald-500" : "bg-muted"
+                    )} />
+                    <div className={cn(
+                      "h-9 w-9 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-sm",
+                      isCurrent
+                        ? "bg-primary text-white scale-110 shadow-md ring-4 ring-primary/20"
+                        : isReached
+                        ? "bg-emerald-500 text-white"
+                        : "bg-muted/70 text-text-muted border border-border/60"
+                    )}>
+                      <StepIcon className="h-4 w-4" strokeWidth={2.2} />
+                    </div>
+                    <div className={cn(
+                      "h-1 w-full rounded-full transition-colors",
+                      idx === 3 ? "invisible" : isReached && idx < (activeStep || 1) ? "bg-emerald-500" : "bg-muted"
+                    )} />
+                  </div>
+                  <span className={cn(
+                    "text-[10px] sm:text-xs font-black leading-tight",
+                    isCurrent ? "text-primary" : isReached ? "text-text-primary" : "text-text-muted"
+                  )}>
+                    {step.label}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
         {/* Fulfillment & Order Details Badge Row */}
-        <div className="flex flex-wrap gap-2">
-
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           {order.deliveryMethod === 'PICKUP' ? (
             <span className="text-[10px] font-black text-purple-800 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
               <Store className="h-3.5 w-3.5 shrink-0" /> Self-Pickup (Take Away)
             </span>
           ) : (
-            <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5 shrink-0" /> Doorstep Delivery
+            <span className="text-[10px] font-black text-sky-800 bg-sky-100 dark:bg-sky-900/30 dark:text-sky-400 px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5 shrink-0" /> Doorstep Fast Delivery
             </span>
           )}
           {isScheduled && order.estimatedDelivery && (
@@ -826,13 +873,59 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
         </div>
 
-        {compOrder ? (
+        {/* Dual-Store Combined Order Fulfillment Status */}
+        {order.isCombined && order.subOrders && order.subOrders.length > 0 ? (
+          <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-accent/5 to-card p-4 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h3 className="text-text-primary font-black text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Store className="h-4 w-4 text-primary shrink-0" />
+                <span>Multi-Store Preparation Progress</span>
+              </h3>
+              <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30">
+                🔗 1 Delivery · 2 Stops
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {order.subOrders.map((sub: any, idx: number) => {
+                const isRest = sub.type === 'RESTAURANT'
+                return (
+                  <div key={sub.id || idx} className="bg-card p-3 rounded-xl border border-border/70 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-9 w-9 rounded-xl flex items-center justify-center text-base shrink-0 bg-muted/60">
+                        {isRest ? '🍳' : '🛒'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-text-primary font-black text-xs truncate">
+                          {isRest ? (sub.shopName || 'Restaurant') : 'FastKirana Darkstore'}
+                        </div>
+                        <div className="text-[10px] text-text-muted font-medium mt-0.5">
+                          {sub.itemsCount || sub.items?.length || 0} {isRest ? 'Dishes' : 'Grocery items'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className={cn(
+                      "text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0",
+                      sub.status === 'DELIVERED' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' :
+                      sub.status === 'CANCELLED' ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' :
+                      sub.status === 'SHIPPED' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' :
+                      sub.status === 'PACKED' ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30' :
+                      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                    )}>
+                      {sub.status === 'PACKED' ? (isRest ? '🍳 Food Ready' : '📦 Packed') : sub.status}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : compOrder ? (
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 space-y-3 text-xs font-semibold text-text-secondary">
             <h3 className="text-text-primary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
               <Store className="h-4 w-4 text-primary shrink-0" /> Consolidated Fulfillment Status
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Primary Order Status */}
               <div className="bg-card p-3 rounded-lg border border-border/60 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-lg leading-none">
@@ -853,7 +946,6 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                   {order.status}
                 </span>
               </div>
-
             </div>
           </div>
         ) : (
@@ -871,32 +963,35 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
         {/* Out For Delivery Dedicated Contact Card */}
         {order.status === 'SHIPPED' && (
-          <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border-2 border-emerald-500/30 p-4 rounded-2xl shadow-md space-y-3">
-            <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🛵</span>
-                <div>
-                  <h3 className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                    OUT FOR DELIVERY CONTACT
-                  </h3>
-                  <p className="text-[10px] text-text-secondary font-semibold">
-                    {order.deliveryUser?.name && order.deliveryUser.name !== 'Admin'
-                      ? `Delivery Partner: ${order.deliveryUser.name}`
-                      : 'Delivery Partner: FastKirana Executive'}
-                  </p>
+          <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border border-emerald-500/30 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 w-full sm:w-auto">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+                🛵
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                    Delivery Partner Assigned
+                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div className="text-sm font-black text-text-primary mt-0.5 truncate">
+                  {order.deliveryUser?.name && order.deliveryUser.name !== 'Admin'
+                    ? order.deliveryUser.name
+                    : 'FastKirana Delivery Executive'}
+                </div>
+                <div className="text-[10px] text-text-muted font-medium">
+                  Verified FastKirana Delivery Partner
                 </div>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9px] font-black uppercase tracking-wider">
-                ACTIVE DELIVERY
-              </span>
             </div>
 
             <a
               href={`tel:${formatPhone(order.deliveryUser?.phone || '+919696503759').replace(/\s+/g, '')}`}
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95 text-center"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 text-center shrink-0 cursor-pointer"
             >
               <Phone className="h-4 w-4" />
-              Call Delivery Partner ({order.deliveryUser?.name && order.deliveryUser.name !== 'Admin' ? order.deliveryUser.name : 'Rider'})
+              <span>Call Rider</span>
             </a>
           </div>
         )}
@@ -927,173 +1022,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
 
 
-        {/* Step Progression Map UI */}
-        <div className="relative pl-8 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border before:content-['']">
-          {statusSteps.map((step, idx) => {
-            const isCompleted = idx < activeStep
-            const isActive = idx === activeStep
-            const isCancelledStep = step.status === 'CANCELLED'
-            const StepIcon = step.icon
-
-            return (
-              <div key={step.status} className="relative flex items-start gap-4">
-                {/* Step Circle Pin */}
-                <div
-                  className={cn(
-                    "absolute -left-[35px] flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300",
-                    isCancelledStep
-                      ? "bg-red-500 border-red-500 text-white scale-110 shadow ring-4 ring-red-500/20"
-                      : isCompleted || isActive
-                      ? "bg-green-500 border-green-500 text-white"
-                      : "bg-card border-border text-text-muted",
-                    isActive && !isCancelledStep && "scale-110 shadow-md ring-4 ring-green-500/20"
-                  )}
-                >
-                  {isCancelledStep ? (
-                    <X className="h-3 w-3 stroke-[3]" />
-                  ) : isCompleted || isActive ? (
-                    <Check className="h-3 w-3 stroke-[3]" />
-                  ) : (
-                    <span className="text-[10px] font-bold">{idx + 1}</span>
-                  )}
-                </div>
-
-                {/* Step Text Info */}
-                <div className="flex-grow">
-                  <h3
-                    className={cn(
-                      "text-sm font-extrabold",
-                      isCancelledStep
-                        ? "text-red-500"
-                        : isActive
-                        ? "text-green-600 dark:text-green-500"
-                        : isCompleted
-                        ? "text-text-primary"
-                        : "text-text-muted"
-                    )}
-                  >
-                    {step.label}
-                  </h3>
-                  <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
-                    {step.desc}
-                  </p>
-
-                  {/* Micro-checklist for PACKED state */}
-                  {isActive && step.status === 'PACKED' && (
-                    <div className="mt-3 bg-muted/40 border border-border/60 rounded-xl p-3 space-y-2.5 max-w-xs animate-fade-in">
-                      <span className="text-[9px] uppercase font-black text-accent tracking-wider block">
-                        🛡️ DarkStore Fresh Checks
-                      </span>
-                      <div className="space-y-2">
-                        {[
-                          "Sanitizing grocery items",
-                          "Quality checking freshness seals",
-                          "Sealing hygiene-safe bags"
-                        ].map((mStep, mIdx) => {
-                          const isDone = mIdx < packingStep
-                          const isPacking = mIdx === packingStep
-                          
-                          return (
-                            <div key={mIdx} className="flex items-center gap-2 text-[11px] font-semibold">
-                              {isDone ? (
-                                <span className="text-accent font-black text-xs">✓</span>
-                              ) : isPacking ? (
-                                <span className="relative flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                                </span>
-                              ) : (
-                                <span className="h-1.5 w-1.5 rounded-full bg-border" />
-                              )}
-                              <span className={cn(
-                                "transition-colors duration-300",
-                                isDone ? "text-text-muted line-through" : isPacking ? "text-primary font-bold animate-pulse-gentle" : "text-text-secondary"
-                              )}>
-                                {mStep}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Live Loader for active step */}
-                {isActive && order.status !== 'DELIVERED' && (
-                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0 mt-0.5" />
-                )}
-              </div>
-            )
-          })}
-        </div>
       </div>
-
-      <LockscreenAlertMockup orderId={order.id} />
-
-      {/* Simulated Tracking Map Panel */}
-      {order.status !== 'DELIVERED' && order.status !== 'PENDING' && order.status !== 'CANCELLED' && (
-        <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-            <Navigation className="h-4 w-4 text-primary" />
-            Live Rider Position
-          </h2>
-
-          {/* Map Simulation Graphics Area */}
-          <div className="relative h-44 rounded-xl bg-muted/30 overflow-hidden border border-border/40 flex items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
-            {/* Route Line */}
-            <div className="absolute h-1 w-[80%] bg-border rounded-full" />
-            
-            {/* Animated rider scooter */}
-            <div
-              className="absolute flex items-center justify-center h-10 w-10 bg-primary text-white rounded-full shadow-lg border-2 border-white transition-all duration-[15000ms] ease-linear"
-              style={{
-                left: `${
-                  order.status === 'CONFIRMED' ? '15%' :
-                  order.status === 'PACKED' ? '40%' :
-                  order.status === 'SHIPPED' ? '65%' : '90%'
-                }`
-              }}
-            >
-              <Truck className="h-5 w-5 animate-pulse-gentle" />
-            </div>
-
-            {/* Destination House Marker */}
-            <div className="absolute right-[10%] flex flex-col items-center gap-1">
-              <Home className="h-6 w-6 text-accent fill-accent animate-bounce-subtle" />
-              <span className="text-[9px] font-bold text-text-secondary bg-card px-1.5 py-0.5 rounded border shadow-sm">Home</span>
-            </div>
-
-            {/* Starting Store Marker */}
-            <div className="absolute left-[10%] flex flex-col items-center gap-1">
-              <Store className="h-6 w-6 text-primary fill-primary/10" />
-              <span className="text-[9px] font-bold text-text-secondary bg-card px-1.5 py-0.5 rounded border shadow-sm max-w-[100px] truncate" title={order.shopName || 'Store'}>
-                {order.shopName || 'Store'}
-              </span>
-            </div>
-          </div>
-
-          {/* Delivery Rider partner info block */}
-          <div className="flex items-center justify-between border-t border-border/40 pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-text-secondary border">
-                <User className="h-5 w-5" />
-              </div>
-              <div className="text-xs">
-                <h4 className="font-bold text-text-primary">{order.deliveryUser?.name || 'Sonu Kumar'}</h4>
-                <p className="text-[10px] text-accent font-semibold">FastKirana Delivery Executive</p>
-              </div>
-            </div>
-            <a
-              href={`tel:${formatPhone(order.deliveryUser?.phone || '+919876543210').replace(/\s+/g, '')}`}
-              className="flex items-center justify-center h-9 w-9 bg-accent/10 text-accent rounded-full hover:bg-accent/20 transition-colors"
-              aria-label="Call Rider"
-            >
-              <Phone className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
-      )}
 
       {/* Delivery Proof Card */}
       {order.status === 'DELIVERED' && (

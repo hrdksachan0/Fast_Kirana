@@ -38,6 +38,7 @@ interface OrderItem {
 interface Order {
   id: string
   readableId?: string
+  baseReadableId?: string
   status: string
   restaurantId?: string
   orderType?: string
@@ -59,6 +60,13 @@ interface Order {
   paymentMethod?: string
   paymentStatus?: string
   total: number
+  isCombined?: boolean
+  groceryStatus?: string | null
+  groceryItems?: OrderItem[]
+  restaurantStatus?: string | null
+  restaurantName?: string | null
+  restaurantItems?: OrderItem[]
+  subOrders?: any[]
 }
 
 interface OrderTrackingModalProps {
@@ -97,7 +105,11 @@ export default function OrderTrackingModal({
       (o.deliveryMethod || '').toUpperCase() === 'PICKUP' || 
       o.isSelfPickup === true
     )
-    const orderId = o.readableId || o.id?.slice(0, 8) || 'Order'
+    
+    // For combined orders, prefer restaurant sub-order token e.g. 600981-R
+    const restSub = o.subOrders?.find(s => s.type === 'RESTAURANT')
+    const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+    const outletName = restSub?.shopName || o.restaurantName || (o.shopName !== 'FastKirana Grocery' ? o.shopName : 'Restaurant')
     const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
@@ -105,18 +117,33 @@ export default function OrderTrackingModal({
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`
     text += `📦 *Type:* ${pickupMode ? '🛍️ Self Pickup (Customer Takeaway)' : '🛵 Doorstep Delivery (Rider Pickup)'}\n`
-    if (o.shopName) {
-      text += `🏪 *Outlet:* ${o.shopName}\n`
+    if (outletName) {
+      text += `🏪 *Outlet:* ${outletName}\n`
+    }
+    const hasPremium = Boolean(
+      o.notes?.toLowerCase().includes('premium') ||
+      o.notes?.toLowerCase().includes('thermal') ||
+      o.notes?.toLowerCase().includes('packaging') ||
+      o.deliveryInstructions?.toLowerCase().includes('premium') ||
+      (o.miscFee !== undefined && o.miscFee >= 15) ||
+      (o as any).packagingOption === 'PREMIUM' ||
+      (o as any).isPremiumPackaging === true
+    )
+    if (hasPremium) {
+      text += `✨ *PACK IN PREMIUM THERMAL PACKAGING*\n`
     }
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
-    const hasPremium = (o.notes?.includes('Premium') || (o as any).miscFee === 15)
-    if (hasPremium) {
-      text += `✨ *PREMIUM THERMAL PACKAGING REQUESTED*\n\n`
-    }
     text += `📋 *ITEMS TO PREPARE:*\n\n`
     
-    if (o.items && o.items.length > 0) {
-      o.items.forEach((item, index) => {
+    // If combined order, only include food dishes for the restaurant kitchen slip
+    const targetItems = (o.restaurantItems && o.restaurantItems.length > 0)
+      ? o.restaurantItems
+      : (restSub?.items && restSub.items.length > 0)
+      ? restSub.items
+      : (o.items || [])
+
+    if (targetItems && targetItems.length > 0) {
+      targetItems.forEach((item: OrderItem, index: number) => {
         let displayName = item.name || ''
         if (item.selectedVariant) {
           const varClean = item.selectedVariant.replace(/[()]/g, '').trim().toLowerCase()
@@ -134,14 +161,17 @@ export default function OrderTrackingModal({
       text += `(No items listed)\n`
     }
 
-    const totalQty = o.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
+    const totalQty = targetItems?.reduce((sum: number, item: OrderItem) => sum + (item.quantity || 1), 0) || 0
     text += `\n🔢 *Total Items to Pack:* ${totalQty} items\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
 
-    // Customer Notes / Special Instructions
-    const customerNote = o.notes || o.deliveryInstructions
-    if (customerNote && customerNote.trim()) {
-      text += `📝 *Customer Cooking/Delivery Note:*\n"${customerNote.trim()}"\n`
+    // Customer Notes / Special Instructions (Sanitize automated packaging fee string)
+    let customerNote = (o.notes || o.deliveryInstructions || '').trim()
+    if (customerNote.toLowerCase().includes('premium thermal packaging')) {
+      customerNote = customerNote.replace(/✨?\s*Premium Thermal Packaging Requested(\s*\(\+₹\d+\))?/gi, '').trim()
+    }
+    if (customerNote) {
+      text += `📝 *Customer Cooking/Delivery Note:*\n"${customerNote}"\n`
       text += `━━━━━━━━━━━━━━━━━━━━━\n`
     }
 
@@ -174,7 +204,15 @@ export default function OrderTrackingModal({
   const customerPhone = order.userPhone || order.address?.phone
   const totalItemCount = order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
   const statusStyle = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
-  const hasPremiumPackaging = (order.notes?.includes('Premium') || (order as any).miscFee === 15)
+  const hasPremiumPackaging = Boolean(
+    order.notes?.toLowerCase().includes('premium') ||
+    order.notes?.toLowerCase().includes('thermal') ||
+    order.notes?.toLowerCase().includes('packaging') ||
+    order.deliveryInstructions?.toLowerCase().includes('premium') ||
+    (order.miscFee !== undefined && order.miscFee >= 15) ||
+    (order as any).packagingOption === 'PREMIUM' ||
+    (order as any).isPremiumPackaging === true
+  )
   const orderTime = order.createdAt 
     ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     : ''
@@ -233,8 +271,8 @@ export default function OrderTrackingModal({
               {isPickup ? '🛍️ Pickup' : '🛵 Delivery'}
             </span>
             {hasPremiumPackaging && (
-              <span className="text-[10px] font-black px-2 py-[3px] rounded-md bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/30 shadow-2xs">
-                ✨ Premium Pack
+              <span className="text-[10px] font-black px-2 py-[3px] rounded-md bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 shadow-2xs">
+                ✨ Premium Packaging (+₹15)
               </span>
             )}
             <span className="text-[10px] text-text-muted font-medium ml-auto tabular-nums">
@@ -308,6 +346,26 @@ export default function OrderTrackingModal({
             </div>
           )}
 
+          {/* ── Premium Thermal Packaging Card Banner ── */}
+          {hasPremiumPackaging && (
+            <div className="p-3 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border border-amber-500/40 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg">✨</span>
+                <div>
+                  <div className="text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-wide">
+                    Premium Thermal Packaging (+₹15)
+                  </div>
+                  <div className="text-[10px] font-semibold text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                    Insulated hot/cold foil packaging requested for kitchen &amp; delivery
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2 py-1 bg-amber-500 text-white rounded-lg shadow-2xs shrink-0">
+                Thermal Pack
+              </span>
+            </div>
+          )}
+
           {/* ── Customer Note (if any) ── */}
           {(order.notes || order.deliveryInstructions) && (
             <div className="p-3 bg-amber-500/8 rounded-xl border border-amber-500/15">
@@ -343,51 +401,98 @@ export default function OrderTrackingModal({
                 </div>
               ) : (
                 <div className="divide-y divide-border/40">
-                  {order.items.map((item: OrderItem, idx: number) => (
-                    <div key={item.id || idx} className="p-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
-                      {/* Item Image */}
-                      {item.imageUrl ? (
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.name} 
-                          className="w-10 h-10 object-cover rounded-lg border border-border/30 shrink-0" 
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                          <Package className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
+                  {order.isCombined && order.subOrders && order.subOrders.length > 1 ? (
+                    order.subOrders.map((sub: any, subIdx: number) => {
+                      const isRest = sub.type === 'RESTAURANT'
+                      const subItems = sub.items || []
+                      if (subItems.length === 0) return null
+                      return (
+                        <div key={sub.id || subIdx} className="space-y-0">
+                          <div className="bg-muted/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
+                            <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : '🛒 FastKirana Grocery'}</span>
+                            <span className="font-mono text-text-muted">#{sub.readableId || sub.id?.slice(0, 8)}</span>
+                          </div>
+                          <div className="divide-y divide-border/30">
+                            {subItems.map((item: OrderItem, idx: number) => (
+                              <div key={item.id || idx} className="p-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
+                                {item.imageUrl ? (
+                                  <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-cover rounded-lg border border-border/30 shrink-0" />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                                    <Package className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-xs text-text-primary leading-tight truncate">{item.name}</div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    {item.selectedVariant && (
+                                      <span className="text-[10px] text-text-muted font-medium">{item.selectedVariant}</span>
+                                    )}
+                                    {item.notes && (
+                                      <span className="text-[9px] bg-amber-500/12 text-amber-700 dark:text-amber-300 px-1.5 py-px rounded font-medium">
+                                        📝 {item.notes}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 pl-2">
+                                  <div className="text-xs font-black text-text-primary tabular-nums">
+                                    {formatPrice(item.quantity * item.price)}
+                                  </div>
+                                  <div className="text-[10px] text-text-muted font-medium tabular-nums">
+                                    {item.quantity} × {formatPrice(item.price)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      )}
+                      )
+                    })
+                  ) : (
+                    order.items.map((item: OrderItem, idx: number) => (
+                      <div key={item.id || idx} className="p-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
+                        {item.imageUrl ? (
+                          <img 
+                            src={item.imageUrl} 
+                            alt={item.name} 
+                            className="w-10 h-10 object-cover rounded-lg border border-border/30 shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
+                          </div>
+                        )}
 
-                      {/* Item Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs text-text-primary leading-tight truncate">
-                          {item.name}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-xs text-text-primary leading-tight truncate">
+                            {item.name}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {item.selectedVariant && (
+                              <span className="text-[10px] text-text-muted font-medium">
+                                {item.selectedVariant}
+                              </span>
+                            )}
+                            {item.notes && (
+                              <span className="text-[9px] bg-amber-500/12 text-amber-700 dark:text-amber-300 px-1.5 py-px rounded font-medium">
+                                📝 {item.notes}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {item.selectedVariant && (
-                            <span className="text-[10px] text-text-muted font-medium">
-                              {item.selectedVariant}
-                            </span>
-                          )}
-                          {item.notes && (
-                            <span className="text-[9px] bg-amber-500/12 text-amber-700 dark:text-amber-300 px-1.5 py-px rounded font-medium">
-                              📝 {item.notes}
-                            </span>
-                          )}
+
+                        <div className="text-right shrink-0 pl-2">
+                          <div className="text-xs font-black text-text-primary tabular-nums">
+                            {formatPrice(item.quantity * item.price)}
+                          </div>
+                          <div className="text-[10px] text-text-muted font-medium tabular-nums">
+                            {item.quantity} × {formatPrice(item.price)}
+                          </div>
                         </div>
                       </div>
-
-                      {/* Qty × Price */}
-                      <div className="text-right shrink-0 pl-2">
-                        <div className="text-xs font-black text-text-primary tabular-nums">
-                          {formatPrice(item.quantity * item.price)}
-                        </div>
-                        <div className="text-[10px] text-text-muted font-medium tabular-nums">
-                          {item.quantity} × {formatPrice(item.price)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
             </div>

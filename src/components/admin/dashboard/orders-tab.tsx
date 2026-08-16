@@ -62,7 +62,9 @@ export function OrdersTab({
 
   const shareKitchenOrder = (o: any) => {
     const isPickup = isOrderPickup(o)
-    const orderId = o.readableId || o.id?.slice(0, 8) || 'Order'
+    const restSub = o.subOrders?.find((s: any) => s.type === 'RESTAURANT')
+    const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+    const outletName = restSub?.shopName || o.restaurantName || (o.shopName !== 'FastKirana Grocery' ? o.shopName : 'Restaurant')
     const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
@@ -70,18 +72,33 @@ export function OrdersTab({
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`
     text += `📦 *Type:* ${isPickup ? '🛍️ Self Pickup (Customer Takeaway)' : '🛵 Doorstep Delivery (Rider Pickup)'}\n`
-    if (o.shopName) {
-      text += `🏪 *Outlet:* ${o.shopName}\n`
+    if (outletName) {
+      text += `🏪 *Outlet:* ${outletName}\n`
     }
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
-    const hasPremium = (o.notes?.includes('Premium') || o.miscFee === 15)
+    const hasPremium = Boolean(
+      o.notes?.toLowerCase()?.includes('premium') ||
+      o.notes?.toLowerCase()?.includes('thermal') ||
+      o.notes?.toLowerCase()?.includes('packaging') ||
+      o.deliveryInstructions?.toLowerCase()?.includes('premium') ||
+      (o.miscFee !== undefined && o.miscFee >= 15) ||
+      (o as any).packagingOption === 'PREMIUM' ||
+      (o as any).isPremiumPackaging === true
+    )
     if (hasPremium) {
-      text += `✨ *PREMIUM THERMAL PACKAGING REQUESTED*\n\n`
+      text += `✨ *PACK IN PREMIUM THERMAL PACKAGING*\n`
     }
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `📋 *ITEMS TO PREPARE:*\n\n`
     
-    if (o.items && Array.isArray(o.items) && o.items.length > 0) {
-      o.items.forEach((item: any, index: number) => {
+    const targetItems = (o.restaurantItems && o.restaurantItems.length > 0)
+      ? o.restaurantItems
+      : (restSub?.items && restSub.items.length > 0)
+      ? restSub.items
+      : (o.items || [])
+
+    if (targetItems && Array.isArray(targetItems) && targetItems.length > 0) {
+      targetItems.forEach((item: any, index: number) => {
         let displayName = item.name || ''
         if (item.selectedVariant) {
           const varClean = item.selectedVariant.replace(/[()]/g, '').trim().toLowerCase()
@@ -95,7 +112,7 @@ export function OrdersTab({
           text += `   ↳ _Item Note: ${item.notes.trim()}_\n`
         }
       })
-      const totalQty = o.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+      const totalQty = targetItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
       text += `\n🔢 *Total Items to Pack:* ${totalQty} items\n`
     } else {
       text += `(Click Quick View in Admin to view loaded products)\n`
@@ -103,10 +120,13 @@ export function OrdersTab({
 
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     
-    // Customer Notes / Cooking Instructions
-    const customerNote = o.notes || o.deliveryInstructions
-    if (customerNote && customerNote.trim()) {
-      text += `📝 *Customer Cooking/Delivery Note:*\n"${customerNote.trim()}"\n`
+    // Customer Notes / Cooking Instructions (Sanitize automated packaging fee string)
+    let customerNote = (o.notes || o.deliveryInstructions || '').trim()
+    if (customerNote.toLowerCase().includes('premium thermal packaging')) {
+      customerNote = customerNote.replace(/✨?\s*Premium Thermal Packaging Requested(\s*\(\+₹\d+\))?/gi, '').trim()
+    }
+    if (customerNote) {
+      text += `📝 *Customer Cooking/Delivery Note:*\n"${customerNote}"\n`
       text += `━━━━━━━━━━━━━━━━━━━━━\n`
     }
 
@@ -370,6 +390,13 @@ export function OrdersTab({
                               </span>
                             )}
                           </div>
+                          {(o.notes?.toLowerCase().includes('premium') || o.notes?.toLowerCase().includes('thermal') || (o as any).miscFee >= 15 || (o as any).packagingOption === 'PREMIUM' || (o as any).isPremiumPackaging) && (
+                            <div className="mt-1">
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 shadow-2xs">
+                                ✨ Premium Pack (+₹15)
+                              </span>
+                            </div>
+                          )}
                           <div className="mt-1 flex items-center gap-1">
                             {(() => {
                               const displayName = ((o as any).restaurantName || o.shopName || '').trim()
@@ -708,6 +735,13 @@ export function OrdersTab({
                           <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
                             #{o.readableId || o.id.slice(0, 8)}
                           </span>
+                          {(o.notes?.toLowerCase().includes('premium') || o.notes?.toLowerCase().includes('thermal') || (o as any).miscFee >= 15 || (o as any).packagingOption === 'PREMIUM' || (o as any).isPremiumPackaging) && (
+                            <div className="mt-1">
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 shadow-2xs">
+                                ✨ Premium Pack (+₹15)
+                              </span>
+                            </div>
+                          )}
                           <div className="mt-1 flex items-center gap-1">
                             {(() => {
                               const displayName = ((o as any).restaurantName || o.shopName || '').trim()

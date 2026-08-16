@@ -85,6 +85,15 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
             lat: data.address?.lat || 26.1534185,
             lng: data.address?.lng || 80.1714024,
           },
+          readableId: data.readableId || data.baseReadableId || data.id?.slice(0, 8),
+          baseReadableId: data.baseReadableId,
+          isCombined: !!data.isCombined,
+          groceryStatus: data.groceryStatus,
+          groceryItems: data.groceryItems || [],
+          restaurantStatus: data.restaurantStatus,
+          restaurantName: data.restaurantName,
+          restaurantItems: data.restaurantItems || [],
+          subOrders: data.subOrders || [],
           deliveryUser: data.deliveryUser || null,
         }
 

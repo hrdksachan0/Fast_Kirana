@@ -154,16 +154,31 @@ export async function GET(
       const statuses = combinedOrders.map(o => o.status)
       const combinedStatus = getCombinedStatus(statuses)
 
-      const subOrders = combinedOrders.map(o => ({
-        id: o.id,
-        type: (o.orderType === 'RESTAURANT' || !!o.restaurantId) ? 'RESTAURANT' : 'GROCERY',
-        status: o.status,
-        total: o.total,
-        itemsCount: allItems.filter(item => item.orderId === o.id).length
-      }))
+      const baseReadableId = (order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId
+
+      const subOrders = combinedOrders.map(o => {
+        const subItems = allItems.filter(item => item.orderId === o.id)
+        const isRest = (o.orderType === 'RESTAURANT' || !!o.restaurantId)
+        return {
+          id: o.id,
+          readableId: o.readableId,
+          type: isRest ? 'RESTAURANT' : 'GROCERY',
+          shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
+          status: o.status,
+          subtotal: o.subtotal,
+          total: o.total,
+          itemsCount: subItems.length,
+          items: subItems,
+        }
+      })
+
+      const grocerySub = subOrders.find(s => s.type === 'GROCERY')
+      const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
 
       const mergedOrder = {
         ...order,
+        readableId: baseReadableId,
+        baseReadableId,
         status: combinedStatus,
         subtotal: combinedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
         discount: combinedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
@@ -175,6 +190,11 @@ export async function GET(
         address,
         deliveryUser,
         isCombined: true,
+        groceryStatus: grocerySub?.status || null,
+        groceryItems: grocerySub?.items || [],
+        restaurantStatus: restaurantSub?.status || null,
+        restaurantName: restaurantSub?.shopName || null,
+        restaurantItems: restaurantSub?.items || [],
         subOrders
       }
       return NextResponse.json(mergedOrder)
