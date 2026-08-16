@@ -65,26 +65,52 @@ export function OrdersTab({
     const orderId = o.readableId || o.id?.slice(0, 8) || 'Order'
     const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
     
-    let text = `🍳 *KITCHEN ORDER - #${orderId}*\n`
-    text += `⏰ *Time:* ${orderTime}\n`
-    text += `📦 *Type:* ${isPickup ? '🛍️ SELF PICKUP' : '🛵 DOORSTEP DELIVERY'}\n`
+    let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`
+    text += `🆔 *Order Token:* #${orderId}\n`
+    text += `⏰ *Order Time:* ${orderTime}\n`
+    text += `📦 *Type:* ${isPickup ? '🛍️ Self Pickup (Customer Takeaway)' : '🛵 Doorstep Delivery (Rider Pickup)'}\n`
     if (o.shopName) {
-      text += `🏪 *Restaurant:* ${o.shopName}\n`
+      text += `🏪 *Outlet:* ${o.shopName}\n`
     }
-    text += `\n📋 *ITEMS TO PREPARE:*\n`
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`
+    const hasPremium = (o.notes?.includes('Premium') || o.miscFee === 15)
+    if (hasPremium) {
+      text += `✨ *PREMIUM THERMAL PACKAGING REQUESTED*\n\n`
+    }
+    text += `📋 *ITEMS TO PREPARE:*\n\n`
     
     if (o.items && Array.isArray(o.items) && o.items.length > 0) {
       o.items.forEach((item: any, index: number) => {
-        const variantText = item.selectedVariant ? ` (${item.selectedVariant})` : ''
-        text += `${index + 1}. *${item.name}${variantText}*  ✖  *${item.quantity}*\n`
+        let displayName = item.name || ''
+        if (item.selectedVariant) {
+          const varClean = item.selectedVariant.replace(/[()]/g, '').trim().toLowerCase()
+          const nameClean = displayName.toLowerCase()
+          if (!nameClean.includes(varClean)) {
+            displayName += ` (${item.selectedVariant.replace(/[()]/g, '').trim()})`
+          }
+        }
+        text += `${index + 1}. *${displayName}*  ➜  *Qty: ${item.quantity}*\n`
+        if (item.notes && item.notes.trim()) {
+          text += `   ↳ _Item Note: ${item.notes.trim()}_\n`
+        }
       })
       const totalQty = o.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
-      text += `\n🔢 *Total Items:* ${totalQty} units\n`
+      text += `\n🔢 *Total Items to Pack:* ${totalQty} items\n`
     } else {
       text += `(Click Quick View in Admin to view loaded products)\n`
     }
 
-    text += `⚠️ *Kitchen Slip: Only Products & Quantities Included*`
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`
+    
+    // Customer Notes / Cooking Instructions
+    const customerNote = o.notes || o.deliveryInstructions
+    if (customerNote && customerNote.trim()) {
+      text += `📝 *Customer Cooking/Delivery Note:*\n"${customerNote.trim()}"\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━\n`
+    }
+
+    text += `👨‍🍳 *Chef Note:* Kripya fresh prepare karein aur safely pack karein.`
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
     window.open(url, '_blank')
   }
