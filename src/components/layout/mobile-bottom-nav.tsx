@@ -227,13 +227,13 @@ export function MobileBottomNav() {
                 <div className="flex items-center justify-center h-7 w-7 relative">
                   <motion.div
                     animate={{
-                      scale: isActive ? [1, 1.15, 0.98, 1.05] : 1,
+                      scale: isActive ? 1.08 : 1,
                       y: isActive ? -0.5 : 0,
                     }}
                     transition={{
                       type: 'spring',
-                      stiffness: 500,
-                      damping: 18,
+                      stiffness: 450,
+                      damping: 20,
                     }}
                     className={cn(
                       "flex items-center justify-center transition-all duration-300",
@@ -255,12 +255,12 @@ export function MobileBottomNav() {
                 {/* Text Label - Clean Red Accent on Active */}
                 <motion.span
                   animate={{
-                    scale: isActive ? [1, 1.06, 1.02] : 1,
+                    scale: isActive ? 1.03 : 1,
                   }}
                   transition={{
                     type: 'spring',
                     stiffness: 400,
-                    damping: 20,
+                    damping: 22,
                   }}
                   className={cn(
                     "text-[9.5px] min-[375px]:text-[10px] mt-0.5 tracking-tight transition-colors duration-300 leading-none",

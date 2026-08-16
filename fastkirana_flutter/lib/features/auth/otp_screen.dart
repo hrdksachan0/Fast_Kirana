@@ -155,7 +155,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               const SizedBox(height: 40),
               Text(
                 'Verify OTP',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -165,7 +165,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               Text(
                 'We sent a code to ${widget.identifier}',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
@@ -183,7 +183,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       keyboardType: TextInputType.number,
                       maxLength: 1,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                       ),
@@ -212,7 +212,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 children: [
                   Text(
                     "Didn't receive the code? ",
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -224,7 +224,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       _resendCooldown > 0
                           ? 'Resend in ${_resendCooldown}s'
                           : 'Resend',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
@@ -255,7 +255,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                           ),
                         )
                       : Text('Verify OTP',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600)),
                 ),

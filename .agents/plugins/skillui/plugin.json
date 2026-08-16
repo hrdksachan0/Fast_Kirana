@@ -1,0 +1,7 @@
+{
+  "name": "skillui",
+  "version": "1.0.0",
+  "description": "Design Token Extraction, Component Architecture, and Next.js / Flutter Design System Sync",
+  "skills": ["skills/skillui/SKILL.md"],
+  "rules": ["rules/skillui-design-rules.md"]
+}

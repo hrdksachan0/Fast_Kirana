@@ -84,19 +84,9 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   try {
     // If order belongs to a combined order group, merge companion order items and totals for customer view
     let combinedOrdersToMerge: any[] = []
-    if (order.combinedId) {
+    if (order.combinedId && typeof order.combinedId === 'string' && order.combinedId.trim().length > 0) {
       combinedOrdersToMerge = await prisma.order.findMany({
         where: { combinedId: order.combinedId },
-        include: { items: true }
-      })
-    } else {
-      const fiveSecondsAgo = new Date(new Date(order.createdAt).getTime() - 5000)
-      const fiveSecondsAfter = new Date(new Date(order.createdAt).getTime() + 5000)
-      combinedOrdersToMerge = await prisma.order.findMany({
-        where: {
-          userId: order.userId,
-          createdAt: { gte: fiveSecondsAgo, lte: fiveSecondsAfter }
-        },
         include: { items: true }
       })
     }
@@ -274,14 +264,6 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                     : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and instant delivery.'}
                 </p>
               </div>
-              {order.shopPhone && (
-                <a
-                  href={`tel:${order.shopPhone}`}
-                  className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl transition-all flex items-center gap-1.5 shrink-0 border border-primary/20"
-                >
-                  <span>📞</span> Call Shop
-                </a>
-              )}
             </div>
           </div>
         )}

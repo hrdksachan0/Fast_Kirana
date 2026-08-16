@@ -48,7 +48,7 @@ class ComboBuilderScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: Text('₹349', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
+                  child: Text('₹349', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
                 ),
               ],
             ),

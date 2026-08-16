@@ -475,10 +475,6 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
             <Clock size={13} className="text-zinc-400" />
             <span>30-40 min</span>
           </div>
-          {/* Price for two */}
-          <div className="flex items-center gap-1 text-xs font-bold text-zinc-600 dark:text-zinc-400 shrink-0">
-            <span>₹200 for two</span>
-          </div>
         </div>
         {/* Share button (optional) */}
       </div>

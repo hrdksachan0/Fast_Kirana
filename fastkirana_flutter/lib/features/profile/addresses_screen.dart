@@ -17,7 +17,7 @@ class AddressesScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
-        title: Text('Saved Addresses', style: GoogleFonts.poppins(
+        title: Text('Saved Addresses', style: GoogleFonts.inter(
           fontWeight: FontWeight.w700, color: Colors.white,
         )),
         backgroundColor: AppDesignSystem.primary,
@@ -41,13 +41,13 @@ class AddressesScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       Text(
                         'No addresses saved yet',
-                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary),
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Tap "Add Address" to save your first delivery address',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(fontSize: 13, color: AppDesignSystem.textSecondary),
+                        style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
                       ),
                     ],
                   ),
@@ -71,13 +71,13 @@ class AddressesScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Could not load addresses',
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     err.toString(),
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppDesignSystem.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   BrandButton(
@@ -93,7 +93,7 @@ class AddressesScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
         icon: const Icon(Icons.add),
-        label: Text('Add Address', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        label: Text('Add Address', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         backgroundColor: AppDesignSystem.primary,
       ),
     );
@@ -114,7 +114,7 @@ class AddressesScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               Text(
                 addr.label,
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               if (addr.isDefault)
@@ -126,7 +126,7 @@ class AddressesScreen extends ConsumerWidget {
                   ),
                   child: Text(
                     'DEFAULT',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: AppDesignSystem.success,
@@ -138,12 +138,12 @@ class AddressesScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             addr.fullAddress,
-            style: GoogleFonts.poppins(fontSize: 13, color: AppDesignSystem.textSecondary),
+            style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             'Phone: ${addr.phone}',
-            style: GoogleFonts.poppins(fontSize: 12, color: AppDesignSystem.textSecondary),
+            style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
           ),
           const SizedBox(height: 12),
           Row(

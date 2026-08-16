@@ -144,6 +144,13 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     }
   }
 
+  Future<void> clearCart() async {
+    try {
+      await repository.saveLocalCart([]);
+      state = AsyncValue.data(_createMockCart([]));
+    } catch (_) {}
+  }
+
   Cart _createMockCart(List<CartItem> items) {
     return Cart(
       id: 'cart_local',

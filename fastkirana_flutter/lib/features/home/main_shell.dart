@@ -6,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/cart_provider.dart';
 import 'home_screen.dart';
+import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
-import '../cart/cart_screen.dart';
 import '../profile/profile_screen.dart';
 
 final selectedTabProvider = StateProvider<int>((ref) => 0);
@@ -19,10 +19,11 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(selectedTabProvider);
 
+    // 4 Standard Tabs matching Web: Home · Search · Category · Account
     final screens = const [
       HomeScreen(),
+      SearchScreen(),
       CategoriesScreen(),
-      CartScreen(),
       ProfileScreen(),
     ];
 
@@ -37,97 +38,127 @@ class MainShell extends ConsumerWidget {
             children: screens,
           ),
 
-          // Floating Cart Bar overlay (visible on Home & Categories tab when cart has items)
-          if (selectedIndex != 2) // Hide on Cart tab itself
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: MediaQuery.of(context).padding.bottom + 84,
-              child: cartAsync.when(
-                data: (cart) {
-                  if (cart.items.isEmpty) return const SizedBox.shrink();
-                  final total = cart.subtotal;
-                  final itemCount = cart.totalItems;
+          // Slim Modern Floating Sticky Cart Bar (visible on Home, Search & Category tabs when cart has items)
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: MediaQuery.of(context).padding.bottom + 76,
+            child: cartAsync.when(
+              data: (cart) {
+                if (cart.items.isEmpty) return const SizedBox.shrink();
+                final total = cart.subtotal;
+                final itemCount = cart.totalItems;
 
-                  return Container(
-                    height: 54,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE20A22), // FastKirana Primary Brand Red
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFE20A22).withOpacity(0.35),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                return Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE8153A), Color(0xFFFF2D55), Color(0xFFFF4742)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                     ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        ref.read(selectedTabProvider.notifier).state = 2; // Switch to Cart tab
-                      },
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE8153A).withOpacity(0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      // Navigate to Cart
+                      Navigator.pushNamed(context, '/cart');
+                    },
+                    child: Row(
+                      children: [
+                        // Bag Icon Pill
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.white),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} • ₹${total.toInt()}',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w900,
                                 color: Colors.white,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            '₹${total.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Text(
-                                'View Cart',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
+                            Text(
+                              total >= 200 ? '✨ Free delivery unlocked' : 'Add ₹${(200 - total).clamp(0, 200).toInt()} for FREE',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withOpacity(0.9),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'VIEW CART',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFE8153A),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFFE8153A)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
+          ),
             
-          // Floating Pill Navigation
+          // Liquid Flow Glass Bottom Navigation
           Positioned(
             left: 0,
             right: 0,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
             child: Align(
               alignment: Alignment.bottomCenter,
-              child: _buildBottomNav(context, ref, selectedIndex),
+              child: _buildLiquidBottomNav(context, ref, selectedIndex),
             ),
           ),
         ],
@@ -135,95 +166,116 @@ class MainShell extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
-    const textMuted = Color(0xFF9CA3AF);
-
-    final items = [
-      {'icon': Icons.home_outlined, 'activeIcon': Icons.home_rounded},
-      {'icon': Icons.grid_view_outlined, 'activeIcon': Icons.grid_view_rounded},
-      {'icon': Icons.shopping_cart_outlined, 'activeIcon': Icons.shopping_cart_rounded},
-      {'icon': Icons.person_outline, 'activeIcon': Icons.person_rounded},
+  Widget _buildLiquidBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
+    final navItems = [
+      {'label': 'Home', 'icon': Icons.home_outlined},
+      {'label': 'Search', 'icon': Icons.search_rounded},
+      {'label': 'Category', 'icon': Icons.grid_view_rounded},
+      {'label': 'Account', 'icon': Icons.person_outline_rounded},
     ];
 
-    final cartState = ref.watch(cartProvider);
-    final cartCount = cartState.value?.totalItems ?? 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final navWidth = (screenWidth * 0.92).clamp(320.0, 420.0);
+    final tabWidth = (navWidth - 12) / 4;
 
     return Container(
-      width: MediaQuery.of(context).size.width * 0.92,
-      constraints: const BoxConstraints(maxWidth: 420),
-      height: 56,
+      width: navWidth,
+      height: 58,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.grey.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 30,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(30),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(items.length, (index) {
-              final isSelected = selectedIndex == index;
-              final isCartTab = index == 2;
-
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    ref.read(selectedTabProvider.notifier).state = index;
-                  },
-                  child: Center(
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFE20A22) : Colors.transparent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        clipBehavior: Clip.none,
-                        children: [
-                          Icon(
-                            isSelected ? (items[index]['activeIcon'] as IconData) : (items[index]['icon'] as IconData),
-                            size: 24,
-                            color: isSelected ? Colors.white : textMuted,
-                          ),
-                          if (isCartTab && cartCount > 0)
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? Colors.white : const Color(0xFFE20A22),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '$cartCount',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w900,
-                                    color: isSelected ? const Color(0xFFE20A22) : Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              // Liquid Water Droplet Active Indicator
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutBack,
+                left: 6 + (selectedIndex * tabWidth),
+                top: 8,
+                child: Container(
+                  width: tabWidth,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.9),
+                        const Color(0xFFF3F4F6).withOpacity(0.6),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.grey.withOpacity(0.22)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }),
+              ),
+
+              // Interactive Tabs Row
+              Row(
+                children: List.generate(navItems.length, (index) {
+                  final isSelected = selectedIndex == index;
+                  final item = navItems[index];
+
+                  return Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(selectedTabProvider.notifier).state = index;
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedScale(
+                              scale: isSelected ? 1.08 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(
+                                item['icon'] as IconData,
+                                size: 21,
+                                color: isSelected ? const Color(0xFFF33B30) : const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item['label'] as String,
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isSelected ? const Color(0xFFF33B30) : const Color(0xFF9CA3AF),
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
         ),
       ),

@@ -89,50 +89,6 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
 
         setOrder(mapped)
         setError(null)
-
-        // Merge companion order into main order for unified single-order tracking
-        try {
-          const ordersRes = await fetch('/api/orders')
-          if (ordersRes.ok) {
-            const allOrders = await ordersRes.json()
-            const orderCreatedAt = new Date(data.createdAt).getTime()
-            const companion = allOrders.find((o: any) =>
-              o.id !== data.id &&
-              (o.combinedId === data.combinedId || Math.abs(new Date(o.createdAt).getTime() - orderCreatedAt) <= 5000)
-            )
-            if (companion && isMounted) {
-              const compRes = await fetch(`/api/orders/${companion.id}`)
-              if (compRes.ok) {
-                const compData = await compRes.json()
-                const compItems = (compData.items || []).map((i: any) => ({
-                  id: i.id,
-                  productId: i.productId,
-                  name: i.name,
-                  price: i.price,
-                  quantity: i.quantity,
-                  selectedVariant: i.selectedVariant || null
-                }))
-                setOrder((prev: any) => {
-                  if (!prev) return prev
-                  const existingItemIds = new Set(prev.items.map((i: any) => i.id))
-                  const newItems = compItems.filter((i: any) => !existingItemIds.has(i.id))
-                  return {
-                    ...prev,
-                    subtotal: (prev.subtotal || 0) + (compData.subtotal || 0),
-                    discount: (prev.discount || 0) + (compData.discount || 0),
-                    deliveryFee: (prev.deliveryFee || 0) + (compData.deliveryFee || 0),
-                    taxes: (prev.taxes || 0) + (compData.taxes || 0),
-                    total: (prev.total || 0) + (compData.total || 0),
-                    items: [...prev.items, ...newItems],
-                    isCombined: true
-                  }
-                })
-              }
-            }
-          }
-        } catch {
-          // Companion order merge is non-critical, ignore errors
-        }
       } catch (err: any) {
         console.error('Error fetching order for tracking:', err)
         if (isMounted) {

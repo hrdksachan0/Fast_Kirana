@@ -1143,10 +1143,6 @@ export function RestaurantOrdersConsole() {
                       <p className="text-[10px] text-text-secondary font-bold mt-1 flex items-center gap-1.5 flex-wrap">
                         <span className="font-black text-text-primary">{order.user?.name || 'Customer'}</span>
                         <span className="text-text-muted">•</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
-                          📞 {(order.user as any)?.phone || (order as any).userPhone || (order as any).shopPhone || (order.address as any)?.phone || 'No Phone'}
-                        </span>
-                        <span className="text-text-muted">•</span>
                         <span className="uppercase font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">{order.deliveryMethod || 'PICKUP'}</span>
                       </p>
                     </div>

@@ -1,537 +1,583 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:action_slider/action_slider.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/utils/validators.dart';
-import '../../data/models/address.dart';
 import '../../data/models/cart.dart';
-import '../../data/models/order.dart';
-import '../../data/repositories/order_repository.dart';
 import '../../providers/cart_provider.dart';
-import '../../core/network/api_client.dart';
-import '../../widgets/brand_input.dart';
-import '../../widgets/brand_card.dart';
-import '../../widgets/brand_button.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-  const CheckoutScreen({super.key});
+  final double discountAmount;
+  final String? couponCode;
+
+  const CheckoutScreen({
+    super.key,
+    this.discountAmount = 0.0,
+    this.couponCode,
+  });
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  int _addressType = 0;
-  bool _isLoading = false;
   String _selectedPayment = 'cod';
-  final double _freeDeliveryThreshold = 199.0;
-  final double _deliveryFee = 25.0;
+  int _selectedAddressIndex = 0;
+  bool _isPlacingOrder = false;
 
-  final _controllers = {
-    'house': TextEditingController(),
-    'street': TextEditingController(),
-    'area': TextEditingController(),
-    'city': TextEditingController(),
-    'pincode': TextEditingController(),
-    'phone': TextEditingController(),
-  };
+  static const Color primaryRed = Color(0xFFE20A22);
+  static const Color successGreen = Color(0xFF10B981);
 
-  final _paymentMethods = [
-    {'id': 'cod', 'label': 'Cash on Delivery', 'icon': Icons.payments_outlined},
-    {'id': 'upi', 'label': 'UPI / GPay / PhonePe', 'icon': Icons.qr_code_2_outlined},
-    {'id': 'card', 'label': 'Card / Wallet', 'icon': Icons.credit_card_outlined},
+  final List<Map<String, String>> _addresses = [
+    {
+      'tag': 'Home',
+      'icon': '🏠',
+      'name': 'Ghatampur Home',
+      'address': 'Ward No. 4, Near Subhash Chowk, Kanpur Road',
+      'city': 'Ghatampur, Kanpur Nagar - 209206',
+      'phone': '+91 70544 70303',
+    },
+    {
+      'tag': 'Work',
+      'icon': '🏢',
+      'name': 'Market Office',
+      'address': 'Shop #12, Station Road Market',
+      'city': 'Ghatampur - 209206',
+      'phone': '+91 70544 70303',
+    },
   ];
+
+  final List<Map<String, dynamic>> _paymentOptions = [
+    {
+      'id': 'cod',
+      'name': 'Cash on Delivery',
+      'desc': 'Pay cash or UPI at doorstep',
+      'icon': Icons.payments_outlined,
+      'badge': 'Most Popular',
+    },
+    {
+      'id': 'upi',
+      'name': 'UPI Instant (GPay / PhonePe / Paytm)',
+      'desc': 'Fast & 100% secure payment',
+      'icon': Icons.qr_code_2_rounded,
+      'badge': 'Zero Fee',
+    },
+    {
+      'id': 'card',
+      'name': 'Credit / Debit Card / Net Banking',
+      'desc': 'Visa, MasterCard, RuPay',
+      'icon': Icons.credit_card_rounded,
+      'badge': null,
+    },
+  ];
+
+  Future<void> _handlePlaceOrder(Cart cart) async {
+    HapticFeedback.heavyImpact();
+    setState(() => _isPlacingOrder = true);
+
+    await Future.delayed(const Duration(milliseconds: 1200));
+
+    final subtotal = cart.subtotal;
+    final deliveryFee = subtotal >= 200 ? 0.0 : 25.0;
+    final taxes = 0.0;
+    final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
+
+    final selectedAddr = _addresses[_selectedAddressIndex];
+
+    ref.read(cartProvider.notifier).clearCart();
+
+    if (!mounted) return;
+    setState(() => _isPlacingOrder = false);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderSuccessScreen(
+          totalAmount: grandTotal,
+          deliveryAddress: '${selectedAddr['name']}, ${selectedAddr['address']}',
+          paymentMethod: _selectedPayment.toUpperCase(),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cartAsync = ref.watch(cartProvider);
+    final cartState = ref.watch(cartProvider);
+    final cart = cartState.value;
+
+    if (cart == null || cart.items.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
+        body: const Center(child: Text('Your cart is empty')),
+      );
+    }
+
+    final subtotal = cart.subtotal;
+    final deliveryFee = subtotal >= 200 ? 0.0 : 25.0;
+    final taxes = 0.0;
+    final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
 
     return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      body: cartAsync.when(
-        data: (cart) {
-          if (cart.items.isEmpty) {
-            return _buildEmptyState();
-          }
-          return Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildAddressSection(),
-                    const SizedBox(height: 20),
-                    _buildPaymentSection(),
-                    const SizedBox(height: 20),
-                    _buildOrderSummary(cart),
-                    const SizedBox(height: 20),
-                    BrandButton(
-                      text: 'Place Order',
-                      onPressed: () => _placeOrder(cart),
-                      isLoading: _isLoading,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF111827)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Confirm & Pay',
+          style: GoogleFonts.inter(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF111827),
+            letterSpacing: -0.3,
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
-        left: 16,
-        right: 16,
-        bottom: 16,
-      ),
-      decoration: const BoxDecoration(
-        color: AppDesignSystem.primary,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(20),
-        ),
-      ),
-      child: Row(
+      body: Stack(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          ),
-          Text(
-            'Checkout',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddressSection() {
-    final addressTypes = ['Home', 'Work', 'Other'];
-    final icons = [Icons.home_rounded, Icons.work_rounded, Icons.location_on_rounded];
-
-    return BrandCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Delivery Address',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppDesignSystem.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Address Type Selector
-          Row(
-            children: List.generate(3, (index) {
-              final isSelected = _addressType == index;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _addressType = index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppDesignSystem.primary.withOpacity(0.08) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? AppDesignSystem.primary : AppDesignSystem.border,
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          icons[index],
-                          size: 18,
-                          color: isSelected ? AppDesignSystem.primary : AppDesignSystem.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          addressTypes[index],
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? AppDesignSystem.primary : AppDesignSystem.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-
-          const SizedBox(height: 16),
-          BrandInput(
-            label: 'House / Flat No',
-            controller: _controllers['house']!,
-            hint: 'e.g., 123, Flat 4B',
-            prefixIcon: Icons.home_outlined,
-            validator: (v) => Validators.required(v, 'House number'),
-          ),
-          const SizedBox(height: 12),
-          BrandInput(
-            label: 'Street / Society',
-            controller: _controllers['street']!,
-            hint: 'e.g., Main Street, Galaxy Apartments',
-            prefixIcon: Icons.signpost_outlined,
-            validator: (v) => Validators.required(v, 'Street'),
-          ),
-          const SizedBox(height: 12),
-          Row(
+          ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
             children: [
-              Expanded(
-                child: BrandInput(
-                  label: 'Area',
-                  controller: _controllers['area']!,
-                  hint: 'Area',
-                  prefixIcon: Icons.location_city_outlined,
-                  validator: (v) => Validators.required(v, 'Area'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: BrandInput(
-                  label: 'City',
-                  controller: _controllers['city']!,
-                  hint: 'City',
-                  prefixIcon: Icons.location_on_outlined,
-                  validator: (v) => Validators.required(v, 'City'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: BrandInput(
-                  label: 'Pincode',
-                  controller: _controllers['pincode']!,
-                  hint: '6-digit pincode',
-                  prefixIcon: Icons.pin_drop_outlined,
-                  keyboardType: TextInputType.number,
-                  validator: Validators.pincode,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: BrandInput(
-                  label: 'Phone',
-                  controller: _controllers['phone']!,
-                  hint: '10-digit mobile',
-                  prefixIcon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  validator: Validators.phone,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentSection() {
-    return BrandCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Payment Method',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppDesignSystem.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...List.generate(_paymentMethods.length, (index) {
-            final method = _paymentMethods[index];
-            final isSelected = _selectedPayment == method['id'];
-            return GestureDetector(
-              onTap: () => setState(() => _selectedPayment = method['id'] as String),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
+              // 1. Delivery ETA Banner
+              Container(
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppDesignSystem.primary.withOpacity(0.04)
-                      : AppDesignSystem.surface,
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-                  border: Border.all(
-                    color: isSelected ? AppDesignSystem.primary : AppDesignSystem.borderLight,
-                    width: isSelected ? 1.5 : 1,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFEF2F2), Color(0xFFFFF1F2)],
                   ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFECDD3)),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppDesignSystem.primary.withOpacity(0.1)
-                            : AppDesignSystem.background,
-                        borderRadius: BorderRadius.circular(10),
+                        color: primaryRed.withOpacity(0.12),
+                        shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        method['icon'] as IconData,
-                        color: AppDesignSystem.primary,
-                        size: 20,
-                      ),
+                      child: const Icon(Icons.bolt_rounded, color: primaryRed, size: 20),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        method['label'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: AppDesignSystem.textPrimary,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Superfast Delivery in 10-15 mins',
+                            style: GoogleFonts.inter(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF991B1B),
+                            ),
+                          ),
+                          Text(
+                            'Dispatching directly from Ghatampur Hub',
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFFB91C1C),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Radio<String>(
-                      value: method['id'] as String,
-                      groupValue: _selectedPayment,
-                      onChanged: (v) => setState(() => _selectedPayment = v!),
-                      activeColor: AppDesignSystem.primary,
                     ),
                   ],
                 ),
               ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
+              const SizedBox(height: 14),
 
-  Widget _buildOrderSummary(Cart cart) {
-    final subtotal = cart.subtotal;
-    final deliveryFee = subtotal >= _freeDeliveryThreshold ? 0.0 : _deliveryFee;
-    final total = subtotal + deliveryFee;
-
-    return BrandCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Order Summary',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppDesignSystem.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...cart.items.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.borderLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: item.product.imageUrl != null && item.product.imageUrl!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: item.product.imageUrl!,
-                            fit: BoxFit.cover,
-                            width: 40,
-                            height: 40,
+              // 2. Select Delivery Address
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('📍', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Delivery Address',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '+ Add New',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: primaryRed,
                           ),
-                        )
-                      : const Icon(Icons.shopping_bag, size: 18, color: AppDesignSystem.textMuted),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                Text(
-                  'x${item.quantity}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppDesignSystem.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  Helpers.formatPrice(item.lineTotal),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          )),
-          const Divider(height: 20),
-          _buildRow('Subtotal', Helpers.formatPrice(subtotal)),
-          _buildRow(
-            'Delivery',
-            deliveryFee == 0 ? 'FREE' : Helpers.formatPrice(deliveryFee),
-            highlight: deliveryFee == 0,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppDesignSystem.textPrimary,
+                    const SizedBox(height: 12),
+                    ...List.generate(_addresses.length, (idx) {
+                      final addr = _addresses[idx];
+                      final isSelected = _selectedAddressIndex == idx;
+
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedAddressIndex = idx);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? primaryRed : const Color(0xFFE5E7EB),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                size: 18,
+                                color: isSelected ? primaryRed : const Color(0xFF9CA3AF),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(addr['icon']!, style: const TextStyle(fontSize: 12)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          addr['name']!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF111827),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? primaryRed.withOpacity(0.12) : const Color(0xFFE5E7EB),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            addr['tag']!,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: isSelected ? primaryRed : const Color(0xFF4B5563),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${addr['address']}, ${addr['city']}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF4B5563),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      addr['phone']!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
-              Text(
-                Helpers.formatPrice(total),
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppDesignSystem.primary,
+              const SizedBox(height: 14),
+
+              // 3. Payment Method Selection
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('💳', style: TextStyle(fontSize: 15)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Select Payment Method',
+                          style: GoogleFonts.inter(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ..._paymentOptions.map((method) {
+                      final isSelected = _selectedPayment == method['id'];
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedPayment = method['id'] as String);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? primaryRed : const Color(0xFFE5E7EB),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                size: 18,
+                                color: isSelected ? primaryRed : const Color(0xFF9CA3AF),
+                              ),
+                              const SizedBox(width: 10),
+                              Icon(
+                                method['icon'] as IconData,
+                                size: 22,
+                                color: isSelected ? primaryRed : const Color(0xFF4B5563),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          method['name'] as String,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF111827),
+                                          ),
+                                        ),
+                                        if (method['badge'] != null) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDCFCE7),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              method['badge'] as String,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: const Color(0xFF15803D),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    Text(
+                                      method['desc'] as String,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 4. Order Bill Summary
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payment Summary',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildSummaryRow('Items Total', '₹${subtotal.toInt()}'),
+                    if (widget.discountAmount > 0)
+                      _buildSummaryRow('Coupon Discount', '-₹${widget.discountAmount.toInt()}', isHighlight: true),
+                    _buildSummaryRow(
+                      'Delivery Fee',
+                      deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
+                      isHighlight: deliveryFee == 0,
+                    ),
+                    _buildSummaryRow('Taxes & Packaging', '₹${taxes.toInt()}'),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Grand Total',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                        Text(
+                          '₹${grandTotal.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: primaryRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+
+          // 5. Sticky Bottom Slide-to-Order Swipe Bar
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: ActionSlider.standard(
+                height: 54,
+                sliderBehavior: SliderBehavior.stretch,
+                backgroundColor: const Color(0xFFF3F4F6),
+                toggleColor: primaryRed,
+                icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
+                loadingIcon: const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                ),
+                successIcon: const Icon(Icons.check_rounded, color: Colors.white, size: 24),
+                child: Text(
+                  'Slide to Place Order · ₹${grandTotal.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF374151),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                action: (controller) async {
+                  controller.loading();
+                  await _handlePlaceOrder(cart);
+                  controller.success();
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRow(String label, String value, {bool highlight = false}) {
+  Widget _buildSummaryRow(String label, String value, {bool isHighlight = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 13,
-              color: AppDesignSystem.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF4B5563),
             ),
           ),
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: highlight ? AppDesignSystem.accent : AppDesignSystem.textPrimary,
+              fontSize: 12,
+              fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w600,
+              color: isHighlight ? successGreen : const Color(0xFF111827),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildEmptyState() {
-    return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.shopping_cart_outlined, size: 64, color: AppDesignSystem.textMuted),
-            const SizedBox(height: 16),
-            Text('Your cart is empty', style: GoogleFonts.inter(fontSize: 18)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _placeOrder(Cart cart) async {
-    final house = _controllers['house']!.text.trim();
-    final street = _controllers['street']!.text.trim();
-    final area = _controllers['area']!.text.trim();
-    final city = _controllers['city']!.text.trim();
-    final pincode = _controllers['pincode']!.text.trim();
-    final phone = _controllers['phone']!.text.trim();
-
-    if (house.isEmpty || street.isEmpty || area.isEmpty || city.isEmpty || pincode.isEmpty || phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all address fields'), backgroundColor: AppDesignSystem.danger),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final repo = OrderRepository(ref.read(dioProvider));
-      final order = await repo.placeOrder({
-        'address': {
-          'houseNo': house,
-          'street': street,
-          'area': area,
-          'city': city,
-          'pincode': pincode,
-          'phone': phone,
-          'label': _addressType == 0 ? 'Home' : _addressType == 1 ? 'Work' : 'Other',
-        },
-        'paymentMethod': _selectedPayment,
-        'items': cart.items.map((item) => {
-          'productId': item.productId,
-          'quantity': item.quantity,
-        }).toList(),
-      });
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => OrderSuccessScreen(orderId: order.id)),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppDesignSystem.danger),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
-    super.dispose();
   }
 }

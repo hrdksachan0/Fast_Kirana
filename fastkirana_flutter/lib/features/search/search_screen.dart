@@ -1,141 +1,411 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../widgets/brand_button.dart';
-import 'search_results_screen.dart';
+import '../../data/models/product.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../widgets/product_card.dart';
+import '../products/product_detail_screen.dart';
+import '../cart/cart_screen.dart';
 
-class SearchScreen extends StatefulWidget {
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
-  final _controller = TextEditingController();
-  final List<String> _recent = ['Milk', 'Bread', 'Eggs', 'Tomato'];
-  final List<String> _trending = ['Amul Milk', 'Onion', 'Rice 5kg', 'Maggi', 'Coca Cola', 'Lays'];
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  final TextEditingController _controller = TextEditingController();
+  String _query = '';
+
+  final List<String> _recentSearches = [
+    'Milk',
+    'Amul Butter',
+    'Maggi',
+    'Fortune Oil',
+    'Lays',
+  ];
+
+  final List<String> _trending = [
+    'Amul Toned Milk',
+    'Dairy Milk Silk',
+    'Fortune Mustard Oil',
+    'Aashirvaad Atta',
+    'Lays India Magic Masala',
+    'Coca Cola 750ml',
+    'Veg Cheese Burger',
+    'Paneer Tikka Roll',
+    'Farm Fresh Eggs',
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onSearchTermSelected(String term) {
+    HapticFeedback.selectionClick();
+    _controller.text = term;
+    setState(() {
+      _query = term;
+      if (!_recentSearches.contains(term)) {
+        _recentSearches.insert(0, term);
+        if (_recentSearches.length > 6) {
+          _recentSearches.removeLast();
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final cart = ref.watch(cartProvider).value;
+    final cartCount = cart?.totalItems ?? 0;
+    final cartSubtotal = cart?.subtotal ?? 0.0;
+
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+            border: Border.all(color: AppDesignSystem.border),
+          ),
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            onChanged: (val) => setState(() => _query = val.trim()),
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+            decoration: InputDecoration(
+              hintText: 'Search 400+ groceries & hot meals...',
+              hintStyle: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppDesignSystem.textMuted,
+              ),
+              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.primary),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 16, color: AppDesignSystem.textSecondary),
+                      onPressed: () {
+                        _controller.clear();
+                        setState(() => _query = '');
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          _query.isEmpty ? _buildTrendingAndRecent() : _buildSearchResults(),
+
+          // Floating Cart Bar
+          if (cartCount > 0)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  );
+                },
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: AppDesignSystem.cartBarGradient,
+                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppDesignSystem.primary.withOpacity(0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$cartCount items · ₹${cartSubtotal.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Delivery in 10-15 mins',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Text(
+                            'View Cart',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendingAndRecent() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // 1. Recent Searches with Clear All
+        if (_recentSearches.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_rounded),
-                  ),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppDesignSystem.borderLight),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        decoration: InputDecoration(
-                          hintText: 'Search groceries...',
-                          hintStyle: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textMuted),
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: (value) {
-                          if (value.isNotEmpty) {
-                            Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => SearchResultsScreen(query: value),
-                            ));
-                          }
-                        },
-                      ),
+                  const Icon(Icons.history_rounded, size: 16, color: AppDesignSystem.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Recent Searches',
+                    style: GoogleFonts.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignSystem.textPrimary,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.tune_rounded, color: AppDesignSystem.primary),
-                    style: IconButton.styleFrom(backgroundColor: AppDesignSystem.primary.withOpacity(0.1)),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  if (_recent.isNotEmpty) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Recent Searches', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                        TextButton(onPressed: () => setState(() => _recent.clear()), child: Text('Clear', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.danger))),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _recent.map((r) => GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchResultsScreen(query: r))),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppDesignSystem.borderLight),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.history_rounded, size: 14, color: AppDesignSystem.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(r, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textPrimary)),
-                            ],
-                          ),
-                        ),
-                      )).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _recentSearches.clear());
+                },
+                child: Text(
+                  'Clear All',
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppDesignSystem.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _recentSearches.map((item) {
+              return GestureDetector(
+                onTap: () => _onSearchTermSelected(item),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                    border: Border.all(color: AppDesignSystem.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Trending Now', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                      Icon(Icons.trending_up_rounded, color: AppDesignSystem.primary, size: 18),
+                      const Icon(Icons.refresh_rounded, size: 12, color: AppDesignSystem.textSecondary),
+                      const SizedBox(width: 5),
+                      Text(
+                        item,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppDesignSystem.textPrimary,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  ..._trending.map((t) => GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchResultsScreen(query: t))),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppDesignSystem.borderLight),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textSecondary),
-                          const SizedBox(width: 12),
-                          Text(t, style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  )).toList(),
-                ],
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // 2. Trending Searches
+        Row(
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 6),
+            Text(
+              'Trending Searches',
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: AppDesignSystem.textPrimary,
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _trending.map((item) {
+            return GestureDetector(
+              onTap: () => _onSearchTermSelected(item),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                  border: Border.all(color: AppDesignSystem.border),
+                  boxShadow: AppDesignSystem.shadowSm,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.trending_up_rounded, size: 13, color: Color(0xFFEA580C)),
+                    const SizedBox(width: 5),
+                    Text(
+                      item,
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppDesignSystem.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchResults() {
+    final repo = ref.watch(productRepositoryProvider);
+
+    return FutureBuilder<List<Product>>(
+      future: repo.getProducts(search: _query, limit: 100),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: AppDesignSystem.primary));
+        }
+
+        final results = snapshot.data ?? [];
+
+        if (results.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('🔍', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No products found for "$_query"',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignSystem.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Check for spelling mistakes or try a different keyword',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 11.5, color: AppDesignSystem.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Text(
+                '${results.length} results found',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.65,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: results.length,
+                itemBuilder: (context, index) {
+                  final product = results[index];
+                  return ProductCard(
+                    product: product,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailScreen(product: product),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

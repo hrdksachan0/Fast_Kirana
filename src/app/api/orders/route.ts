@@ -1045,10 +1045,8 @@ export async function GET(request: NextRequest) {
       const relatedOrders = result.filter((o: any) => {
         if (processedIds.has(o.id)) return false
         if (o.id === order.id) return true
-        if (order.combinedId && o.combinedId === order.combinedId) return true
-        // Fallback proximity match: placed within 10 seconds by same user
-        const timeDiff = Math.abs(new Date(o.createdAt).getTime() - new Date(order.createdAt).getTime())
-        return o.userId === order.userId && timeDiff <= 10000
+        if (order.combinedId && typeof order.combinedId === 'string' && o.combinedId === order.combinedId) return true
+        return false
       })
 
       relatedOrders.forEach((o: any) => processedIds.add(o.id))

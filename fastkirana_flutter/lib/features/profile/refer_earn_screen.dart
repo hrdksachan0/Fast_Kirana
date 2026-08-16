@@ -49,7 +49,7 @@ class ReferEarnScreen extends StatelessWidget {
                     ),
                     child: Text(
                       'FAST2024',
-                      style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
+                      style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
                     ),
                   ),
                   const SizedBox(height: 16),

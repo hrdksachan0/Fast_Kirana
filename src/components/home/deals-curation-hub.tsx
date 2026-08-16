@@ -605,9 +605,19 @@ export function DealsCurationHub({
       const isPersonalCareOrHousehold = ['personal-care', 'personal_care', 'skincare', 'household', 'beauty'].includes(categorySlug) ||
         /face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum|soap|shampoo|cleaner|detergent/i.test(pName)
       const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
+      const isIceCreamProduct = categorySlug === 'ice-cream' ||
+        categoryName.toLowerCase().includes('ice cream') ||
+        pTags.includes('ice-cream') ||
+        /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|vadilal|baskin|cup masti/i.test(pName)
 
-      // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery
-      if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
+      // Ensure Ice Cream items (including Choco Brownie Sundae) stay in Ice Cream
+      if (isIceCreamProduct) {
+        categoryName = 'Ice Cream'
+        categorySlug = 'ice-cream'
+        sortOrder = 4
+      }
+      // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery (excluding Ice Creams)
+      else if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
         categoryName = 'Bakery'
         categorySlug = 'bakery'
         sortOrder = 6

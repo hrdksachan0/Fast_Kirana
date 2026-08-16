@@ -26,10 +26,16 @@ dependencies:
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.0.0
 
-  # UI
+  # UI & Animations
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
   cached_network_image: ^3.3.1
+  flutter_animate: ^4.5.0
+  skeletonizer: ^1.4.2
+  lucide_icons: ^0.257.0
+  action_slider: ^0.7.0
+  smooth_page_indicator: ^1.2.0
+  lottie: ^3.1.2
   shimmer: ^3.0.0
   flutter_staggered_animations: ^1.1.1
   badges: ^3.1.2

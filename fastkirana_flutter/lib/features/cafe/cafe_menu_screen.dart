@@ -8,6 +8,20 @@ import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import 'table_booking_screen.dart';
 
+class CafeCategorySection {
+  final String id;
+  final String name;
+  final String emoji;
+  final List<String> matchTags;
+
+  const CafeCategorySection({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    required this.matchTags,
+  });
+}
+
 class CafeMenuScreen extends ConsumerStatefulWidget {
   final String restaurantId;
   final String restaurantName;
@@ -23,24 +37,64 @@ class CafeMenuScreen extends ConsumerStatefulWidget {
 }
 
 class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'all';
   bool _vegOnly = false;
+  String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, String>> _categories = const [
-    {'id': 'All', 'name': 'All Items', 'emoji': '🍽️'},
-    {'id': 'Rolls', 'name': 'Rolls', 'emoji': '🌯'},
-    {'id': 'Burgers', 'name': 'Burgers', 'emoji': '🍔'},
-    {'id': 'Pizza', 'name': 'Pizza', 'emoji': '🍕'},
-    {'id': 'Chinese', 'name': 'Chinese', 'emoji': '🥡'},
-    {'id': 'Beverages', 'name': 'Beverages', 'emoji': '☕'},
-    {'id': 'Desserts', 'name': 'Desserts', 'emoji': '🍨'},
+  // Full 19 Categories from Web constants.ts (DEFAULT_CAFE_MENU_SECTIONS)
+  static const List<CafeCategorySection> _categories = [
+    CafeCategorySection(id: 'all', name: 'All Items', emoji: '🍽️', matchTags: []),
+    CafeCategorySection(id: 'hot-beverage', name: 'Brews & Tea', emoji: '☕', matchTags: ['hot-beverage', 'brews', 'tea', 'chai', 'hot coffee', 'coffee']),
+    CafeCategorySection(id: 'hot-bite', name: 'Quick Snacks', emoji: '🥟', matchTags: ['hot-bite', 'snacks', 'momos', 'fries', 'samosa']),
+    CafeCategorySection(id: 'sandwiches', name: 'Sandwiches', emoji: '🥪', matchTags: ['sandwiches', 'sandwich', 'grilled sandwich']),
+    CafeCategorySection(id: 'burgers', name: 'Burgers', emoji: '🍔', matchTags: ['burgers', 'burger', 'veg-burger', 'cheese-burger', 'paneer-burger']),
+    CafeCategorySection(id: 'frankie-rolls', name: 'Rolls & Frankie', emoji: '🌯', matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll']),
+    CafeCategorySection(id: 'garlic-bread', name: 'Garlic Bread', emoji: '🧄', matchTags: ['garlic-bread', 'garlic bread', 'garlic-breads']),
+    CafeCategorySection(id: 'pizza', name: 'Pizzas', emoji: '🍕', matchTags: ['pizza', 'pizzas']),
+    CafeCategorySection(id: 'pav-bhaji', name: 'Pav Bhaji', emoji: '🫕', matchTags: ['pav-bhaji', 'pav bhaji', 'pavbhaji']),
+    CafeCategorySection(id: 'chinese', name: 'Chinese', emoji: '🥡', matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine', 'noodles', 'manchurian']),
+    CafeCategorySection(id: 'italian-pasta', name: 'Pastas', emoji: '🍝', matchTags: ['italian-pasta', 'italian-pastas', 'pasta', 'penne']),
+    CafeCategorySection(id: 'south-indian', name: 'South Indian', emoji: '🍛', matchTags: ['south-indian', 'south indian', 'dosa', 'idli', 'vada', 'uttapam']),
+    CafeCategorySection(id: 'bombay-bites', name: 'Bombay Bites', emoji: '🥪', matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'vada pav', 'misal']),
+    CafeCategorySection(id: 'rice-dishes', name: 'Rice & Bowls', emoji: '🍚', matchTags: ['rice-dishes', 'rice dishes', 'biryani', 'pulav', 'fried rice']),
+    CafeCategorySection(id: 'shakes', name: 'Shakes', emoji: '🥤', matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes', 'oreo shake']),
+    CafeCategorySection(id: 'mocktails', name: 'Mocktails', emoji: '🍹', matchTags: ['mocktails', 'mocktail', 'coolers', 'mojito']),
+    CafeCategorySection(id: 'cold-coffee', name: 'Cold Coffee', emoji: '🧋', matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'frappe']),
+    CafeCategorySection(id: 'bakery', name: 'Bakery', emoji: '🎂', matchTags: ['bakery', 'bakery-biscuits', 'cake', 'cakes', 'pastry']),
+    CafeCategorySection(id: 'chilled', name: 'Cold Drinks', emoji: '🥤', matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'soft drink']),
+    CafeCategorySection(id: 'desserts', name: 'Desserts', emoji: '🍦', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet', 'brownie']),
   ];
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  bool _isVeg(Product product) {
+    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+    if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _matchesCategory(Product product, CafeCategorySection section) {
+    if (section.id == 'all') return true;
+    final catId = product.categoryId?.toLowerCase() ?? '';
+    final prodName = product.name.toLowerCase();
+    final prodDesc = (product.description ?? '').toLowerCase();
+    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+
+    // Check matchTags synonym list
+    for (final tag in section.matchTags) {
+      final t = tag.toLowerCase();
+      if (catId.contains(t) || prodName.contains(t) || prodDesc.contains(t) || tags.any((pt) => pt.contains(t))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
@@ -51,13 +105,13 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
     final cartSubtotal = cart?.subtotal ?? 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: AppDesignSystem.background,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // 1. Sliver AppBar with Restaurant Details
+          // 1. Sliver AppBar with Restaurant Details & Hero Banner
           SliverAppBar(
             pinned: true,
-            expandedHeight: 200,
+            expandedHeight: 180,
             backgroundColor: const Color(0xFFEA580C),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -100,33 +154,71 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(
-                            widget.restaurantName,
-                            style: GoogleFonts.inter(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.12),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Text('🥘', style: TextStyle(fontSize: 24)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.restaurantName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Freshly prepared • Fast Delivery in 25-35 mins',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 10),
                           Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
+                                  color: const Color(0xFF16A34A),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.star_rounded, size: 13, color: Color(0xFFFDE68A)),
-                                    const SizedBox(width: 3),
+                                    const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+                                    const SizedBox(width: 2),
                                     Text(
-                                      '4.7',
+                                      '4.8',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
@@ -136,50 +228,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               Text(
-                                '⚡ 20-25 mins',
+                                '• 30-40 min',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withOpacity(0.9),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                '• ₹250 for two',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 10),
-                          // Coupon Offer Tag
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.18),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white.withOpacity(0.25)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🔥', style: TextStyle(fontSize: 10)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'FLAT 5% OFF on all orders · Code: FIRST5',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                         ],
                       ),
@@ -190,14 +248,48 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
             ),
           ),
 
-          // 2. Filters & Categories Header
+          // 2. Filters, In-Menu Search & Categories Header
           SliverToBoxAdapter(
             child: Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
-                  // Veg Only Switch + Search
+                  // Search Bar inside Menu
+                  Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      decoration: InputDecoration(
+                        hintText: 'Search dishes in ${widget.restaurantName}...',
+                        hintStyle: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF9CA3AF)),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF6B7280)),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF6B7280)),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Veg Only Switch + Book Table Pill
                   Row(
                     children: [
                       // Veg Only Toggle
@@ -208,7 +300,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: _vegOnly ? const Color(0xFFDCFCE7) : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
                             border: Border.all(
                               color: _vegOnly ? const Color(0xFF86EFAC) : const Color(0xFFE5E7EB),
                             ),
@@ -266,7 +358,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
                             border: Border.all(color: const Color(0xFFFFEDD5)),
                           ),
                           child: Row(
@@ -290,47 +382,72 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Horizontal Category Pills
-                  SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 6),
-                      itemBuilder: (context, index) {
-                        final cat = _categories[index];
-                        final isSelected = _selectedCategory == cat['id'];
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedCategory = cat['id']!),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFE5E7EB),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(cat['emoji']!, style: const TextStyle(fontSize: 12)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  cat['name']!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                  // Horizontal Category Pills (Web Style with Counts)
+                  menuAsync.when(
+                    data: (products) {
+                      return SizedBox(
+                        height: 36,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 6),
+                          itemBuilder: (context, index) {
+                            final cat = _categories[index];
+                            final isSelected = _selectedCategory == cat.id;
+
+                            // Compute items count in this category
+                            final count = cat.id == 'all'
+                                ? products.length
+                                : products.where((p) => _matchesCategory(p, cat)).length;
+
+                            if (cat.id != 'all' && count == 0) {
+                              return const SizedBox.shrink(); // Don't show empty categories
+                            }
+
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedCategory = cat.id),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFE5E7EB),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(cat.emoji, style: const TextStyle(fontSize: 12)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      cat.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                        color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '($count)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isSelected ? Colors.white.withOpacity(0.85) : const Color(0xFF9CA3AF),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox(height: 36),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
               ),
@@ -340,10 +457,28 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
         body: menuAsync.when(
           data: (products) {
             var filtered = products;
-            if (_selectedCategory != 'All') {
+
+            // 1. Apply Veg Only Filter (FIXED BUG)
+            if (_vegOnly) {
+              filtered = filtered.where((p) => _isVeg(p)).toList();
+            }
+
+            // 2. Apply Category Filter (FIXED BUG)
+            if (_selectedCategory != 'all') {
+              final section = _categories.firstWhere(
+                (c) => c.id == _selectedCategory,
+                orElse: () => _categories.first,
+              );
+              filtered = filtered.where((p) => _matchesCategory(p, section)).toList();
+            }
+
+            // 3. Apply Search Filter
+            if (_searchQuery.isNotEmpty) {
+              final q = _searchQuery.toLowerCase();
               filtered = filtered.where((p) {
-                return (p.categoryId?.toLowerCase().contains(_selectedCategory.toLowerCase()) ?? false) ||
-                    (p.tags?.any((t) => t.toLowerCase().contains(_selectedCategory.toLowerCase())) ?? false);
+                return p.name.toLowerCase().contains(q) ||
+                    (p.description?.toLowerCase().contains(q) ?? false) ||
+                    (p.tags?.any((t) => t.toLowerCase().contains(q)) ?? false);
               }).toList();
             }
 
@@ -355,9 +490,13 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                     const Text('🍽️', style: TextStyle(fontSize: 48)),
                     const SizedBox(height: 12),
                     Text(
-                      'No items in this category',
+                      _searchQuery.isNotEmpty
+                          ? 'No items found matching "$_searchQuery"'
+                          : _vegOnly
+                              ? 'No veg items in this category'
+                              : 'No items in this category',
                       style: GoogleFonts.inter(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF6B7280),
                       ),
@@ -384,7 +523,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
         ),
       ),
 
-      // 3. Floating Bottom Cart Bar (if items in cart)
+      // 3. Floating Bottom Cart Bar
       bottomSheet: cartCount > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -409,7 +548,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
                   ),
                   child: Row(
                     children: [
@@ -463,39 +602,34 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
     final cart = ref.watch(cartProvider).value;
     final cartItem = cart?.items.where((i) => i.productId == product.id).firstOrNull;
     final inCartQty = cartItem?.quantity ?? 0;
+    final isVeg = _isVeg(product);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+        border: Border.all(color: AppDesignSystem.border),
+        boxShadow: AppDesignSystem.shadowSm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Food Image with ADD button overlay
+          // Food Image with rounded border
           Stack(
-            clipBehavior: Clip.none,
             children: [
               Container(
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+                  child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: product.imageUrl!,
                           fit: BoxFit.cover,
@@ -519,26 +653,30 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
           ),
           const SizedBox(width: 12),
 
-          // Food Info (Veg Icon, Name, Price, Description)
+          // Food Info (Veg/Non-Veg Dynamic Icon, Name, Price, Description)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Veg Indicator
+                // Veg / Non-Veg Indicator (DYNAMIC CHECK)
                 Container(
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF16A34A), width: 1.5),
+                    border: Border.all(
+                      color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      width: 1.5,
+                    ),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Center(
                     child: Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF16A34A),
+                      decoration: BoxDecoration(
+                        shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                        borderRadius: isVeg ? null : BorderRadius.circular(1),
+                        color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                       ),
                     ),
                   ),
@@ -549,7 +687,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                 Text(
                   product.name,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF111827),
                     height: 1.2,
@@ -559,7 +697,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                 ),
                 const SizedBox(height: 4),
 
-                // Price
+                // Price & MRP
                 Row(
                   children: [
                     Text(
@@ -602,15 +740,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
             ),
           ),
 
-          // ADD Button on Right
+          // Contextual ADD Button on Right
           Padding(
-            padding: const EdgeInsets.only(top: 20),
+            padding: const EdgeInsets.only(top: 16),
             child: inCartQty > 0
                 ? Container(
-                    height: 32,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: const Color(0xFFEA580C),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -624,14 +762,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                             }
                           },
                           child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                             child: Icon(Icons.remove, size: 14, color: Colors.white),
                           ),
                         ),
                         Text(
                           '$inCartQty',
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                           ),
@@ -643,7 +781,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                             }
                           },
                           child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                             child: Icon(Icons.add, size: 14, color: Colors.white),
                           ),
                         ),
@@ -655,16 +793,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                       ref.read(cartProvider.notifier).addItem(product.id, 1);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
                         border: Border.all(color: const Color(0xFFEA580C), width: 1.5),
                       ),
                       child: Text(
                         'ADD',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFFEA580C),
                         ),

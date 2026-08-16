@@ -37,7 +37,7 @@ class OrdersScreen extends ConsumerWidget {
             elevation: 0,
             title: Text(
               'My Orders',
-              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: textDark),
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: textDark),
             ),
             iconTheme: const IconThemeData(color: textDark),
           ),
@@ -277,7 +277,7 @@ class OrdersScreen extends ConsumerWidget {
             const SizedBox(height: 28),
             Text(
               message ?? 'No orders yet',
-              style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: textDark),
+              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: textDark),
             ),
             const SizedBox(height: 8),
             Text(

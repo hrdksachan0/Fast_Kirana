@@ -403,62 +403,46 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         />
         
         {/* Banner Content Overlays */}
-        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-4 sm:px-10 md:px-14 z-10 max-w-[65%] sm:max-w-[55%] py-2 sm:py-3">
-          {/* Dynamic Kitchen Status Badge */}
-          {(experienceMode === 'cafe' ? cafeOpen : restaurantOpen) ? (
-            <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.2em] text-[#00b140] dark:text-emerald-400 uppercase leading-none mb-1.5 select-none flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
+        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-4 sm:px-10 md:px-14 z-10 max-w-[75%] sm:max-w-[65%] md:max-w-[58%] py-2 sm:py-3.5">
+          {/* Dynamic Kitchen Status & Motivation Tag */}
+          <div className="flex items-center gap-2 mb-1 sm:mb-1.5 flex-wrap">
+            {(experienceMode === 'cafe' ? cafeOpen : restaurantOpen) ? (
+              <span className="text-[7px] sm:text-[8.5px] font-black tracking-[0.18em] text-[#00b140] dark:text-emerald-400 uppercase leading-none select-none flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00b140]" /> KITCHEN OPEN
+              </span>
+            ) : (
+              <span className="text-[7px] sm:text-[9px] font-black tracking-[0.15em] text-rose-600 dark:text-rose-400 uppercase flex items-center gap-1 select-none">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
+              </span>
+            )}
+            <span className="hidden min-[360px]:inline-flex items-center gap-1 text-[7px] sm:text-[8.5px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              ✨ Good Food • Good Mood
             </span>
-          ) : (
-            <div className="mb-1.5 select-none flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
-              <span className="text-[7px] sm:text-[9px] font-black tracking-[0.15em] text-zinc-800 dark:text-zinc-300 uppercase flex items-center gap-1">
-                <span className="h-1.2 w-1.2 rounded-full bg-rose-600 animate-pulse" /> KITCHEN CLOSED
-              </span>
-              <span className="text-[7px] sm:text-[9px] font-extrabold text-red-500 normal-case tracking-normal leading-relaxed">
-                (Timings: {formatTime12h(experienceMode === 'cafe' ? settings.cafe_open_time : settings.restaurant_open_time)} - {formatTime12h(experienceMode === 'cafe' ? settings.cafe_close_time : settings.restaurant_close_time)})
-              </span>
-            </div>
-          )}
+          </div>
           
-          <h2 className="text-[11px] sm:text-2xl md:text-3.5xl tracking-tight leading-[1.05] text-zinc-950 dark:text-white select-none">
-            <span className="font-extrabold tracking-[0.1em] uppercase text-[7.5px] sm:text-[12px] text-zinc-800 dark:text-zinc-300">FastKirana Presents</span>
-            <br />
-            <span className="text-[#e20a22] dark:text-red-500 font-black tracking-tighter uppercase text-[12px] sm:text-[25px] md:text-[36px] block mt-0.5 sm:mt-1">
-              Cafe &amp; Restaurant
+          <h2 className="tracking-tight leading-[1.08] text-zinc-950 dark:text-white select-none">
+            <span className="text-[#e20a22] dark:text-red-500 font-black tracking-tighter text-[13px] sm:text-[24px] md:text-[32px] block">
+              Craving Something Delicious?
+            </span>
+            <span className="font-bold text-[8.5px] sm:text-[13px] md:text-[15px] text-zinc-700 dark:text-zinc-300 block mt-0.5 sm:mt-1 italic leading-snug">
+              “Life is too short for boring meals. Treat yourself today!”
             </span>
           </h2>
           
-          {/* Clickable & Copiable Coupon Code Badge - Optimized for Single Line */}
-          <div className="mt-2 sm:mt-4 flex select-none">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation()
-                if (typeof window !== 'undefined') {
-                  navigator.clipboard.writeText('FIRST5')
-                  toast.success('Coupon code "FIRST5" copied! 📋')
-                }
-              }}
-              className="group/btn flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-red-500/20 bg-[#e20a22]/10 hover:bg-[#e20a22]/20 dark:bg-red-500/10 dark:hover:bg-red-500/20 active:scale-95 shadow-[0_2px_8px_rgba(226,10,34,0.04)] cursor-pointer transition-all shrink-0"
-            >
-              <span className="text-[6.5px] sm:text-[9px] font-black text-[#e20a22] dark:text-red-450 uppercase tracking-wider">
-                CODE: <span className="underline decoration-solid font-black">FIRST5</span>
-              </span>
-              <span className="text-zinc-400 dark:text-zinc-650 text-[6.5px] sm:text-[9px] select-none">•</span>
-              <span className="text-[6.5px] sm:text-[8px] font-bold text-zinc-655 dark:text-zinc-300 uppercase tracking-wide">
-                5% OFF (TAP)
-              </span>
-              <ChevronRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500/60 dark:text-red-400/60 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
-            </button>
-          </div>
-
-          {/* Banner Footnotes (Self-adjusting in flow) */}
-          <div className="mt-2 flex items-center gap-1.5 text-[6px] sm:text-[8.5px] font-black select-none text-zinc-500 dark:text-zinc-300 shrink-0">
-            <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 px-1.5 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-              *Only for first user
-            </span>
-            <span className="bg-[#fdf8f4]/90 dark:bg-[#181614]/90 px-1.5 py-[1px] rounded-full border border-zinc-200/30 dark:border-zinc-800/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-              *T&amp;C Apply
-            </span>
+          {/* Aesthetic Highlights & CTA */}
+          <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-2 flex-wrap select-none">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 font-black text-[6.5px] sm:text-[9px] tracking-wide">
+              <span>🔥</span>
+              <span>Fresh &amp; Piping Hot</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-black text-[6.5px] sm:text-[9px] tracking-wide">
+              <span>⚡</span>
+              <span>20-30 Min Delivery</span>
+            </div>
+            <div className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 text-[#e20a22] dark:text-rose-400 border border-rose-500/20 font-black text-[9px] tracking-wide">
+              <span>👨‍🍳</span>
+              <span>Top Local Kitchens</span>
+            </div>
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ class WalletScreen extends StatelessWidget {
               children: [
                 Text('Wallet Balance', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.9))),
                 const SizedBox(height: 8),
-                Text('₹1,250', style: GoogleFonts.poppins(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text('₹1,250', style: GoogleFonts.inter(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,

@@ -36,7 +36,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                 child: Center(child: Text('☕', style: TextStyle(fontSize: 56))),
               ),
               const SizedBox(height: 32),
-              Text('Restaurant Owner Login', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
+              Text('Restaurant Owner Login', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text('Manage your cafe/restaurant orders', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary), textAlign: TextAlign.center),
               const SizedBox(height: 40),

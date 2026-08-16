@@ -23,7 +23,7 @@ class ProductsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
-        title: Text('All Products', style: GoogleFonts.poppins(
+        title: Text('All Products', style: GoogleFonts.inter(
           fontWeight: FontWeight.w700, color: Colors.white,
         )),
         backgroundColor: AppDesignSystem.primary,
@@ -32,7 +32,7 @@ class ProductsScreen extends ConsumerWidget {
       body: productsAsync.when(
         data: (products) {
           if (products.isEmpty) {
-            return Center(child: Text('No products found', style: GoogleFonts.poppins(color: AppDesignSystem.textSecondary)));
+            return Center(child: Text('No products found', style: GoogleFonts.inter(color: AppDesignSystem.textSecondary)));
           }
           return GridView.builder(
             padding: const EdgeInsets.all(16),

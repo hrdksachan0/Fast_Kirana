@@ -335,6 +335,7 @@ function getSubcategories(
         emoji: '🍦',
         filterFn: (p) => {
           const name = p.name.toLowerCase()
+          if (/shake|milkshake|smoothie|frappe/i.test(name)) return false
           const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
           const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
           const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||
@@ -350,6 +351,7 @@ function getSubcategories(
         emoji: '🍨',
         filterFn: (p) => {
           const name = p.name.toLowerCase()
+          if (/shake|milkshake|smoothie|frappe/i.test(name)) return false
           const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
           const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
           const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||

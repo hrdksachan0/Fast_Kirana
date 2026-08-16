@@ -48,7 +48,7 @@ class BrandLogo extends StatelessWidget {
             children: [
               Text(
                 'FastKirana',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: size * 0.55,
                   fontWeight: FontWeight.w800,
                   color: textColor,
@@ -58,7 +58,7 @@ class BrandLogo extends StatelessWidget {
               ),
               Text(
                 'Grocery & Food',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: size * 0.22,
                   fontWeight: FontWeight.w500,
                   color: textColor.withOpacity(0.7),

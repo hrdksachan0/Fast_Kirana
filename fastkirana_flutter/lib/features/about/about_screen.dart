@@ -136,7 +136,7 @@ class AboutScreen extends StatelessWidget {
   Widget _statBox(String number, String label) {
     return Column(
       children: [
-        Text(number, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
+        Text(number, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
         const SizedBox(height: 4),
         Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
       ],

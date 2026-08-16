@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, IndianRupee, TrendingUp, ShoppingBag, Percent, RefreshCw } from 'lucide-react'
+import { Calendar, IndianRupee, TrendingUp, ShoppingBag, Percent, RefreshCw, FileSpreadsheet, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 
@@ -139,6 +139,68 @@ export function RestaurantSalesConsole() {
     return { salesPath, profitPath, salesArea, profitArea, points, maxValue }
   }, [dailySales])
 
+  const exportToExcel = () => {
+    try {
+      // Generate CSV content with Excel BOM for UTF-8 compatibility
+      let csv = '\uFEFF' // UTF-8 Byte Order Mark for Excel
+      
+      // Header & Metadata
+      csv += 'FASTKIRANA RESTAURANT SALES REPORT\n'
+      csv += `Date Range,"${startDate} to ${endDate}"\n`
+      csv += `Generated On,"${new Date().toLocaleString()}"\n\n`
+      
+      // Financial Summary Section
+      csv += '--- FINANCIAL SUMMARY ---\n'
+      csv += 'Metric,Value (INR)\n'
+      csv += `Total Net Sales,₹${(summary.totalSales || 0).toFixed(2)}\n`
+      csv += `Restaurant Margin / Net Share,₹${(summary.restaurantProfit || 0).toFixed(2)}\n`
+      csv += `FastKirana Admin Commission,₹${(summary.adminProfit || 0).toFixed(2)}\n`
+      csv += `Completed Orders Count,${summary.ordersCount || 0}\n`
+      csv += `Average Order Value,₹${(summary.avgOrderValue || 0).toFixed(2)}\n`
+      csv += `Commission Rate,${summary.commissionRate || 10}%\n`
+      csv += `Restaurant Margin Rate,${100 - (summary.commissionRate || 10)}%\n\n`
+      
+      // Daily Breakdown Table
+      csv += '--- DAILY SALES BREAKDOWN ---\n'
+      csv += 'Date,Completed Orders,Net Sales (INR),Restaurant Margin (INR),Admin Commission (INR)\n'
+      if (dailySales.length > 0) {
+        dailySales.forEach(d => {
+          const comm = (d.sales || 0) - (d.profit || 0)
+          csv += `"${d.date}",${d.orders},${(d.sales || 0).toFixed(2)},${(d.profit || 0).toFixed(2)},${comm > 0 ? comm.toFixed(2) : '0.00'}\n`
+        })
+      } else {
+        csv += 'No daily sales data available\n'
+      }
+      csv += '\n'
+      
+      // Top Dishes Table
+      csv += '--- TOP SELLING DISHES ---\n'
+      csv += 'Rank,Dish Name,Units Sold,Total Revenue (INR),Restaurant Margin (INR)\n'
+      if (topProducts.length > 0) {
+        topProducts.forEach((p, idx) => {
+          csv += `${idx + 1},"${(p.name || '').replace(/"/g, '""')}",${p.quantity},${(p.sales || 0).toFixed(2)},${(p.profit || 0).toFixed(2)}\n`
+        })
+      } else {
+        csv += 'No product sales recorded in this period\n'
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `Restaurant_Sales_Report_${startDate}_to_${endDate}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      toast.success('Excel Sheet downloaded successfully!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export sales Excel sheet')
+    }
+  }
+
   return (
     <div className="space-y-6 select-none">
       {/* Analytics Controls */}
@@ -162,7 +224,7 @@ export function RestaurantSalesConsole() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <Calendar className="h-4 w-4 text-text-muted shrink-0" />
           <input
             type="date"
@@ -185,9 +247,19 @@ export function RestaurantSalesConsole() {
           />
           <button
             onClick={fetchReports}
+            title="Refresh Report"
             className="p-2 bg-card border border-border hover:bg-muted/40 rounded-xl transition-all cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={exportToExcel}
+            disabled={loading || (summary.ordersCount === 0 && topProducts.length === 0)}
+            title="Download Excel Sheet / CSV"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] sm:text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>Excel Sheet</span>
           </button>
         </div>
       </div>

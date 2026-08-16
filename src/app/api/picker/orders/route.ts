@@ -127,7 +127,7 @@ export async function GET(request: Request) {
 
     if (orders.length > 0 && minTime && maxTime) {
       companionOrders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."readableId", o.status::text as status, o."shopName", o."createdAt"
+        SELECT o.id, o."userId", o."readableId", o.status::text as status, o."shopName", o."createdAt", o."combinedId"
         FROM orders o
         WHERE o."userId" = ANY(${userIds})
           AND o."createdAt" >= ${minTime}
@@ -183,16 +183,10 @@ export async function GET(request: Request) {
       const address = allAddresses.find(a => a.id === o.addressId)
       const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null
 
-      // Find companion order from pre-fetched list
-      const fiveSecondsAgo = new Date(new Date(o.createdAt).getTime() - 5000).getTime()
-      const fiveSecondsAfter = new Date(new Date(o.createdAt).getTime() + 5000).getTime()
-
-      const companion = companionOrders.find(c => 
-        c.userId === o.userId &&
-        c.id !== o.id &&
-        new Date(c.createdAt).getTime() >= fiveSecondsAgo &&
-        new Date(c.createdAt).getTime() <= fiveSecondsAfter
-      )
+      // Find companion order only if this is an explicit combined order with a combinedId
+      const companion = (o.combinedId && typeof o.combinedId === 'string' && o.combinedId.trim().length > 0)
+        ? companionOrders.find(c => c.id !== o.id && c.combinedId === o.combinedId)
+        : null
 
       return {
         ...o,

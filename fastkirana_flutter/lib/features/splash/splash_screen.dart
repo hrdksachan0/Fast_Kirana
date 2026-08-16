@@ -108,7 +108,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   children: [
                     Text(
                       'FastKirana',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 40,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -124,7 +124,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       ),
                       child: Text(
                         'GROCERY & FOOD DELIVERY',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
@@ -135,7 +135,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     const SizedBox(height: 16),
                     Text(
                       '10 min delivery to your doorstep',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.9),
                       ),

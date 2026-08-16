@@ -268,14 +268,14 @@ export function StorefrontClient({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] sm:text-sm font-black tracking-tight text-white leading-tight">
-                Hot Cafe &amp; Restaurant Meals
+                Craving Something Delicious?
               </span>
-              <span className="bg-amber-400 text-zinc-950 text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md">
-                5% OFF
+              <span className="bg-white/20 text-white border border-white/30 text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md">
+                ⚡ HOT &amp; FRESH
               </span>
             </div>
             <p className="text-[9.5px] sm:text-[11px] text-white/90 font-medium truncate mt-0.5">
-              Order fresh food super fast · Use code <span className="font-black bg-white/20 px-1 py-0.2 rounded border border-dashed border-white/30 text-white">FIRST5</span>
+              “Good food is good mood” · Fast doorstep delivery in 20-30 mins
             </p>
           </div>
         </div>

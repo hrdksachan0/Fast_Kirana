@@ -4,35 +4,35 @@ import 'package:google_fonts/google_fonts.dart';
 /// FastKirana Premium Design System
 /// Based on brand guidelines: Orange-Red primary, green accent, clean modern aesthetic
 class BrandColors {
-  // Primary Brand Palette
-  static const Color primary = Color(0xFFEA580C); // Brand Orange
-  static const Color primaryLight = Color(0xFFFB923C);
-  static const Color primaryDark = Color(0xFFC2410C);
-  static const Color primaryGradientStart = Color(0xFFEA580C);
-  static const Color primaryGradientEnd = Color(0xFFDC2626);
+  // Primary Brand Colors (Web globals.css: #E20A22)
+  static const Color primary = Color(0xFFE20A22); // FastKirana Core Red
+  static const Color primaryDark = Color(0xFFB30013);
+  static const Color primaryLight = Color(0xFFFF4D62);
+  static const Color primaryGradientStart = Color(0xFFE20A22);
+  static const Color primaryGradientEnd = Color(0xFFFF4D62);
 
-  // Accent Colors
-  static const Color accent = Color(0xFF10B981); // Savings Green
-  static const Color accentLight = Color(0xFF34D399);
+  // Accent & Secondary
+  static const Color accent = Color(0xFF00B140); // Leaf Green (#00B140)
+  static const Color accentLight = Color(0xFF3CC070);
   static const Color accentDark = Color(0xFF008F33);
 
   // Semantic Colors
-  static const Color success = Color(0xFF22C55E);
+  static const Color success = Color(0xFF10B981);
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
 
   // Neutral Palette
-  static const Color textPrimary = Color(0xFF111827); // Gray 900
-  static const Color textSecondary = Color(0xFF6B7280); // Gray 500
-  static const Color textTertiary = Color(0xFF9CA3AF); // Gray 400
+  static const Color background = Color(0xFFFAFAFA);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color card = Color(0xFFFFFFFF);
+
+  static const Color textPrimary = Color(0xFF1A1A2E);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textTertiary = Color(0xFF9CA3AF);
   static const Color textInverse = Colors.white;
 
-  static const Color background = Color(0xFFF9FAFB); // Gray 50
-  static const Color surface = Colors.white;
-  static const Color surfaceElevated = Color(0xFFFFFFFF);
-
-  static const Color border = Color(0xFFE5E7EB); // Gray 200
+  static const Color border = Color(0xFFE5E7EB);
   static const Color borderLight = Color(0xFFF3F4F6); // Gray 100
 
   // Status Colors
@@ -60,19 +60,19 @@ class BrandTypography {
   static TextTheme get textTheme {
     return TextTheme(
       // Display
-      displayLarge: GoogleFonts.poppins(
+      displayLarge: GoogleFonts.inter(
         fontSize: 32,
         fontWeight: FontWeight.w800,
         color: BrandColors.textPrimary,
         height: 1.2,
       ),
-      displayMedium: GoogleFonts.poppins(
+      displayMedium: GoogleFonts.inter(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: BrandColors.textPrimary,
         height: 1.25,
       ),
-      displaySmall: GoogleFonts.poppins(
+      displaySmall: GoogleFonts.inter(
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: BrandColors.textPrimary,
@@ -80,19 +80,19 @@ class BrandTypography {
       ),
 
       // Headings
-      headlineLarge: GoogleFonts.poppins(
+      headlineLarge: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: BrandColors.textPrimary,
         height: 1.4,
       ),
-      headlineMedium: GoogleFonts.poppins(
+      headlineMedium: GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: BrandColors.textPrimary,
         height: 1.4,
       ),
-      headlineSmall: GoogleFonts.poppins(
+      headlineSmall: GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: BrandColors.textPrimary,
@@ -100,19 +100,19 @@ class BrandTypography {
       ),
 
       // Body
-      bodyLarge: GoogleFonts.poppins(
+      bodyLarge: GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: BrandColors.textPrimary,
         height: 1.5,
       ),
-      bodyMedium: GoogleFonts.poppins(
+      bodyMedium: GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: BrandColors.textSecondary,
         height: 1.5,
       ),
-      bodySmall: GoogleFonts.poppins(
+      bodySmall: GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: BrandColors.textSecondary,
@@ -120,19 +120,19 @@ class BrandTypography {
       ),
 
       // Labels
-      labelLarge: GoogleFonts.poppins(
+      labelLarge: GoogleFonts.inter(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: BrandColors.textPrimary,
         height: 1.4,
       ),
-      labelMedium: GoogleFonts.poppins(
+      labelMedium: GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: BrandColors.textSecondary,
         height: 1.4,
       ),
-      labelSmall: GoogleFonts.poppins(
+      labelSmall: GoogleFonts.inter(
         fontSize: 11,
         fontWeight: FontWeight.w500,
         color: BrandColors.textTertiary,

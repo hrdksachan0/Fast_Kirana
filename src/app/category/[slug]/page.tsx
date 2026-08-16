@@ -188,7 +188,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     if (isHotPreparedFood) return false
 
     if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
-      const isNonIceCream = /shampoo|soap|paste|lotion|cleaner|chips|namkeen|biscuit|cookie|atta|rice|dal|tea|coffee|coke|pepsi|sprite|soda|paratha|pizza|burger|oil|ghee|paneer|curd|milkshake/i.test(pName)
+      if (/shake|milkshake|smoothie|frappe/i.test(pName)) return false
+      const isNonIceCream = /shampoo|soap|paste|lotion|cleaner|chips|namkeen|biscuit|cookie|atta|rice|dal|tea|coffee|coke|pepsi|sprite|soda|paratha|pizza|burger|oil|ghee|paneer|curd|milkshake|shake|smoothie/i.test(pName)
       if (isNonIceCream && !/ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop/i.test(pName)) return false
 
       const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic|falooda/i.test(pName) ||

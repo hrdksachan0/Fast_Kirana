@@ -863,11 +863,6 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                   <span className="text-text-primary font-bold">Fulfillment:</span> {order.shopName}
                 </div>
               </div>
-              {order.shopPhone && (
-                <a href={`tel:${formatPhone(order.shopPhone).replace(/\s+/g, '')}`} className="text-primary hover:underline font-black flex items-center gap-1.5 shrink-0">
-                  <Phone className="h-3.5 w-3.5" /> Support Hotline
-                </a>
-              )}
             </div>
           )
         )}

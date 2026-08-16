@@ -1697,8 +1697,8 @@ export default function CheckoutPage() {
 
               {/* Secure Transaction notice */}
               <div className="flex items-center gap-2 border border-accent/20 bg-accent/5 p-3 rounded-xl text-xs font-semibold text-accent">
-                <ShieldCheck className="h-5 w-5" />
-                Your transaction is simulated safely for local demonstration.
+                <ShieldCheck className="h-5 w-5 shrink-0" />
+                <span>100% Secure &amp; Verified Order • Fast &amp; Reliable Delivery</span>
               </div>
 
               {/* Place Order Button (Desktop Only) */}
@@ -1725,15 +1725,21 @@ export default function CheckoutPage() {
 
           {/* Single Consolidated Bill Breakdown */}
           <div className="space-y-2.5 text-xs font-semibold">
-            <div className="flex justify-between text-text-secondary">
-              <span>Item Total</span>
-              <span>₹{(grocerySubtotal + cafeSubtotal).toFixed(0)}</span>
-            </div>
-
-            {grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount > 0 && (
-              <div className="flex justify-between text-accent font-bold">
-                <span>Total Savings</span>
-                <span>-₹{(grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount).toFixed(0)}</span>
+            {grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount > 0 ? (
+              <>
+                <div className="flex justify-between text-text-secondary">
+                  <span>Item Total (MRP)</span>
+                  <span>₹{(groceryMrpSubtotal + cafeMrpSubtotal).toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between text-accent font-bold">
+                  <span>Product Discount</span>
+                  <span>-₹{(grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount).toFixed(0)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between text-text-secondary">
+                <span>Item Total</span>
+                <span>₹{(grocerySubtotal + cafeSubtotal).toFixed(0)}</span>
               </div>
             )}
 

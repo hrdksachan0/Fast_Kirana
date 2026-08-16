@@ -47,7 +47,7 @@ const SEARCH_PLACEHOLDERS = [
 export function Navbar() {
   const pathname = usePathname()
   const isCategoryPage = pathname?.startsWith('/category/')
-  const isStorefrontPage = pathname?.startsWith('/food/') || pathname?.startsWith('/restaurant') || pathname?.startsWith('/cafe') || pathname?.startsWith('/cart') || isCategoryPage
+  const isStorefrontPage = pathname?.startsWith('/food/') || pathname?.startsWith('/restaurant') || pathname?.startsWith('/cafe') || pathname?.startsWith('/cart') || pathname?.startsWith('/checkout') || isCategoryPage
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)

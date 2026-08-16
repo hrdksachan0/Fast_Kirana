@@ -33,7 +33,7 @@ class BrandInput extends StatelessWidget {
       obscureText: obscure,
       keyboardType: keyboardType,
       validator: validator,
-      style: GoogleFonts.poppins(
+      style: GoogleFonts.inter(
         fontSize: 14,
         color: AppDesignSystem.textPrimary,
       ),
