@@ -314,18 +314,18 @@ export const HUB_CONFIG = [
   {
     key: 'food',
     label: 'Food & Restaurants',
-    description: 'Restaurant kitchen console, outlet management & payouts',
+    description: 'Restaurant kitchen live console & outlet operations',
     color: 'from-orange-500/10 to-red-500/10',
     activeBorder: 'border-orange-500/60 ring-2 ring-orange-500/20',
-    tabs: ['restaurant-console', 'restaurant-report'] as const
+    tabs: ['restaurant-console'] as const
   },
   {
     key: 'insights',
     label: 'Business Intelligence',
-    description: 'Analytics dashboards, AI forecasting & sales reports',
+    description: 'Finance reports, restaurant payouts, analytics dashboards & AI forecasting',
     color: 'from-blue-500/10 to-cyan-500/10',
     activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['analytics', 'forecast', 'reports'] as const
+    tabs: ['reports', 'restaurant-report', 'analytics', 'forecast'] as const
   },
   {
     key: 'people',

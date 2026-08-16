@@ -294,6 +294,14 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
 
+    const latestPayout = await prisma.restaurantPayout.findFirst({
+      where: {
+        ...(assignedRestId ? { restaurantId: assignedRestId } : {}),
+        status: 'PAID'
+      },
+      orderBy: { paidAt: 'desc' }
+    })
+
     return NextResponse.json({
       summary: {
         totalSales,
@@ -308,6 +316,9 @@ export async function GET(request: NextRequest) {
         avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,
         commissionRate: commissionRate * 100,
         profitShareRate: profitShareRate * 100,
+        lastSettledDate: latestPayout?.paidAt || latestPayout?.endDate || null,
+        lastSettledAmount: latestPayout?.amount || null,
+        lastSettledTxnId: latestPayout?.transactionId || null,
         delivery: {
           ordersCount: deliveryOrdersCount,
           sales: deliverySales,

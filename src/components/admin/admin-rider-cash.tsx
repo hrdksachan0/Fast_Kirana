@@ -15,7 +15,8 @@ import {
   History,
   ArrowDownRight,
   ShieldCheck,
-  Search
+  Search,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
@@ -136,6 +137,43 @@ export function AdminRiderCash() {
       toast.error('Network error settling cash')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteDeposit = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/rider-cash?id=${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('Deposit log deleted')
+        fetchData()
+      } else {
+        toast.error(data.error || 'Failed to delete deposit log')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Error deleting deposit log')
+    }
+  }
+
+  const handleClearAllDeposits = async () => {
+    if (!confirm('Are you sure you want to delete all cash deposit logs to clean up data?')) return
+    try {
+      const res = await fetch('/api/admin/rider-cash?clearAll=true', {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success(data.message || 'Cleared all deposit logs')
+        fetchData()
+      } else {
+        toast.error(data.error || 'Failed to clear deposit logs')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Error clearing deposit logs')
     }
   }
 
@@ -361,17 +399,30 @@ export function AdminRiderCash() {
 
       {/* Recent Cash Deposits Ledger */}
       <div className="bg-card border border-border rounded-3xl shadow-xs p-5 space-y-4">
-        <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-          <History className="h-4 w-4 text-primary" />
-          Recent Cash Deposit Log
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            Recent Cash Deposit Log
+          </h2>
+
+          {recentDeposits.length > 0 && (
+            <button
+              onClick={handleClearAllDeposits}
+              className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-500/10 hover:bg-rose-500/20 px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-rose-500/20"
+              title="Delete all cash deposit logs"
+            >
+              <Trash2 className="h-3 w-3" />
+              <span>Clear Logs</span>
+            </button>
+          )}
+        </div>
 
         {recentDeposits.length === 0 ? (
           <p className="text-xs text-text-muted">No cash deposits recorded yet today.</p>
         ) : (
           <div className="space-y-2">
             {recentDeposits.map((d) => (
-              <div key={d.id} className="flex items-center justify-between bg-muted/20 border border-border/40 p-3 rounded-2xl text-xs">
+              <div key={d.id} className="flex items-center justify-between bg-muted/20 border border-border/40 p-3 rounded-2xl text-xs group">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="h-4 w-4" />
@@ -385,9 +436,18 @@ export function AdminRiderCash() {
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] bg-accent/10 text-accent font-bold px-2 py-0.5 rounded border border-accent/20">
-                  {d.notes || 'Handover'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-accent/10 text-accent font-bold px-2 py-0.5 rounded border border-accent/20">
+                    {d.notes || 'Handover'}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteDeposit(d.id)}
+                    className="p-1.5 text-text-muted hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                    title="Delete this log"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -25,6 +25,9 @@ interface Summary {
   avgOrderValue: number
   commissionRate?: number
   profitShareRate?: number
+  lastSettledDate?: string | null
+  lastSettledAmount?: number | null
+  lastSettledTxnId?: string | null
   delivery?: ChannelMetrics
   pickup?: ChannelMetrics
 }
@@ -289,6 +292,36 @@ export function RestaurantSalesConsole() {
         </div>
       ) : (
         <>
+          {/* Last Settlement Status Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border/60 p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🧾</span>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
+                  Last Settlement Status
+                </span>
+                <p className="text-xs font-black text-text-primary">
+                  {summary.lastSettledDate ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      Settled on {new Date(summary.lastSettledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {summary.lastSettledAmount ? ` (${formatPrice(summary.lastSettledAmount)})` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Pending First Settlement Draft
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {summary.lastSettledTxnId && (
+              <span className="text-[10px] font-mono font-bold text-text-muted bg-muted/40 px-2.5 py-1 rounded-xl border border-border/40">
+                Txn Ref: {summary.lastSettledTxnId}
+              </span>
+            )}
+          </div>
+
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Sales Card */}

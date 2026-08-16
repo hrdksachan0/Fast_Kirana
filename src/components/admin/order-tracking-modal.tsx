@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback } from 'react'
-import { X, Loader2 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { X, Loader2, Share2, Copy, Check, MessageSquare } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { formatOrderTime } from '@/lib/date-helpers'
 import { formatAddress } from '@/lib/utils'
@@ -63,7 +64,51 @@ export default function OrderTrackingModal({
   isLoadingOrderItems,
   setSelectedOrderForTracking,
 }: OrderTrackingModalProps) {
+  const [copied, setCopied] = useState(false)
   const order = selectedOrderForTracking
+
+  const generateRestaurantKOTText = (o: Order | null) => {
+    if (!o) return ''
+    const isPickup = ((o.deliveryMethod || '').toUpperCase() === 'SELF_PICKUP' || (o.deliveryMethod || '').toUpperCase() === 'PICKUP' || o.isSelfPickup)
+    const orderId = o.readableId || o.id?.slice(0, 8) || 'Order'
+    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
+    
+    let text = `🍳 *KITCHEN ORDER - #${orderId}*\n`
+    text += `⏰ *Time:* ${orderTime}\n`
+    text += `📦 *Type:* ${isPickup ? '🛍️ SELF PICKUP' : '🛵 DOORSTEP DELIVERY'}\n`
+    if (o.shopName) {
+      text += `🏪 *Restaurant:* ${o.shopName}\n`
+    }
+    text += `\n📋 *ITEMS TO PREPARE:*\n`
+    
+    if (o.items && o.items.length > 0) {
+      o.items.forEach((item, index) => {
+        const variantText = item.selectedVariant ? ` (${item.selectedVariant})` : ''
+        text += `${index + 1}. *${item.name}${variantText}*  ✖  *${item.quantity}*\n`
+      })
+    } else {
+      text += `(No items listed)\n`
+    }
+
+    const totalQty = o.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
+    text += `\n🔢 *Total Items:* ${totalQty} units\n`
+    text += `⚠️ *Kitchen Copy: Only Product Preparation Details*`
+    return text
+  }
+
+  const handleShareWhatsApp = () => {
+    const text = generateRestaurantKOTText(order)
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+  }
+
+  const handleCopyKitchenDetails = () => {
+    const text = generateRestaurantKOTText(order)
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    toast.success('Kitchen order details copied to clipboard!')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -223,6 +268,64 @@ export default function OrderTrackingModal({
             </div>
           </div>
 
+          {/* Restaurant Kitchen Share Box (Products Only - No Customer/Payment Details) */}
+          <div className="p-4 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-orange-500/10 border border-orange-500/25 rounded-2xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-orange-500/15 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🍳</span>
+                <div>
+                  <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">
+                    Share with Restaurant / Kitchen
+                  </h4>
+                  <p className="text-[10px] text-text-muted">
+                    Safe kitchen slip: Sends only dishes & quantities (no customer phone/address/totals)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleShareWhatsApp}
+                  className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-black rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  title="Share products via WhatsApp with Restaurant"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyKitchenDetails}
+                  className="px-3 py-1.5 bg-card hover:bg-muted border border-border text-text-primary text-[11px] font-bold rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  title="Copy kitchen text to clipboard"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Preview of What the Kitchen Sees */}
+            <div className="bg-card/70 border border-border/50 rounded-xl p-3 text-[11px] font-mono space-y-1">
+              <div className="text-text-secondary font-bold text-[10px] uppercase">
+                Preview Kitchen Slip (Order #{order?.readableId || order?.id?.slice(0, 8)}):
+              </div>
+              <div className="text-text-primary font-semibold space-y-0.5 pt-1">
+                {order?.items && order.items.length > 0 ? (
+                  order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span>{idx + 1}. {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}</span>
+                      <span className="font-black text-orange-600 dark:text-orange-400">✖ {item.quantity}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-text-muted italic">Click Quick View or wait for items to load...</div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Items List */}
           <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
@@ -287,20 +390,41 @@ export default function OrderTrackingModal({
         </div>
 
         {/* Modal Actions Footer */}
-        <div className="p-4 bg-muted/40 border-t border-border flex items-center justify-between gap-2">
-          <Link
-            href={`/order/${order?.id}/track`}
-            target="_blank"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-          >
-            🗺️ Open Driver Map Tracker
-          </Link>
-          <button
-            onClick={() => setSelectedOrderForTracking(null)}
-            className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer"
-          >
-            Close
-          </button>
+        <div className="p-4 bg-muted/40 border-t border-border flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="px-3.5 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>WhatsApp Kitchen Slip</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyKitchenDetails}
+              className="px-3 py-2 border border-border bg-card hover:bg-muted text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy List'}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/order/${order?.id}/track`}
+              target="_blank"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              🗺️ Track Driver
+            </Link>
+            <button
+              onClick={() => setSelectedOrderForTracking(null)}
+              className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

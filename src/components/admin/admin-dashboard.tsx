@@ -2279,17 +2279,17 @@ export function AdminDashboard({
   })
 
   const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
-    { key: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
-    { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
+    { key: 'products', label: 'Products', icon: Package, count: productTotal },
+    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
     { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
+    { key: 'csv-import', label: 'CSV Import', icon: Download },
+    { key: 'restaurant-console', label: 'Restaurant Console', icon: Utensils },
     { key: 'reports', label: 'Finance & Sales', icon: IndianRupee },
     { key: 'restaurant-report', label: 'Restaurant Payouts', icon: Utensils },
-    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
-    { key: 'products', label: 'Products', icon: Package, count: productTotal },
-    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
     { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
     { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
@@ -2298,8 +2298,8 @@ export function AdminDashboard({
     { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
     { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
     { key: 'settings', label: 'Store Settings', icon: Settings },
-    { key: 'csv-import', label: 'CSV Import', icon: Download },
-    { key: 'restaurant-console', label: 'Restaurant Console', icon: Utensils },
+    { key: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
   ]
 
   return (

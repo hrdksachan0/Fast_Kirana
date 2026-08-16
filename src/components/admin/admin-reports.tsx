@@ -267,31 +267,56 @@ export function AdminReports() {
   }, [rawDailySales])
 
   // Excel / CSV Exporter with UTF-8 BOM
-  const handleDownloadCSV = () => {
+  // Excel / CSV Exporter with UTF-8 BOM
+  const handleDownloadCSV = (scope: 'all' | 'grocery' | 'restaurant' = 'all') => {
     try {
       let csv = '\uFEFF' // UTF-8 Byte Order Mark for Excel
-      csv += 'FASTKIRANA COMPREHENSIVE FINANCIAL REPORT\n'
+      const scopeLabel = scope === 'grocery' ? 'GROCERY WISE' : scope === 'restaurant' ? 'RESTAURANTS WISE' : 'ALL FINANCIAL'
+      csv += `FASTKIRANA ${scopeLabel} REPORT\n`
       csv += `Date Range,"${startDate} to ${endDate}"\n`
+      csv += `Report Type,"${scopeLabel}"\n`
       csv += `Filtered Category,"${selectedCategory === 'all' ? 'All Categories (Full Store)' : selectedCategory}"\n`
       csv += `Generated On,"${new Date().toLocaleString()}"\n\n`
 
+      // Filter categories and products based on scope
+      const targetCategories = rawCategorySales.filter(cat => {
+        if (scope === 'grocery') return cat.type === 'grocery'
+        if (scope === 'restaurant') return cat.type === 'restaurant'
+        return true
+      })
+
+      const targetProducts = (rawTopProducts || []).filter((prod: TopProduct) => {
+        if (selectedCategory !== 'all' && prod.categoryName !== selectedCategory) return false
+        if (scope === 'grocery') return prod.type === 'grocery'
+        if (scope === 'restaurant') return prod.type === 'restaurant'
+        return true
+      })
+
+      const scopeSales = targetCategories.reduce((sum, c) => sum + (c.sales || 0), 0)
+      const scopeCost = targetCategories.reduce((sum, c) => sum + (c.cost ?? (c.sales - c.profit)), 0)
+      const scopeProfit = targetCategories.reduce((sum, c) => sum + (c.profit || 0), 0)
+      const scopeMargin = scopeSales > 0 ? ((scopeProfit / scopeSales) * 100).toFixed(1) : '0'
+
       // 1. Financial Summary
-      csv += '--- STORE FINANCIAL SUMMARY ---\n'
+      csv += `--- ${scopeLabel} SUMMARY ---\n`
       csv += 'Metric,Amount (INR)\n'
-      csv += `Total Net Sales (Revenue),₹${summary.totalSales.toFixed(2)}\n`
-      csv += `Cost of Goods / Payouts (COGS),₹${summary.totalCost.toFixed(2)}\n`
-      csv += `Net Profit (Earnings),₹${summary.totalProfit.toFixed(2)}\n`
-      csv += `Overall Profit Margin,${summary.profitMargin}%\n`
-      csv += `Total Orders Delivered,${summary.totalOrders}\n`
-      csv += `Average Order Value,₹${summary.averageOrderValue.toFixed(2)}\n`
-      csv += `Delivery Fees Collected,₹${(summary.totalDeliveryFee || 0).toFixed(2)}\n`
-      csv += `Packaging & Handling Fees,₹${(summary.totalMiscFee || 0).toFixed(2)}\n`
-      csv += `GST / Taxes Collected,₹${(summary.totalTaxes || 0).toFixed(2)}\n\n`
+      csv += `Total Net Sales (Revenue),₹${scopeSales.toFixed(2)}\n`
+      csv += `Product Cost / Restaurant Payouts (COGS),₹${scopeCost.toFixed(2)}\n`
+      csv += `Store Net Profit (Earnings),₹${scopeProfit.toFixed(2)}\n`
+      csv += `Profit Margin,${scopeMargin}%\n`
+      if (scope === 'all') {
+        csv += `Total Orders Delivered,${summary.totalOrders}\n`
+        csv += `Average Order Value,₹${summary.averageOrderValue.toFixed(2)}\n`
+        csv += `Delivery Fees Collected,₹${(summary.totalDeliveryFee || 0).toFixed(2)}\n`
+        csv += `Packaging & Handling Fees,₹${(summary.totalMiscFee || 0).toFixed(2)}\n`
+        csv += `GST / Taxes Collected,₹${(summary.totalTaxes || 0).toFixed(2)}\n`
+      }
+      csv += '\n'
 
       // 2. Category-Wise Financial Breakdown
-      csv += '--- CATEGORY-WISE FINANCIAL BREAKDOWN ---\n'
-      csv += 'Category Name,Type,Units Sold,Total Sales (INR),Product Cost (INR),Net Profit (INR),Margin (%)\n'
-      rawCategorySales.forEach(cat => {
+      csv += `--- ${scope === 'restaurant' ? 'OUTLET-WISE RESTAURANTS BREAKDOWN' : 'CATEGORY-WISE FINANCIAL BREAKDOWN'} ---\n`
+      csv += `${scope === 'restaurant' ? 'Restaurant Name' : 'Category Name'},Type,Units Sold,Total Sales (INR),${scope === 'restaurant' ? 'Restaurant Payout Share (INR)' : 'Product Cost (INR)'},${scope === 'restaurant' ? 'FastKirana Commission (INR)' : 'Net Profit (INR)'},Margin (%)\n`
+      targetCategories.forEach(cat => {
         const catCost = cat.cost ?? (cat.sales - cat.profit)
         const margin = cat.sales > 0 ? ((cat.profit / cat.sales) * 100).toFixed(1) : '0'
         csv += `"${cat.categoryName}","${cat.type || 'grocery'}",${cat.quantity || '-'},₹${cat.sales.toFixed(2)},₹${catCost.toFixed(2)},₹${cat.profit.toFixed(2)},${margin}%\n`
@@ -299,9 +324,9 @@ export function AdminReports() {
       csv += '\n'
 
       // 3. Itemized Product Performance
-      csv += '--- ITEMIZED PRODUCT SALES ---\n'
-      csv += 'Product Name,Category,Selling Price (INR),Cost Price (INR),Qty Sold,Total Revenue (INR),Net Profit (INR),Margin (%)\n'
-      filteredProducts.forEach(prod => {
+      csv += `--- ITEMIZED ${scopeLabel} SALES PERFORMANCE ---\n`
+      csv += 'Product / Dish Name,Category / Outlet,Selling Price (INR),Cost / Payout (INR),Qty Sold,Total Sales (INR),Net Profit (INR),Margin (%)\n'
+      targetProducts.forEach((prod: TopProduct) => {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100).toFixed(1) : '0'
         csv += `"${prod.name}","${prod.categoryName || '-'}",₹${(prod.price || 0).toFixed(2)},₹${(prod.costPrice || 0).toFixed(2)},${prod.quantity},₹${prod.sales.toFixed(2)},₹${prod.profit.toFixed(2)},${margin}%\n`
       })
@@ -310,13 +335,13 @@ export function AdminReports() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `FastKirana_Finance_${startDate}_to_${endDate}.csv`)
+      link.setAttribute('download', `FastKirana_${scopeLabel.replace(/\s+/g, '_')}_${startDate}_to_${endDate}.csv`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      toast.success('Financial report exported successfully!')
+      toast.success(`${scopeLabel} report exported successfully!`)
     } catch (err) {
       console.error(err)
       toast.error('Could not export report')
@@ -327,7 +352,7 @@ export function AdminReports() {
     <div className="space-y-6">
       
       {/* Top Header & Date Presets */}
-      <div className="bg-card border border-border p-5 md:p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-card border border-border p-5 md:p-6 rounded-3xl shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
@@ -379,15 +404,38 @@ export function AdminReports() {
             </div>
           )}
 
-          {/* Export CSV Button */}
-          <button
-            onClick={handleDownloadCSV}
-            disabled={loading}
-            className="h-9 px-4 rounded-2xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export Excel (.csv)</span>
-          </button>
+          {/* Export Buttons Group (All / Grocery Wise / Restaurant Wise) */}
+          <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-2xl border border-border/80">
+            <button
+              onClick={() => handleDownloadCSV('all')}
+              disabled={loading}
+              className="h-8 px-3 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Full Store Comprehensive Financial Report"
+            >
+              <Download className="h-3 w-3" />
+              <span>All Excel</span>
+            </button>
+
+            <button
+              onClick={() => handleDownloadCSV('grocery')}
+              disabled={loading}
+              className="h-8 px-2.5 rounded-xl text-xs font-black bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Grocery-Only Category & Product Excel Sheet"
+            >
+              <span>🛒</span>
+              <span>Grocery Wise</span>
+            </button>
+
+            <button
+              onClick={() => handleDownloadCSV('restaurant')}
+              disabled={loading}
+              className="h-8 px-2.5 rounded-xl text-xs font-black bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Restaurant-Only Outlet & Dishes Excel Sheet"
+            >
+              <span>🍽️</span>
+              <span>Restaurants Wise</span>
+            </button>
+          </div>
         </div>
       </div>
 

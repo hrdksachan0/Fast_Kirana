@@ -31,6 +31,13 @@ interface RestaurantSalesData {
   topDish: string
   totalDeliveryFee: number
   totalPackaging: number
+  lastSettledDate?: string | null
+  lastSettledAmount?: number | null
+  lastSettledTxnId?: string | null
+  deliveryOrders?: number
+  deliverySales?: number
+  pickupOrders?: number
+  pickupSales?: number
 }
 
 export function AdminRestaurantReport() {
@@ -128,12 +135,12 @@ export function AdminRestaurantReport() {
   const handleDownloadCSV = () => {
     try {
       let csvContent = 'data:text/csv;charset=utf-8,'
-      csvContent += 'Restaurant Name,Status,Commission (%),Total Orders,Total Product Sales (INR),Admin Commission (INR),Restaurant Payout Share (INR),Avg Order (INR),Top Dish,Delivery Fee (INR),Packaging Fee (INR)\n'
+      csvContent += 'Restaurant Name,Status,Commission (%),Total Orders,Total Product Sales (INR),Admin Commission (INR),Restaurant Payout Share (INR),Doorstep Delivery Orders,Doorstep Delivery Sales (INR),Self Pickup Orders,Self Pickup Sales (INR),Avg Order (INR),Top Dish,Delivery Fee (INR),Packaging Fee (INR)\n'
       
       data.forEach(r => {
         const comm = (r.commissionRate * 100).toFixed(1)
         const status = r.isOpen ? 'Open' : 'Closed'
-        csvContent += `"${r.name}",${status},${comm}%,${r.totalOrders},${r.totalProductSales},${r.adminCommission},${r.restaurantShare},${r.avgOrderValue},"${r.topDish}",${r.totalDeliveryFee},${r.totalPackaging}\n`
+        csvContent += `"${r.name}",${status},${comm}%,${r.totalOrders},${r.totalProductSales},${r.adminCommission},${r.restaurantShare},${r.deliveryOrders || 0},${r.deliverySales || 0},${r.pickupOrders || 0},${r.pickupSales || 0},${r.avgOrderValue},"${r.topDish}",${r.totalDeliveryFee},${r.totalPackaging}\n`
       })
       
       const encodedUri = encodeURI(csvContent)
@@ -308,6 +315,20 @@ export function AdminRestaurantReport() {
                       </div>
                     )}
                   </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-border/40 pt-2">
+                    <span className="text-text-secondary font-semibold">Last Settled:</span>
+                    {r.lastSettledDate ? (
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] border border-emerald-500/20">
+                        {new Date(r.lastSettledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {r.lastSettledAmount ? ` (${formatPrice(r.lastSettledAmount)})` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        Pending Settlement
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -335,7 +356,28 @@ export function AdminRestaurantReport() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-col md:flex-row justify-between text-[10px] font-semibold text-text-secondary bg-muted/40 p-2 rounded-lg border border-border/40 gap-2">
+                {/* Channel Split: Delivery vs Pickup */}
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/5 border border-blue-500/15">
+                    <span className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300 text-[10px]">
+                      <span>🛵</span> Doorstep Delivery:
+                    </span>
+                    <span className="font-black text-text-primary text-[10px]">
+                      {r.deliveryOrders || 0} orders ({formatPrice(r.deliverySales || 0)})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-300 text-[10px]">
+                      <span>🛍️</span> Self Pickup:
+                    </span>
+                    <span className="font-black text-text-primary text-[10px]">
+                      {r.pickupOrders || 0} orders ({formatPrice(r.pickupSales || 0)})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex flex-col md:flex-row justify-between text-[10px] font-semibold text-text-secondary bg-muted/40 p-2 rounded-lg border border-border/40 gap-2">
                   <span className="flex items-center gap-1">
                     <Utensils className="h-3 w-3" /> Top Dish: <span className="text-text-primary font-bold">{r.topDish || 'N/A'}</span> <span className="mx-1 text-border">|</span> Avg Order: <span className="text-text-primary font-bold">{formatPrice(r.avgOrderValue)}</span>
                   </span>

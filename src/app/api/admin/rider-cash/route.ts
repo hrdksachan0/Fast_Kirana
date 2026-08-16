@@ -244,3 +244,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message || 'Failed to settle cash' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth()
+  if (session?.user?.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+  }
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    const clearAll = searchParams.get('clearAll') === 'true'
+
+    if (id) {
+      await prisma.cashDepositTransaction.delete({
+        where: { id }
+      })
+      return NextResponse.json({
+        success: true,
+        message: 'Cash deposit log deleted.'
+      })
+    }
+
+    // Clear all deposits
+    const deleted = await prisma.cashDepositTransaction.deleteMany({})
+    return NextResponse.json({
+      success: true,
+      message: `Cleared ${deleted.count} cash deposit logs.`
+    })
+  } catch (err: any) {
+    console.error('Error deleting cash deposit log:', err)
+    return NextResponse.json({ error: err.message || 'Failed to delete deposit log' }, { status: 500 })
+  }
+}

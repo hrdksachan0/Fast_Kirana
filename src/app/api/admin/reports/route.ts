@@ -68,11 +68,13 @@ export async function GET(request: NextRequest) {
         costPrice: number
         categoryName: string
         categorySlug: string
+        productTags: string[] | null
         variants: any
         selectedVariant: string | null
         shopName: string | null
         restaurantId: string | null
         restaurantName: string | null
+        restaurantCommissionRate: number | null
         orderType: string | null
       }>
     >`
@@ -80,11 +82,13 @@ export async function GET(request: NextRequest) {
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              c.name as "categoryName",
              c.slug as "categorySlug",
+             p.tags as "productTags",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
              o."shopName" as "shopName",
              COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
              r.name as "restaurantName",
+             r."commissionRate" as "restaurantCommissionRate",
              o."orderType"::text as "orderType"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
@@ -108,14 +112,20 @@ export async function GET(request: NextRequest) {
     // Track missing cost products
     const missingCostProductsMap: Record<string, { id: string; name: string; price: number }> = {}
 
+    // Fetch all restaurants and their actual configured commission rates from DB
+    const allRestaurants = await prisma.restaurant.findMany({
+      select: { id: true, name: true, slug: true, commissionRate: true }
+    })
+    const restaurantById = new Map(allRestaurants.map(r => [r.id, r]))
+    const restaurantByName = new Map(allRestaurants.map(r => [r.name.toLowerCase().trim(), r]))
+    const restaurantBySlug = new Map(allRestaurants.map(r => [r.slug.toLowerCase().trim(), r]))
+
     // Fetch dynamic settings
     const settingsList = await prisma.storeSetting.findMany({
       where: { key: { in: ['restaurant_commission', 'restaurant_default_margin', 'cafe_default_margin'] } }
     })
     const settingsMap = new Map(settingsList.map(s => [s.key, s.value]))
     const dynamicCommissionRate = parseFloat(settingsMap.get('restaurant_commission') || '10') / 100
-    const restaurantDefaultMargin = parseFloat(settingsMap.get('restaurant_default_margin') || '30')
-    const cafeDefaultMargin = parseFloat(settingsMap.get('cafe_default_margin') || '30')
 
     // Helper: calculate cost and profit for an item
     const isPureGroceryItem = (item: typeof orderItems[0]) => {
@@ -135,17 +145,61 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const resolveRestaurantForItem = (item: typeof orderItems[0]) => {
+      if (item.restaurantId && restaurantById.has(item.restaurantId)) {
+        return restaurantById.get(item.restaurantId)
+      }
+      if (item.restaurantName && restaurantByName.has(item.restaurantName.toLowerCase().trim())) {
+        return restaurantByName.get(item.restaurantName.toLowerCase().trim())
+      }
+      if (item.shopName && restaurantByName.has(item.shopName.toLowerCase().trim())) {
+        return restaurantByName.get(item.shopName.toLowerCase().trim())
+      }
+      const catLower = (item.categoryName || '').toLowerCase().trim()
+      if (catLower.includes('wedson')) {
+        return allRestaurants.find(r => r.slug.includes('wedson') || r.name.toLowerCase().includes('wedson'))
+      }
+      if (catLower.includes('as') || catLower.includes('a.s')) {
+        return allRestaurants.find(r => r.slug.includes('as') || r.name.toLowerCase().includes('a.s') || r.name.toLowerCase().includes('as'))
+      }
+      if (catLower.includes('bal udyan') || catLower.includes('baludyan')) {
+        return allRestaurants.find(r => r.slug.includes('bal') || r.name.toLowerCase().includes('bal udyan'))
+      }
+      if (Array.isArray(item.productTags)) {
+        for (const t of item.productTags) {
+          const tLower = (t || '').toLowerCase()
+          if (restaurantBySlug.has(tLower)) return restaurantBySlug.get(tLower)
+        }
+      }
+      return null
+    }
+
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const itemRevenue = item.price * item.quantity
       const isGrocery = isPureGroceryItem(item)
+      const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
+      const isRestaurant = !isGrocery && (
+        !!matchedRest ||
+        !!item.restaurantId || 
+        item.orderType === 'RESTAURANT' || 
+        item.categoryName.toLowerCase().includes('restaurant') || 
+        item.categoryName.toLowerCase().includes('cafe')
+      )
 
-      // Special Logic for partner Restaurant (Wedson / A.S Cafe) prepared dishes:
-      // Admin profit is dynamic commission on item sales.
-      // The remaining portion is the payout cost to the partner restaurant.
-      if (!isGrocery && (item.restaurantId || item.orderType === 'RESTAURANT' || item.categoryName.toLowerCase().includes('restaurant') || item.categoryName.toLowerCase().includes('cafe'))) {
-        const itemProfit = itemRevenue * dynamicCommissionRate
-        const itemCost = itemRevenue * (1 - dynamicCommissionRate)
-        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
+      // Real Restaurant Commission Logic synced from Outlet Setup:
+      if (isRestaurant) {
+        let commRate = dynamicCommissionRate
+        if (matchedRest?.commissionRate !== undefined && matchedRest?.commissionRate !== null) {
+          const rawRate = Number(matchedRest.commissionRate)
+          commRate = rawRate > 1 ? rawRate / 100 : rawRate
+        } else if (item.restaurantCommissionRate !== undefined && item.restaurantCommissionRate !== null) {
+          const rawRate = Number(item.restaurantCommissionRate)
+          commRate = rawRate > 1 ? rawRate / 100 : rawRate
+        }
+
+        const itemProfit = itemRevenue * commRate
+        const itemCost = itemRevenue * (1 - commRate)
+        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest }
       }
 
       let costPrice = item.costPrice
@@ -168,21 +222,17 @@ export async function GET(request: NextRequest) {
       const hasCostPrice = costPrice > 0
       let costPerUnit = costPrice
       if (!hasCostPrice) {
-        if (!isGrocery && (item.restaurantId || item.orderType === 'RESTAURANT')) {
-          costPerUnit = item.price * (1 - restaurantDefaultMargin / 100)
-        } else {
-          costPerUnit = item.price * 0.75
-          missingCostProductsMap[item.productId] = {
-            id: item.productId,
-            name: item.name,
-            price: item.price
-          }
+        costPerUnit = item.price * 0.75
+        missingCostProductsMap[item.productId] = {
+          id: item.productId,
+          name: item.name,
+          price: item.price
         }
       }
       const itemCost = costPerUnit * item.quantity
       const itemProfit = itemRevenue - itemCost
       
-      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
+      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null }
     }
 
     // Calculate aggregated metrics
@@ -196,7 +246,8 @@ export async function GET(request: NextRequest) {
     const totalOrders = orders.length
 
     // Group by Date (YYYY-MM-DD)
-    const dailyData: Record<string, { date: string; sales: number; profit: number; orders: number }> = {}
+    type DailySale = { date: string; sales: number; profit: number; orders: number }
+    const dailyData: Record<string, DailySale> = {}
     
     // Initialize days in range with 0 to ensure continuous charts
     const currentDate = new Date(start)
@@ -257,7 +308,7 @@ export async function GET(request: NextRequest) {
       let orderCost = 0
 
       for (const item of items) {
-        const { cost, revenue: itemRev, profit: itemProf } = getItemMetrics(item)
+        const { cost, revenue: itemRev, profit: itemProf, matchedRest } = getItemMetrics(item)
         orderCost += cost
 
         // Strict Category Resolution
@@ -270,6 +321,9 @@ export async function GET(request: NextRequest) {
         if (isGrocery) {
           targetCategoryName = item.categoryName
           targetType = 'grocery'
+        } else if (matchedRest) {
+          targetCategoryName = matchedRest.name
+          targetType = 'restaurant'
         } else if (item.restaurantId || item.orderType === 'RESTAURANT' || catNameLower.includes('restaurant') || catNameLower.includes('cafe')) {
           targetType = 'restaurant'
           if (item.restaurantName) {

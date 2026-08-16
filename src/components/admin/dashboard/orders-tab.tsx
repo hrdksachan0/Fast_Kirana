@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Search, Plus, Loader2 } from 'lucide-react'
+import { Search, Plus, Loader2, MessageSquare, Share2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 
@@ -57,6 +58,35 @@ export function OrdersTab({
   const isOrderPickup = (o: any) => {
     const method = (o.deliveryMethod || '').toUpperCase()
     return method === 'SELF_PICKUP' || method === 'PICKUP' || o.isSelfPickup === true
+  }
+
+  const shareKitchenOrder = (o: any) => {
+    const isPickup = isOrderPickup(o)
+    const orderId = o.readableId || o.id?.slice(0, 8) || 'Order'
+    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
+    
+    let text = `🍳 *KITCHEN ORDER - #${orderId}*\n`
+    text += `⏰ *Time:* ${orderTime}\n`
+    text += `📦 *Type:* ${isPickup ? '🛍️ SELF PICKUP' : '🛵 DOORSTEP DELIVERY'}\n`
+    if (o.shopName) {
+      text += `🏪 *Restaurant:* ${o.shopName}\n`
+    }
+    text += `\n📋 *ITEMS TO PREPARE:*\n`
+    
+    if (o.items && Array.isArray(o.items) && o.items.length > 0) {
+      o.items.forEach((item: any, index: number) => {
+        const variantText = item.selectedVariant ? ` (${item.selectedVariant})` : ''
+        text += `${index + 1}. *${item.name}${variantText}*  ✖  *${item.quantity}*\n`
+      })
+      const totalQty = o.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+      text += `\n🔢 *Total Items:* ${totalQty} units\n`
+    } else {
+      text += `(Click Quick View in Admin to view loaded products)\n`
+    }
+
+    text += `⚠️ *Kitchen Slip: Only Products & Quantities Included*`
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
   }
 
   const getOrderStoreType = (o: any) => {
@@ -486,6 +516,14 @@ export function OrdersTab({
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={() => shareKitchenOrder(o)}
+                                  className="flex-1 py-1 px-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
+                                  title="Share products-only WhatsApp slip with Kitchen"
+                                >
+                                  📱 Share
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => printCustomerInvoice(o)}
                                   className="flex-1 py-1 px-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
                                   title="Print Customer Tax Invoice"
@@ -722,6 +760,14 @@ export function OrdersTab({
                               className="px-2 py-1 bg-muted hover:bg-muted/80 text-text-primary border border-border text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
                             >
                               👁️ Details
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => shareKitchenOrder(o)}
+                              className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
+                              title="Share products-only WhatsApp slip with Kitchen"
+                            >
+                              📱 Share
                             </button>
                             <button
                               type="button"

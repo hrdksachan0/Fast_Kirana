@@ -49,11 +49,12 @@ export async function GET(request: NextRequest) {
         deliveryFee: number
         taxes: number
         miscFee: number
+        deliveryMethod: string
         restaurantId: string
         createdAt: Date
       }>
     >`
-      SELECT o.id, o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o."restaurantId", o."createdAt"
+      SELECT o.id, o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o."deliveryMethod", o."restaurantId", o."createdAt"
       FROM orders o
       WHERE o.status::text = 'DELIVERED'
         AND o."restaurantId" IS NOT NULL
@@ -85,13 +86,35 @@ export async function GET(request: NextRequest) {
       totalRestaurantShare: 0,
       totalOrders: 0,
       totalDeliveryFee: 0,
-      totalPackaging: 0
+      totalPackaging: 0,
+      deliveryOrders: 0,
+      deliverySales: 0,
+      pickupOrders: 0,
+      pickupSales: 0
+    }
+
+    // Fetch latest paid payouts for each restaurant
+    const paidPayouts = await prisma.restaurantPayout.findMany({
+      where: { status: 'PAID' },
+      orderBy: { paidAt: 'desc' }
+    })
+
+    const lastSettledMap = new Map<string, { date: Date; amount: number; transactionId?: string | null }>()
+    for (const p of paidPayouts) {
+      if (p.restaurantId && !lastSettledMap.has(p.restaurantId)) {
+        lastSettledMap.set(p.restaurantId, {
+          date: p.paidAt || p.endDate || p.updatedAt,
+          amount: p.amount,
+          transactionId: p.transactionId
+        })
+      }
     }
 
     const restaurantMap = new Map<string, any>()
 
     for (const r of restaurants) {
-      const commRate = r.commissionRate ? parseFloat(r.commissionRate.toString()) / 100 : 0.15 // fallback to 15% if undefined? Let's assume it's stored as percentage or fraction. Wait, in DB it's usually percentage like 15 or 10. Let's look at how it's used. In reference, restaurant commission might be global setting. Here they asked to use r.commissionRate. Let's assume it's a decimal like 0.15, or maybe we just use it directly. Actually, the example in the prompt has `commissionRate: 0.15`. Let's assume it's a Decimal/float stored as fraction or we just use it directly if it's already a float. The prompt example: `"commissionRate": 0.15`. So I will use `Number(r.commissionRate) || 0`.
+      const commRate = r.commissionRate ? parseFloat(r.commissionRate.toString()) / 100 : 0.15
+      const lastSettled = lastSettledMap.get(r.id)
 
       restaurantMap.set(r.id, {
         id: r.id,
@@ -108,6 +131,15 @@ export async function GET(request: NextRequest) {
         topDish: '',
         totalDeliveryFee: 0,
         totalPackaging: 0,
+        deliveryOrders: 0,
+        deliverySales: 0,
+        deliveryShare: 0,
+        pickupOrders: 0,
+        pickupSales: 0,
+        pickupShare: 0,
+        lastSettledDate: lastSettled?.date ? lastSettled.date.toISOString() : null,
+        lastSettledAmount: lastSettled?.amount || null,
+        lastSettledTxnId: lastSettled?.transactionId || null,
         _itemCounts: new Map<string, number>()
       })
     }
@@ -127,6 +159,20 @@ export async function GET(request: NextRequest) {
       rStats.restaurantShare += restShare
       rStats.totalDeliveryFee += Number(o.deliveryFee) || 0
       rStats.totalPackaging += Number(o.miscFee) || 0
+
+      if (o.deliveryMethod === 'PICKUP') {
+        rStats.pickupOrders++
+        rStats.pickupSales += productSales
+        rStats.pickupShare += restShare
+        grandTotal.pickupOrders++
+        grandTotal.pickupSales += productSales
+      } else {
+        rStats.deliveryOrders++
+        rStats.deliverySales += productSales
+        rStats.deliveryShare += restShare
+        grandTotal.deliveryOrders++
+        grandTotal.deliverySales += productSales
+      }
     }
 
     for (const oi of orderItems) {
