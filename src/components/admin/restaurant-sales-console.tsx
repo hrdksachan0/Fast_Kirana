@@ -5,6 +5,13 @@ import { Calendar, IndianRupee, TrendingUp, ShoppingBag, Percent, RefreshCw, Fil
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 
+interface ChannelMetrics {
+  ordersCount: number
+  sales: number
+  restaurantProfit: number
+  adminProfit: number
+}
+
 interface Summary {
   totalSales: number
   totalCost: number
@@ -18,6 +25,8 @@ interface Summary {
   avgOrderValue: number
   commissionRate?: number
   profitShareRate?: number
+  delivery?: ChannelMetrics
+  pickup?: ChannelMetrics
 }
 
 interface DailySale {
@@ -36,6 +45,7 @@ interface TopProduct {
 
 export function RestaurantSalesConsole() {
   const [loading, setLoading] = useState(true)
+  const [selectedChannel, setSelectedChannel] = useState<'all' | 'delivery' | 'pickup'>('all')
   const [summary, setSummary] = useState<Summary>({
     totalSales: 0,
     totalCost: 0,
@@ -48,7 +58,9 @@ export function RestaurantSalesConsole() {
     ordersCount: 0,
     avgOrderValue: 0,
     commissionRate: 10,
-    profitShareRate: 15
+    profitShareRate: 15,
+    delivery: { ordersCount: 0, sales: 0, restaurantProfit: 0, adminProfit: 0 },
+    pickup: { ordersCount: 0, sales: 0, restaurantProfit: 0, adminProfit: 0 }
   })
   const [dailySales, setDailySales] = useState<DailySale[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
@@ -159,6 +171,12 @@ export function RestaurantSalesConsole() {
       csv += `Average Order Value,₹${(summary.avgOrderValue || 0).toFixed(2)}\n`
       csv += `Commission Rate,${summary.commissionRate || 10}%\n`
       csv += `Restaurant Margin Rate,${100 - (summary.commissionRate || 10)}%\n\n`
+      
+      // Channel Breakdown Section
+      csv += '--- FULFILLMENT CHANNEL BREAKDOWN ---\n'
+      csv += 'Channel,Orders Count,Gross Sales (INR),Restaurant Share (INR),Admin Commission (INR)\n'
+      csv += `Doorstep Delivery,${summary.delivery?.ordersCount || 0},₹${(summary.delivery?.sales || 0).toFixed(2)},₹${(summary.delivery?.restaurantProfit || 0).toFixed(2)},₹${(summary.delivery?.adminProfit || 0).toFixed(2)}\n`
+      csv += `Self Pickup / Takeaway,${summary.pickup?.ordersCount || 0},₹${(summary.pickup?.sales || 0).toFixed(2)},₹${(summary.pickup?.restaurantProfit || 0).toFixed(2)},₹${(summary.pickup?.adminProfit || 0).toFixed(2)}\n\n`
       
       // Daily Breakdown Table
       csv += '--- DAILY SALES BREAKDOWN ---\n'
@@ -319,6 +337,71 @@ export function RestaurantSalesConsole() {
               </div>
               <h3 className="text-base sm:text-2xl font-black text-text-primary truncate">{summary.ordersCount}</h3>
               <p className="text-[8px] sm:text-[9px] font-bold text-purple-500">Completed</p>
+            </div>
+          </div>
+
+          {/* Fulfillment Channel Comparison (Delivery vs. Pickup) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Doorstep Delivery Card */}
+            <div className="bg-card border border-border/60 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-blue-500/[0.02] to-transparent">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛵</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Doorstep Delivery</h4>
+                    <p className="text-[10px] text-text-muted font-medium">{summary.delivery?.ordersCount || 0} Orders delivered by fleet</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
+                  {formatPrice(summary.delivery?.sales || 0)} Sales
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">Restaurant Share</span>
+                  <strong className="text-sm font-black text-text-primary mt-0.5 block">
+                    {formatPrice(summary.delivery?.restaurantProfit || 0)}
+                  </strong>
+                </div>
+                <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastKirana Commission</span>
+                  <strong className="text-sm font-black text-blue-600 dark:text-blue-400 mt-0.5 block">
+                    {formatPrice(summary.delivery?.adminProfit || 0)}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Self Pickup Card */}
+            <div className="bg-card border border-border/60 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-emerald-500/[0.02] to-transparent">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛍️</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Self Pickup / Takeaway</h4>
+                    <p className="text-[10px] text-text-muted font-medium">{summary.pickup?.ordersCount || 0} Orders picked up at counter</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  {formatPrice(summary.pickup?.sales || 0)} Sales
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">Restaurant Share</span>
+                  <strong className="text-sm font-black text-text-primary mt-0.5 block">
+                    {formatPrice(summary.pickup?.restaurantProfit || 0)}
+                  </strong>
+                </div>
+                <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastKirana Commission</span>
+                  <strong className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                    {formatPrice(summary.pickup?.adminProfit || 0)}
+                  </strong>
+                </div>
+              </div>
             </div>
           </div>
 

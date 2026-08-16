@@ -53,8 +53,15 @@ interface TopProduct {
   type?: 'restaurant' | 'grocery'
 }
 
+interface ChannelMetrics {
+  ordersCount: number
+  sales: number
+  profit: number
+}
+
 interface ReportSummary {
   totalSales: number
+  totalCollected?: number
   totalProfit: number
   totalCost: number
   totalOrders: number
@@ -65,6 +72,8 @@ interface ReportSummary {
   totalDeliveryFee?: number
   productSales?: number
   missingCostCount?: number
+  delivery?: ChannelMetrics
+  pickup?: ChannelMetrics
 }
 
 // Category Icon & Color Mapping for Premium Polish
@@ -511,6 +520,55 @@ export function AdminReports() {
 
           </div>
 
+          {/* Fulfillment Channel Split (Delivery vs. Self Pickup) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Doorstep Delivery Revenue */}
+            <div className="bg-card border border-border/70 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-blue-500/[0.02] to-transparent">
+              <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛵</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Doorstep Delivery Revenue</h4>
+                    <p className="text-[10px] text-text-muted font-medium">{rawSummary.delivery?.ordersCount || 0} Orders delivered to customers</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
+                  {formatPrice(rawSummary.delivery?.sales || 0)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-text-secondary font-medium">Net Profit on Deliveries:</span>
+                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatPrice(rawSummary.delivery?.profit || 0)}
+                </strong>
+              </div>
+            </div>
+
+            {/* Self Pickup Revenue */}
+            <div className="bg-card border border-border/70 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-emerald-500/[0.02] to-transparent">
+              <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛍️</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Self Pickup / Takeaway Revenue</h4>
+                    <p className="text-[10px] text-text-muted font-medium">{rawSummary.pickup?.ordersCount || 0} Orders picked up directly</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  {formatPrice(rawSummary.pickup?.sales || 0)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-text-secondary font-medium">Net Profit on Pickups:</span>
+                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatPrice(rawSummary.pickup?.profit || 0)}
+                </strong>
+              </div>
+            </div>
+          </div>
+
           {/* Category-Wise Performance Ledger Table */}
           <div className="bg-card border border-border p-5 md:p-6 rounded-3xl shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3.5">
@@ -566,7 +624,7 @@ export function AdminReports() {
                               </span>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md border ${meta.badge}`}>
-                                  {cat.type === 'restaurant' ? 'Kitchen & Cafe' : 'Grocery'}
+                                  {cat.type === 'restaurant' ? 'Kitchen & Restaurant' : 'Grocery'}
                                 </span>
                                 <span className="text-[9.5px] text-text-muted font-medium">
                                   {percentOfStore}% of store sales
@@ -768,7 +826,16 @@ export function AdminReports() {
                 )}
                 <div className="flex justify-between items-center pt-2.5 border-t border-border/60 text-sm">
                   <span className="font-black text-text-primary">Total Collected Cash Flow:</span>
-                  <span className="font-black text-primary text-base">{formatPrice(summary.totalSales)}</span>
+                  <span className="font-black text-primary text-base">
+                    {formatPrice(
+                      summary.totalCollected || (
+                        (summary.productSales || summary.totalSales || 0) + 
+                        (summary.totalDeliveryFee || 0) + 
+                        (summary.totalMiscFee || 0) + 
+                        (summary.totalTaxes || 0)
+                      )
+                    )}
+                  </span>
                 </div>
               </div>
             </div>

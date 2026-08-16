@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
 import { Loader2, Truck, ShoppingBag } from 'lucide-react'
-import PhotoCapture from '@/components/delivery/photo-capture'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import DeliveryHeader from './components/delivery-header'
@@ -162,8 +161,6 @@ export default function DeliveryDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [capturingOrderId, setCapturingOrderId] = useState<string | null>(null)
-  const [capturingPhotoSubmitting, setCapturingPhotoSubmitting] = useState(false)
 
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
 
@@ -648,31 +645,57 @@ export default function DeliveryDashboard() {
     .filter((o) => o.paymentMethod === 'COD')
     .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
 
-  const [paymentMeta, setPaymentMeta] = useState<{ isRiderCash: boolean; paymentCollectedBy: string }>({
-    isRiderCash: true,
-    paymentCollectedBy: 'RIDER',
-  })
+  const executeDeliveryCompletion = async (
+    orderId: string, 
+    isRiderCash: boolean, 
+    paymentCollectedBy: string
+  ) => {
+    setUpdatingId(orderId)
+    try {
+      const coords = await getCurrentCoords()
+      const success = await handleUpdateStatus(orderId, 'DELIVERED', {
+        deliveryLat: coords?.lat || null,
+        deliveryLng: coords?.lng || null,
+        isRiderCash,
+        paymentCollectedBy,
+      })
+
+      if (success) {
+        const matchingOrder = orders.find((o) => o.id === orderId)
+        const displayId = matchingOrder?.readableId || orderId.slice(0, 8)
+        toast.success(`🎉 Order #${displayId} Delivered Successfully!`, {
+          description: coords 
+            ? `Delivered & verified at customer location.`
+            : `Delivered successfully.`,
+          duration: 4000,
+        })
+      }
+    } catch (err) {
+      toast.error('Failed to complete delivery')
+    } finally {
+      setUpdatingId(null)
+      setPaymentChoiceOrderId(null)
+      setUpiQrOrderId(null)
+    }
+  }
 
   const handleMarkDelivered = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId)
     if (order && order.paymentMethod === 'COD') {
       setPaymentChoiceOrderId(orderId)
     } else {
-      setPaymentMeta({ isRiderCash: false, paymentCollectedBy: 'ONLINE' })
-      setCapturingOrderId(orderId)
+      executeDeliveryCompletion(orderId, false, 'ONLINE')
     }
   }
 
   const handleSelectRiderCash = (orderId: string) => {
-    setPaymentMeta({ isRiderCash: true, paymentCollectedBy: 'RIDER' })
     setPaymentChoiceOrderId(null)
-    setCapturingOrderId(orderId)
+    executeDeliveryCompletion(orderId, true, 'RIDER')
   }
 
   const handleSelectOwnerCash = (orderId: string) => {
-    setPaymentMeta({ isRiderCash: false, paymentCollectedBy: 'OWNER' })
     setPaymentChoiceOrderId(null)
-    setCapturingOrderId(orderId)
+    executeDeliveryCompletion(orderId, false, 'OWNER')
   }
 
   const handleSelectUpi = (orderId: string) => {
@@ -680,44 +703,18 @@ export default function DeliveryDashboard() {
     setUpiQrOrderId(orderId)
   }
 
-  const handleConfirmUpiPaid = (orderId: string) => {
-    setPaymentMeta({ isRiderCash: false, paymentCollectedBy: 'ONLINE' })
-    setUpiQrOrderId(null)
-    setCapturingOrderId(orderId)
-  }
-
-  const handlePhotoCaptured = async (photoBase64: string) => {
-    if (!capturingOrderId) return
-    setCapturingPhotoSubmitting(true)
+  const handleConfirmUpiPaid = async (orderId: string) => {
     try {
-      const coords = await getCurrentCoords()
-      const success = await handleUpdateStatus(capturingOrderId, 'DELIVERED', {
-        deliveryPhoto: photoBase64,
-        deliveryLat: coords?.lat || null,
-        deliveryLng: coords?.lng || null,
-        isRiderCash: paymentMeta.isRiderCash,
-        paymentCollectedBy: paymentMeta.paymentCollectedBy,
+      await fetch(`/api/delivery/orders/${orderId}/qr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referenceId: 'Rider Approved Doorstep QR' })
       })
-      if (success) {
-        const matchingOrder = orders.find((o) => o.id === capturingOrderId)
-        const displayId = matchingOrder?.readableId || capturingOrderId.slice(0, 8)
-        toast.success('📸 Delivery confirmed with photo proof!', {
-          description: coords 
-            ? `Photo proof and GPS coordinates saved for order #${displayId}…`
-            : `Photo proof saved for order #${displayId}… (GPS not available)`,
-          duration: 4000,
-        })
-        setCapturingOrderId(null)
-      }
-    } catch (err) {
-      toast.error('Failed to save delivery proof')
-    } finally {
-      setCapturingPhotoSubmitting(false)
+    } catch (e) {
+      console.error('Error recording UPI conversion:', e)
     }
-  }
-
-  const handlePhotoCancelled = () => {
-    setCapturingOrderId(null)
+    setUpiQrOrderId(null)
+    executeDeliveryCompletion(orderId, false, 'ONLINE')
   }
 
   if (status === 'loading' || isLoading) {
@@ -742,17 +739,6 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
-      {/* Photo Capture Overlay */}
-      {capturingOrderId && (
-        <PhotoCapture
-          orderId={capturingOrderId}
-          orderNumber={orders.find((o) => o.id === capturingOrderId)?.readableId}
-          onConfirm={handlePhotoCaptured}
-          onCancel={handlePhotoCancelled}
-          isSubmitting={capturingPhotoSubmitting}
-        />
-      )}
-
       {/* COD Payment Choice Modal */}
       {paymentChoiceOrderId && (
         <CodPaymentModal
@@ -833,6 +819,7 @@ export default function DeliveryDashboard() {
                       idx={idx}
                       updatingId={updatingId}
                       onMarkDelivered={handleMarkDelivered}
+                      onShowUpiQr={handleSelectUpi}
                     />
                   ))
                 )}

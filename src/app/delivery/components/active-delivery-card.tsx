@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { MapPin, Phone, User, ShoppingBag, Camera, Loader2 } from 'lucide-react'
+import { MapPin, Phone, User, ShoppingBag, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 
 interface ActiveDeliveryCardProps {
@@ -9,6 +9,7 @@ interface ActiveDeliveryCardProps {
   idx: number
   updatingId: string | null
   onMarkDelivered: (orderId: string) => void
+  onShowUpiQr?: (orderId: string) => void
 }
 
 const itemVariants = {
@@ -22,6 +23,7 @@ export default function ActiveDeliveryCard({
   idx,
   updatingId,
   onMarkDelivered,
+  onShowUpiQr,
 }: ActiveDeliveryCardProps) {
   return (
     <motion.div
@@ -235,7 +237,7 @@ export default function ActiveDeliveryCard({
         </div>
 
         {/* COD total + action */}
-        <div className="flex justify-between items-center border-t border-border/40 pt-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-t border-border/40 pt-3">
           <div>
             <span className="text-[10px] font-bold text-text-secondary block">
               {order.companionOrder ? 'Combined Total to Collect' : 'Total to Collect'}
@@ -245,20 +247,34 @@ export default function ActiveDeliveryCard({
             </span>
           </div>
           
-          <button
-            onClick={() => onMarkDelivered(order.id)}
-            disabled={updatingId === order.id}
-            className="flex items-center gap-1.5 px-5 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60 cursor-pointer"
-          >
-            {updatingId === order.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Camera className="h-4 w-4" />
-                {order.companionOrder ? 'Deliver Both Orders ✅' : 'Mark Delivered'}
-              </>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {order.paymentMethod === 'COD' && onShowUpiQr && (
+              <button
+                type="button"
+                onClick={() => onShowUpiQr(order.id)}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-3 min-h-[44px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-black rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
+                title="Show UPI QR Code for Customer to Scan"
+              >
+                <span>📱</span>
+                <span>UPI QR</span>
+              </button>
             )}
-          </button>
+
+            <button
+              onClick={() => onMarkDelivered(order.id)}
+              disabled={updatingId === order.id}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60 cursor-pointer"
+            >
+              {updatingId === order.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{order.companionOrder ? 'Deliver Both Orders ✅' : 'Mark Delivered'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

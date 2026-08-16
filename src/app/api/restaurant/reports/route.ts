@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       deliveryFee: number
       taxes: number
       miscFee: number
+      deliveryMethod: string
       createdAt: Date
     }
 
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     if (assignedRestId) {
       // Dynamic: query strictly by restaurantId — works for any restaurant, no hardcoded names
       orders = await prisma.$queryRaw<OrderRow[]>`
-        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
+        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
         FROM orders
         WHERE status::text = 'DELIVERED'
           AND "restaurantId" = ${assignedRestId}
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Admin fallback: all restaurant orders (excludes grocery-only orders)
       orders = await prisma.$queryRaw<OrderRow[]>`
-        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
+        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
         FROM orders
         WHERE status::text = 'DELIVERED'
           AND "restaurantId" IS NOT NULL
@@ -183,7 +184,7 @@ export async function GET(request: NextRequest) {
       return { cost: ingredientCost, sales: totalItemSales, profit: netKitchenProfit, restaurantProfit, adminProfit }
     }
 
-    // 3. Process Financials Summary
+    // 3. Process Financials Summary (with Channel Separation)
     let totalSales = 0
     let totalCost = 0
     let totalDiscount = 0
@@ -192,20 +193,47 @@ export async function GET(request: NextRequest) {
     let totalRestaurantProfit = 0
     let totalAdminProfit = 0
 
+    let deliveryOrdersCount = 0
+    let deliverySales = 0
+    let deliveryRestaurantProfit = 0
+    let deliveryAdminProfit = 0
+
+    let pickupOrdersCount = 0
+    let pickupSales = 0
+    let pickupRestaurantProfit = 0
+    let pickupAdminProfit = 0
+
     orders.forEach(o => {
+      const isPickup = o.deliveryMethod === 'PICKUP'
       const foodSales = (o.subtotal || 0) - (o.discount || 0)
       totalSales += foodSales
       totalDiscount += o.discount || 0
       totalTaxes += o.taxes || 0
       totalMisc += o.miscFee || 0
 
+      let orderRestProfit = 0
+      let orderAdmProfit = 0
       const items = itemsByOrder[o.id] || []
       items.forEach(item => {
         const metrics = getItemMetrics(item)
+        orderRestProfit += metrics.restaurantProfit
+        orderAdmProfit += metrics.adminProfit
         totalRestaurantProfit += metrics.restaurantProfit
         totalAdminProfit += metrics.adminProfit
         totalCost += metrics.cost
       })
+
+      if (isPickup) {
+        pickupOrdersCount++
+        pickupSales += foodSales
+        pickupRestaurantProfit += orderRestProfit
+        pickupAdminProfit += orderAdmProfit
+      } else {
+        deliveryOrdersCount++
+        deliverySales += foodSales
+        deliveryRestaurantProfit += orderRestProfit
+        deliveryAdminProfit += orderAdmProfit
+      }
     })
 
     const netProfit = totalRestaurantProfit - totalCost
@@ -280,6 +308,18 @@ export async function GET(request: NextRequest) {
         avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,
         commissionRate: commissionRate * 100,
         profitShareRate: profitShareRate * 100,
+        delivery: {
+          ordersCount: deliveryOrdersCount,
+          sales: deliverySales,
+          restaurantProfit: deliveryRestaurantProfit,
+          adminProfit: deliveryAdminProfit,
+        },
+        pickup: {
+          ordersCount: pickupOrdersCount,
+          sales: pickupSales,
+          restaurantProfit: pickupRestaurantProfit,
+          adminProfit: pickupAdminProfit,
+        }
       },
       dailySales,
       topProducts,

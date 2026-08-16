@@ -44,10 +44,11 @@ export async function GET(request: NextRequest) {
         deliveryFee: number
         taxes: number
         miscFee: number
+        deliveryMethod: string
         createdAt: Date
       }>
     >`
-      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
+      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
       FROM orders
       WHERE status::text = 'DELIVERED'
         AND "createdAt" >= ${start}
@@ -66,25 +67,30 @@ export async function GET(request: NextRequest) {
         name: string
         costPrice: number
         categoryName: string
+        categorySlug: string
         variants: any
         selectedVariant: string | null
         shopName: string | null
         restaurantId: string | null
+        restaurantName: string | null
         orderType: string | null
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              c.name as "categoryName",
+             c.slug as "categorySlug",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
              o."shopName" as "shopName",
-             o."restaurantId" as "restaurantId",
+             COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
+             r.name as "restaurantName",
              o."orderType"::text as "orderType"
       FROM order_items oi
       JOIN products p ON oi."productId" = p.id
       JOIN categories c ON p."categoryId" = c.id
       JOIN orders o ON oi."orderId" = o.id
+      LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
@@ -112,13 +118,31 @@ export async function GET(request: NextRequest) {
     const cafeDefaultMargin = parseFloat(settingsMap.get('cafe_default_margin') || '30')
 
     // Helper: calculate cost and profit for an item
+    const isPureGroceryItem = (item: typeof orderItems[0]) => {
+      const catNameLower = (item.categoryName || '').toLowerCase().trim()
+      const catSlugLower = (item.categorySlug || '').toLowerCase().trim()
+      return (
+        catNameLower.includes('ice cream') || catSlugLower.includes('ice-cream') ||
+        catNameLower.includes('beverage') || catNameLower.includes('drink') || catSlugLower.includes('beverage') ||
+        catNameLower.includes('fruit') || catNameLower.includes('vegetable') || catSlugLower.includes('fruits-vegetables') ||
+        catNameLower.includes('dairy') || catNameLower.includes('milk') || catSlugLower.includes('dairy-breakfast') ||
+        catNameLower.includes('snack') || catNameLower.includes('munch') || catSlugLower.includes('snacks-munchies') ||
+        catNameLower.includes('bakery') || catNameLower.includes('biscuit') || catSlugLower.includes('bakery-biscuits') ||
+        catNameLower.includes('atta') || catNameLower.includes('rice') || catSlugLower.includes('dal') || catSlugLower.includes('atta-rice-dal') ||
+        catNameLower.includes('personal') || catSlugLower.includes('personal-care') ||
+        catNameLower.includes('house') || catSlugLower.includes('household') ||
+        catNameLower.includes('essential') || catSlugLower.includes('grocery-essential')
+      )
+    }
+
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const itemRevenue = item.price * item.quantity
+      const isGrocery = isPureGroceryItem(item)
 
-      // Special Logic for partner Restaurant (Wedson) orders:
+      // Special Logic for partner Restaurant (Wedson / A.S Cafe) prepared dishes:
       // Admin profit is dynamic commission on item sales.
       // The remaining portion is the payout cost to the partner restaurant.
-      if (item.restaurantId || item.orderType === 'RESTAURANT') {
+      if (!isGrocery && (item.restaurantId || item.orderType === 'RESTAURANT' || item.categoryName.toLowerCase().includes('restaurant') || item.categoryName.toLowerCase().includes('cafe'))) {
         const itemProfit = itemRevenue * dynamicCommissionRate
         const itemCost = itemRevenue * (1 - dynamicCommissionRate)
         return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
@@ -144,22 +168,19 @@ export async function GET(request: NextRequest) {
       const hasCostPrice = costPrice > 0
       let costPerUnit = costPrice
       if (!hasCostPrice) {
-        if (item.restaurantId || item.orderType === 'RESTAURANT') {
+        if (!isGrocery && (item.restaurantId || item.orderType === 'RESTAURANT')) {
           costPerUnit = item.price * (1 - restaurantDefaultMargin / 100)
         } else {
           costPerUnit = item.price * 0.75
+          missingCostProductsMap[item.productId] = {
+            id: item.productId,
+            name: item.name,
+            price: item.price
+          }
         }
       }
       const itemCost = costPerUnit * item.quantity
       const itemProfit = itemRevenue - itemCost
-      
-      if (!hasCostPrice) {
-        missingCostProductsMap[item.productId] = {
-          id: item.productId,
-          name: item.name,
-          price: item.price
-        }
-      }
       
       return { cost: itemCost, revenue: itemRevenue, profit: itemProfit }
     }
@@ -205,9 +226,18 @@ export async function GET(request: NextRequest) {
       }
     > = {}
 
+    let deliveryOrdersCount = 0
+    let deliverySales = 0
+    let deliveryProfit = 0
+    let pickupOrdersCount = 0
+    let pickupSales = 0
+    let pickupProfit = 0
+
     // Process each order
     for (const order of orders) {
+      const isPickup = order.deliveryMethod === 'PICKUP'
       const dateString = order.createdAt.toISOString().split('T')[0]
+      const orderSales = (order.subtotal || 0) - (order.discount || 0)
       
       // Ensure dailyData has the key (in case it fell outside initialized range due to timezone)
       if (!dailyData[dateString]) {
@@ -215,12 +245,12 @@ export async function GET(request: NextRequest) {
       }
 
       dailyData[dateString].orders++
-      dailyData[dateString].sales += (order.subtotal || 0) - (order.discount || 0)
-      totalRevenue += (order.subtotal || 0) - (order.discount || 0)
+      dailyData[dateString].sales += orderSales
+      totalRevenue += orderSales
       totalMiscFee += order.miscFee || 0
       totalTaxes += order.taxes || 0
       totalDeliveryFee += order.deliveryFee || 0
-      totalProductSales += (order.subtotal - order.discount)
+      totalProductSales += orderSales
 
       // Process items for profit calculation
       const items = itemsByOrder[order.id] || []
@@ -230,27 +260,50 @@ export async function GET(request: NextRequest) {
         const { cost, revenue: itemRev, profit: itemProf } = getItemMetrics(item)
         orderCost += cost
 
-        // Category breakdown
-        if (!categoryData[item.categoryName]) {
-          const isRestaurantOrCafe = item.restaurantId || 
-                                     item.orderType === 'RESTAURANT' || 
-                                     item.categoryName.toLowerCase().includes('cafe') ||
-                                     item.categoryName.toLowerCase().includes('restaurant');
-          const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
-          categoryData[item.categoryName] = { categoryName: item.categoryName, sales: 0, cost: 0, profit: 0, quantity: 0, type }
+        // Strict Category Resolution
+        const isGrocery = isPureGroceryItem(item)
+        const catNameLower = (item.categoryName || '').toLowerCase().trim()
+
+        let targetCategoryName = item.categoryName
+        let targetType: 'restaurant' | 'grocery' = 'grocery'
+
+        if (isGrocery) {
+          targetCategoryName = item.categoryName
+          targetType = 'grocery'
+        } else if (item.restaurantId || item.orderType === 'RESTAURANT' || catNameLower.includes('restaurant') || catNameLower.includes('cafe')) {
+          targetType = 'restaurant'
+          if (item.restaurantName) {
+            targetCategoryName = item.restaurantName
+          } else if (item.shopName) {
+            targetCategoryName = item.shopName
+          } else if (catNameLower.includes('fastkirana restaurant') || catNameLower.includes('restaurant')) {
+            targetCategoryName = 'Wedson Restaurant'
+          } else {
+            targetCategoryName = item.categoryName
+          }
+        } else {
+          targetCategoryName = item.categoryName
+          targetType = 'grocery'
         }
-        categoryData[item.categoryName].sales += itemRev
-        categoryData[item.categoryName].cost += cost
-        categoryData[item.categoryName].profit += itemProf
-        categoryData[item.categoryName].quantity += item.quantity
+
+        // Category breakdown
+        if (!categoryData[targetCategoryName]) {
+          categoryData[targetCategoryName] = { 
+            categoryName: targetCategoryName, 
+            sales: 0, 
+            cost: 0, 
+            profit: 0, 
+            quantity: 0, 
+            type: targetType 
+          }
+        }
+        categoryData[targetCategoryName].sales += itemRev
+        categoryData[targetCategoryName].cost += cost
+        categoryData[targetCategoryName].profit += itemProf
+        categoryData[targetCategoryName].quantity += item.quantity
 
         // Product breakdown
         if (!productData[item.productId]) {
-          const isRestaurantOrCafe = item.restaurantId || 
-                                     item.orderType === 'RESTAURANT' || 
-                                     item.categoryName.toLowerCase().includes('cafe') ||
-                                     item.categoryName.toLowerCase().includes('restaurant');
-          const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
           productData[item.productId] = {
             productId: item.productId,
             name: item.name,
@@ -260,8 +313,8 @@ export async function GET(request: NextRequest) {
             quantity: 0,
             sales: 0,
             profit: 0,
-            categoryName: item.categoryName,
-            type
+            categoryName: targetCategoryName,
+            type: targetType
           }
         }
         productData[item.productId].quantity += item.quantity
@@ -269,13 +322,21 @@ export async function GET(request: NextRequest) {
         productData[item.productId].profit += itemProf
       }
 
-      // Order profit = order.total - orderCost (takes discounts, taxes, delivery fee into account in proportion)
-      // Note: orderCost is raw product cost, order.total includes deliveryFee, minus discount.
-      // So order profit is a true reflection of net earnings.
+      // Order profit = order.total - orderCost
       const orderProfit = order.total - orderCost
       dailyData[dateString].profit += orderProfit
       totalProfit += orderProfit
       totalCost += orderCost
+
+      if (isPickup) {
+        pickupOrdersCount++
+        pickupSales += orderSales
+        pickupProfit += orderProfit
+      } else {
+        deliveryOrdersCount++
+        deliverySales += orderSales
+        deliveryProfit += orderProfit
+      }
     }
 
     // Convert grouped records to arrays
@@ -303,6 +364,16 @@ export async function GET(request: NextRequest) {
         totalDeliveryFee: Math.round(totalDeliveryFee * 100) / 100,
         productSales: Math.round(totalProductSales * 100) / 100,
         missingCostCount: Object.keys(missingCostProductsMap).length,
+        delivery: {
+          ordersCount: deliveryOrdersCount,
+          sales: Math.round(deliverySales * 100) / 100,
+          profit: Math.round(deliveryProfit * 100) / 100,
+        },
+        pickup: {
+          ordersCount: pickupOrdersCount,
+          sales: Math.round(pickupSales * 100) / 100,
+          profit: Math.round(pickupProfit * 100) / 100,
+        }
       },
       dailySales: dailyList,
       categorySales: categoryList,
