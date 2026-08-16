@@ -265,7 +265,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", total FROM orders WHERE id = ${id} LIMIT 1
+      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", total FROM orders WHERE id = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -387,7 +387,7 @@ export async function PATCH(
       }
 
       const isOwnerOrOnlinePayment = paymentCollectedBy === 'OWNER' || paymentCollectedBy === 'ONLINE' || isRiderCash === false
-      const newPaymentMethod = isOwnerOrOnlinePayment ? 'ONLINE' : (existingOrder.paymentMethod || 'COD')
+      const newPaymentMethod = isOwnerOrOnlinePayment ? 'UPI' : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD')
 
       await prisma.$executeRaw`
         UPDATE orders 
@@ -577,14 +577,19 @@ export async function PATCH(
     try {
       const statusLabels: Record<string, string> = {
         CONFIRMED: 'Confirmed by Store 🏪',
+        PREPARING: 'Preparing in Kitchen 🍳',
         PACKED: 'Packed & Ready to Go 📦',
         SHIPPED: 'Out for Delivery 🚴',
         DELIVERED: 'Delivered Successfully 🎉',
         CANCELLED: 'Cancelled ❌',
       }
       
-      const statusTitle = `Order Update: ${statusLabels[status] || status}`
-      const statusBody = `Your FastKirana order #${id.slice(-6).toUpperCase()} is now ${statusLabels[status] || status}.`
+      const baseOrderNo = existingOrder.readableId
+        ? String(existingOrder.readableId).replace(/-[GR\d]+$/i, '')
+        : id.slice(-6).toUpperCase()
+
+      const statusTitle = `Order #${baseOrderNo}: ${statusLabels[status] || status}`
+      const statusBody = `Your FastKirana order #${baseOrderNo} is now ${statusLabels[status] || status}.`
       
       const origin = request.headers.get('origin') || 'https://fastkirana.com'
       
@@ -600,8 +605,8 @@ export async function PATCH(
 
       // Notify workers/staff of the update
       sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-        title: `Order #${id.slice(-6).toUpperCase()} Updated 🔄`,
-        body: `Order status changed to ${statusLabels[status] || status}.`,
+        title: `Order #${baseOrderNo} Updated 🔄`,
+        body: `Order #${baseOrderNo} status changed to ${statusLabels[status] || status}.`,
         icon: `${origin}/icons/icon-192.png`,
         badge: `${origin}/icons/icon-192.png`,
         tag: `order-${id}-update`,

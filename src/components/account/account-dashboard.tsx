@@ -8,7 +8,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2 } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
@@ -469,67 +469,103 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       
-      {/* User Welcome Card Banner */}
-      <div className="relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-5 border border-zinc-200/80 dark:border-zinc-800 bg-gradient-to-br from-white via-zinc-50/50 to-rose-50/20 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-5 sm:p-6 rounded-[28px] shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center gap-4">
-          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e8153a] via-[#ff2d55] to-[#ff5533] text-white text-xl font-black shadow-md shadow-rose-500/25 ring-4 ring-white dark:ring-zinc-950">
-            {userName?.charAt(0)?.toUpperCase() || 'U'}
+      {/* User Welcome Card Banner - Luxury Modern Glassmorphism Design */}
+      <div className="relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-zinc-200/90 dark:border-white/10 bg-gradient-to-br from-white via-zinc-50/70 to-rose-50/30 dark:from-zinc-900/95 dark:via-zinc-900/70 dark:to-zinc-950 p-5 sm:p-6 rounded-[30px] shadow-[0_12px_36px_-12px_rgba(0,0,0,0.07)] backdrop-blur-xl">
+        {/* Ambient Decorative Light Flare */}
+        <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-gradient-to-br from-rose-500/15 to-primary/10 blur-3xl opacity-70" />
+        <div className="pointer-events-none absolute -bottom-14 -left-14 h-44 w-44 rounded-full bg-gradient-to-tr from-amber-500/10 to-violet-500/10 blur-3xl opacity-60" />
+
+        <div className="relative z-10 flex items-center gap-4 w-full sm:w-auto">
+          {/* Avatar with Glow and Verified Role Pin */}
+          <div className="relative shrink-0">
+            <div className="relative flex h-16 w-16 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-2xl bg-gradient-to-br from-[#e8153a] via-[#ff2d55] to-[#ff6b4a] text-white text-2xl font-black shadow-lg shadow-rose-500/25 ring-4 ring-white dark:ring-zinc-900 select-none">
+              {userName?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            {/* Status Pin Badge */}
+            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white dark:bg-zinc-900 shadow-md ring-2 ring-white dark:ring-zinc-900">
+              {user.role === 'ADMIN' ? (
+                <span className="text-xs">👑</span>
+              ) : user.role === 'DELIVERY' ? (
+                <span className="text-xs">🚴</span>
+              ) : user.role === 'CHEF' || user.role === 'RESTAURANT_OWNER' ? (
+                <span className="text-xs">👨‍🍳</span>
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 stroke-[2.5]" />
+              )}
+            </div>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-black text-text-primary tracking-tight">{userName || 'User'}</h2>
-              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                {user.role === 'ADMIN' ? '👑 Admin' : user.role === 'DELIVERY' ? '🚴 Rider' : 'Member'}
+
+          {/* User Details */}
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-black text-text-primary tracking-tight truncate">
+                {userName || 'User'}
+              </h2>
+              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 ${
+                user.role === 'ADMIN'
+                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                  : user.role === 'DELIVERY'
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : user.role === 'CHEF' || user.role === 'RESTAURANT_OWNER'
+                  ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                  : 'bg-primary/10 text-primary border-primary/20'
+              }`}>
+                {user.role === 'ADMIN' ? '👑 Admin' : user.role === 'DELIVERY' ? '🚴 Rider' : user.role === 'CHEF' ? '👨‍🍳 Chef' : user.role === 'RESTAURANT_OWNER' ? '🏪 Partner' : '✨ Member'}
               </span>
             </div>
-            <p className="text-xs font-semibold text-text-secondary mt-0.5">{formatEmailForDisplay(user.email)}</p>
+
+            <p className="text-xs font-semibold text-text-secondary truncate flex items-center gap-1.5">
+              <span>{formatEmailForDisplay(user.email)}</span>
+            </p>
           </div>
         </div>
-        
-        {/* Navigation links for Admin or Delivery Boy */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
+
+        {/* Action Controls */}
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-start sm:justify-end border-t sm:border-t-0 border-border/50 pt-3 sm:pt-0">
           {user.role === 'ADMIN' && (
-            <Link href="/admin">
-              <Button variant="outline" className="border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-2xl text-xs h-10 px-4 font-black shadow-sm transition-all active:scale-95">
-                ⚡ Admin Console
+            <Link href="/admin" className="flex-1 sm:flex-initial">
+              <Button className="w-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-700 hover:to-red-800 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-rose-600/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 border-0 cursor-pointer">
+                <Zap className="h-3.5 w-3.5 fill-current" />
+                <span>Admin Console</span>
               </Button>
             </Link>
           )}
           {user.role === 'PICKER' && (
-            <Link href="/picker">
-              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
-                Picker Console
+            <Link href="/picker" className="flex-1 sm:flex-initial">
+              <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>📦 Picker Console</span>
               </Button>
             </Link>
           )}
           {user.role === 'RESTAURANT_OWNER' && (
-            <Link href="/restaurant-kitchen">
-              <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
-                🏪 Outlet Console
+            <Link href="/restaurant-kitchen" className="flex-1 sm:flex-initial">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-orange-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>🏪 Outlet Console</span>
               </Button>
             </Link>
           )}
           {user.role === 'CHEF' && (
-            <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'}>
-              <Button variant="outline" className="border-rose-500/30 text-rose-500 hover:bg-rose-500/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
-                Chef Console
+            <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'} className="flex-1 sm:flex-initial">
+              <Button className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-rose-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>👨‍🍳 Chef Console</span>
               </Button>
             </Link>
           )}
           {user.role === 'DELIVERY' && (
-            <Link href="/delivery">
-              <Button variant="outline" className="border-accent/30 text-accent hover:bg-accent/5 rounded-2xl text-xs h-10 px-4 font-bold active:scale-95">
-                Rider Console
+            <Link href="/delivery" className="flex-1 sm:flex-initial">
+              <Button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>🚴 Rider Console</span>
               </Button>
             </Link>
           )}
+
           <Button
             onClick={handleSignOut}
             variant="outline"
-            className="text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border-rose-500/20 rounded-2xl text-xs flex items-center gap-1.5 h-10 px-4 font-bold active:scale-95 transition-all"
+            className="flex-1 sm:flex-initial text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border-rose-500/25 bg-rose-500/5 rounded-2xl text-xs flex items-center justify-center gap-1.5 h-10 px-4 font-black active:scale-95 transition-all shadow-2xs cursor-pointer"
           >
-            <LogOut className="h-4 w-4" />
-            Logout
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Logout</span>
           </Button>
         </div>
       </div>

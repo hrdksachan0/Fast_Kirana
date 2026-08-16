@@ -9,7 +9,6 @@ interface ActiveDeliveryCardProps {
   idx: number
   updatingId: string | null
   onMarkDelivered: (orderId: string) => void
-  onShowUpiQr?: (orderId: string) => void
 }
 
 const itemVariants = {
@@ -23,7 +22,6 @@ export default function ActiveDeliveryCard({
   idx,
   updatingId,
   onMarkDelivered,
-  onShowUpiQr,
 }: ActiveDeliveryCardProps) {
   return (
     <motion.div
@@ -66,8 +64,13 @@ export default function ActiveDeliveryCard({
                   Stop #{idx + 1}
                 </span>
               </div>
-              <span className="text-xs font-mono font-bold text-text-primary">
-                {order.id} {order.companionOrder ? `+ #${order.companionOrder.id}` : ''}
+              <span className="text-xs font-mono font-black text-text-primary flex items-center gap-1.5 flex-wrap">
+                #{order.readableId || order.id.slice(0, 8)}
+                {order.companionOrder && (
+                  <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                    🛒 + 🍽️ Combined
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -248,29 +251,17 @@ export default function ActiveDeliveryCard({
           </div>
           
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {order.paymentMethod === 'COD' && onShowUpiQr && (
-              <button
-                type="button"
-                onClick={() => onShowUpiQr(order.id)}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-3 min-h-[44px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-black rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
-                title="Show UPI QR Code for Customer to Scan"
-              >
-                <span>📱</span>
-                <span>UPI QR</span>
-              </button>
-            )}
-
             <button
               onClick={() => onMarkDelivered(order.id)}
               disabled={updatingId === order.id}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60 cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 sm:px-6 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-60 cursor-pointer"
             >
               {updatingId === order.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>{order.companionOrder ? 'Deliver Both Orders ✅' : 'Mark Delivered'}</span>
+                  <span>{order.companionOrder ? 'Deliver Both Orders ✅' : 'Mark Delivered ✅'}</span>
                 </>
               )}
             </button>

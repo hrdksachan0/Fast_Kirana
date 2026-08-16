@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,109 +7,551 @@ import '../../core/theme/design_system.dart';
 import '../../core/utils/validators.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
+import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/brand_card.dart';
+import '../../providers/cart_provider.dart';
+import '../cart/cart_screen.dart';
 import 'order_detail_screen.dart';
 
 final ordersProvider = FutureProvider.family<List<Order>, String>((ref, userId) async {
   return OrderRepository(ref.read(dioProvider)).getOrders(userId);
 });
 
-class OrdersScreen extends ConsumerWidget {
+class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
 
-  static const Color textDark = Color(0xFF1A1A2E);
+  @override
+  ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends ConsumerState<OrdersScreen> {
+  static const Color primaryRed = Color(0xFFE20A22);
+  static const Color textDark = Color(0xFF111827);
   static const Color textMuted = Color(0xFF6B7280);
 
+  // Sub-tabs: 'ACTIVE' | 'HISTORY'
+  String _selectedTab = 'ACTIVE';
+  String _searchQuery = '';
+  String _statusFilter = 'ALL';
+
+  final TextEditingController _searchController = TextEditingController();
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _reorderItems(BuildContext context, Order order) {
+    HapticFeedback.mediumImpact();
+    final items = order.items ?? [];
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No items to reorder in this order'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final cartNotifier = ref.read(cartProvider.notifier);
+    for (final item in items) {
+      final dummyProduct = Product(
+        id: item.productId ?? item.id,
+        name: item.name,
+        price: item.price,
+        mrp: item.price,
+        unit: '1 unit',
+        stock: 99,
+        category: 'Grocery',
+        imageUrl: item.imageUrl,
+        isAvailable: true,
+        rating: 4.8,
+        reviewsCount: 12,
+      );
+      cartNotifier.addToCart(dummyProduct, quantity: item.quantity);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF16A34A),
+        content: Text('Reordered ${items.length} items to your cart!'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'View Cart',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userId = ref.watch(currentUserIdProvider) ?? '';
     final ordersAsync = ref.watch(ordersProvider(userId));
 
     return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: AppDesignSystem.surface,
-            elevation: 0,
-            title: Text(
-              'My Orders',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: textDark),
-            ),
-            iconTheme: const IconThemeData(color: textDark),
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: textDark),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'My Orders',
+          style: GoogleFonts.inter(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            color: textDark,
+            letterSpacing: -0.4,
           ),
-          SliverToBoxAdapter(
-            child: ordersAsync.when(
-              data: (orders) {
-                if (orders.isEmpty) return _buildEmptyOrders(context);
-                return Column(
-                  children: [
-                    _buildUnifiedTracker(),
-                    const SizedBox(height: 16),
-                    ...orders.map((order) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: _buildOrderCard(context, order),
-                    )),
-                  ],
-                );
-              },
-              loading: () => const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator(color: AppDesignSystem.primary)),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: primaryRed),
+            onPressed: () {
+              ref.invalidate(ordersProvider(userId));
+            },
+          ),
+        ],
+      ),
+      body: ordersAsync.when(
+        data: (allOrders) {
+          // Separate Active vs Completed/Cancelled orders
+          final activeOrders = allOrders.where((o) =>
+              o.status == OrderStatus.pending ||
+              o.status == OrderStatus.confirmed ||
+              o.status == OrderStatus.packed ||
+              o.status == OrderStatus.shipped).toList();
+
+          final pastOrders = allOrders.where((o) =>
+              o.status == OrderStatus.delivered ||
+              o.status == OrderStatus.cancelled).toList();
+
+          List<Order> currentList = _selectedTab == 'ACTIVE' ? activeOrders : pastOrders;
+
+          // Filter by search query
+          if (_searchQuery.trim().isNotEmpty) {
+            final q = _searchQuery.trim().toLowerCase();
+            currentList = currentList.where((o) {
+              final idMatch = (o.readableId ?? o.id).toLowerCase().contains(q);
+              final itemMatch = (o.items ?? []).any((item) => item.name.toLowerCase().contains(q));
+              return idMatch || itemMatch;
+            }).toList();
+          }
+
+          // Filter by status pill
+          if (_statusFilter != 'ALL') {
+            currentList = currentList.where((o) => o.status.name.toUpperCase() == _statusFilter).toList();
+          }
+
+          return RefreshIndicator(
+            color: primaryRed,
+            onRefresh: () async {
+              ref.invalidate(ordersProvider(userId));
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+              children: [
+                // 1. Dual Sub-Tabs (Active Orders vs Past History)
+                _buildSubTabs(activeOrders.length, pastOrders.length),
+                const SizedBox(height: 14),
+
+                // 2. Search Box
+                _buildSearchBox(),
+                const SizedBox(height: 12),
+
+                // 3. Status Filters (ALL / DELIVERED / CANCELLED) for History tab
+                if (_selectedTab == 'HISTORY') ...[
+                  _buildStatusFilterPills(),
+                  const SizedBox(height: 14),
+                ],
+
+                // 4. Order List
+                if (currentList.isEmpty)
+                  _buildEmptyState()
+                else
+                  ...currentList.map((order) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _buildOrderCard(order),
+                      )),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: primaryRed),
+        ),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text('Unable to load orders', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(ordersProvider(userId)),
+                style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
+                child: const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
-              error: (e, _) => _buildEmptyOrders(context, message: 'Error loading orders: $e'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 1. Sub-Tabs Capsule
+  Widget _buildSubTabs(int activeCount, int historyCount) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _selectedTab = 'ACTIVE');
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: _selectedTab == 'ACTIVE' ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _selectedTab == 'ACTIVE'
+                      ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Live Orders',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: _selectedTab == 'ACTIVE' ? FontWeight.w800 : FontWeight.w600,
+                        color: _selectedTab == 'ACTIVE' ? textDark : textMuted,
+                      ),
+                    ),
+                    if (activeCount > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: primaryRed,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$activeCount',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _selectedTab = 'HISTORY');
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: _selectedTab == 'HISTORY' ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _selectedTab == 'HISTORY'
+                      ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Order History',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: _selectedTab == 'HISTORY' ? FontWeight.w800 : FontWeight.w600,
+                        color: _selectedTab == 'HISTORY' ? textDark : textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$historyCount',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: textDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildUnifiedTracker() {
+  // 2. Search Box
+  Widget _buildSearchBox() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE20A22), Color(0xFFFF4D62)],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) => setState(() => _searchQuery = val),
+        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: textDark),
+        decoration: InputDecoration(
+          hintText: 'Search by item name or order ID...',
+          hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF9CA3AF)),
+          prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF9CA3AF)),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 16, color: Color(0xFF9CA3AF)),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        borderRadius: BorderRadius.circular(18),
+      ),
+    );
+  }
+
+  // 3. Status Filter Pills
+  Widget _buildStatusFilterPills() {
+    final filters = ['ALL', 'DELIVERED', 'CANCELLED'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: filters.map((f) {
+          final isSelected = _statusFilter == f;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _statusFilter = f);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryRed : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: isSelected ? primaryRed : const Color(0xFFE5E7EB)),
+                ),
+                child: Text(
+                  f,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // 4. Order Card (1:1 with Web)
+  Widget _buildOrderCard(Order order) {
+    final statusColor = _getStatusColor(order.status);
+    final statusBg = _getStatusBg(order.status);
+    final items = order.items ?? [];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: AppDesignSystem.primary.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
+        border: Border.all(color: const Color(0xFFF3F4F6)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Horizontal tracker timeline
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildTrackerStep('Confirmed', true, Icons.check_circle_rounded, true),
-              _buildTrackerStep('Packed', true, Icons.inventory_2_rounded, true),
-              _buildTrackerStep('Out', true, Icons.delivery_dining_rounded, false),
-              _buildTrackerStep('Delivered', false, Icons.home_rounded, false),
-            ],
-          ),
-          // Connecting line
+          // Header Row: Order ID + Date + Status Pill
           Padding(
-            padding: const EdgeInsets.only(left: 24, right: 24),
-            child: Stack(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(height: 3, color: Colors.white.withOpacity(0.2)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '#${order.readableId ?? order.id.substring(0, 8).toUpperCase()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w900,
+                            color: textDark,
+                          ),
+                        ),
+                        if (order.shopName != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              order.shopName!,
+                              style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF92400E)),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      Helpers.formatDate(order.createdAt),
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: textMuted),
+                    ),
+                  ],
+                ),
                 Container(
-                  height: 3,
-                  width: 120,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.horizontal(left: Radius.circular(2)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  child: Text(
+                    order.status.displayName.toUpperCase(),
+                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: statusColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+
+          // Items Preview List
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: items.isEmpty
+                ? Text('1 order batch', style: GoogleFonts.inter(fontSize: 12, color: textMuted))
+                : Column(
+                    children: items.take(2).map((item) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.5),
+                          child: Row(
+                            children: [
+                              Text('${item.quantity}x', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF4B5563))),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: textDark),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text('₹${(item.price * item.quantity).toInt()}', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: textDark)),
+                            ],
+                          ),
+                        )).toList(),
+                  ),
+          ),
+
+          if (items.length > 2)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8),
+              child: Text(
+                '+${items.length - 2} more items',
+                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textMuted),
+              ),
+            ),
+
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+
+          // Footer Row: Total Price + Action Buttons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Total Amount', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w500, color: textMuted)),
+                    Text(
+                      '₹${order.total.toInt()}',
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: textDark),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    // Reorder Button
+                    OutlinedButton.icon(
+                      onPressed: () => _reorderItems(context, order),
+                      icon: const Icon(Icons.refresh_rounded, size: 13, color: Color(0xFF374151)),
+                      label: const Text('Reorder'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF374151),
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Track Order Button
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order)));
+                      },
+                      icon: const Icon(Icons.location_on_outlined, size: 13, color: Colors.white),
+                      label: const Text('Track'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -118,187 +561,34 @@ class OrdersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrackerStep(String label, bool isActive, IconData icon, bool isFilled) {
-    return Column(
-      children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            color: isFilled ? Colors.white.withOpacity(0.25) : Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isFilled ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.15), width: 2),
-          ),
-          child: Icon(icon, size: 20, color: isFilled ? Colors.white : Colors.white.withOpacity(0.4)),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: isFilled ? FontWeight.w700 : FontWeight.w500,
-            color: isFilled ? Colors.white : Colors.white.withOpacity(0.5),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOrderCard(BuildContext context, Order order) {
-    final statusColor = _getStatusColor(order.status);
-    final statusBg = _getStatusBgColor(order.status);
-    final statusName = order.status.displayName;
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => OrderDetailScreen(order: order),
-        ));
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppDesignSystem.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppDesignSystem.borderLight),
-          boxShadow: AppDesignSystem.shadowSm,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.borderLight,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '#${order.readableId ?? order.id.substring(0, 8).toUpperCase()}',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: textMuted),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: statusBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      statusName,
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: statusColor),
-                    ),
-                  ),
-                ],
-              ),
-              if (order.items != null && order.items!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 64,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: order.items!.length.clamp(0, 5),
-                    itemBuilder: (context, index) {
-                      final item = order.items![index];
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        width: 64, height: 64,
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.background,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppDesignSystem.borderLight),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                              ? CachedNetworkImage(imageUrl: item.imageUrl!, fit: BoxFit.cover, width: 64, height: 64)
-                              : Center(child: Text(_getEmoji(item.name), style: const TextStyle(fontSize: 28))),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: AppDesignSystem.divider),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today_rounded, size: 14, color: textMuted),
-                      const SizedBox(width: 6),
-                      Text(
-                        Helpers.formatDate(order.createdAt),
-                        style: GoogleFonts.inter(fontSize: 12, color: textMuted),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        '${order.items?.length ?? 0} items',
-                        style: GoogleFonts.inter(fontSize: 12, color: textMuted),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        Helpers.formatPrice(order.total),
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.primary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyOrders(BuildContext context, {String? message}) {
+  // 5. Empty State
+  Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+        padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120, height: 120,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: AppDesignSystem.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(60),
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(Icons.receipt_long_outlined, size: 60, color: AppDesignSystem.primary.withOpacity(0.3)),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              message ?? 'No orders yet',
-              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: textDark),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message == null ? 'Start shopping to see your orders here' : 'Please try again later',
-              style: GoogleFonts.inter(fontSize: 14, color: textMuted),
-              textAlign: TextAlign.center,
-            ),
-            if (message == null) ...[
-              const SizedBox(height: 24),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppDesignSystem.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TextButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.shopping_bag_rounded, size: 18, color: Colors.white),
-                  label: Text('Start Shopping', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
+              child: const Center(
+                child: Text('🛍️', style: TextStyle(fontSize: 32)),
               ),
-            ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _selectedTab == 'ACTIVE' ? 'No Live Active Orders' : 'No Order History Found',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: textDark),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Your placed orders will appear here in real-time',
+              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: textMuted),
+            ),
           ],
         ),
       ),
@@ -307,31 +597,33 @@ class OrdersScreen extends ConsumerWidget {
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
-      case OrderStatus.pending: return AppDesignSystem.statusPendingText;
-      case OrderStatus.confirmed: return AppDesignSystem.statusConfirmedText;
-      case OrderStatus.packed: return AppDesignSystem.statusPackedText;
-      case OrderStatus.shipped: return AppDesignSystem.statusShippedText;
-      case OrderStatus.delivered: return AppDesignSystem.statusDeliveredText;
-      case OrderStatus.cancelled: return AppDesignSystem.statusCancelledText;
+      case OrderStatus.pending:
+        return const Color(0xFFD97706);
+      case OrderStatus.confirmed:
+        return const Color(0xFF2563EB);
+      case OrderStatus.packed:
+      case OrderStatus.shipped:
+        return const Color(0xFF059669);
+      case OrderStatus.delivered:
+        return const Color(0xFF16A34A);
+      case OrderStatus.cancelled:
+        return const Color(0xFFDC2626);
     }
   }
 
-  Color _getStatusBgColor(OrderStatus status) {
+  Color _getStatusBg(OrderStatus status) {
     switch (status) {
-      case OrderStatus.pending: return AppDesignSystem.statusPending;
-      case OrderStatus.confirmed: return AppDesignSystem.statusConfirmed;
-      case OrderStatus.packed: return AppDesignSystem.statusPacked;
-      case OrderStatus.shipped: return AppDesignSystem.statusShipped;
-      case OrderStatus.delivered: return AppDesignSystem.statusDelivered;
-      case OrderStatus.cancelled: return AppDesignSystem.statusCancelled;
+      case OrderStatus.pending:
+        return const Color(0xFFFEF3C7);
+      case OrderStatus.confirmed:
+        return const Color(0xFFDBEAFE);
+      case OrderStatus.packed:
+      case OrderStatus.shipped:
+        return const Color(0xFFD1FAE5);
+      case OrderStatus.delivered:
+        return const Color(0xFFDCFCE7);
+      case OrderStatus.cancelled:
+        return const Color(0xFFFEE2E2);
     }
-  }
-
-  String _getEmoji(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('milk')) return '🥛';
-    if (lower.contains('bread')) return '🍞';
-    if (lower.contains('egg')) return '🥚';
-    return '🛒';
   }
 }

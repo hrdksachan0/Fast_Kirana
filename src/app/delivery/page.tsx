@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import DeliveryHeader from './components/delivery-header'
 import CodPaymentModal from './components/cod-payment-modal'
-import UpiQrModal from './components/upi-qr-modal'
 import ActiveDeliveryCard from './components/active-delivery-card'
 import PendingPickupCard from './components/pending-pickup-card'
 import RiderWalletView from './components/rider-wallet-view'
@@ -165,7 +164,6 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
 
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
-  const [upiQrOrderId, setUpiQrOrderId] = useState<string | null>(null)
 
   const [walletInfo, setWalletInfo] = useState<{
     cashInHand: number
@@ -351,7 +349,8 @@ export default function DeliveryDashboard() {
             if (wasActive && newStatus === 'CANCELLED') {
               playNotificationChime()
               triggerHaptic('warning')
-              toast.error(`⚠️ Active delivery #${orderId.slice(-6).toUpperCase()} to ${wasActive.user?.name || 'customer'} was CANCELLED by the customer! Please do not deliver.`, {
+              const orderNum = wasActive.readableId || orderId.slice(0, 8)
+              toast.error(`⚠️ Active delivery #${orderNum} to ${wasActive.user?.name || 'customer'} was CANCELLED by the customer! Please do not deliver.`, {
                 duration: 10000,
                 icon: '🛑'
               })
@@ -360,7 +359,8 @@ export default function DeliveryDashboard() {
             const activePacked = ordersRef.current.filter(o => o.status === 'PACKED')
             const wasPending = activePacked.find(o => o.id === orderId)
             if (wasPending && newStatus === 'CANCELLED') {
-              toast.info(`📦 Order #${orderId.slice(-6).toUpperCase()} in pickup queue has been CANCELLED.`, {
+              const orderNum = wasPending.readableId || orderId.slice(0, 8)
+              toast.info(`📦 Order #${orderNum} in pickup queue has been CANCELLED.`, {
                 icon: 'ℹ️'
               })
             }
@@ -675,7 +675,6 @@ export default function DeliveryDashboard() {
     } finally {
       setUpdatingId(null)
       setPaymentChoiceOrderId(null)
-      setUpiQrOrderId(null)
     }
   }
 
@@ -688,32 +687,13 @@ export default function DeliveryDashboard() {
     }
   }
 
-  const handleSelectRiderCash = (orderId: string) => {
+  const handleSelectCash = (orderId: string) => {
     setPaymentChoiceOrderId(null)
     executeDeliveryCompletion(orderId, true, 'RIDER')
   }
 
-  const handleSelectOwnerCash = (orderId: string) => {
+  const handleSelectOnline = (orderId: string) => {
     setPaymentChoiceOrderId(null)
-    executeDeliveryCompletion(orderId, false, 'OWNER')
-  }
-
-  const handleSelectUpi = (orderId: string) => {
-    setPaymentChoiceOrderId(null)
-    setUpiQrOrderId(orderId)
-  }
-
-  const handleConfirmUpiPaid = async (orderId: string) => {
-    try {
-      await fetch(`/api/delivery/orders/${orderId}/qr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ referenceId: 'Rider Approved Doorstep QR' })
-      })
-    } catch (e) {
-      console.error('Error recording UPI conversion:', e)
-    }
-    setUpiQrOrderId(null)
     executeDeliveryCompletion(orderId, false, 'ONLINE')
   }
 
@@ -739,27 +719,13 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
-      {/* COD Payment Choice Modal */}
+      {/* COD Payment Choice Modal (Cash vs Online) */}
       {paymentChoiceOrderId && (
         <CodPaymentModal
           order={orders.find((o) => o.id === paymentChoiceOrderId)}
           onClose={() => setPaymentChoiceOrderId(null)}
-          onSelectRiderCash={handleSelectRiderCash}
-          onSelectOwnerCash={handleSelectOwnerCash}
-          onSelectUpi={handleSelectUpi}
-        />
-      )}
-
-      {/* UPI QR Code Scanner Modal */}
-      {upiQrOrderId && (
-        <UpiQrModal
-          order={orders.find((o) => o.id === upiQrOrderId)}
-          onBack={() => {
-            const orderId = upiQrOrderId
-            setUpiQrOrderId(null)
-            setPaymentChoiceOrderId(orderId)
-          }}
-          onConfirmPaid={handleConfirmUpiPaid}
+          onSelectCash={handleSelectCash}
+          onSelectOnline={handleSelectOnline}
         />
       )}
 
@@ -819,7 +785,6 @@ export default function DeliveryDashboard() {
                       idx={idx}
                       updatingId={updatingId}
                       onMarkDelivered={handleMarkDelivered}
-                      onShowUpiQr={handleSelectUpi}
                     />
                   ))
                 )}

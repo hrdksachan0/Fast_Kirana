@@ -258,30 +258,42 @@ export function StorefrontClient({
   )
 }function FoodBanner() {
   return (
-    <div className="w-full overflow-hidden rounded-xl md:rounded-2xl border border-orange-500/20 shadow-xs select-none bg-gradient-to-r from-orange-600 via-rose-600 to-amber-600 text-white px-3.5 py-2.5 sm:px-5 sm:py-3 relative">
-      <div className="flex items-center justify-between gap-3 relative z-10">
-        {/* Left: Text & Icon */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
-            <span className="text-base sm:text-xl">🍔</span>
+    <div className="w-full overflow-hidden rounded-[24px] border border-white/10 dark:border-white/5 bg-gradient-to-r from-amber-500 via-rose-600 to-violet-750 text-white px-4.5 py-4 sm:px-6 sm:py-5 relative shadow-[0_12px_36px_-12px_rgba(226,10,34,0.18)] select-none">
+      {/* Dynamic Glass Glow Layers */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.15),transparent_45%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_75%,rgba(251,191,36,0.15),transparent_40%)] pointer-events-none" />
+      
+      {/* Decorative clean line accents */}
+      <div className="absolute -top-10 -left-10 w-24 h-24 rounded-full border border-white/10 pointer-events-none" />
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full border border-white/5 pointer-events-none" />
+
+      <div className="flex items-center justify-between gap-4 relative z-10">
+        <div className="flex items-center gap-3.5 min-w-0">
+          {/* Glowing hot food badge */}
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shrink-0 shadow-md">
+            <span className="text-xl sm:text-2xl">🍔</span>
           </div>
+
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] sm:text-sm font-black tracking-tight text-white leading-tight">
-                Craving Something Delicious?
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-amber-400 text-zinc-950 text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-xs">
+                ⚡ SPECIAL CAFE
               </span>
-              <span className="bg-white/20 text-white border border-white/30 text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md">
-                ⚡ HOT &amp; FRESH
+              <span className="text-[10px] font-bold text-orange-100 flex items-center gap-1">
+                • FastKirana Kitchen
               </span>
             </div>
-            <p className="text-[9.5px] sm:text-[11px] text-white/90 font-medium truncate mt-0.5">
-              “Good food is good mood” · Fast doorstep delivery in 20-30 mins
+            <h3 className="text-sm sm:text-[16px] font-black text-white tracking-tight mt-1 leading-snug drop-shadow-xs">
+              Tasty &amp; delicious food delivered by Fastkirana
+            </h3>
+            <p className="text-[10.5px] text-orange-50/90 font-medium mt-0.5">
+              “Good food is good mood” • Freshly prepared &amp; delivered in minutes
             </p>
           </div>
         </div>
 
-        {/* Right: Compact Badge */}
-        <div className="shrink-0 hidden min-[420px]:flex items-center gap-1 bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider">
+        {/* Explore Button */}
+        <div className="shrink-0 hidden min-[440px]:flex items-center gap-1.5 bg-white text-rose-600 hover:bg-orange-50 px-4 py-2.5 rounded-2xl text-[10.5px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer select-none">
           <span>Explore</span>
           <span>→</span>
         </div>

@@ -79,7 +79,9 @@ export default function DeliveryHistoryView({
           >
             <div className="flex justify-between items-center border-b border-border/30 pb-2">
               <div>
-                <span className="text-xs font-mono font-bold text-text-primary block">{order.id}</span>
+                <span className="text-xs font-mono font-black text-text-primary block">
+                  #{order.readableId || order.id.slice(0, 8)}
+                </span>
                 <span className="text-[9px] text-text-muted font-semibold">
                   Delivered: {formatOrderTime(order.deliveredAt || order.updatedAt || order.createdAt)}
                 </span>

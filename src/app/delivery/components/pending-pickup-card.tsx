@@ -69,8 +69,13 @@ export default function PendingPickupCard({
                 </span>
               )}
             </span>
-            <span className="text-xs font-mono font-bold text-text-primary">
-              {order.id} {order.companionOrder ? `+ #${order.companionOrder.id}` : ''}
+            <span className="text-xs font-mono font-black text-text-primary flex items-center gap-1.5 flex-wrap">
+              #{order.readableId || order.id.slice(0, 8)}
+              {order.companionOrder && (
+                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                  🛒 + 🍽️ Combined
+                </span>
+              )}
             </span>
           </div>
           <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
