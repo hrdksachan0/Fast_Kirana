@@ -41,7 +41,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { startDate, endDate, notes, type = 'RESTAURANT', restaurantId } = await request.json()
+    const { 
+      startDate, 
+      endDate, 
+      notes, 
+      type = 'RESTAURANT', 
+      restaurantId, 
+      amount: directAmount,
+      status: directStatus,
+      transactionId
+    } = await request.json()
+
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Start date and End date are required' }, { status: 400 })
     }
@@ -51,42 +61,47 @@ export async function POST(request: NextRequest) {
     const end = new Date(endDate)
     end.setHours(23, 59, 59, 999)
 
-    // Fetch dynamic profit share setting
-    const shareSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'restaurant_profit_share' }
-    })
-    const profitShareRate = parseFloat(shareSetting?.value || '15') / 100
+    let finalAmount = directAmount !== undefined && directAmount !== null ? Number(directAmount) : 0
 
-    // Fetch all delivered orders in range
-    const orders = await prisma.order.findMany({
-      where: {
-        status: 'DELIVERED',
-        createdAt: {
-          gte: start,
-          lte: end
-        },
-        ...(restaurantId ? { restaurantId } : { OR: [{ orderType: 'RESTAURANT' }, { restaurantId: { not: null } }] })
-      }
-    })
+    if (directAmount === undefined || directAmount === null) {
+      // Fetch dynamic profit share setting
+      const shareSetting = await prisma.storeSetting.findUnique({
+        where: { key: 'restaurant_profit_share' }
+      })
 
-    // Calculate total share (food sales minus admin commission)
-    let totalShare = 0
-    for (const o of orders) {
-      const foodSales = (o.subtotal || 0) - (o.discount || 0)
-      let commRate = 0.15
-      if (o.restaurantId) {
-        const restObj = await prisma.restaurant.findUnique({
-          where: { id: o.restaurantId },
-          select: { commissionRate: true }
-        })
-        if (restObj && restObj.commissionRate !== null && restObj.commissionRate !== undefined) {
-          commRate = restObj.commissionRate
+      // Fetch all delivered orders in range
+      const orders = await prisma.order.findMany({
+        where: {
+          status: 'DELIVERED',
+          createdAt: {
+            gte: start,
+            lte: end
+          },
+          ...(restaurantId ? { restaurantId } : { OR: [{ orderType: 'RESTAURANT' }, { restaurantId: { not: null } }] })
         }
+      })
+
+      // Calculate total share (food sales minus admin commission)
+      let totalShare = 0
+      for (const o of orders) {
+        const foodSales = (o.subtotal || 0) - (o.discount || 0)
+        let commRate = 0.15
+        if (o.restaurantId) {
+          const restObj = await prisma.restaurant.findUnique({
+            where: { id: o.restaurantId },
+            select: { commissionRate: true }
+          })
+          if (restObj && restObj.commissionRate !== null && restObj.commissionRate !== undefined) {
+            commRate = restObj.commissionRate
+          }
+        }
+        totalShare += foodSales * (1 - commRate)
       }
-      totalShare += foodSales * (1 - commRate)
+
+      finalAmount = Math.round(totalShare * 100) / 100
     }
 
-    const finalAmount = Math.round(totalShare * 100) / 100
+    const isPaid = directStatus === 'PAID'
 
     // Create payout entry
     const payout = await prisma.restaurantPayout.create({
@@ -96,8 +111,10 @@ export async function POST(request: NextRequest) {
         startDate: start,
         endDate: end,
         amount: finalAmount,
-        status: 'PENDING',
-        notes: notes || `Payout calculation for ${startDate} to ${endDate}`
+        status: isPaid ? 'PAID' : 'PENDING',
+        transactionId: transactionId || null,
+        paidAt: isPaid ? new Date() : null,
+        notes: notes || `Payout settlement for ${startDate} to ${endDate}`
       }
     })
 
