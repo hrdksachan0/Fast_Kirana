@@ -541,7 +541,8 @@ export default function CheckoutPage() {
   const isPremiumPackagingSelected = (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM'
   const packagingFee = isPremiumPackagingSelected ? 15 : 0
 
-  const groceryChargedMisc = groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP'
+  // When Premium Thermal Packaging is selected (+₹15), the normal handling/packaging fee is completely waived
+  const groceryChargedMisc = groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP' && !isPremiumPackagingSelected
   const effectiveGroceryMiscFee = groceryChargedMisc ? miscFee : 0
   const cafeChargedMisc = cafeCartItems.length > 0 && !groceryChargedMisc && !isPremiumPackagingSelected
   const effectiveCafeMiscFee = cafeChargedMisc ? miscFee : 0

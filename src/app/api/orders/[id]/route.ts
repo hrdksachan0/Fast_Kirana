@@ -27,8 +27,9 @@ export async function GET(
              o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
              o."deliveryUserId",
              o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
-             o."combinedId"
-      FROM orders o WHERE o.id = ${id} LIMIT 1
+             o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+             o.notes, o."couponCode"
+      FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
     `
 
     if (orders.length === 0) {
@@ -40,8 +41,6 @@ export async function GET(
     // Check ownership (order owner) or staff role
     const { error: authError, session } = await requireOrderAccess(order.userId)
     if (authError) return authError
-
-    const isWorker = STAFF_ROLES.includes(session!.user.role)
 
     // Fetch address
     const address = await prisma.address.findUnique({
@@ -84,7 +83,7 @@ export async function GET(
       }
     }
 
-    if (!isWorker && order.combinedId) {
+    if (order.combinedId && typeof order.combinedId === 'string' && order.combinedId.trim().length > 0) {
       // Fetch all sub-orders of this combined order
       const combinedOrders: any[] = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
@@ -96,113 +95,117 @@ export async function GET(
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
                o."deliveryUserId",
                o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
-               o."combinedId"
+               o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+               o.notes, o."couponCode"
         FROM orders o WHERE o."combinedId" = ${order.combinedId}
+        ORDER BY o."createdAt" ASC
       `
 
-      const combinedOrderIds = combinedOrders.map(o => o.id)
-      const allItems = await prisma.orderItem.findMany({
-        where: { orderId: { in: combinedOrderIds } }
-      })
+      if (combinedOrders.length > 0) {
+        const combinedOrderIds = combinedOrders.map(o => o.id)
+        const allItems = await prisma.orderItem.findMany({
+          where: { orderId: { in: combinedOrderIds } }
+        })
 
-      // Fetch delivery user details from any sub-order that has one assigned
-      if (!deliveryUser) {
-        const assignedOrder = combinedOrders.find(o => o.deliveryUserId)
-        if (assignedOrder) {
-          const riders: any[] = await prisma.$queryRaw`
-            SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
-          `
-          if (riders.length > 0) {
-            let name = riders[0].name
-            let phone = riders[0].phone
+        // Fetch delivery user details from any sub-order that has one assigned
+        if (!deliveryUser) {
+          const assignedOrder = combinedOrders.find(o => o.deliveryUserId)
+          if (assignedOrder) {
+            const riders: any[] = await prisma.$queryRaw`
+              SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${assignedOrder.deliveryUserId} LIMIT 1
+            `
+            if (riders.length > 0) {
+              let name = riders[0].name
+              let phone = riders[0].phone
 
-            if (riders[0].role === 'ADMIN' || name === 'Admin') {
-              const mainRider: any[] = await prisma.$queryRaw`
-                SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
-              `
-              if (mainRider.length > 0) {
-                name = mainRider[0].name || 'FastKirana Delivery Executive'
-                phone = mainRider[0].phone || '+919696503759'
-              } else {
-                name = 'FastKirana Delivery Executive'
-                phone = '+919696503759'
+              if (riders[0].role === 'ADMIN' || name === 'Admin') {
+                const mainRider: any[] = await prisma.$queryRaw`
+                  SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
+                `
+                if (mainRider.length > 0) {
+                  name = mainRider[0].name || 'FastKirana Delivery Executive'
+                  phone = mainRider[0].phone || '+919696503759'
+                } else {
+                  name = 'FastKirana Delivery Executive'
+                  phone = '+919696503759'
+                }
               }
-            }
 
-            deliveryUser = {
-              name,
-              phone
-            }
-            if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
-              order.deliveryLat = riders[0].liveLat
-              order.deliveryLng = riders[0].liveLng
+              deliveryUser = {
+                name,
+                phone
+              }
+              if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
+                order.deliveryLat = riders[0].liveLat
+                order.deliveryLng = riders[0].liveLng
+              }
             }
           }
         }
-      }
 
-      function getCombinedStatus(statuses: string[]): string {
-        const active = statuses.filter(s => s !== 'CANCELLED')
-        if (active.length === 0) return 'CANCELLED'
-        if (active.includes('PENDING')) return 'PENDING'
-        if (active.includes('CONFIRMED')) return 'CONFIRMED'
-        if (active.includes('PACKED')) return 'PACKED'
-        if (active.includes('SHIPPED')) return 'SHIPPED'
-        return 'DELIVERED'
-      }
-
-      const statuses = combinedOrders.map(o => o.status)
-      const combinedStatus = getCombinedStatus(statuses)
-
-      const baseReadableId = (order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId
-
-      const subOrders = combinedOrders.map(o => {
-        const subItems = allItems.filter(item => item.orderId === o.id)
-        const isRest = (o.orderType === 'RESTAURANT' || !!o.restaurantId)
-        return {
-          id: o.id,
-          readableId: o.readableId,
-          type: isRest ? 'RESTAURANT' : 'GROCERY',
-          shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
-          status: o.status,
-          subtotal: o.subtotal,
-          total: o.total,
-          itemsCount: subItems.length,
-          items: subItems,
+        function getCombinedStatus(statuses: string[]): string {
+          const active = statuses.filter(s => s !== 'CANCELLED')
+          if (active.length === 0) return 'CANCELLED'
+          if (active.includes('PENDING')) return 'PENDING'
+          if (active.includes('CONFIRMED')) return 'CONFIRMED'
+          if (active.includes('PACKED')) return 'PACKED'
+          if (active.includes('SHIPPED')) return 'SHIPPED'
+          return 'DELIVERED'
         }
-      })
 
-      const grocerySub = subOrders.find(s => s.type === 'GROCERY')
-      const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
+        const statuses = combinedOrders.map(o => o.status)
+        const combinedStatus = getCombinedStatus(statuses)
 
-      const mergedOrder = {
-        ...order,
-        readableId: baseReadableId,
-        baseReadableId,
-        status: combinedStatus,
-        subtotal: combinedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
-        discount: combinedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
-        deliveryFee: combinedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
-        taxes: combinedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
-        miscFee: combinedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
-        total: combinedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-        items: allItems,
-        address,
-        deliveryUser,
-        isCombined: true,
-        groceryStatus: grocerySub?.status || null,
-        groceryItems: grocerySub?.items || [],
-        restaurantStatus: restaurantSub?.status || null,
-        restaurantName: restaurantSub?.shopName || null,
-        restaurantItems: restaurantSub?.items || [],
-        subOrders
+        const baseReadableId = (order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId
+
+        const subOrders = combinedOrders.map(o => {
+          const subItems = allItems.filter(item => item.orderId === o.id)
+          const isRest = (o.orderType === 'RESTAURANT' || !!o.restaurantId || (o.readableId && o.readableId.endsWith('-R')) || (o.shopName && o.shopName.toLowerCase().includes('restaurant')))
+          return {
+            id: o.id,
+            readableId: o.readableId,
+            type: isRest ? 'RESTAURANT' : 'GROCERY',
+            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
+            status: o.status,
+            subtotal: o.subtotal,
+            total: o.total,
+            itemsCount: subItems.length,
+            items: subItems,
+          }
+        })
+
+        const grocerySub = subOrders.find(s => s.type === 'GROCERY')
+        const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
+
+        const mergedOrder = {
+          ...order,
+          readableId: baseReadableId,
+          baseReadableId,
+          status: combinedStatus,
+          subtotal: combinedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
+          discount: combinedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
+          deliveryFee: combinedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
+          taxes: combinedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
+          miscFee: combinedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
+          total: combinedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+          items: allItems,
+          address,
+          deliveryUser,
+          isCombined: true,
+          groceryStatus: grocerySub?.status || null,
+          groceryItems: grocerySub?.items || [],
+          restaurantStatus: restaurantSub?.status || null,
+          restaurantName: restaurantSub?.shopName || null,
+          restaurantItems: restaurantSub?.items || [],
+          subOrders
+        }
+        return NextResponse.json(mergedOrder)
       }
-      return NextResponse.json(mergedOrder)
     }
 
-    // Default individual order details for workers or non-combined orders
+    // Default individual order details for non-combined orders
     const items = await prisma.orderItem.findMany({
-      where: { orderId: id },
+      where: { orderId: order.id },
     })
 
     return NextResponse.json({ ...order, items, address, deliveryUser })

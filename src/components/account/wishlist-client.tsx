@@ -2,45 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, ShoppingBag, Trash2, Loader2 } from 'lucide-react'
+import { Heart, ShoppingBag, Trash2, Loader2, Sparkles, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ProductCard } from '@/components/product/product-card'
 import { toast } from 'sonner'
-import { formatPrice } from '@/lib/utils'
-import Image from 'next/image'
-
-interface WishlistProduct {
-  id: string
-  name: string
-  slug: string
-  price: number
-  mrp: number
-  discount: number
-  unit: string
-  stock: number
-  isAvailable: boolean
-  imageUrl: string | null
-  category?: {
-    id: string
-    name: string
-    slug: string
-    imageUrl: string | null
-  }
-}
+import { triggerHaptic } from '@/lib/haptic'
 
 interface WishlistItem {
   id: string
   productId: string
   createdAt: string
-  product: WishlistProduct
+  product: any
 }
 
 export function WishlistClient({ initialItems }: { initialItems?: WishlistItem[] } = {}) {
   const [items, setItems] = useState<WishlistItem[]>(initialItems || [])
   const [loading, setLoading] = useState(false)
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
 
   const fetchWishlist = async () => {
-    if (initialItems) return // Server already provided data
+    if (initialItems && initialItems.length > 0) return
     setLoading(true)
     try {
       const res = await fetch('/api/wishlist')
@@ -58,131 +40,145 @@ export function WishlistClient({ initialItems }: { initialItems?: WishlistItem[]
     fetchWishlist()
   }, [])
 
-  const removeItem = async (productId: string) => {
-    setRemoving(productId)
+  const removeItem = async (productId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    triggerHaptic('light')
+    setRemovingId(productId)
     try {
-      await fetch('/api/wishlist', {
+      const res = await fetch('/api/wishlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
       })
-      setItems((prev) => prev.filter((item) => item.productId !== productId))
-      toast.success('Removed from wishlist')
+      if (res.ok) {
+        setItems((prev) => prev.filter((item) => item.productId !== productId))
+        toast.success('Item removed from wishlist')
+      } else {
+        throw new Error('Failed')
+      }
     } catch {
-      toast.error('Failed to remove')
+      toast.error('Failed to remove from wishlist')
     } finally {
-      setRemoving(null)
+      setRemovingId(null)
+    }
+  }
+
+  const clearAllWishlist = async () => {
+    if (items.length === 0) return
+    triggerHaptic('medium')
+    setClearing(true)
+    try {
+      await Promise.all(
+        items.map((item) =>
+          fetch('/api/wishlist', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId: item.productId }),
+          })
+        )
+      )
+      setItems([])
+      toast.success('Wishlist cleared')
+    } catch {
+      toast.error('Failed to clear wishlist')
+    } finally {
+      setClearing(false)
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-xs font-semibold text-text-secondary">Loading your wishlist...</p>
       </div>
     )
   }
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-20 border border-dashed border-border bg-card rounded-2xl">
-        <Heart className="h-12 w-12 mx-auto text-text-muted mb-4" />
-        <h3 className="text-lg font-bold text-text-primary mb-2">Your wishlist is empty</h3>
-        <p className="text-sm text-text-secondary mb-6">Save items you love for later</p>
-        <Link href="/">
-          <Button className="bg-primary text-white">Start Shopping</Button>
-        </Link>
+      <div className="text-center py-16 sm:py-20 border border-dashed border-border/80 bg-card/60 backdrop-blur-sm rounded-3xl p-6 sm:p-10 space-y-4">
+        <div className="h-16 w-16 mx-auto rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shadow-sm">
+          <Heart className="h-8 w-8 stroke-[1.8]" />
+        </div>
+        <div className="space-y-1.5 max-w-xs mx-auto">
+          <h3 className="text-base sm:text-lg font-black text-text-primary">Your Wishlist is Empty</h3>
+          <p className="text-xs text-text-secondary font-medium leading-relaxed">
+            Save your favorite grocery items and restaurant dishes here to order them quickly anytime!
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-3">
+          <Link href="/" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-black text-xs rounded-xl shadow-sm h-10 px-5">
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Explore Grocery Mart
+            </Button>
+          </Link>
+          <Link href="/restaurant" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto font-black text-xs rounded-xl border-border hover:bg-muted h-10 px-5">
+              🍽️ Order Food
+            </Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="bg-card border border-border rounded-xl overflow-hidden group hover:shadow-md transition-all"
-        >
-          <Link href={`/product/${item.product.slug || item.product.id}`} className="block">
-            <div className="relative aspect-square bg-muted/30">
-              {item.product.imageUrl ? (
-                <Image
-                  src={item.product.imageUrl}
-                  alt={item.product.name}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <ShoppingBag className="h-12 w-12 text-text-muted" />
-                </div>
-              )}
-              {!item.product.isAvailable && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold bg-black/70 px-3 py-1 rounded-full">
-                    Out of Stock
-                  </span>
-                </div>
-              )}
-            </div>
-          </Link>
-
-          <div className="p-3 space-y-2">
-            {item.product.category && (
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                {item.product.category.name}
-              </span>
-            )}
-            <Link href={`/product/${item.product.slug || item.product.id}`}>
-              <h3 className="text-sm font-semibold text-text-primary line-clamp-2 hover:text-primary transition-colors">
-                {item.product.name}
-              </h3>
-            </Link>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-text-primary">
-                {formatPrice(item.product.price)}
-              </span>
-              {item.product.mrp > item.product.price && (
-                <>
-                  <span className="text-xs text-text-secondary line-through">
-                    {formatPrice(item.product.mrp)}
-                  </span>
-                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
-                    {item.product.discount}% OFF
-                  </span>
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <Link href={`/product/${item.product.slug || item.product.id}`} className="flex-1">
-                <Button
-                  size="sm"
-                  className="w-full text-[11px] font-bold bg-primary hover:bg-primary-dark text-white"
-                  disabled={!item.product.isAvailable}
-                >
-                  <ShoppingBag className="h-3 w-3 mr-1" />
-                  {item.product.isAvailable ? 'Add to Cart' : 'Unavailable'}
-                </Button>
-              </Link>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                onClick={() => removeItem(item.productId)}
-                disabled={removing === item.productId}
-              >
-                {removing === item.productId ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-4 animate-fade-in">
+      {/* Top Controls Bar */}
+      <div className="flex items-center justify-between bg-muted/40 border border-border/60 px-4 py-2.5 rounded-2xl">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-rose-500" />
+          <span className="text-xs font-black text-text-primary">
+            {items.length} {items.length === 1 ? 'Product' : 'Products'} Saved
+          </span>
         </div>
-      ))}
+
+        <button
+          onClick={clearAllWishlist}
+          disabled={clearing}
+          className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 px-3 py-1 rounded-xl transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1"
+        >
+          {clearing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Trash2 className="h-3 w-3" />
+          )}
+          Clear All
+        </button>
+      </div>
+
+      {/* Mobile-First 2-Column Product Grid */}
+      <div className="grid grid-cols-2 min-[540px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4">
+        {items.map((item) => {
+          if (!item.product) return null
+          const isRemoving = removingId === item.productId
+
+          return (
+            <div key={item.id || item.productId} className="relative group/wishcard">
+              {/* Overlay Remove Button */}
+              <button
+                type="button"
+                onClick={(e) => removeItem(item.productId, e)}
+                disabled={isRemoving}
+                title="Remove from wishlist"
+                className="absolute top-2 right-2 z-20 h-7 w-7 rounded-full bg-white/95 dark:bg-zinc-900/95 border border-border/80 shadow-md flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-90 cursor-pointer"
+              >
+                {isRemoving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+
+              {/* Real Interactive ProductCard */}
+              <ProductCard product={item.product} />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
+

@@ -1148,29 +1148,69 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
 
         <div className="space-y-3">
           {/* Items List */}
-          <div className="space-y-2">
-            {mergedItems.map((item: any) => (
-              <div key={item.id} className="flex justify-between items-center py-1">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="inline-flex items-center justify-center text-[10px] font-black text-accent bg-accent/5 dark:bg-accent/10 px-2 py-0.5 rounded-lg border border-accent/10 shrink-0">
-                    {item.quantity}x
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-text-primary truncate">
-                      {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
-                    </p>
-                    {item.shopName && (
-                      <p className="text-[9px] text-text-muted font-semibold flex items-center gap-0.5 mt-0.5">
-                        <span>🏢</span> {item.shopName}
-                      </p>
-                    )}
+          <div className="space-y-3">
+            {order.isCombined && order.subOrders && order.subOrders.length > 1 ? (
+              order.subOrders.map((sub: any, subIdx: number) => {
+                const isRest = sub.type === 'RESTAURANT'
+                const subItems = sub.items || []
+                if (subItems.length === 0) return null
+                return (
+                  <div key={sub.id || subIdx} className="rounded-xl border border-border/50 overflow-hidden bg-muted/10">
+                    <div className="bg-muted/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
+                      <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : '🛒 FastKirana Grocery'}</span>
+                      <span className="text-[9px] font-mono text-text-muted">{subItems.length} items</span>
+                    </div>
+                    <div className="p-3 space-y-2 divide-y divide-border/20">
+                      {subItems.map((item: any) => (
+                        <div key={item.id} className="flex justify-between items-center pt-2 first:pt-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="inline-flex items-center justify-center text-[10px] font-black text-accent bg-accent/5 dark:bg-accent/10 px-2 py-0.5 rounded-lg border border-accent/10 shrink-0">
+                              {item.quantity}x
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-text-primary truncate">
+                                {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
+                              </p>
+                              {item.notes && (
+                                <p className="text-[9px] text-amber-600 dark:text-amber-400 font-medium">
+                                  📝 {item.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs font-extrabold text-text-primary shrink-0 ml-4">
+                            ₹{item.price * item.quantity}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )
+              })
+            ) : (
+              mergedItems.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-center py-1">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="inline-flex items-center justify-center text-[10px] font-black text-accent bg-accent/5 dark:bg-accent/10 px-2 py-0.5 rounded-lg border border-accent/10 shrink-0">
+                      {item.quantity}x
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-text-primary truncate">
+                        {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
+                      </p>
+                      {item.shopName && (
+                        <p className="text-[9px] text-text-muted font-semibold flex items-center gap-0.5 mt-0.5">
+                          <span>🏢</span> {item.shopName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-text-primary shrink-0 ml-4">
+                    ₹{item.price * item.quantity}
+                  </span>
                 </div>
-                <span className="text-xs font-extrabold text-text-primary shrink-0 ml-4">
-                  ₹{item.price * item.quantity}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           
           {/* Cost Breakdown */}

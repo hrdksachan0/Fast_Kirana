@@ -32,12 +32,20 @@ export default async function WishlistPage() {
     console.error('Wishlist page fetch error:', err)
   }
 
-  const items = rawItems.map((item: any) => ({
-    id: item.id,
-    productId: item.productId,
-    createdAt: item.createdAt,
-    product: item.product,
-  }))
+  const items = rawItems.map((item: any) => {
+    let prod = item.product
+    if (prod && typeof prod.variants === 'string') {
+      try {
+        prod = { ...prod, variants: JSON.parse(prod.variants) }
+      } catch {}
+    }
+    return {
+      id: item.id,
+      productId: item.productId,
+      createdAt: item.createdAt,
+      product: prod,
+    }
+  })
 
   return (
     <div className="space-y-6">

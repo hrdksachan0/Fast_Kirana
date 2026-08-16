@@ -490,13 +490,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const isPremiumPackaging = packagingOption === 'PREMIUM' || packagingFee === 15
+    const resolvedPackagingFee = isPremiumPackaging ? 15 : 0
+
     let hasChargedMiscFee = false
 
     if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
       
-      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0
+      // When Premium Packaging (+₹15) is selected, standard handling fee (₹5) is completely waived
+      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
       const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee
@@ -513,9 +517,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const isPremiumPackaging = packagingOption === 'PREMIUM' || packagingFee === 15
-    const resolvedPackagingFee = isPremiumPackaging ? 15 : 0
-
     for (const rData of restaurantData) {
       const rDiscount = combinedSubtotal > 0 ? (rData.subtotal / combinedSubtotal) * combinedDiscount : 0
       const rTaxes = (rData.subtotal - rDiscount) * serverTaxRate
@@ -523,10 +524,10 @@ export async function POST(request: NextRequest) {
       const isFirstRestOrder = restaurantData.indexOf(rData) === 0
       const rPackagingFee = isFirstRestOrder ? resolvedPackagingFee : 0
 
-      // If Premium Packaging (₹15) is selected, it covers handling fee for food items, so standard serverMiscFee (₹5) is waived
+      // If Premium Packaging (₹15) is selected, it covers packaging/handling, so standard serverMiscFee (₹5) is waived
       const appliedMiscFee = (rPackagingFee > 0)
         ? rPackagingFee 
-        : ((deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? serverMiscFee : 0)
+        : ((deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0)
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
       const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee

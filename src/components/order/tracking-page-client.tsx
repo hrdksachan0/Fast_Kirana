@@ -73,7 +73,10 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
             name: i.name,
             price: i.price,
             quantity: i.quantity,
-            selectedVariant: i.selectedVariant || null
+            selectedVariant: i.selectedVariant || null,
+            imageUrl: i.imageUrl || i.product?.imageUrl || null,
+            notes: i.notes || null,
+            shopName: i.shopName || null
           })),
           address: {
             label: data.address?.label || 'Pickup Location',

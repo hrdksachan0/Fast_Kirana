@@ -103,6 +103,41 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     return () => clearTimeout(timer)
   }, [phoneCountdown])
 
+  // Name state & editing
+  const [userName, setUserName] = useState(user.name || '')
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newName, setNewName] = useState(user.name || '')
+  const [isUpdatingName, setIsUpdatingName] = useState(false)
+
+  const handleUpdateName = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!newName || !newName.trim()) {
+      toast.error('Please enter your full name')
+      return
+    }
+    setIsUpdatingName(true)
+    try {
+      const res = await fetch('/api/profile/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setUserName(data.name || newName.trim())
+        setIsEditingName(false)
+        toast.success('Name updated successfully!')
+        router.refresh()
+      } else {
+        toast.error(data.error || 'Failed to update name')
+      }
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setIsUpdatingName(false)
+    }
+  }
+
   // Email verification state
   const [email, setEmail] = useState(user.email)
   const [isEditingEmail, setIsEditingEmail] = useState(false)
@@ -438,11 +473,11 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
       <div className="relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-5 border border-zinc-200/80 dark:border-zinc-800 bg-gradient-to-br from-white via-zinc-50/50 to-rose-50/20 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-5 sm:p-6 rounded-[28px] shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-4">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e8153a] via-[#ff2d55] to-[#ff5533] text-white text-xl font-black shadow-md shadow-rose-500/25 ring-4 ring-white dark:ring-zinc-950">
-            {user.name?.charAt(0) || 'U'}
+            {userName?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-black text-text-primary tracking-tight">{user.name || 'User'}</h2>
+              <h2 className="text-base sm:text-lg font-black text-text-primary tracking-tight">{userName || 'User'}</h2>
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 {user.role === 'ADMIN' ? '👑 Admin' : user.role === 'DELIVERY' ? '🚴 Rider' : 'Member'}
               </span>
@@ -867,11 +902,65 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           <div className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
             <h3 className="font-extrabold text-text-primary text-base">Personal Details</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
-              <div className="space-y-1">
-                <span className="text-text-secondary block">Name</span>
-                <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
-                  {user.name || 'Not provided'}
-                </span>
+              <div className="space-y-1 col-span-1 sm:col-span-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary block">Full Name</span>
+                  {!isEditingName ? (
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setIsEditingName(true)
+                        setNewName(userName)
+                      }}
+                      className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit Name
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setIsEditingName(false)
+                        setNewName(userName)
+                      }}
+                      className="text-[10px] text-text-muted font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <X className="h-3 w-3" /> Cancel
+                    </button>
+                  )}
+                </div>
+
+                {!isEditingName ? (
+                  <span className="text-text-primary block font-bold text-sm bg-muted/40 p-2.5 rounded-lg border">
+                    {userName || 'Not provided'}
+                  </span>
+                ) : (
+                  <form onSubmit={handleUpdateName} className="space-y-2 p-3 bg-muted/10 rounded-lg border border-dashed animate-slide-up">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        disabled={isUpdatingName}
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="Enter your full name"
+                        maxLength={50}
+                        autoFocus
+                        className="flex-grow bg-background text-text-primary px-3 py-2 text-xs font-semibold rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isUpdatingName || !newName.trim()}
+                        className="bg-primary text-white text-[10px] font-black px-4 rounded-lg hover:bg-primary-dark disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                      >
+                        {isUpdatingName ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          'Save Name'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
               {!user.email.startsWith('wa-') && (
                 <div className="space-y-1 col-span-1 sm:col-span-2">
