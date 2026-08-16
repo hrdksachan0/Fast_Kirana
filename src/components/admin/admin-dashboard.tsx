@@ -2285,7 +2285,7 @@ export function AdminDashboard({
     { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
-    { key: 'reports', label: 'Reports', icon: FileText },
+    { key: 'reports', label: 'Finance & Sales', icon: IndianRupee },
     { key: 'restaurant-report', label: 'Restaurant Payouts', icon: Utensils },
     { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
     { key: 'products', label: 'Products', icon: Package, count: productTotal },

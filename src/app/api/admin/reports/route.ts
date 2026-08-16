@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Category breakdown
-    const categoryData: Record<string, { categoryName: string; sales: number; profit: number; type: 'restaurant' | 'grocery' }> = {}
+    const categoryData: Record<string, { categoryName: string; sales: number; cost: number; profit: number; quantity: number; type: 'restaurant' | 'grocery' }> = {}
 
     // Product performance
     const productData: Record<
@@ -234,18 +234,22 @@ export async function GET(request: NextRequest) {
         if (!categoryData[item.categoryName]) {
           const isRestaurantOrCafe = item.restaurantId || 
                                      item.orderType === 'RESTAURANT' || 
-                                     item.categoryName.toLowerCase().includes('cafe');
+                                     item.categoryName.toLowerCase().includes('cafe') ||
+                                     item.categoryName.toLowerCase().includes('restaurant');
           const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
-          categoryData[item.categoryName] = { categoryName: item.categoryName, sales: 0, profit: 0, type }
+          categoryData[item.categoryName] = { categoryName: item.categoryName, sales: 0, cost: 0, profit: 0, quantity: 0, type }
         }
         categoryData[item.categoryName].sales += itemRev
+        categoryData[item.categoryName].cost += cost
         categoryData[item.categoryName].profit += itemProf
+        categoryData[item.categoryName].quantity += item.quantity
 
         // Product breakdown
         if (!productData[item.productId]) {
           const isRestaurantOrCafe = item.restaurantId || 
                                      item.orderType === 'RESTAURANT' || 
-                                     item.categoryName.toLowerCase().includes('cafe');
+                                     item.categoryName.toLowerCase().includes('cafe') ||
+                                     item.categoryName.toLowerCase().includes('restaurant');
           const type = isRestaurantOrCafe ? 'restaurant' : 'grocery';
           productData[item.productId] = {
             productId: item.productId,
