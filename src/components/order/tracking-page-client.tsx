@@ -54,6 +54,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
           discount: data.discount,
           deliveryFee: data.deliveryFee,
           taxes: data.taxes,
+          miscFee: data.miscFee ?? 0,
           total: data.total,
           paymentMethod: data.paymentMethod,
           paymentStatus: data.paymentStatus,

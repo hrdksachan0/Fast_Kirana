@@ -17,7 +17,7 @@ export function MainWrapper({ children }: { children: React.ReactNode }) {
     <main className={cn(
       "flex-grow min-h-[calc(100vh-80px)] transition-all duration-300 md:pb-0",
       hasCartItems ? "pb-44" : "pb-24",
-      isFoodRestaurant ? "pt-0" : isStorefrontPage ? "pt-[48px] md:pt-[65px]" : "pt-[96px] md:pt-[80px]"
+      isFoodRestaurant ? "pt-0" : isStorefrontPage ? "pt-[52px] md:pt-[65px]" : "pt-[102px] md:pt-[80px]"
     )}>
       <motion.div
         key={pathname}

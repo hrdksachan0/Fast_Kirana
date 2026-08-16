@@ -622,12 +622,14 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   }, [order.items, order.shopName, compOrder])
 
   // Combined Billing Totals
-  const combinedSubtotal = order.subtotal + (compOrder?.subtotal || 0)
-  const combinedDiscount = order.discount + (compOrder?.discount || 0)
-  const combinedDeliveryFee = order.deliveryFee + (compOrder?.deliveryFee || 0)
-  const combinedTaxes = order.taxes + (compOrder?.taxes || 0)
-  const combinedMiscFee = order.miscFee + (compOrder?.miscFee || 0)
-  const combinedTotal = order.total + (compOrder?.total || 0)
+  const combinedSubtotal = (order.subtotal || 0) + (compOrder?.subtotal || 0)
+  const combinedDiscount = (order.discount || 0) + (compOrder?.discount || 0)
+  const combinedDeliveryFee = (order.deliveryFee || 0) + (compOrder?.deliveryFee || 0)
+  const combinedTaxes = (order.taxes || 0) + (compOrder?.taxes || 0)
+  const rawMiscFee = (order.miscFee || 0) + (compOrder?.miscFee || 0)
+  const combinedTotal = (order.total || 0) + (compOrder?.total || 0)
+  const feeDiff = Math.max(0, combinedTotal - (combinedSubtotal - combinedDiscount + combinedDeliveryFee + combinedTaxes))
+  const combinedMiscFee = rawMiscFee > 0 ? rawMiscFee : feeDiff
 
   // Live rider distance and ETA
   const trackingMetrics = useMemo(() => {
@@ -1268,7 +1270,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             )}
             {combinedMiscFee > 0 && (
               <div className="flex justify-between text-text-secondary font-semibold">
-                <span>Platform Handling Fee</span>
+                <span>Packaging &amp; Handling Fee</span>
                 <span className="font-bold text-text-primary">₹{combinedMiscFee}</span>
               </div>
             )}

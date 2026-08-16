@@ -959,7 +959,7 @@ export function CategoryPageClient({
       </div>
 
       {/* -------------------- MOBILE LAYOUT (SPLIT SIDEBAR VIEW) -------------------- */}
-      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 -mt-[44px] min-h-[calc(100vh-64px)] bg-white dark:bg-zinc-950">
+      <div className="md:hidden flex flex-col -mx-2 min-[375px]:-mx-4 -mt-4 min-h-[calc(100vh-64px)] bg-white dark:bg-zinc-950">
         {/* Mobile top category scrollbar (circular icons, like Zepto) */}
         <div 
           id="mobile-category-scrollbar"

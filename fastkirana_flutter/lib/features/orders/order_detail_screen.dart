@@ -320,7 +320,13 @@ class OrderDetailScreen extends StatelessWidget {
                   if (order.discount > 0)
                     _buildBillRow('Discount Savings', '-₹${order.discount.toInt()}', isGreen: true),
                   _buildBillRow('Delivery Fee', order.deliveryFee == 0 ? 'FREE' : '₹${order.deliveryFee.toInt()}', isGreen: order.deliveryFee == 0),
-                  _buildBillRow('Taxes & Handling', '₹${order.taxes.toInt()}'),
+                  if (order.taxes > 0)
+                    _buildBillRow('Taxes & GST', '₹${order.taxes.toInt()}'),
+                  if (order.miscFee > 0 || (order.total - (order.subtotal - order.discount + order.deliveryFee + order.taxes)) > 0)
+                    _buildBillRow(
+                      'Packaging & Handling Fee',
+                      '₹${(order.miscFee > 0 ? order.miscFee : (order.total - (order.subtotal - order.discount + order.deliveryFee + order.taxes))).toInt()}',
+                    ),
                   const SizedBox(height: 8),
                   const Divider(color: Color(0xFFE5E7EB)),
                   const SizedBox(height: 8),
