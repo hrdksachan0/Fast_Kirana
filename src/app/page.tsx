@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   }
 }
 
-// Revalidate home page dynamically for instant updates
-export const revalidate = 0
+// Revalidate home page every 30s with ISR for lightning-fast loads
+export const revalidate = 30
 
 const productSelect = {
   id: true,

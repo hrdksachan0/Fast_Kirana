@@ -62,6 +62,12 @@ body {
   will-change: transform, opacity;
 }
 
+/* High-performance rendering optimizations for zero lag */
+.section-lazy-render {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 450px;
+}
+
 /* Custom selection & focus styling from Impeccable craft floor */
 ::selection {
   background-color: rgba(226, 10, 34, 0.15);

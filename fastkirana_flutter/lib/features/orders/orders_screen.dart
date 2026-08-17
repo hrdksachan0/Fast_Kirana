@@ -58,20 +58,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     final cartNotifier = ref.read(cartProvider.notifier);
     for (final item in items) {
-      final dummyProduct = Product(
-        id: item.productId ?? item.id,
-        name: item.name,
-        price: item.price,
-        mrp: item.price,
-        unit: '1 unit',
-        stock: 99,
-        category: 'Grocery',
-        imageUrl: item.imageUrl,
-        isAvailable: true,
-        rating: 4.8,
-        reviewsCount: 12,
-      );
-      cartNotifier.addToCart(dummyProduct, quantity: item.quantity);
+      final pid = item.productId ?? item.id;
+      cartNotifier.addItem(pid, item.quantity);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(

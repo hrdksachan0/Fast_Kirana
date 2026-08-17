@@ -758,10 +758,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? (order.deliveryMethod === 'PICKUP' ? 'Order Picked Up! 🎉' : 'Order Delivered! 🎉') 
                 : order.deliveryMethod === 'PICKUP' 
                 ? (
-                    ['SHIPPED', 'READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status)
+                    (order.status === 'PACKED' || order.status === 'SHIPPED' || ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status))
                       ? 'Ready for Counter Pickup!'
-                      : order.status === 'PACKED'
-                      ? 'Packed & Ready Soon'
                       : 'Preparing for Pickup'
                   )
                 : order.status === 'SHIPPED'
@@ -778,6 +776,12 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'This order has been cancelled.'
                 : combinedStatus === 'DELIVERED'
                 ? 'Thank you for ordering with FastKirana!'
+                : order.deliveryMethod === 'PICKUP'
+                ? (
+                    (order.status === 'PACKED' || order.status === 'SHIPPED' || ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status))
+                      ? 'Your order is ready at the store counter. Please collect it at your convenience.'
+                      : 'Your order is being freshly prepared by the store.'
+                  )
                 : order.status === 'SHIPPED'
                 ? 'Your delivery partner has picked up the order and is on the way.'
                 : order.status === 'PACKED'
@@ -806,18 +810,43 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         <div className="py-2 relative z-10">
           <div className="grid grid-cols-4 gap-2 relative">
             {[
-              { label: 'Placed', icon: ShoppingBag, stepIdx: 0, activeWhen: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'] },
-              { label: 'Preparing', icon: Package, stepIdx: 1, activeWhen: ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'] },
-              { label: order.deliveryMethod === 'PICKUP' ? 'Ready' : 'On The Way', icon: Truck, stepIdx: 2, activeWhen: ['SHIPPED', 'DELIVERED'] },
-              { label: 'Delivered', icon: CheckCircle2, stepIdx: 3, activeWhen: ['DELIVERED'] },
+              {
+                label: 'Placed',
+                icon: ShoppingBag,
+                stepIdx: 0,
+                activeWhen: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'],
+                isCurrent: order.status === 'PENDING'
+              },
+              {
+                label: 'Preparing',
+                icon: Package,
+                stepIdx: 1,
+                activeWhen: ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'],
+                isCurrent: order.deliveryMethod === 'PICKUP'
+                  ? order.status === 'CONFIRMED'
+                  : (order.status === 'CONFIRMED' || order.status === 'PACKED')
+              },
+              {
+                label: order.deliveryMethod === 'PICKUP' ? 'Ready' : 'On The Way',
+                icon: order.deliveryMethod === 'PICKUP' ? Store : Truck,
+                stepIdx: 2,
+                activeWhen: order.deliveryMethod === 'PICKUP'
+                  ? ['PACKED', 'SHIPPED', 'DELIVERED']
+                  : ['SHIPPED', 'DELIVERED'],
+                isCurrent: order.deliveryMethod === 'PICKUP'
+                  ? (order.status === 'PACKED' || order.status === 'SHIPPED')
+                  : order.status === 'SHIPPED'
+              },
+              {
+                label: order.deliveryMethod === 'PICKUP' ? 'Picked Up' : 'Delivered',
+                icon: CheckCircle2,
+                stepIdx: 3,
+                activeWhen: ['DELIVERED'],
+                isCurrent: order.status === 'DELIVERED'
+              },
             ].map((step, idx) => {
               const isReached = step.activeWhen.includes(order.status)
-              const isCurrent = (
-                (step.stepIdx === 0 && order.status === 'PENDING') ||
-                (step.stepIdx === 1 && (order.status === 'CONFIRMED' || order.status === 'PACKED')) ||
-                (step.stepIdx === 2 && order.status === 'SHIPPED') ||
-                (step.stepIdx === 3 && order.status === 'DELIVERED')
-              )
+              const isCurrent = step.isCurrent
               const StepIcon = step.icon
 
               return (
@@ -962,7 +991,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         )}
 
         {/* Out For Delivery Dedicated Contact Card */}
-        {order.status === 'SHIPPED' && (
+        {order.status === 'SHIPPED' && order.deliveryMethod !== 'PICKUP' && (
           <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border border-emerald-500/30 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3.5 w-full sm:w-auto">
               <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
@@ -996,8 +1025,55 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           </div>
         )}
 
+        {/* Self-Pickup Counter Details Card */}
+        {order.deliveryMethod === 'PICKUP' && order.status !== 'DELIVERED' && (
+          <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-card border border-amber-500/25 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-11 w-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">
+                🏪
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                    Self-Pickup Order
+                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                </div>
+                <div className="text-sm font-black text-text-primary mt-0.5">
+                  {order.shopName || 'FastKirana Outlet'}
+                </div>
+                <div className="text-xs text-text-secondary mt-1 font-semibold">
+                  Pickup Address: <span className="text-text-primary font-bold">{order.address?.street || 'FastKirana Store counter'}</span>
+                </div>
+                <p className="text-[10.5px] text-text-muted mt-1.5">
+                  Please show your Order ID <span className="font-extrabold text-primary">#{order.baseReadableId || order.readableId || order.id.slice(-6).toUpperCase()}</span> at the counter to collect your items.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 w-full border-t border-border/40 pt-3 mt-1">
+              <a
+                href={`tel:${supportPhone}`}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-muted/60 hover:bg-muted text-text-primary font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                <span>Call Store</span>
+              </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${order.address?.lat || storeLat},${order.address?.lng || storeLng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+                <span>Get Directions</span>
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Support Call Buttons */}
-        {order.status !== 'SHIPPED' && (
+        {order.status !== 'SHIPPED' && order.deliveryMethod !== 'PICKUP' && (
           <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <a
               href="tel:8112849854"
@@ -1025,7 +1101,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       </div>
 
       {/* Delivery Proof Card */}
-      {order.status === 'DELIVERED' && (
+      {order.status === 'DELIVERED' && order.deliveryMethod !== 'PICKUP' && (
         <div className="bg-card border-2 border-accent p-4 min-[375px]:p-5 rounded-2xl shadow-md space-y-4 animate-fade-in">
           <h2 className="text-sm font-black text-text-primary flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-accent" />
@@ -1084,6 +1160,19 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Self-Pickup Confirmation Success Card */}
+      {order.status === 'DELIVERED' && order.deliveryMethod === 'PICKUP' && (
+        <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-card border border-emerald-500/30 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-3">
+          <h2 className="text-sm font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            Picked Up Successfully
+          </h2>
+          <p className="text-xs text-text-secondary leading-relaxed font-semibold">
+            Your order has been collected from the store counter. Thank you for shopping with FastKirana!
+          </p>
         </div>
       )}
 

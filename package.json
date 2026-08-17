@@ -12,7 +12,7 @@
     "test:e2e:ui": "playwright test --ui",
     "flutter": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run",
     "flutter:device": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d ZY22KGQCV3",
-    "flutter:chrome": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d chrome",
+    "flutter:chrome": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d chrome --web-port 5000",
     "flutter:apk": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat build apk --release"
   },
   "dependencies": {

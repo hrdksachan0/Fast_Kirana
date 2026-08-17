@@ -14,6 +14,11 @@ class OrderDetailScreen extends StatelessWidget {
   static const Color textDark = Color(0xFF111827);
   static const Color textMuted = Color(0xFF6B7280);
 
+  bool get isPickupOrder {
+    final method = (order.deliveryMethod ?? '').toUpperCase();
+    return method.contains('PICKUP');
+  }
+
   Future<void> _makeCall(String phone) async {
     final uri = Uri.parse('tel:$phone');
     if (await canLaunchUrl(uri)) {
@@ -48,7 +53,7 @@ class OrderDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Order Tracking',
+              isPickupOrder ? 'Store Pickup Tracking' : 'Order Tracking',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -98,11 +103,11 @@ class OrderDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Live ETA & Status Header Card
+            // 1. Live ETA & Status Header Card (Delivery vs Self-Pickup)
             _buildStatusHeaderCard(),
             const SizedBox(height: 16),
 
-            // 2. Order Tracking Timeline
+            // 2. Order Tracking Timeline (Adaptive for Delivery vs Pickup)
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -124,7 +129,7 @@ class OrderDetailScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Live Order Tracker',
+                        isPickupOrder ? 'Store Pickup Status' : 'Live Order Tracker',
                         style: GoogleFonts.inter(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w900,
@@ -149,39 +154,71 @@ class OrderDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  _buildTimelineStep(
-                    0,
-                    'Order Placed',
-                    'Your order has been verified by store',
-                    statusIndex >= 0,
-                    timeText: Helpers.formatDate(order.createdAt),
-                  ),
-                  _buildTimelineStep(
-                    1,
-                    'Order Confirmed & Packed',
-                    'Items packed fresh at Ghatampur darkstore',
-                    statusIndex >= 1,
-                  ),
-                  _buildTimelineStep(
-                    2,
-                    'Out for Delivery',
-                    'Rider is on the way to your address',
-                    statusIndex >= 2,
-                  ),
-                  _buildTimelineStep(
-                    3,
-                    order.status == OrderStatus.cancelled ? 'Order Cancelled' : 'Delivered',
-                    order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Package handed over at doorstep',
-                    statusIndex >= 3,
-                    isLast: true,
-                    isCancelled: order.status == OrderStatus.cancelled,
-                  ),
+                  if (isPickupOrder) ...[
+                    // Self-Pickup 4-Step Flow
+                    _buildTimelineStep(
+                      0,
+                      'Order Placed',
+                      'Order received at Ghatampur store',
+                      statusIndex >= 0,
+                      timeText: Helpers.formatDate(order.createdAt),
+                    ),
+                    _buildTimelineStep(
+                      1,
+                      'Packing at Darkstore Counter',
+                      'Staff is bagging your items with care',
+                      statusIndex >= 1,
+                    ),
+                    _buildTimelineStep(
+                      2,
+                      'Ready for Self Pickup',
+                      'Collect at Ghatampur Hub Counter (Show Order ID)',
+                      statusIndex >= 2,
+                    ),
+                    _buildTimelineStep(
+                      3,
+                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : 'Order Picked Up',
+                      order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Handed over to customer',
+                      statusIndex >= 3,
+                      isLast: true,
+                      isCancelled: order.status == OrderStatus.cancelled,
+                    ),
+                  ] else ...[
+                    // Doorstep Delivery 4-Step Flow
+                    _buildTimelineStep(
+                      0,
+                      'Order Placed',
+                      'Your order has been verified by store',
+                      statusIndex >= 0,
+                      timeText: Helpers.formatDate(order.createdAt),
+                    ),
+                    _buildTimelineStep(
+                      1,
+                      'Order Confirmed & Packed',
+                      'Items packed fresh at Ghatampur darkstore',
+                      statusIndex >= 1,
+                    ),
+                    _buildTimelineStep(
+                      2,
+                      'Out for Delivery',
+                      'Rider is on the way to your address',
+                      statusIndex >= 2,
+                    ),
+                    _buildTimelineStep(
+                      3,
+                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : 'Delivered',
+                      order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Package handed over at doorstep',
+                      statusIndex >= 3,
+                      isLast: true,
+                      isCancelled: order.status == OrderStatus.cancelled,
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // 3. Delivery Address & Contact Card
+            // 3. Delivery Address / Store Pickup Point Card
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -204,14 +241,17 @@ class OrderDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
+                          color: isPickupOrder ? const Color(0xFFECFDF5) : const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.location_on_rounded, size: 16, color: primaryRed),
+                        child: Text(
+                          isPickupOrder ? '🏬' : '📍',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Delivery Address',
+                        isPickupOrder ? 'Store Pickup Counter' : 'Delivery Address',
                         style: GoogleFonts.inter(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w800,
@@ -222,7 +262,9 @@ class OrderDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Ghatampur Market, Kanpur Nagar, UP - 209206',
+                    isPickupOrder
+                        ? 'Ghatampur Central Hub Store, Station Road Market, Kanpur Nagar - 209206'
+                        : 'Ghatampur Market, Kanpur Nagar, UP - 209206',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -230,6 +272,13 @@ class OrderDetailScreen extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
+                  if (isPickupOrder) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '⏱️ Store Timings: 7:00 AM – 10:00 PM (Show Order ID at counter)',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF047857)),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   const Divider(color: Color(0xFFF3F4F6)),
                   const SizedBox(height: 12),
@@ -259,7 +308,6 @@ class OrderDetailScreen extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          // WhatsApp Action Button
                           IconButton(
                             onPressed: () => _openWhatsApp('917054470303', orderIdDisplay),
                             icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 20),
@@ -269,11 +317,10 @@ class OrderDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // Call Action Button
                           ElevatedButton.icon(
                             onPressed: () => _makeCall('+917054470303'),
                             icon: const Icon(Icons.phone, size: 13, color: Colors.white),
-                            label: const Text('Call Support'),
+                            label: const Text('Call Store'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryRed,
                               foregroundColor: Colors.white,
@@ -376,8 +423,8 @@ class OrderDetailScreen extends StatelessWidget {
                     _buildBillRow('Discount Savings', '-₹${order.discount.toInt()}', isGreen: true),
                   _buildBillRow(
                     'Delivery Fee',
-                    order.deliveryFee == 0 ? 'FREE' : '₹${order.deliveryFee.toInt()}',
-                    isGreen: order.deliveryFee == 0,
+                    isPickupOrder ? 'FREE (Store Pickup)' : (order.deliveryFee == 0 ? 'FREE' : '₹${order.deliveryFee.toInt()}'),
+                    isGreen: order.deliveryFee == 0 || isPickupOrder,
                   ),
                   _buildBillRow('Taxes & Packaging', '₹${order.taxes.toInt()}'),
                   const SizedBox(height: 10),
@@ -422,7 +469,7 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  // 1. Status Header Card (Adaptive for Confirmed, Delivered, and Cancelled)
+  // Status Header Card (Adaptive for Pickup, Delivery, Delivered, and Cancelled)
   Widget _buildStatusHeaderCard() {
     if (order.status == OrderStatus.delivered) {
       return Container(
@@ -453,12 +500,12 @@ class OrderDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Order Delivered Successfully!',
+                    isPickupOrder ? 'Order Picked Up Successfully!' : 'Order Delivered Successfully!',
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Delivered fresh from Ghatampur Hub',
+                    isPickupOrder ? 'Collected from Ghatampur Store counter' : 'Delivered fresh to your doorstep',
                     style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF047857)),
                   ),
                 ],
@@ -499,7 +546,7 @@ class OrderDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Contact support for refund or reorder assistance',
+                    'Contact store support for refund or reorder assistance',
                     style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFFB91C1C)),
                   ),
                 ],
@@ -510,7 +557,60 @@ class OrderDetailScreen extends StatelessWidget {
       );
     }
 
-    // Default Live Tracking (Pending / Confirmed / Packed / Out for Delivery)
+    // Live Active Status
+    if (isPickupOrder) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFA7F3D0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(child: Text('🏬', style: TextStyle(fontSize: 22))),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ready for Self Pickup in 5-10 mins',
+                    style: GoogleFonts.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF065F46),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Collect at Ghatampur Darkstore Counter • ₹0 Fee',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF047857),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -531,9 +631,7 @@ class OrderDetailScreen extends StatelessWidget {
               color: const Color(0xFF10B981),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(
-              child: Text('🛵', style: TextStyle(fontSize: 22)),
-            ),
+            child: const Center(child: Text('🛵', style: TextStyle(fontSize: 22))),
           ),
           const SizedBox(width: 14),
           Expanded(

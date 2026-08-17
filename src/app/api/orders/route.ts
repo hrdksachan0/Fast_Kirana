@@ -691,6 +691,20 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
+        // Sync address phone number to user profile if currently missing in system
+        if (address && address.phone) {
+          const userObj = await tx.user.findUnique({
+            where: { id: userId },
+            select: { phone: true }
+          })
+          if (userObj && (!userObj.phone || userObj.phone.trim() === '')) {
+            await tx.user.update({
+              where: { id: userId },
+              data: { phone: address.phone.trim() }
+            })
+          }
+        }
+
         // Create order
         const newOrder = await tx.order.create({
           data: {

@@ -78,43 +78,17 @@ export function StorefrontClient({
 
   return (
     <div className="w-full min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-28 md:pb-12 mt-3 relative">
-      {/* Grocery ambient glow (red) */}
+      {/* Grocery ambient glow (lightweight CSS) */}
       <AnimatePresence>
         {activeTab === 'grocery' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute top-0 left-0 right-0 h-[600px] overflow-hidden pointer-events-none select-none z-0"
-          >
-            <div
-              className="absolute -top-[350px] left-1/2 -translate-x-1/2 w-[850px] h-[650px] rounded-full blur-[150px] opacity-[0.25] dark:opacity-[0.14]"
-              style={{
-                background: 'radial-gradient(circle, rgba(239,68,68,0.22) 0%, rgba(244,63,94,0.08) 50%, transparent 100%)'
-              }}
-            />
-          </motion.div>
+          <div className="absolute top-0 left-0 right-0 h-[380px] bg-gradient-to-b from-red-500/[0.06] via-rose-500/[0.02] to-transparent pointer-events-none select-none z-0" />
         )}
       </AnimatePresence>
 
-      {/* Food ambient glow (orange) */}
+      {/* Food ambient glow (lightweight CSS) */}
       <AnimatePresence>
         {activeTab === 'food' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute top-0 left-0 right-0 h-[600px] overflow-hidden pointer-events-none select-none z-0"
-          >
-            <div
-              className="absolute -top-[350px] left-1/2 -translate-x-1/2 w-[850px] h-[650px] rounded-full blur-[150px] opacity-[0.22] dark:opacity-[0.13]"
-              style={{
-                background: 'radial-gradient(circle, rgba(249,115,22,0.26) 0%, rgba(244,63,94,0.10) 50%, transparent 100%)'
-              }}
-            />
-          </motion.div>
+          <div className="absolute top-0 left-0 right-0 h-[380px] bg-gradient-to-b from-amber-500/[0.07] via-orange-500/[0.02] to-transparent pointer-events-none select-none z-0" />
         )}
       </AnimatePresence>
 
@@ -193,7 +167,6 @@ export function StorefrontClient({
             transition={{ duration: 0.35, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-1 flex flex-col gap-1.5 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            <FloatingEmojis type="grocery" />
             {/* 1. Hero Banners */}
             <div>
               <HeroArea initialBanners={promoBanners} />
@@ -215,7 +188,7 @@ export function StorefrontClient({
             </div>
 
             {/* 4. Deals & Curations Hub */}
-            <div>
+            <div className="section-lazy-render">
               <DealsCurationHub
                 flashDeals={flashDeals}
                 bestSellers={bestSellers}
@@ -229,12 +202,12 @@ export function StorefrontClient({
             </div>
 
             {/* 5. Value Proposition Banner */}
-            <div>
+            <div className="section-lazy-render">
               <DeliveryBanner />
             </div>
 
             {/* 6. Last Order Banner */}
-            <div>
+            <div className="section-lazy-render">
               <LastOrderBanner />
             </div>
           </motion.div>
@@ -247,7 +220,6 @@ export function StorefrontClient({
             transition={{ duration: 0.35, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            <FloatingEmojis type="food" />
             {/* Swiggy-style restaurant listing — banner + cards */}
             <FoodBanner />
             <RestaurantListing initialRestaurants={restaurants} />
@@ -258,7 +230,7 @@ export function StorefrontClient({
   )
 }function FoodBanner() {
   return (
-    <div className="w-full overflow-hidden rounded-[24px] border border-white/10 dark:border-white/5 bg-gradient-to-r from-amber-500 via-rose-600 to-violet-750 text-white px-4.5 py-4 sm:px-6 sm:py-5 relative shadow-[0_12px_36px_-12px_rgba(226,10,34,0.18)] select-none">
+    <div className="w-full overflow-hidden rounded-[24px] border border-white/10 dark:border-white/5 bg-gradient-to-r from-amber-500 via-primary to-rose-700 text-white px-4.5 py-4 sm:px-6 sm:py-5 relative shadow-[0_12px_36px_-12px_rgba(226,10,34,0.18)] select-none">
       {/* Dynamic Glass Glow Layers */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.15),transparent_45%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_75%,rgba(251,191,36,0.15),transparent_40%)] pointer-events-none" />
@@ -293,7 +265,7 @@ export function StorefrontClient({
         </div>
 
         {/* Explore Button */}
-        <div className="shrink-0 hidden min-[440px]:flex items-center gap-1.5 bg-white text-rose-600 hover:bg-orange-50 px-4 py-2.5 rounded-2xl text-[10.5px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer select-none">
+        <div className="shrink-0 hidden min-[440px]:flex items-center gap-1.5 bg-white text-primary hover:bg-orange-50 px-4 py-2.5 rounded-2xl text-[10.5px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer select-none">
           <span>Explore</span>
           <span>→</span>
         </div>

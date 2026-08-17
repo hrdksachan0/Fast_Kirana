@@ -570,6 +570,35 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         </div>
       </div>
 
+      {/* Phone Number Missing Banner Warning */}
+      {(!phone || phone === '') && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-card border border-amber-500/30 p-4 sm:p-5 rounded-[24px] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 w-full sm:w-auto">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">
+              ⚠️
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                Contact Number Missing
+              </h4>
+              <p className="text-xs text-text-secondary mt-0.5 font-semibold">
+                Please add a valid mobile number to receive order updates via WhatsApp.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setActiveTab('profile')
+              setIsEditingPhone(true)
+              setNewPhone('')
+            }}
+            className="w-full sm:w-auto px-4.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 text-center shrink-0 cursor-pointer"
+          >
+            Add Phone Number
+          </button>
+        </div>
+      )}
+
       {/* Sliding Pill Tab Navigation Bar */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="w-full overflow-x-auto no-scrollbar py-1 mb-6">
