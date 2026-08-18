@@ -703,7 +703,7 @@ export function AdminReports() {
 
           {/* Business Channel Revenue Split: Main Kirana Shop vs Restaurant Outlets */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Main Shop (Kirana) Revenue Card */}
+            {/* Main Shop POS / Walk-in Counter Revenue Card */}
             <div className="bg-card border-2 border-blue-500/20 bg-gradient-to-br from-blue-500/[0.04] to-transparent rounded-3xl p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <div className="flex items-center gap-3">
@@ -711,21 +711,21 @@ export function AdminReports() {
                     🏪
                   </div>
                   <div>
-                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Core Retail Business</span>
-                    <h4 className="text-sm font-black text-text-primary">Main Shop (Kirana) Revenue</h4>
+                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block">POS Counter Sales</span>
+                    <h4 className="text-sm font-black text-text-primary">Main Shop Walk-in Revenue</h4>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-lg md:text-xl font-black text-blue-600 dark:text-blue-400 block">
-                    {formatPrice(grocerySales)}
+                    {formatPrice(rawSummary.retail?.sales || 0)}
                   </span>
-                  <span className="text-[10px] text-text-muted font-bold">Gross Shop Sales</span>
+                  <span className="text-[10px] text-text-muted font-bold">Total Counter Sales</span>
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-text-secondary font-medium">Shop Net Profit:</span>
-                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                  {formatPrice(groceryProfit)}
+                <span className="text-text-secondary font-medium">Walk-in Customers / Bills:</span>
+                <strong className="font-black text-blue-600 dark:text-blue-400 text-sm">
+                  {rawSummary.retail?.ordersCount || 0} Orders
                 </strong>
               </div>
             </div>
