@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       } else {
         where.restaurant = { slug: restaurantSlug }
       }
-    } else if (excludeRestaurant || (!isWorker && !category)) {
+    } else if (excludeRestaurant || (!isWorker && !includeUnavailable && !category)) {
       // In grocery context (no restaurant specified, no category override), exclude restaurant products
       // This prevents restaurant items from appearing in grocery search, home page, etc.
       where.restaurantId = null
@@ -499,13 +499,16 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    if (normalizedSearch) {
+    if (normalizedSearch && !isWorker && !includeUnavailable) {
       setCachedSearch(cacheKey, responseData)
     }
 
+    const isCacheable = !isWorker && !includeUnavailable
     return NextResponse.json(responseData, {
       headers: {
-        'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+        'Cache-Control': isCacheable
+          ? 'public, s-maxage=15, stale-while-revalidate=30'
+          : 'no-store, max-age=0, must-revalidate',
       }
     })
   } catch (error: any) {

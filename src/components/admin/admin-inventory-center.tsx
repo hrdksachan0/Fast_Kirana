@@ -79,7 +79,7 @@ export function AdminInventoryCenter() {
   const fetchCatalog = async () => {
     try {
       setLoadingCatalog(true)
-      const res = await fetch('/api/products?limit=1000')
+      const res = await fetch('/api/products?limit=1000&admin=true&includeUnavailable=true')
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
@@ -448,15 +448,30 @@ export function AdminInventoryCenter() {
     }
   }, [activeTab])
 
-  // Filter products for the search results dropdown
-  const posSearchResults = useMemo(() => {
-    const query = posSearchQuery.trim().toLowerCase()
-    if (!query) return []
-    return products.filter(p => 
-      p.name.toLowerCase().includes(query) || 
-      (p.barcode && p.barcode.toLowerCase().includes(query))
-    ).slice(0, 10)
-  }, [posSearchQuery, products])
+  const [posSearchResults, setPosSearchResults] = useState<Product[]>([])
+
+  // Debounced API search for POS results to support full catalog, fuzzy match, and synonyms
+  useEffect(() => {
+    const query = posSearchQuery.trim()
+    if (!query) {
+      setPosSearchResults([])
+      return
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=10&admin=true&includeUnavailable=true`)
+        if (res.ok) {
+          const data = await res.json()
+          setPosSearchResults(data.products || [])
+        }
+      } catch (err) {
+        console.error('Error fetching POS search results:', err)
+      }
+    }, 150) // 150ms debounce
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [posSearchQuery])
 
   const handleAddProductToCart = (product: Product, selectedVariant?: any) => {
     let variantsList: any[] = []
@@ -497,17 +512,35 @@ export function AdminInventoryCenter() {
   }
 
   // Scan or search product into Retail POS cart
-  const handlePosBarcodeSubmit = (e?: React.FormEvent) => {
+  const handlePosBarcodeSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     const query = posSearchQuery.trim()
     if (!query) return
 
-    // 1. Try to find by exact barcode
+    // 1. Try to find by exact barcode locally
     let product = products.find(p => p.barcode === query)
 
-    // 2. If not found by barcode, select the highlighted search result if available
+    // 2. If not found by barcode locally, select the highlighted search result if available
     if (!product && posSearchResults.length > 0 && highlightedIndex >= 0 && highlightedIndex < posSearchResults.length) {
       product = posSearchResults[highlightedIndex]
+    }
+
+    // 3. Fallback: Search in the full database in real-time if not found in memory (e.g. for large inventory)
+    if (!product) {
+      try {
+        setCheckoutLoading(true)
+        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=1&admin=true&includeUnavailable=true`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.products && data.products.length > 0) {
+            product = data.products[0]
+          }
+        }
+      } catch (err) {
+        console.error('Error searching product in real-time:', err)
+      } finally {
+        setCheckoutLoading(false)
+      }
     }
 
     if (product) {
