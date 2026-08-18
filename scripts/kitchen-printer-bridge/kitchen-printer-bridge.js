@@ -63,10 +63,30 @@ function savePrintedOrderLog() {
   }
 }
 
+// Word-wrapper helper to keep lines clean
+function wrapText(text, limit) {
+  const words = text.split(' ');
+  let lines = [];
+  let currentLine = '';
+  
+  words.forEach(word => {
+    if ((currentLine + (currentLine ? ' ' : '') + word).length <= limit) {
+      currentLine += (currentLine ? ' ' : '') + word;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+}
+
 // 3. Printing Mechanism (PowerShell Silent Print)
 function printKOT(order, items, user) {
   try {
-    const lineLength = 40; // standard 3-inch/80mm thermal receipt line width
+    const lineLength = 32; // Optimized for 58mm (2-inch) thermal printers
     const divider = '='.repeat(lineLength);
     const thinDivider = '-'.repeat(lineLength);
 
@@ -76,12 +96,6 @@ function printKOT(order, items, user) {
       return ' '.repeat(pad) + text;
     };
 
-    const padText = (left, right) => {
-      const space = lineLength - (left.length + right.length);
-      if (space <= 0) return left + ' ' + right;
-      return left + ' '.repeat(space) + right;
-    };
-
     let lines = [];
     lines.push(divider);
     lines.push(centerText('FASTKIRANA ONLINE'));
@@ -89,37 +103,45 @@ function printKOT(order, items, user) {
     lines.push(divider);
 
     const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
-    lines.push(`KOT ID   : ${orderIdText}`);
+    lines.push(`KOT ID: ${orderIdText}`);
 
     const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     });
-    lines.push(`Date     : ${dateStr}`);
-    lines.push(`Type     : ${order.deliveryMethod || 'DELIVERY'}`);
-    lines.push(`Customer : ${user?.name || 'Customer'}`);
+    lines.push(`Date  : ${dateStr}`);
+    lines.push(`Type  : ${order.deliveryMethod || 'DELIVERY'}`);
+    lines.push(`Cust  : ${user?.name || 'Customer'}`);
     lines.push(thinDivider);
-    lines.push(padText('Qty   Item', ''));
+    lines.push(`Qty  Item`);
     lines.push(thinDivider);
 
     items.forEach((item) => {
-      let itemLine = `[${item.quantity}x]  ${item.name}`;
-      if (item.selectedVariant) {
-        itemLine += ` (${item.selectedVariant})`;
+      const prefix = `[${item.quantity}x] `;
+      const availableWidth = lineLength - prefix.length;
+      
+      const wrappedName = wrapText(item.name, availableWidth);
+      if (wrappedName.length > 0) {
+        lines.push(`${prefix}${wrappedName[0]}`);
+        for (let i = 1; i < wrappedName.length; i++) {
+          lines.push(' '.repeat(prefix.length) + wrappedName[i]);
+        }
       }
-      lines.push(itemLine);
+      
+      if (item.selectedVariant) {
+        lines.push(' '.repeat(prefix.length) + `Var: ${item.selectedVariant}`);
+      }
       if (item.notes) {
-        lines.push(`      Note: ${item.notes}`);
+        lines.push(' '.repeat(prefix.length) + `Note: ${item.notes}`);
       }
     });
 
     lines.push(divider);
     lines.push(centerText('*** KITCHEN COPY ***'));
-    lines.push('\n\n\n\n\n'); // Tearing whitespace
+    lines.push('\n\n\n'); // Reduced tearing whitespace
 
     const receiptText = lines.join('\n');
     const tempFilePath = path.join(__dirname, 'temp_kot.txt');
