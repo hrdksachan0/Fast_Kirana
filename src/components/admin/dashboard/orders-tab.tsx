@@ -5,6 +5,7 @@ import { Search, Plus, Loader2, MessageSquare, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
+import { supabase } from '@/lib/supabase-client'
 
 export interface OrdersTabProps {
   orders: any[]
@@ -55,13 +56,51 @@ export function OrdersTab({
   const rawActiveList = orders.filter((o) => activeStatuses.includes(o.status))
   const rawHistoryList = orders.filter((o) => historyStatuses.includes(o.status))
 
-  const isOrderPickup = (o: any) => {
+  const getOrderMethod = (o: any) => {
     const method = (o.deliveryMethod || '').toUpperCase()
-    return method === 'SELF_PICKUP' || method === 'PICKUP' || o.isSelfPickup === true
+    if (method === 'RETAIL') return 'RETAIL'
+    if (method === 'SELF_PICKUP' || method === 'PICKUP' || o.isSelfPickup === true) return 'SELF_PICKUP'
+    return 'DELIVERY'
+  }
+
+  const isOrderPickup = (o: any) => {
+    return getOrderMethod(o) === 'SELF_PICKUP'
+  }
+
+  const sendRemotePrintKOT = async (o: any) => {
+    const toastId = toast.loading(`Sending KOT print command for Order #${o.readableId || o.id.slice(0, 8)}...`)
+    try {
+      const channel = supabase.channel('restaurant-orders-live')
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channel.send({
+            type: 'broadcast',
+            event: 'reprint-kot',
+            payload: { orderId: o.id }
+          }).then((resp) => {
+            toast.dismiss(toastId)
+            if (resp === 'ok') {
+              toast.success(`KOT sent to kitchen PC! 🖨️`)
+            } else {
+              toast.error('Failed to send print command. Make sure Kitchen PC is online.')
+            }
+            supabase.removeChannel(channel)
+          }).catch(() => {
+            toast.dismiss(toastId)
+            toast.error('Print command transmission failed.')
+            supabase.removeChannel(channel)
+          })
+        }
+      })
+    } catch (err) {
+      toast.dismiss(toastId)
+      toast.error('Remote print connection error.')
+    }
   }
 
   const shareKitchenOrder = (o: any) => {
     const isPickup = isOrderPickup(o)
+    const isRetail = getOrderMethod(o) === 'RETAIL'
     const restSub = o.subOrders?.find((s: any) => s.type === 'RESTAURANT')
     const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
     const outletName = restSub?.shopName || o.restaurantName || (o.shopName !== 'FastKirana Grocery' ? o.shopName : 'Restaurant')
@@ -71,7 +110,14 @@ export function OrdersTab({
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`
-    text += `📦 *Type:* ${isPickup ? '🛍️ Self Pickup (Customer Takeaway)' : '🛵 Doorstep Delivery (Rider Pickup)'}\n`
+    
+    let typeStr = '🛵 Doorstep Delivery (Rider Pickup)'
+    if (isPickup) {
+      typeStr = '🛍️ Self Pickup (Customer Takeaway)'
+    } else if (isRetail) {
+      typeStr = '🏪 Walk-in Counter Sale'
+    }
+    text += `📦 *Type:* ${typeStr}\n`
     if (outletName) {
       text += `🏪 *Outlet:* ${outletName}\n`
     }
@@ -148,7 +194,7 @@ export function OrdersTab({
   const filteredActiveOrders = rawActiveList.filter((o) => {
     const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
-    const matchesMethod = orderMethodFilter === 'ALL' || (orderMethodFilter === 'SELF_PICKUP' ? isOrderPickup(o) : !isOrderPickup(o))
+    const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
     const matchesSearch = 
       orderSearchQuery.trim() === '' || 
       o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
@@ -163,7 +209,7 @@ export function OrdersTab({
   const filteredHistoryOrders = rawHistoryList.filter((o) => {
     const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
-    const matchesMethod = orderMethodFilter === 'ALL' || (orderMethodFilter === 'SELF_PICKUP' ? isOrderPickup(o) : !isOrderPickup(o))
+    const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
     const matchesSearch = 
       orderSearchQuery.trim() === '' || 
       o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
@@ -324,6 +370,7 @@ export function OrdersTab({
                 { key: 'ALL', label: '📦 All Types' },
                 { key: 'DELIVERY', label: '🛵 Delivery' },
                 { key: 'SELF_PICKUP', label: '🛍️ Self Pickup' },
+                { key: 'RETAIL', label: '🏪 Walk-in/Retail' },
               ].map((m) => (
                 <button
                   key={m.key}
@@ -429,15 +476,28 @@ export function OrdersTab({
                         </td>
 
                         <td className="py-3 px-3 whitespace-nowrap">
-                          {isPickup ? (
-                            <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs animate-pulse inline-flex items-center gap-1">
-                              🛍️ SELF PICKUP
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px] inline-flex items-center gap-1">
-                              🛵 DELIVERY
-                            </span>
-                          )}
+                          {(() => {
+                            const method = getOrderMethod(o)
+                            if (method === 'RETAIL') {
+                              return (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-[9px] inline-flex items-center gap-1">
+                                  🏪 WALK-IN RETAIL
+                                </span>
+                              )
+                            }
+                            if (method === 'SELF_PICKUP') {
+                              return (
+                                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs animate-pulse inline-flex items-center gap-1">
+                                  🛍️ SELF PICKUP
+                                </span>
+                              )
+                            }
+                            return (
+                              <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px] inline-flex items-center gap-1">
+                                🛵 DELIVERY
+                              </span>
+                            )
+                          })()}
                         </td>
 
                         <td 
@@ -454,34 +514,50 @@ export function OrdersTab({
                           )}
                         </td>
                         <td className="py-3 px-3 text-[11px]">
-                          {isPickup ? (
-                            <div>
-                              <div className="font-black text-[10px] text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                                🛍️ Customer Pickup at Counter
-                              </div>
-                              <div className="text-[9px] text-text-muted font-medium">Store pickup (No rider needed)</div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                              <div className="mt-1 flex items-center gap-1.5">
-                                <span className="font-mono text-[9px] text-text-muted">
-                                  [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
-                                </span>
-                                {o.deliveryLat && o.deliveryLng && (
-                                  <a
-                                    href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
-                                    title="Open exact GPS coordinates on Google Maps"
-                                  >
-                                    📍
-                                  </a>
-                                )}
-                              </div>
-                            </>
-                          )}
+                          {(() => {
+                            const method = getOrderMethod(o)
+                            if (method === 'RETAIL') {
+                              return (
+                                <div>
+                                  <div className="font-black text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                    🏪 Walk-in Counter Sale
+                                  </div>
+                                  <div className="text-[9px] text-text-muted font-medium">Retail counter checkout</div>
+                                </div>
+                              )
+                            }
+                            if (method === 'SELF_PICKUP') {
+                              return (
+                                <div>
+                                  <div className="font-black text-[10px] text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                    🛍️ Customer Pickup at Counter
+                                  </div>
+                                  <div className="text-[9px] text-text-muted font-medium">Store pickup (No rider needed)</div>
+                                </div>
+                              )
+                            }
+                            return (
+                              <>
+                                <div className="line-clamp-2">{formatAddress(o.address)}</div>
+                                <div className="mt-1 flex items-center gap-1.5">
+                                  <span className="font-mono text-[9px] text-text-muted">
+                                    [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
+                                  </span>
+                                  {o.deliveryLat && o.deliveryLng && (
+                                    <a
+                                      href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                                      title="Open exact GPS coordinates on Google Maps"
+                                    >
+                                      📍
+                                    </a>
+                                  )}
+                                </div>
+                              </>
+                            )
+                          })()}
                         </td>
                         <td className="py-3 px-3 font-black text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
                         <td className="py-3 px-3 text-center">
@@ -558,14 +634,11 @@ export function OrdersTab({
                               <div className="flex items-center justify-center gap-1 w-full">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const isRest = !!o.restaurantId || o.orderType === 'RESTAURANT'
-                                    printKOTReceipt(o, isRest ? 'RESTAURANT' : 'STORE')
-                                  }}
+                                  onClick={() => sendRemotePrintKOT(o)}
                                   className="flex-1 py-1 px-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
-                                  title="Print Thermal Kitchen Order Ticket (KOT)"
+                                  title="Send Print Command to Kitchen PC Printer"
                                 >
-                                  🖨️ KOT
+                                  🖨️ Send KOT
                                 </button>
                                 <button
                                   type="button"
@@ -682,6 +755,7 @@ export function OrdersTab({
                 { key: 'ALL', label: '📦 All Types' },
                 { key: 'DELIVERY', label: '🛵 Delivery' },
                 { key: 'SELF_PICKUP', label: '🛍️ Self Pickup' },
+                { key: 'RETAIL', label: '🏪 Walk-in/Retail' },
               ].map((m) => (
                 <button
                   key={m.key}
@@ -774,15 +848,28 @@ export function OrdersTab({
                         </td>
 
                         <td className="py-3 px-3 whitespace-nowrap">
-                          {isPickup ? (
-                            <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs">
-                              🛍️ SELF PICKUP
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
-                              🛵 DELIVERY
-                            </span>
-                          )}
+                          {(() => {
+                            const method = getOrderMethod(o)
+                            if (method === 'RETAIL') {
+                              return (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-[9px]">
+                                  🏪 WALK-IN RETAIL
+                                </span>
+                              )
+                            }
+                            if (method === 'SELF_PICKUP') {
+                              return (
+                                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9.5px] shadow-xs">
+                                  🛍️ SELF PICKUP
+                                </span>
+                              )
+                            }
+                            return (
+                              <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
+                                🛵 DELIVERY
+                              </span>
+                            )
+                          })()}
                         </td>
 
                         <td 
@@ -794,15 +881,30 @@ export function OrdersTab({
                           <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
                         </td>
                         <td className="py-3 px-3 text-[11px]">
-                          {isPickup ? (
-                            <div>
-                              <div className="font-bold text-[10px] text-purple-600 dark:text-purple-400">
-                                🛍️ Customer Store Pickup
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                          )}
+                          {(() => {
+                            const method = getOrderMethod(o)
+                            if (method === 'RETAIL') {
+                              return (
+                                <div>
+                                  <div className="font-bold text-[10px] text-amber-600 dark:text-amber-400">
+                                    🏪 Walk-in Counter Sale
+                                  </div>
+                                </div>
+                              )
+                            }
+                            if (method === 'SELF_PICKUP') {
+                              return (
+                                <div>
+                                  <div className="font-bold text-[10px] text-purple-600 dark:text-purple-400">
+                                    🛍️ Customer Store Pickup
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return (
+                              <div className="line-clamp-2">{formatAddress(o.address)}</div>
+                            )
+                          })()}
                         </td>
                         <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
                         <td className="py-3 px-3 text-center">

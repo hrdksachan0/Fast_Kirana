@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
 import { printKOTReceipt as silentPrintKOT } from '@/lib/kot-print'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase-client'
 import { 
   Loader2, 
   ShoppingBag, 
@@ -216,11 +217,18 @@ export function RestaurantOrdersConsole() {
       .catch(() => {})
   }, [])
 
-  // Load sound preference from localStorage
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false)
+
+  // Load preferences from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('kitchen_sound_enabled')
-    if (stored !== null) {
-      setSoundEnabled(stored === 'true')
+    const storedSound = localStorage.getItem('kitchen_sound_enabled')
+    if (storedSound !== null) {
+      setSoundEnabled(storedSound === 'true')
+    }
+
+    const storedAutoPrint = localStorage.getItem('kitchen_autoprint_enabled')
+    if (storedAutoPrint !== null) {
+      setAutoPrintEnabled(storedAutoPrint === 'true')
     }
     
     // Check if AudioContext is blocked by browser autoplay policy
@@ -240,6 +248,17 @@ export function RestaurantOrdersConsole() {
     }
   }
 
+  const toggleAutoPrint = () => {
+    const next = !autoPrintEnabled
+    setAutoPrintEnabled(next)
+    localStorage.setItem('kitchen_autoprint_enabled', String(next))
+    if (next) {
+      toast.success('Browser automatic KOT printing enabled! 🖨️')
+    } else {
+      toast.info('Browser automatic KOT printing disabled. 🖨️')
+    }
+  }
+
   const handleUnblockAudio = async () => {
     const { tryUnlockAudioContext } = await import('@/lib/audio')
     const unlocked = await tryUnlockAudioContext()
@@ -255,6 +274,8 @@ export function RestaurantOrdersConsole() {
 
   const soundEnabledRef = useRef(true)
   const audioContextBlockedRef = useRef(false)
+  const autoPrintEnabledRef = useRef(false)
+  const ordersRef = useRef<Order[]>([])
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled
@@ -263,6 +284,14 @@ export function RestaurantOrdersConsole() {
   useEffect(() => {
     audioContextBlockedRef.current = audioContextBlocked
   }, [audioContextBlocked])
+
+  useEffect(() => {
+    autoPrintEnabledRef.current = autoPrintEnabled
+  }, [autoPrintEnabled])
+
+  useEffect(() => {
+    ordersRef.current = orders
+  }, [orders])
 
   // Continuous alarm chime while unaccepted PENDING orders exist
   useEffect(() => {
@@ -342,7 +371,9 @@ export function RestaurantOrdersConsole() {
             if (order.status === 'CONFIRMED' && !printedOrderIdsRef.current.has(order.id)) {
               printedOrderIdsRef.current.add(order.id)
               // Trigger automatic print
-              printKOTReceiptRef.current?.(order)
+              if (autoPrintEnabledRef.current) {
+                printKOTReceiptRef.current?.(order)
+              }
             }
           })
         }
@@ -372,24 +403,29 @@ export function RestaurantOrdersConsole() {
     }
   }, [])
 
-  // Connect to SSE for real-time order notifications
+  // Connect to Supabase Realtime for order notifications
   useEffect(() => {
     if (status !== 'authenticated') return
     
-    let eventSource: EventSource | null = null
     let updateTimeout: NodeJS.Timeout | null = null
     
-    const connectSSE = () => {
-      eventSource = new EventSource('/api/sse/orders')
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          
-          if (data.type === 'status-change') {
-            const { orderId, status: newStatus } = data
-            
-            // Check if active order cancelled
+    const channel = supabase
+      .channel('restaurant-orders-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const oldOrder = payload.old as any
+            const newOrder = payload.new as any
+            const orderId = newOrder.id
+            const newStatus = newOrder.status
+
+            // Check if active order cancelled or packed
             const currentActive = activeOrderRef.current
             if (currentActive && currentActive.id === orderId) {
               if (newStatus === 'CANCELLED') {
@@ -402,39 +438,49 @@ export function RestaurantOrdersConsole() {
                 setPickedItemIds({})
               }
             }
-          }
 
-          if (data.type === 'new-order' || data.type === 'status-change') {
             // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
             }, 1000)
+          } else if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as any
+            const isRestaurantOrder = newOrder.restaurantId || newOrder.orderType === 'RESTAURANT'
             
-            if (data.type === 'new-order' && (data.restaurantId || data.orderType === 'RESTAURANT')) {
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
+
+            if (isRestaurantOrder) {
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
                 playKitchenAlarmChime()
               }
               triggerHaptic()
             }
           }
-        } catch (err) {
-          console.error('SSE parse error:', err)
         }
-      }
-      
-      eventSource.onerror = (err) => {
-        eventSource?.close()
-        setTimeout(connectSSE, 5000)
-      }
-    }
-    
-    connectSSE()
+      )
+      .on(
+        'broadcast',
+        { event: 'reprint-kot' },
+        (payload) => {
+          const { orderId } = payload.payload || {}
+          if (orderId) {
+            const orderToPrint = ordersRef.current.find((o) => o.id === orderId)
+            if (orderToPrint) {
+              console.log('Received remote reprint request for Order ID:', orderId)
+              printKOTReceiptRef.current?.(orderToPrint)
+              toast.info(`Remote reprint requested for KOT #${orderToPrint.readableId || orderId.slice(0, 8)}`)
+            }
+          }
+        }
+      )
+      .subscribe()
     
     return () => {
-      if (eventSource) {
-        eventSource.close()
-      }
+      supabase.removeChannel(channel)
       if (updateTimeout) {
         clearTimeout(updateTimeout)
       }
@@ -511,8 +557,10 @@ export function RestaurantOrdersConsole() {
         })
         setPickedItemIds(initialPicked)
         fetchOrders(true)
-        // Automatically print KOT receipt on acceptance
-        printKOTReceipt(order)
+        // Automatically print KOT receipt on acceptance if enabled
+        if (autoPrintEnabledRef.current) {
+          printKOTReceipt(order)
+        }
       } else {
         toast.error('Failed to accept order')
       }
@@ -541,7 +589,9 @@ export function RestaurantOrdersConsole() {
         })
         setPickedItemIds(initialPicked)
         fetchOrders(true)
-        printKOTReceipt(order)
+        if (autoPrintEnabledRef.current) {
+          printKOTReceipt(order)
+        }
       } else {
         toast.error('Failed to accept order')
       }
@@ -576,7 +626,9 @@ export function RestaurantOrdersConsole() {
       toast.success('🍲 Order accepted, prepared, and packed in one click!', { duration: 4000 })
       setPreparedToday(prev => prev + 1)
       fetchOrders(true)
-      printKOTReceipt(order)
+      if (autoPrintEnabledRef.current) {
+        printKOTReceipt(order)
+      }
     } catch (err: any) {
       toast.dismiss(toastId)
       toast.error(err.message || 'Error quick packing order')
@@ -1044,29 +1096,48 @@ export function RestaurantOrdersConsole() {
         </button>
       )}
 
-      {/* Sound Alerts Controls Header Toggle Bar */}
-      <div className="flex justify-between items-center bg-card border border-border/50 px-4 py-3 rounded-3xl shadow-xs">
-        <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
-          Kitchen Sounds
-        </span>
-        <button
-          onClick={toggleSound}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide uppercase transition-all cursor-pointer ${
-            soundEnabled
-              ? 'bg-[#00b140]/10 border-[#00b140]/25 text-[#00b140]'
-              : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
-          }`}
-        >
-          {soundEnabled ? (
-            <>
-              <Volume2 className="h-3.5 w-3.5" /> Sound Alerts: ON
-            </>
-          ) : (
-            <>
-              <VolumeX className="h-3.5 w-3.5" /> Sound Alerts: MUTED
-            </>
-          )}
-        </button>
+      {/* Sound & Printer Settings Controls Header Toggle Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/50 px-4 py-3 rounded-3xl shadow-xs">
+        <div className="flex items-center justify-between sm:justify-start gap-4">
+          <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
+            Kitchen Sounds
+          </span>
+          <button
+            onClick={toggleSound}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide uppercase transition-all cursor-pointer ${
+              soundEnabled
+                ? 'bg-[#00b140]/10 border-[#00b140]/25 text-[#00b140]'
+                : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
+            }`}
+          >
+            {soundEnabled ? (
+              <>
+                <Volume2 className="h-3.5 w-3.5" /> Sound Alerts: ON
+              </>
+            ) : (
+              <>
+                <VolumeX className="h-3.5 w-3.5" /> Sound Alerts: MUTED
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-start gap-4 border-t sm:border-t-0 border-border/30 pt-2.5 sm:pt-0">
+          <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
+            Browser KOT
+          </span>
+          <button
+            onClick={toggleAutoPrint}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wide uppercase transition-all cursor-pointer ${
+              autoPrintEnabled
+                ? 'bg-[#00b140]/10 border-[#00b140]/25 text-[#00b140]'
+                : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
+            }`}
+          >
+            <Printer className="h-3.5 w-3.5" />
+            {autoPrintEnabled ? 'Auto Print: ON' : 'Auto Print: OFF'}
+          </button>
+        </div>
       </div>
 
       {/* Overview Stats */}
