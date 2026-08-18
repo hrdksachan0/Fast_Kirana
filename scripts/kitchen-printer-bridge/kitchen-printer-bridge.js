@@ -97,10 +97,8 @@ function printKOT(order, items, user) {
     };
 
     let lines = [];
-    lines.push(divider);
-    lines.push(centerText('FASTKIRANA ONLINE'));
-    lines.push(centerText('KITCHEN ORDER TICKET'));
-    lines.push(divider);
+    lines.push(centerText('FASTKIRANA ONLINE KOT'));
+    lines.push(thinDivider);
 
     const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
     lines.push(`KOT ID: ${orderIdText}`);
@@ -115,8 +113,6 @@ function printKOT(order, items, user) {
     lines.push(`Date  : ${dateStr}`);
     lines.push(`Type  : ${order.deliveryMethod || 'DELIVERY'}`);
     lines.push(`Cust  : ${user?.name || 'Customer'}`);
-    lines.push(thinDivider);
-    lines.push(`Qty  Item`);
     lines.push(thinDivider);
 
     items.forEach((item) => {
@@ -139,9 +135,8 @@ function printKOT(order, items, user) {
       }
     });
 
-    lines.push(divider);
-    lines.push(centerText('*** KITCHEN COPY ***'));
-    lines.push('\n\n\n'); // Reduced tearing whitespace
+    lines.push(thinDivider);
+    lines.push('\n\n'); // Minimal tearing whitespace
 
     const receiptText = lines.join('\n');
     const tempFilePath = path.join(__dirname, 'temp_kot.txt');
