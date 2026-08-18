@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --include=dev",
+  "installCommand": "rm -rf node_modules && npm install",
   "buildCommand": "npx prisma generate && next build",
   "functions": {
     "src/app/**/*": {
