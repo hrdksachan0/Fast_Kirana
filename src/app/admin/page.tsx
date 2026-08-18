@@ -78,12 +78,14 @@ export default async function AdminPage() {
       prisma.order.count({
         where: {
           createdAt: { gte: startOfToday },
+          deliveryMethod: { not: 'RETAIL' },
         },
       }),
       prisma.order.aggregate({
         where: {
           createdAt: { gte: startOfToday },
           status: { not: 'CANCELLED' },
+          deliveryMethod: { not: 'RETAIL' },
         },
         _sum: { total: true },
       }),
@@ -91,6 +93,7 @@ export default async function AdminPage() {
         where: {
           createdAt: { gte: startOfToday },
           status: 'DELIVERED',
+          deliveryMethod: { not: 'RETAIL' },
         },
         _sum: { total: true },
       }),
@@ -110,6 +113,9 @@ export default async function AdminPage() {
       }),
       prisma.order.groupBy({
         by: ['shopName', 'status'],
+        where: {
+          deliveryMethod: { not: 'RETAIL' },
+        },
         _sum: { total: true, subtotal: true, discount: true },
         _count: { id: true },
       }),

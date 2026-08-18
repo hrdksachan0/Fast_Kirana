@@ -125,6 +125,7 @@ export async function GET(request: Request) {
         where: {
           createdAt: { gte: startOfToday },
           status: { not: 'CANCELLED' },
+          deliveryMethod: { not: 'RETAIL' },
         },
         _sum: { total: true },
         _count: { id: true },
@@ -133,6 +134,7 @@ export async function GET(request: Request) {
         where: {
           createdAt: { gte: startOfToday },
           status: 'DELIVERED',
+          deliveryMethod: { not: 'RETAIL' },
         },
         _sum: { total: true },
       }),

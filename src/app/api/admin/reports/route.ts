@@ -243,7 +243,7 @@ export async function GET(request: NextRequest) {
     let totalTaxes = 0
     let totalDeliveryFee = 0
     let totalProductSales = 0 // subtotal - discount
-    const totalOrders = orders.length
+    const totalOrders = orders.filter(o => o.deliveryMethod !== 'RETAIL').length
 
     // Group by Date (YYYY-MM-DD)
     type DailySale = { date: string; sales: number; profit: number; orders: number }
@@ -283,10 +283,14 @@ export async function GET(request: NextRequest) {
     let pickupOrdersCount = 0
     let pickupSales = 0
     let pickupProfit = 0
+    let retailOrdersCount = 0
+    let retailSales = 0
+    let retailProfit = 0
 
     // Process each order
     for (const order of orders) {
       const isPickup = order.deliveryMethod === 'PICKUP'
+      const isRetail = order.deliveryMethod === 'RETAIL'
       const dateString = order.createdAt.toISOString().split('T')[0]
       const orderSales = (order.subtotal || 0) - (order.discount || 0)
       
@@ -295,13 +299,15 @@ export async function GET(request: NextRequest) {
         dailyData[dateString] = { date: dateString, sales: 0, profit: 0, orders: 0 }
       }
 
-      dailyData[dateString].orders++
-      dailyData[dateString].sales += orderSales
-      totalRevenue += orderSales
-      totalMiscFee += order.miscFee || 0
-      totalTaxes += order.taxes || 0
-      totalDeliveryFee += order.deliveryFee || 0
-      totalProductSales += orderSales
+      if (!isRetail) {
+        dailyData[dateString].orders++
+        dailyData[dateString].sales += orderSales
+        totalRevenue += orderSales
+        totalMiscFee += order.miscFee || 0
+        totalTaxes += order.taxes || 0
+        totalDeliveryFee += order.deliveryFee || 0
+        totalProductSales += orderSales
+      }
 
       // Process items for profit calculation
       const items = itemsByOrder[order.id] || []
@@ -310,6 +316,8 @@ export async function GET(request: NextRequest) {
       for (const item of items) {
         const { cost, revenue: itemRev, profit: itemProf, matchedRest } = getItemMetrics(item)
         orderCost += cost
+
+        if (isRetail) continue // Skip adding retail items to category and product breakdown
 
         // Strict Category Resolution
         const isGrocery = isPureGroceryItem(item)
@@ -378,14 +386,21 @@ export async function GET(request: NextRequest) {
 
       // Order profit = order.total - orderCost
       const orderProfit = order.total - orderCost
-      dailyData[dateString].profit += orderProfit
-      totalProfit += orderProfit
-      totalCost += orderCost
+      
+      if (!isRetail) {
+        dailyData[dateString].profit += orderProfit
+        totalProfit += orderProfit
+        totalCost += orderCost
+      }
 
       if (isPickup) {
         pickupOrdersCount++
         pickupSales += orderSales
         pickupProfit += orderProfit
+      } else if (isRetail) {
+        retailOrdersCount++
+        retailSales += orderSales
+        retailProfit += orderProfit
       } else {
         deliveryOrdersCount++
         deliverySales += orderSales
@@ -427,6 +442,11 @@ export async function GET(request: NextRequest) {
           ordersCount: pickupOrdersCount,
           sales: Math.round(pickupSales * 100) / 100,
           profit: Math.round(pickupProfit * 100) / 100,
+        },
+        retail: {
+          ordersCount: retailOrdersCount,
+          sales: Math.round(retailSales * 100) / 100,
+          profit: Math.round(retailProfit * 100) / 100,
         }
       },
       dailySales: dailyList,
