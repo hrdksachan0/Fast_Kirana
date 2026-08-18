@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm ci",
   "buildCommand": "npx prisma generate && next build",
   "functions": {
     "src/app/**/*": {
