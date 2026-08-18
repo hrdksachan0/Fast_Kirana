@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  transpilePackages: ['@supabase/supabase-js'],
+  serverExternalPackages: ['@supabase/supabase-js'],
   experimental: {
     staleTimes: {
       dynamic: 30,
