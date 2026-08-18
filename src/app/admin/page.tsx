@@ -394,6 +394,8 @@ export default async function AdminPage() {
           activeOrderCount: activeOrdersCount,
           userCount,
           lowStockCount,
+          groceryRevenue,
+          restaurantRevenue,
         }}
       />
 
