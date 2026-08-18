@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { formatDate } from '@/lib/date-helpers'
+import * as XLSX from 'xlsx'
 
 interface DailySale {
   date: string
@@ -74,6 +75,7 @@ interface ReportSummary {
   missingCostCount?: number
   delivery?: ChannelMetrics
   pickup?: ChannelMetrics
+  retail?: ChannelMetrics
 }
 
 // Category Icon & Color Mapping for Premium Polish
@@ -236,6 +238,23 @@ export function AdminReports() {
     }
   }, [rawSummary, rawCategorySales, selectedCategory])
 
+  // Split calculations for Main Shop (Grocery) vs Food/Restaurant
+  const grocerySales = useMemo(() => {
+    return rawCategorySales.filter(c => c.type === 'grocery').reduce((acc, c) => acc + (c.sales || 0), 0)
+  }, [rawCategorySales])
+
+  const groceryProfit = useMemo(() => {
+    return rawCategorySales.filter(c => c.type === 'grocery').reduce((acc, c) => acc + (c.profit || 0), 0)
+  }, [rawCategorySales])
+
+  const restaurantSales = useMemo(() => {
+    return rawCategorySales.filter(c => c.type === 'restaurant').reduce((acc, c) => acc + (c.sales || 0), 0)
+  }, [rawCategorySales])
+
+  const restaurantProfit = useMemo(() => {
+    return rawCategorySales.filter(c => c.type === 'restaurant').reduce((acc, c) => acc + (c.profit || 0), 0)
+  }, [rawCategorySales])
+
   // Custom SVG Line Graph calculations
   const svgChartPath = useMemo(() => {
     if (rawDailySales.length < 2) return { salesPath: '', profitPath: '', salesArea: '', profitArea: '', points: [], maxValue: 100 }
@@ -265,6 +284,110 @@ export function AdminReports() {
 
     return { salesPath, profitPath, salesArea, profitArea, points, maxValue }
   }, [rawDailySales])
+
+  // Real Excel (.xlsx) Exporter with SheetJS
+  const handleDownloadXLSX = (scope: 'all' | 'grocery' | 'restaurant' = 'all') => {
+    try {
+      const scopeLabel = scope === 'grocery' ? 'Grocery' : scope === 'restaurant' ? 'Restaurant' : 'Overall'
+      
+      // Filter categories and products based on scope
+      const targetCategories = rawCategorySales.filter(cat => {
+        if (scope === 'grocery') return cat.type === 'grocery'
+        if (scope === 'restaurant') return cat.type === 'restaurant'
+        return true
+      })
+
+      const targetProducts = (rawTopProducts || []).filter((prod: TopProduct) => {
+        if (selectedCategory !== 'all' && prod.categoryName !== selectedCategory) return false
+        if (scope === 'grocery') return prod.type === 'grocery'
+        if (scope === 'restaurant') return prod.type === 'restaurant'
+        return true
+      })
+
+      const scopeSales = targetCategories.reduce((sum, c) => sum + (c.sales || 0), 0)
+      const scopeCost = targetCategories.reduce((sum, c) => sum + (c.cost ?? (c.sales - c.profit)), 0)
+      const scopeProfit = targetCategories.reduce((sum, c) => sum + (c.profit || 0), 0)
+      const scopeMargin = scopeSales > 0 ? (scopeProfit / scopeSales) * 100 : 0
+
+      // 1. Tab 1: Financial Summary Sheet
+      const summaryRows = [
+        ['FastKirana Financial Report', ''],
+        ['Report Type', `${scopeLabel} Financials`],
+        ['Date Range', `${startDate} to ${endDate}`],
+        ['Generated On', new Date().toLocaleString()],
+        ['', ''],
+        ['Metric', 'Amount (INR)'],
+        ['Total Net Sales (Revenue)', scopeSales],
+        ['Product Cost / Restaurant Payouts (COGS)', scopeCost],
+        ['Store Net Profit (Earnings)', scopeProfit],
+        ['Profit Margin', `${scopeMargin.toFixed(1)}%`],
+      ]
+
+      if (scope === 'all') {
+        summaryRows.push(
+          ['Total Orders Delivered', summary.totalOrders],
+          ['Average Order Value', summary.averageOrderValue],
+          ['Delivery Fees Collected', summary.totalDeliveryFee || 0],
+          ['Packaging & Handling Fees', summary.totalMiscFee || 0],
+          ['GST / Taxes Collected', summary.totalTaxes || 0]
+        )
+      }
+
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows)
+
+      // 2. Tab 2: Category Breakdown Sheet
+      const catHeader = scope === 'restaurant' 
+        ? ['Restaurant Name', 'Type', 'Units Sold', 'Total Sales (INR)', 'Restaurant Payout Share (INR)', 'FastKirana Commission (INR)', 'Margin']
+        : ['Category Name', 'Type', 'Units Sold', 'Total Sales (INR)', 'Product Cost (INR)', 'Net Profit (INR)', 'Margin']
+      
+      const catRows = targetCategories.map(cat => {
+        const catCost = cat.cost ?? (cat.sales - cat.profit)
+        const margin = cat.sales > 0 ? ((cat.profit / cat.sales) * 100) : 0
+        return [
+          cat.categoryName,
+          cat.type || 'grocery',
+          cat.quantity || 0,
+          cat.sales,
+          catCost,
+          cat.profit,
+          `${margin.toFixed(1)}%`
+        ]
+      })
+
+      const wsCategory = XLSX.utils.aoa_to_sheet([catHeader, ...catRows])
+
+      // 3. Tab 3: Product Sales Sheet
+      const prodHeader = ['Product / Dish Name', 'Category / Outlet', 'Selling Price (INR)', 'Cost / Payout (INR)', 'Qty Sold', 'Total Sales (INR)', 'Net Profit (INR)', 'Margin']
+      const prodRows = targetProducts.map((prod: TopProduct) => {
+        const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100) : 0
+        return [
+          prod.name,
+          prod.categoryName || '-',
+          prod.price || 0,
+          prod.costPrice || 0,
+          prod.quantity,
+          prod.sales,
+          prod.profit,
+          `${margin.toFixed(1)}%`
+        ]
+      })
+
+      const wsProduct = XLSX.utils.aoa_to_sheet([prodHeader, ...prodRows])
+
+      // Create Workbook and Append Sheets
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+      XLSX.utils.book_append_sheet(wb, wsCategory, 'Categories')
+      XLSX.utils.book_append_sheet(wb, wsProduct, 'Products')
+
+      // Save Workbook
+      XLSX.writeFile(wb, `FastKirana_${scopeLabel}_Report_${startDate}_to_${endDate}.xlsx`)
+      toast.success(`${scopeLabel} Excel report exported successfully!`)
+    } catch (e) {
+      console.error('Error exporting Excel report:', e)
+      toast.error('Failed to export Excel report')
+    }
+  }
 
   // Excel / CSV Exporter with UTF-8 BOM
   // Excel / CSV Exporter with UTF-8 BOM
@@ -407,7 +530,7 @@ export function AdminReports() {
           {/* Export Buttons Group (All / Grocery Wise / Restaurant Wise) */}
           <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-2xl border border-border/80">
             <button
-              onClick={() => handleDownloadCSV('all')}
+              onClick={() => handleDownloadXLSX('all')}
               disabled={loading}
               className="h-8 px-3 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
               title="Download Full Store Comprehensive Financial Report"
@@ -417,7 +540,7 @@ export function AdminReports() {
             </button>
 
             <button
-              onClick={() => handleDownloadCSV('grocery')}
+              onClick={() => handleDownloadXLSX('grocery')}
               disabled={loading}
               className="h-8 px-2.5 rounded-xl text-xs font-black bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
               title="Download Grocery-Only Category & Product Excel Sheet"
@@ -427,13 +550,23 @@ export function AdminReports() {
             </button>
 
             <button
-              onClick={() => handleDownloadCSV('restaurant')}
+              onClick={() => handleDownloadXLSX('restaurant')}
               disabled={loading}
               className="h-8 px-2.5 rounded-xl text-xs font-black bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
               title="Download Restaurant-Only Outlet & Dishes Excel Sheet"
             >
               <span>🍽️</span>
               <span>Restaurants Wise</span>
+            </button>
+
+            {/* Secondary CSV Download option */}
+            <button
+              onClick={() => handleDownloadCSV('all')}
+              disabled={loading}
+              className="h-8 w-8 rounded-xl text-[9px] font-black bg-muted hover:bg-muted/85 border border-border flex items-center justify-center transition-all disabled:opacity-50 cursor-pointer active:scale-95 text-text-secondary"
+              title="Download raw CSV format instead"
+            >
+              CSV
             </button>
           </div>
         </div>
@@ -568,8 +701,65 @@ export function AdminReports() {
 
           </div>
 
-          {/* Fulfillment Channel Split (Delivery vs. Self Pickup) */}
+          {/* Business Channel Revenue Split: Main Kirana Shop vs Restaurant Outlets */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Main Shop (Kirana) Revenue Card */}
+            <div className="bg-card border-2 border-blue-500/20 bg-gradient-to-br from-blue-500/[0.04] to-transparent rounded-3xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xl">
+                    🏪
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Core Retail Business</span>
+                    <h4 className="text-sm font-black text-text-primary">Main Shop (Kirana) Revenue</h4>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg md:text-xl font-black text-blue-600 dark:text-blue-400 block">
+                    {formatPrice(grocerySales)}
+                  </span>
+                  <span className="text-[10px] text-text-muted font-bold">Gross Shop Sales</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-text-secondary font-medium">Shop Net Profit:</span>
+                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatPrice(groceryProfit)}
+                </strong>
+              </div>
+            </div>
+
+            {/* Restaurant & Food Outlets Revenue Card */}
+            <div className="bg-card border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/[0.04] to-transparent rounded-3xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-xl">
+                    🍽️
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider block">Food Partner Network</span>
+                    <h4 className="text-sm font-black text-text-primary">Restaurant Outlets Revenue</h4>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg md:text-xl font-black text-purple-600 dark:text-purple-400 block">
+                    {formatPrice(restaurantSales)}
+                  </span>
+                  <span className="text-[10px] text-text-muted font-bold">Gross Food Sales</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-text-secondary font-medium">Commission &amp; Earnings:</span>
+                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatPrice(restaurantProfit)}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Fulfillment Channel Split (Delivery vs. Self Pickup vs. Walk-in Retail) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Doorstep Delivery Revenue */}
             <div className="bg-card border border-border/70 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-blue-500/[0.02] to-transparent">
               <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
@@ -612,6 +802,29 @@ export function AdminReports() {
                 <span className="text-text-secondary font-medium">Net Profit on Pickups:</span>
                 <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                   {formatPrice(rawSummary.pickup?.profit || 0)}
+                </strong>
+              </div>
+            </div>
+
+            {/* Walk-in / Retail Counter Revenue */}
+            <div className="bg-card border border-border/70 rounded-3xl p-5 shadow-xs space-y-3 bg-gradient-to-br from-amber-500/[0.02] to-transparent">
+              <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛒</span>
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Walk-in / Retail Counter Revenue</h4>
+                    <p className="text-[10px] text-text-muted font-medium">{rawSummary.retail?.ordersCount || 0} Counter sales completed</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                  {formatPrice(rawSummary.retail?.sales || 0)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-text-secondary font-medium">Net Profit on Retail:</span>
+                <strong className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatPrice(rawSummary.retail?.profit || 0)}
                 </strong>
               </div>
             </div>
