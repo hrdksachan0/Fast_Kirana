@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
+import { SignJWT, jwtVerify } from 'jose'
 
 // Clean environment variables (removes quotes if copy-pasted with quotes)
 const getCleanEnv = (key: string): string => {
@@ -95,6 +96,29 @@ export const authConfig = {
   },
   session: {
     strategy: 'jwt',
+  },
+  jwt: {
+    async encode({ token }) {
+      if (!token) return ''
+      const secretStr = getCleanEnv('AUTH_SECRET') || getCleanEnv('NEXTAUTH_SECRET') || 'fastkirana-secret-key-change-me'
+      const secretKey = new TextEncoder().encode(secretStr)
+      return await new SignJWT(token as any)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('30d')
+        .sign(secretKey)
+    },
+    async decode({ token }) {
+      if (!token) return null
+      try {
+        const secretStr = getCleanEnv('AUTH_SECRET') || getCleanEnv('NEXTAUTH_SECRET') || 'fastkirana-secret-key-change-me'
+        const secretKey = new TextEncoder().encode(secretStr)
+        const { payload } = await jwtVerify(token, secretKey, { algorithms: ['HS256'] })
+        return payload as any
+      } catch (e) {
+        return null
+      }
+    },
   },
   pages: {
     signIn: '/login',
