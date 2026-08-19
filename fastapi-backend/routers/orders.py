@@ -180,24 +180,26 @@ async def upload_to_cloudinary(base64_image: str, cloud_name: str, upload_preset
         return res_json["secure_url"]
 
 
-async def send_pwa_notification_to_roles(roles: list, title: str, body: str, data: dict, db: AsyncSession):
+async def send_pwa_notification_to_roles(roles: list, title: str, body: str, data: dict, db: AsyncSession = None):
     try:
-        stmt = select(FcmToken.token).join(User).where(User.role.in_(roles))
-        res = await db.execute(stmt)
-        tokens = list(res.scalars().all())
-        if tokens:
-            await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
+        async with AsyncSessionLocal() as session:
+            stmt = select(FcmToken.token).join(User).where(User.role.in_(roles))
+            res = await session.execute(stmt)
+            tokens = list(res.scalars().all())
+            if tokens:
+                await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to roles: {str(e)}")
 
 
-async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession):
+async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession = None):
     try:
-        stmt = select(FcmToken.token).where(FcmToken.userId == user_id)
-        res = await db.execute(stmt)
-        tokens = list(res.scalars().all())
-        if tokens:
-            await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
+        async with AsyncSessionLocal() as session:
+            stmt = select(FcmToken.token).where(FcmToken.userId == user_id)
+            res = await session.execute(stmt)
+            tokens = list(res.scalars().all())
+            if tokens:
+                await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
 
