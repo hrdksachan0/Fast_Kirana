@@ -79,19 +79,39 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           },
       child: AnimatedScale(
         scale: _isPressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
         child: Container(
           width: widget.width ?? (widget.isCompact ? 140 : 156),
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-            border: Border.all(color: AppDesignSystem.border),
-            boxShadow: AppDesignSystem.shadowSm,
+            color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Product Image Box with all 4 corners rounded
               Container(
                 height: widget.isCompact ? 100 : 118,

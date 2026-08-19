@@ -15,8 +15,12 @@ final dioProvider = Provider<Dio>((ref) {
     onRequest: (options, handler) async {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      if (token != null) {
+      final userId = prefs.getString('user_id');
+      if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
+      }
+      if (userId != null && userId.isNotEmpty) {
+        options.headers['x-user-id'] = userId;
       }
       return handler.next(options);
     },
