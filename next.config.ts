@@ -111,6 +111,22 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/coupons/:path*`,
       },
 
+      // ── Admin (all sub-routes) ──
+      {
+        source: '/api/admin/:path*',
+        destination: `${apiDest}/api/admin/:path*`,
+      },
+
+      // ── Restaurant Dashboard (Owner/Chef panel) ──
+      {
+        source: '/api/restaurant-dashboard/:path*',
+        destination: `${apiDest}/api/restaurant-dashboard/:path*`,
+      },
+      {
+        source: '/api/restaurant/:path*',
+        destination: `${apiDest}/api/restaurant/:path*`,
+      },
+
       // ── Delivery & Rider ──
       {
         source: '/api/delivery/:path*',
