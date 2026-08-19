@@ -67,7 +67,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
-        content={"error": "An internal server error occurred. Please contact support.", "correlationId": correlation_id}
+        content={"error": str(exc) or "An internal server error occurred. Please contact support.", "detail": str(exc), "correlationId": correlation_id}
     )
 
 # Include API Routers
