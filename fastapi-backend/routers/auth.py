@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +27,7 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    request: Optional[Request] = None,
+    request: Request = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> Optional[Dict[str, Any]]:
@@ -50,20 +50,32 @@ async def get_current_user(
             if user and not is_token_expired(user):
                 return user
 
-        # 3. Check X-User-Id header fallback
+        # 3. Check X-User-Id / X-User-Role header (forwarded by Next.js Proxy/Middleware)
         x_user_id = request.headers.get("x-user-id")
+        x_user_role = request.headers.get("x-user-role")
         if x_user_id:
-            res = await db.execute(select(User).where(User.id == x_user_id))
-            db_user = res.scalars().first()
-            if db_user:
-                role_str = db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
+            try:
+                res = await db.execute(select(User).where(User.id == x_user_id))
+                db_user = res.scalars().first()
+                if db_user:
+                    role_str = db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
+                    return {
+                        "id": db_user.id,
+                        "email": db_user.email,
+                        "role": role_str,
+                        "name": db_user.name,
+                        "phone": db_user.phone,
+                        "assignedRestaurantId": db_user.assignedRestaurantId
+                    }
+            except Exception as e:
+                print(f"Error fetching user by x-user-id: {e}")
+
+            if x_user_role:
                 return {
-                    "id": db_user.id,
-                    "email": db_user.email,
-                    "role": role_str,
-                    "name": db_user.name,
-                    "phone": db_user.phone,
-                    "assignedRestaurantId": db_user.assignedRestaurantId
+                    "id": x_user_id,
+                    "email": request.headers.get("x-user-email", "user@fastkirana.in"),
+                    "role": x_user_role,
+                    "assignedRestaurantId": request.headers.get("x-user-restaurant-id"),
                 }
 
     return None

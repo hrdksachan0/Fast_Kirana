@@ -13,26 +13,7 @@ from utils.jwt import extract_user_from_token, is_token_expired
 security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[Dict[str, Any]]:
-    """
-    Extract and validate current user from JWT token.
-
-    Returns:
-        User dict with {id, email, role, phone, ...} or None if no token
-    """
-    if not credentials or not credentials.credentials:
-        return None
-
-    user = extract_user_from_token(credentials.credentials)
-    if not user:
-        return None
-
-    if is_token_expired(user):
-        return None
-
-    return user
+from routers.auth import get_current_user
 
 
 async def require_auth(
