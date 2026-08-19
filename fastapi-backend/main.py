@@ -8,7 +8,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from config import settings
-from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons
+from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons, health
 
 # Initialize Sentry Error Monitoring if DSN is set
 if settings.SENTRY_DSN:
@@ -100,6 +100,7 @@ app.include_router(public.router)
 app.include_router(paytm.router)
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+app.include_router(health.health_router)
 
 @app.get("/")
 async def root():

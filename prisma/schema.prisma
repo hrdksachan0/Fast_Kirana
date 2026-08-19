@@ -336,6 +336,9 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, status])
+  @@index([restaurantId, status])
+  @@index([deliveryUserId, status])
   @@index([deliveryUserId])
   @@index([assignedPickerId])
   @@index([assignedChefId])
