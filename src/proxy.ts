@@ -122,24 +122,9 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  const requestHeaders = new Headers(req.headers)
-  if (token?.id) {
-    requestHeaders.set('x-user-id', token.id as string)
-  }
-  if (token?.role) {
-    requestHeaders.set('x-user-role', token.role as string)
-  }
-  if (token?.assignedRestaurantId) {
-    requestHeaders.set('x-user-restaurant-id', token.assignedRestaurantId as string)
-  }
-
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|products/|categories/|icons/).*)'],
 }
