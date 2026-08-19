@@ -93,7 +93,7 @@ export function StorefrontClient({
       </AnimatePresence>
 
       {/* Premium Sticky Grocery / Food Slider */}
-      <div className="sticky top-[88px] min-[380px]:top-[92px] sm:top-[96px] md:top-[60px] lg:top-[64px] z-40 bg-[#fafafa]/95 dark:bg-[#09090b]/95 backdrop-blur-xl py-1.5 px-4 flex justify-center transition-all duration-300 border-b border-zinc-200/40 dark:border-zinc-800/40 shadow-xs mb-3 sm:mb-4">
+      <div className="sticky top-[90px] md:top-[64px] z-40 bg-[#fafafa]/95 dark:bg-[#09090b]/95 backdrop-blur-xl py-1.5 px-4 flex justify-center transition-all duration-300 border-b border-zinc-200/40 dark:border-zinc-800/40 shadow-xs mb-3 sm:mb-4">
         <div className="relative flex items-center w-full max-w-[420px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl shadow-[0_16px_36px_-12px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.4)] border border-zinc-200/60 dark:border-zinc-800/70" role="tablist" aria-label="Store mode">
           <motion.button
             onClick={() => handleTabChange('grocery')}

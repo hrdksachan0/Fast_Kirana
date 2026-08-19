@@ -83,12 +83,8 @@ const nextConfig: NextConfig = {
 
       // ── Restaurants ──
       {
-        source: '/api/restaurants', // READ
-        destination: `${apiDest}/api/restaurants`,
-      },
-      {
-        source: '/api/restaurants/:id', // READ
-        destination: `${apiDest}/api/restaurants/:id`,
+        source: '/api/restaurants/:path*',
+        destination: `${apiDest}/api/restaurants/:path*`,
       },
 
       // ── Cart ──

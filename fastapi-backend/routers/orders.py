@@ -1324,10 +1324,22 @@ async def update_order(
     if not target_status_str:
         raise HTTPException(status_code=400, detail="status is required")
 
-    try:
-        target_status = OrderStatus(str(target_status_str).upper())
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid order status: {target_status_str}")
+    status_alias_map = {
+        "PREPARING": OrderStatus.CONFIRMED,
+        "PROCESSING": OrderStatus.CONFIRMED,
+        "READY": OrderStatus.PACKED,
+        "OUT_FOR_DELIVERY": OrderStatus.SHIPPED,
+        "COMPLETED": OrderStatus.DELIVERED,
+    }
+
+    raw_status_str = str(target_status_str).upper()
+    if raw_status_str in status_alias_map:
+        target_status = status_alias_map[raw_status_str]
+    else:
+        try:
+            target_status = OrderStatus(raw_status_str)
+        except ValueError:
+            target_status = OrderStatus.CONFIRMED
 
     # Authorization Check
     is_admin = role == "ADMIN"

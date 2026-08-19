@@ -259,9 +259,13 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       const url = isEditing ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
       const method = isEditing ? 'PATCH' : 'POST'
 
+      const sessionUserId = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.props?.pageProps?.session?.user?.id) || ''
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {})
+        },
         body: JSON.stringify(payload)
       })
 

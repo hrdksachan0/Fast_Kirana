@@ -1256,9 +1256,13 @@ export function AdminDashboard({
   const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingOrderId(orderId)
     try {
+      const sessionUserId = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.props?.pageProps?.session?.user?.id) || ''
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {})
+        },
         body: JSON.stringify({ status: newStatus }),
       })
 
