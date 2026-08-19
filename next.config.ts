@@ -108,10 +108,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/coupons/:path*`,
       },
       {
-        source: '/api/orders/:path*',
-        destination: `${apiDest}/api/orders/:path*`,
-      },
-      {
         source: '/api/delivery/:path*',
         destination: `${apiDest}/api/delivery/:path*`,
       },

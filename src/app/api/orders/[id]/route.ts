@@ -265,7 +265,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", total FROM orders WHERE id = ${id} LIMIT 1
+      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", total FROM orders WHERE id = ${id} OR "readableId" = ${id} OR "readableId" ILIKE ${id + '%'} OR "combinedId" = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
