@@ -125,12 +125,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/picker/:path*`,
       },
 
-      // ── Admin (all sub-routes) ──
-      {
-        source: '/api/admin/:path*',
-        destination: `${apiDest}/api/admin/:path*`,
-      },
-
       // ── Profile ──
       {
         source: '/api/profile/:path*',
@@ -171,10 +165,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/restaurant-dashboard/:path*',
         destination: `${apiDest}/api/restaurant-dashboard/:path*`,
-      },
-      {
-        source: '/api/restaurant/:path*',
-        destination: `${apiDest}/api/restaurant/:path*`,
       },
 
       // ── Cafe Reports ──
@@ -223,25 +213,13 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/revalidate-bridge`,
       },
 
-      // ── Custom Auth Routes (Gradual Zero-Logout Migration) ──
+      // ── Cron Keep-Alive ──
       {
-        source: '/api/auth/login',
-        destination: `${apiDest}/api/auth/login`,
-      },
-      {
-        source: '/api/auth/signup',
-        destination: `${apiDest}/api/auth/signup`,
-      },
-      {
-        source: '/api/auth/otp/:path*',
-        destination: `${apiDest}/api/auth/otp/:path*`,
-      },
-      {
-        source: '/api/auth/email/:path*',
-        destination: `${apiDest}/api/auth/email/:path*`,
+        source: '/api/cron/:path*',
+        destination: `${apiDest}/api/cron/:path*`,
       },
     ];
-    // NOTE: /api/auth/[...nextauth] is preserved for seamless zero-logout session verification
+    // NOTE: Admin, Restaurant, and Auth routes are handled by Next.js natively for 100% NextAuth session compatibility
   },
   async headers() {
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app';
