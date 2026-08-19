@@ -20,10 +20,9 @@ export async function POST(request: Request) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Supabase URL or Service Role Key missing in env!')
       return NextResponse.json(
-        { error: 'Database environment variables not configured' },
-        { status: 500 }
+        { status: 'skipped', message: 'Supabase Auth bridge not active' },
+        { status: 200 }
       )
     }
 
