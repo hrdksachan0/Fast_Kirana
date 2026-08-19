@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
@@ -514,8 +515,37 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: Color(0xFFEA580C)),
+          loading: () => Skeletonizer(
+            enabled: true,
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                return _buildFoodItemCard(
+                  Product(
+                    id: 'skeleton_$index',
+                    name: 'Dummy Food Item Name Here',
+                    slug: 'dummy-slug',
+                    categoryId: 'cat',
+                    mrp: 150.0,
+                    price: 120.0,
+                    discount: 20.0,
+                    unit: '1 serving',
+                    stock: 99,
+                    isAvailable: true,
+                    tags: const [],
+                    minStock: 0,
+                    costPrice: 0,
+                    isFlashDeal: false,
+                    isTopPick: false,
+                    isBestSeller: false,
+                    sortOrder: 0,
+                    createdAt: DateTime.now(),
+                    description: 'This is a description placeholder for the skeleton loading animation card.',
+                  ),
+                );
+              },
+            ),
           ),
           error: (_, __) => const Center(
             child: Text('Failed to load menu items'),

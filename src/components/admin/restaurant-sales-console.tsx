@@ -104,7 +104,7 @@ export function RestaurantSalesConsole() {
   const fetchReports = async () => {
     setLoading(true)
     try {
-      const url = `/api/restaurant/reports?startDate=${startDate}&endDate=${endDate}`
+      const url = `/api/restaurant/reports?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load restaurant financials')
       
@@ -195,7 +195,7 @@ export function RestaurantSalesConsole() {
       csv += '\n'
       
       // Top Dishes Table
-      csv += '--- TOP SELLING DISHES ---\n'
+      csv += '--- DISHES & ITEMS SOLD ---\n'
       csv += 'Rank,Dish Name,Units Sold,Total Revenue (INR),Restaurant Margin (INR)\n'
       if (topProducts.length > 0) {
         topProducts.forEach((p, idx) => {
@@ -501,11 +501,11 @@ export function RestaurantSalesConsole() {
               </div>
             </div>
 
-            {/* Top Products */}
+            {/* Dishes & Items Sold */}
             <div className="bg-card border border-border/55 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
               <div>
-                <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Top Selling Dishes</h4>
-                <p className="text-[10px] text-text-muted mt-0.5">Most ordered restaurant main-courses &amp; specials.</p>
+                <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">Dishes &amp; Items Sold</h4>
+                <p className="text-[10px] text-text-muted mt-0.5">All items sold in this date range.</p>
               </div>
 
               {topProducts.length === 0 ? (
@@ -513,7 +513,7 @@ export function RestaurantSalesConsole() {
                   No products sold in this date range.
                 </div>
               ) : (
-                <div className="space-y-3 flex-1 pt-2">
+                <div className="space-y-3 flex-1 pt-2 max-h-96 overflow-y-auto pr-1">
                   {topProducts.map((p, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs font-semibold border-b border-border/30 pb-2">
                       <div className="truncate pr-4 flex-1">

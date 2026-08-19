@@ -8,6 +8,7 @@ import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
 import { Loader2, Truck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '@/lib/supabase-client'
 
 import DeliveryHeader from './components/delivery-header'
 import CodPaymentModal from './components/cod-payment-modal'
@@ -329,21 +330,28 @@ export default function DeliveryDashboard() {
     }
   }, [status, fetchOrders])
 
+  // Connect to Supabase Realtime for order notifications
   useEffect(() => {
     if (status !== 'authenticated') return
     
-    let eventSource: EventSource | null = null
     let updateTimeout: NodeJS.Timeout | null = null
     
-    const connectSSE = () => {
-      eventSource = new EventSource('/api/sse/orders')
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          
-          if (data.type === 'status-change') {
-            const { orderId, status: newStatus } = data
+    const channel = supabase
+      .channel('delivery-orders-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const oldOrder = payload.old as any
+            const newOrder = payload.new as any
+            const orderId = newOrder.id
+            const newStatus = newOrder.status
+            
             const activeShipped = ordersRef.current.filter(o => o.status === 'SHIPPED')
             const wasActive = activeShipped.find(o => o.id === orderId)
             if (wasActive && newStatus === 'CANCELLED') {
@@ -364,36 +372,28 @@ export default function DeliveryDashboard() {
                 icon: 'ℹ️'
               })
             }
-          }
 
-          if (data.type === 'new-order' || data.type === 'status-change') {
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
             }, 1000)
-            
-            if (data.type === 'status-change' && data.status === 'PACKED') {
+
+            if (newStatus === 'PACKED') {
               playNotificationChime()
               triggerHaptic('success')
             }
+          } else if (payload.eventType === 'INSERT') {
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
           }
-        } catch (err) {
-          console.error('SSE parse error:', err)
         }
-      }
-      
-      eventSource.onerror = (err) => {
-        eventSource?.close()
-        setTimeout(connectSSE, 5000)
-      }
-    }
-    
-    connectSSE()
+      )
+      .subscribe()
     
     return () => {
-      if (eventSource) {
-        eventSource.close()
-      }
+      supabase.removeChannel(channel)
       if (updateTimeout) {
         clearTimeout(updateTimeout)
       }

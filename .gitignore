@@ -58,3 +58,7 @@ restaurant-card.html
 
 # scripts run once during development
 scripts/
+
+# Firebase Admin credentials
+firebase-credentials.json
+fastapi-backend/firebase-credentials.json

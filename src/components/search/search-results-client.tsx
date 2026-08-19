@@ -43,7 +43,14 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
       const isRest = Boolean(p.restaurantId || rest || p.category?.slug === 'restaurant' || p.tags?.includes('restaurant'))
 
       const outletId = p.restaurantId || (isRest ? 'restaurant-general' : 'kirana-grocery')
-      const outletName = rest?.name || (isRest ? 'Restaurant Outlets' : 'FastKirana Store')
+      
+      let outletName = rest?.name || (p as any).restaurantName
+      if (!outletName) {
+        if (outletId === 'kirana-grocery') outletName = 'FastKirana Store'
+        else if (outletId === 'as-restaurant' || outletId === 'as-cafe') outletName = 'A.S Restaurant'
+        else if (outletId === 'wedson' || outletId === 'restaurant-kitchen') outletName = 'Wedson Restaurant'
+        else outletName = isRest ? 'Restaurant Outlets' : 'FastKirana Store'
+      }
 
       if (!map.has(outletId)) {
         map.set(outletId, {
@@ -124,6 +131,37 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
     setInStockOnly(false)
     setSortBy('relevance')
   }
+
+  // Group products by outlet/restaurant
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, { name: string; isRestaurant: boolean; items: Product[] }> = {}
+    
+    filteredProducts.forEach(p => {
+      const rest = (p as any).restaurant
+      const isRest = Boolean(p.restaurantId || rest || p.category?.slug === 'restaurant' || p.tags?.includes('restaurant'))
+      
+      const outletId = p.restaurantId || (isRest ? 'restaurant-general' : 'kirana-grocery')
+      
+      let outletName = rest?.name || (p as any).restaurantName
+      if (!outletName) {
+        if (outletId === 'kirana-grocery') outletName = 'FastKirana Store (Grocery)'
+        else if (outletId === 'as-restaurant' || outletId === 'as-cafe') outletName = 'A.S Restaurant'
+        else if (outletId === 'wedson' || outletId === 'restaurant-kitchen') outletName = 'Wedson Restaurant'
+        else outletName = isRest ? 'Restaurant Outlets' : 'FastKirana Store (Grocery)'
+      }
+
+      if (!groups[outletId]) {
+        groups[outletId] = {
+          name: outletName,
+          isRestaurant: isRest,
+          items: []
+        }
+      }
+      groups[outletId].items.push(p)
+    })
+    
+    return Object.entries(groups).map(([id, g]) => ({ id, ...g }))
+  }, [filteredProducts])
 
   return (
     <div className="space-y-4">
@@ -293,12 +331,40 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
         </div>
       )}
 
-      {/* Results grid */}
-      <div className="grid grid-cols-2 min-[375px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 animate-fade-in px-1">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {/* Results rendering (Grouped when All selected, otherwise flat) */}
+      {selectedOutlet === 'all' ? (
+        <div className="space-y-6">
+          {groupedProducts.map(group => (
+            <div key={group.id} className="space-y-2.5">
+              <div className="flex items-center gap-2 border-b border-border/40 pb-1.5 pt-1">
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[8px] font-black uppercase text-white tracking-wider",
+                  group.isRestaurant ? "bg-red-500" : "bg-emerald-500"
+                )}>
+                  {group.isRestaurant ? 'Kitchen' : 'Store'}
+                </span>
+                <h3 className="text-xs font-black text-text-primary tracking-tight">
+                  {group.name}
+                </h3>
+                <span className="text-[10px] text-text-muted font-bold">
+                  ({group.items.length} {group.items.length === 1 ? 'item' : 'items'})
+                </span>
+              </div>
+              <div className="grid grid-cols-2 min-[375px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 px-1">
+                {group.items.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 min-[375px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 animate-fade-in px-1">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
 
       {/* No results message */}
       {filteredProducts.length === 0 && (

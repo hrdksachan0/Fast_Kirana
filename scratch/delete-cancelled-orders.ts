@@ -1,30 +1,35 @@
 import 'dotenv/config'
-import { prisma } from '../src/lib/prisma'
+import { PrismaClient, OrderStatus } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  // Count how many orders are cancelled
-  const cancelledCount = await prisma.order.count({
-    where: { status: 'CANCELLED' }
-  })
+  try {
+    // 1. Get count of cancelled orders
+    const count = await prisma.order.count({
+      where: { status: OrderStatus.CANCELLED }
+    })
+    console.log(`Found ${count} CANCELLED orders in database.`)
 
-  console.log(`Found ${cancelledCount} cancelled orders in the database.`)
-
-  if (cancelledCount === 0) {
-    console.log('No cancelled orders to delete.')
-    return
+    if (count > 0) {
+      // 2. Delete the cancelled orders (related OrderItems will be cascade deleted)
+      const deleted = await prisma.order.deleteMany({
+        where: { status: OrderStatus.CANCELLED }
+      })
+      console.log(`Successfully deleted ${deleted.count} CANCELLED orders (and their associated order items).`)
+    } else {
+      console.log("No CANCELLED orders found to delete.")
+    }
+  } catch (error) {
+    console.error("Error deleting cancelled orders:", error)
+  } finally {
+    await prisma.$disconnect()
+    await pool.end()
   }
-
-  // Delete all cancelled orders (cascade will handle OrderItems automatically)
-  const deleteResult = await prisma.order.deleteMany({
-    where: { status: 'CANCELLED' }
-  })
-
-  console.log(`Successfully deleted ${deleteResult.count} cancelled orders from the database.`)
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error('Error deleting cancelled orders:', err)
-    process.exit(1)
-  })

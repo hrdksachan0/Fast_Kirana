@@ -39,7 +39,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // 2. Initialize Supabase Client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false }
 });
 
@@ -83,11 +83,10 @@ function wrapText(text, limit) {
   return lines;
 }
 
-// 3. Printing Mechanism (PowerShell Silent Print)
+/// 3. Printing Mechanism (PowerShell Silent Print)
 function printKOT(order, items, user) {
   try {
-    const lineLength = 32; // Optimized for 58mm (2-inch) thermal printers
-    const divider = '='.repeat(lineLength);
+    const lineLength = 40; // Re-adjusted for standard 3-inch (80mm) POS thermal printer rolls
     const thinDivider = '-'.repeat(lineLength);
 
     const centerText = (text) => {
@@ -136,14 +135,48 @@ function printKOT(order, items, user) {
     });
 
     lines.push(thinDivider);
-    lines.push('\n\n'); // Minimal tearing whitespace
+    lines.push('\n\n\n'); // Tearing whitespace
 
     const receiptText = lines.join('\n');
-    const tempFilePath = path.join(__dirname, 'temp_kot.txt');
+    const tempFilePath = path.join(__dirname, 'temp_kot.txt').replace(/\\/g, '/');
+    const psScriptPath = path.join(__dirname, 'print_temp.ps1').replace(/\\/g, '/');
+    
     fs.writeFileSync(tempFilePath, receiptText, 'utf8');
 
-    // Run Windows PowerShell silently to send KOT to the default printer
-    const cmd = `powershell -Command "Get-Content -Path '${tempFilePath}' -Raw | Out-Printer -Name '${PRINTER_NAME}'"`;
+    // Calculate dynamic paper height in hundredths of an inch (1 inch = 100 units)
+    // 220 units base height for header/meta/footer + 40 units per item
+    const calculatedHeight = Math.max(300, 220 + (items.length * 40));
+
+    // Create a temporary PowerShell script using .NET PrintDocument to set minimal margins, custom PaperSize, and Consolas font
+    const psScript = `
+Add-Type -AssemblyName System.Drawing
+$doc = New-Object System.Drawing.Printing.PrintDocument
+$doc.PrinterSettings.PrinterName = "${PRINTER_NAME}"
+
+# Set margins to 0 (since we already center align and format in text)
+$doc.DefaultPageSettings.Margins.Left = 0
+$doc.DefaultPageSettings.Margins.Right = 0
+$doc.DefaultPageSettings.Margins.Top = 0
+$doc.DefaultPageSettings.Margins.Bottom = 0
+
+# Set dynamic paper size: Width = 312 (3.12 inches for 80mm), Height = ${calculatedHeight} (2.2 inches + 0.4 inches per item)
+$paperSize = New-Object System.Drawing.Printing.PaperSize("CustomKOT", 312, ${calculatedHeight})
+$doc.DefaultPageSettings.PaperSize = $paperSize
+
+$doc.add_PrintPage({
+  param($sender, $e)
+  # Consolas size 10 is clean, readable, and stretches properly on 80mm rolls
+  $font = New-Object System.Drawing.Font("Consolas", 10)
+  $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Black)
+  $text = Get-Content -Path "${tempFilePath}" -Raw
+  $e.Graphics.DrawString($text, $font, $brush, 0, 0)
+})
+$doc.Print()
+`;
+    fs.writeFileSync(psScriptPath, psScript, 'utf8');
+
+    // Execute the PowerShell script silently
+    const cmd = `powershell -ExecutionPolicy Bypass -File "${psScriptPath}"`;
     
     exec(cmd, (error) => {
       if (error) {
@@ -151,7 +184,9 @@ function printKOT(order, items, user) {
       } else {
         console.log(`[Success] KOT Printed successfully for Order ${orderIdText}`);
       }
+      // Clean up temp files
       try { fs.unlinkSync(tempFilePath); } catch (_) {}
+      try { fs.unlinkSync(psScriptPath); } catch (_) {}
     });
 
   } catch (err) {
@@ -206,11 +241,9 @@ async function handlePrintRequest(orderId, isForceReprint = false) {
       user = userData;
     }
 
-    // Mark as printed
-    if (!isForceReprint) {
-      printedOrderIds.add(orderId);
-      savePrintedOrderLog();
-    }
+    // Mark as printed (always write to local log to keep history in sync)
+    printedOrderIds.add(orderId);
+    savePrintedOrderLog();
 
     // Print
     printKOT(order, items, user);
@@ -220,55 +253,85 @@ async function handlePrintRequest(orderId, isForceReprint = false) {
   }
 }
 
-// 5. Connect to Supabase Realtime Channels
-console.log('Connecting to Supabase Realtime...');
-const channel = supabase.channel('restaurant-orders-live');
+// 5. Connect to Supabase Realtime Channels with Robust Auto-Reconnect
+let channel = null;
 
-// Subscribe to direct "reprint-kot" broadcast signals (from Admin Mobile Click)
-channel.on('broadcast', { event: 'reprint-kot' }, (payload) => {
-  const { orderId } = payload.payload || {};
-  if (orderId) {
-    console.log(`[Broadcast] Received Reprint request for Order: ${orderId}`);
-    handlePrintRequest(orderId, true); // True forces print bypassing duplicate filters
+function setupSubscription() {
+  // Clean up any old channel before reconnecting
+  if (channel) {
+    console.log('[Realtime] Cleaning up old channel subscription...');
+    try {
+      supabase.removeChannel(channel);
+    } catch (_) {}
+    channel = null;
   }
-});
 
-// Subscribe to DB changes (optional auto-print on status change)
-if (AUTO_PRINT_ON_CONFIRM) {
-  console.log('[Auto-Print] Listening for status transitions to CONFIRMED in database...');
-  channel.on(
-    'postgres_changes',
-    {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'orders'
-    },
-    (payload) => {
-      const oldOrder = payload.old;
-      const newOrder = payload.new;
-      
-      // Print when status transitions to CONFIRMED
-      if (newOrder.status === 'CONFIRMED' && oldOrder.status !== 'CONFIRMED') {
-        console.log(`[DB Event] Order status confirmed: ${newOrder.id}`);
-        handlePrintRequest(newOrder.id, false);
-      }
+  // Force close old socket and re-create client to guarantee a fresh connection
+  console.log('[Realtime] Re-initializing Supabase Client connection...');
+  try {
+    if (supabase && supabase.realtime) {
+      supabase.realtime.disconnect();
     }
-  );
-} else {
-  console.log('[Manual KOT Mode] Auto-print on confirm is DISABLED. Listening to "Send KOT" button clicks only.');
+  } catch (_) {}
+
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false }
+  });
+
+  channel = supabase.channel('restaurant-orders-live');
+
+  // Subscribe to direct "reprint-kot" broadcast signals (from Admin Mobile Click)
+  channel.on('broadcast', { event: 'reprint-kot' }, (payload) => {
+    const { orderId } = payload.payload || {};
+    if (orderId) {
+      console.log(`[Broadcast] Received Reprint request for Order: ${orderId}`);
+      handlePrintRequest(orderId, true); // True forces print bypassing duplicate filters
+    }
+  });
+
+  // Subscribe to DB changes (optional auto-print on status change)
+  if (AUTO_PRINT_ON_CONFIRM) {
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders'
+      },
+      (payload) => {
+        const oldOrder = payload.old;
+        const newOrder = payload.new;
+        
+        // Print when status transitions to CONFIRMED
+        if (newOrder.status === 'CONFIRMED' && oldOrder.status !== 'CONFIRMED') {
+          console.log(`[DB Event] Order status confirmed: ${newOrder.id}`);
+          handlePrintRequest(newOrder.id, false);
+        }
+      }
+    );
+  }
+
+  channel.subscribe((status, err) => {
+    if (status === 'SUBSCRIBED') {
+      console.log('==================================================');
+      console.log('🚀 FastKirana Kitchen Printer Bridge is RUNNING!');
+      console.log(`Target Printer  : ${PRINTER_NAME}`);
+      console.log(`Mode            : ${AUTO_PRINT_ON_CONFIRM ? 'Auto-Print on Confirm' : 'Manual "Send KOT" Only'}`);
+      console.log('Listening for orders... Do not close this window.');
+      console.log('==================================================');
+    } else if (status === 'CLOSED') {
+      console.log('[Realtime] Supabase connection closed.');
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      const errMsg = err ? `: ${err.message}` : '';
+      console.error(`[Realtime] Subscription failed (${status})${errMsg}. Reconnecting in 5 seconds...`);
+      
+      // Auto-retry in 5 seconds
+      setTimeout(() => {
+        setupSubscription();
+      }, 5000);
+    }
+  });
 }
 
-channel.subscribe((status) => {
-  if (status === 'SUBSCRIBED') {
-    console.log('==================================================');
-    console.log('🚀 FastKirana Kitchen Printer Bridge is RUNNING!');
-    console.log(`Target Printer  : ${PRINTER_NAME}`);
-    console.log(`Mode            : ${AUTO_PRINT_ON_CONFIRM ? 'Auto-Print on Confirm' : 'Manual "Send KOT" Only'}`);
-    console.log('Listening for orders... Do not close this window.');
-    console.log('==================================================');
-  } else if (status === 'CLOSED') {
-    console.log('[Realtime] Supabase connection closed.');
-  } else if (status === 'CHANNEL_ERROR') {
-    console.error('[Realtime] Channel error occurred. Retrying connection...');
-  }
-});
+// Start first connection
+setupSubscription();

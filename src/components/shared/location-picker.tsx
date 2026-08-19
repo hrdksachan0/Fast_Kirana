@@ -6,6 +6,7 @@ import { MapPin, Navigation, Search, X, Loader2, Maximize2, Check, AlertCircle }
 import { useUIStore } from '@/stores/ui-store'
 import { FreeMapPicker } from '@/components/shared/free-map-picker'
 import { toast } from 'sonner'
+import { loadGoogleMapsScript } from '@/lib/google-maps'
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Radius of the earth in km
@@ -17,28 +18,6 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
     Math.sin(dLon / 2) * Math.sin(dLon / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
-}
-
-// Load Google Maps script globally with Places API
-let scriptLoadingPromise: Promise<any> | null = null
-function loadGoogleMapsScript(apiKey: string): Promise<any> {
-  if (typeof window === 'undefined') return Promise.resolve()
-  if ((window as any).google?.maps) return Promise.resolve((window as any).google.maps)
-  if (scriptLoadingPromise) return scriptLoadingPromise
-
-  scriptLoadingPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-    script.onload = () => resolve((window as any).google.maps)
-    script.onerror = (err) => {
-      scriptLoadingPromise = null
-      reject(err)
-    }
-    document.head.appendChild(script)
-  })
-  return scriptLoadingPromise
 }
 
 interface LocationPickerProps {

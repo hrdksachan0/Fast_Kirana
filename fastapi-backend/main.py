@@ -8,7 +8,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from config import settings
-from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm
+from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons
 
 # Initialize Sentry Error Monitoring if DSN is set
 if settings.SENTRY_DSN:
@@ -80,21 +80,26 @@ app.include_router(forecast.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
 app.include_router(websockets.router)
 app.include_router(auth.router, prefix="/api")
+app.include_router(coupons.router, prefix="/api")
 app.include_router(cart.router, prefix="/api")
 app.include_router(addresses.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
+app.include_router(restaurants.router, prefix="/api")
 app.include_router(restaurant.router)
 app.include_router(restaurant.restaurant_router)
 app.include_router(restaurant.cafe_router)
 app.include_router(restaurant.restaurant_report_router)
 app.include_router(picker.picker_router)
-app.include_router(profile.router)
+app.include_router(profile.router, prefix="/api")
+app.include_router(banners.router, prefix="/api")
 app.include_router(store_settings_router.router)
 app.include_router(store_settings_router.location_router, prefix="/api")
 app.include_router(orders_helper.helper_router, prefix="/api")
 app.include_router(products_helper.helper_router, prefix="/api")
 app.include_router(public.router)
 app.include_router(paytm.router)
+app.include_router(fcm.router, prefix="/api")
+app.include_router(categories.router, prefix="/api")
 
 @app.get("/")
 async def root():

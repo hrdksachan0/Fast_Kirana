@@ -532,7 +532,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       </div>
                     )}
                   </div>
-
                   {/* Only Cash on Delivery */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Only Cash on Delivery</label>

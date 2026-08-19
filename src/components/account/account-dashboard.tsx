@@ -12,6 +12,7 @@ import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, 
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
+import { supabase } from '@/lib/supabase-client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { BuyAgainSection } from '@/components/home/buy-again-section'
@@ -292,38 +293,42 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
   }
 
-  // Live order status updates via Server-Sent Events
+  // Live order status updates via Supabase Realtime
   useEffect(() => {
     const activeOrders = orders.filter(
       (ord) => !['DELIVERED', 'CANCELLED'].includes(ord.status)
     )
     if (activeOrders.length === 0) return
 
-    const eventSources = activeOrders.map((ord) => {
-      const es = new EventSource(`/api/orders/${ord.id}/live`)
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.status && data.status !== ord.status) {
+    const activeIds = activeOrders.map(o => o.id)
+
+    const channel = supabase
+      .channel('customer-orders-live')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          const updatedOrder = payload.new as any
+          const orderId = updatedOrder.id
+          
+          if (activeIds.includes(orderId)) {
+            const newStatus = updatedOrder.status
             setOrders((prevOrders) =>
               prevOrders.map((o) =>
-                o.id === ord.id ? { ...o, status: data.status } : o
+                o.id === orderId ? { ...o, status: newStatus } : o
               )
             )
           }
-        } catch (err) {
-          console.error('Error parsing SSE in AccountDashboard:', err)
         }
-      }
-      es.onerror = (err) => {
-        console.error(`SSE error for order ${ord.id}:`, err)
-        es.close()
-      }
-      return { id: ord.id, es }
-    })
+      )
+      .subscribe()
 
     return () => {
-      eventSources.forEach(({ es }) => es.close())
+      supabase.removeChannel(channel)
     }
   }, [orders.map((o) => `${o.id}:${o.status}`).join(',')])
 

@@ -2,11 +2,15 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/user.dart';
+import '../core/network/api_client.dart';
+import '../core/services/notification_service.dart';
 
 /// Holds the currently authenticated user, loaded from SharedPreferences.
 /// Stored as a JSON string under the `user_data` key after OTP verification.
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
-  AuthNotifier() : super(const AsyncValue.loading()) {
+  final Ref _ref;
+
+  AuthNotifier(this._ref) : super(const AsyncValue.loading()) {
     _load();
   }
 
@@ -21,6 +25,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
       final json = jsonDecode(raw) as Map<String, dynamic>;
       state = AsyncValue.data(User.fromJson(json));
+
+      // Register device FCM push token on startup
+      try {
+        final dio = _ref.read(dioProvider);
+        NotificationService().registerDeviceToken(dio);
+      } catch (e) {
+        print("Failed to register FCM token on startup: $e");
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -30,6 +42,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_data', jsonEncode(user.toJson()));
     state = AsyncValue.data(user);
+
+    // Register device FCM push token on login
+    try {
+      final dio = _ref.read(dioProvider);
+      NotificationService().registerDeviceToken(dio);
+    } catch (e) {
+      print("Failed to register FCM token on login: $e");
+    }
   }
 
   Future<void> updateUser(User user) async {
@@ -46,7 +66,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
 final authProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(ref);
 });
 
 /// Convenience: returns user id synchronously when available, otherwise null.

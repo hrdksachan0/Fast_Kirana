@@ -10,6 +10,12 @@ export function revalidateStorefront(categorySlug?: string | null, restaurantSlu
     // 1. Purge all product-level ISR caches (covers stock/price/availability
     //    changes surfaced in home, category, trending, search, etc.)
     revalidateTag('products', 'max')
+    
+    // Purge cached restaurant list (home page, etc.)
+    revalidateTag('restaurants', 'max')
+
+    // Purge cached store settings
+    revalidateTag('settings', 'max')
 
     // 2. Revalidate landing page (home)
     revalidatePath('/')

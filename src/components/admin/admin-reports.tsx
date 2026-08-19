@@ -178,7 +178,7 @@ export function AdminReports() {
   const fetchReport = async () => {
     try {
       setLoading(true)
-      const url = `/api/admin/reports?startDate=${startDate}&endDate=${endDate}`
+      const url = `/api/admin/reports?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch report data')
       

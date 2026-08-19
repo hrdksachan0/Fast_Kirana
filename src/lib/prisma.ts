@@ -15,7 +15,7 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  // Use DIRECT_URL in local development to avoid Neon pooler connection issues/timeouts
+  // Use DIRECT_URL in local development to avoid pooler timeouts, and DATABASE_URL in production
   let connectionString = (process.env.NODE_ENV !== 'production' && process.env.DIRECT_URL)
     ? process.env.DIRECT_URL
     : (process.env.DATABASE_URL || '')
@@ -37,7 +37,7 @@ function createPrismaClient() {
 
   const pool = new Pool({
     connectionString,
-    max: process.env.NODE_ENV !== 'production' ? 20 : 3, // Allow larger pool in dev for parallel compilation/queries, restrict in prod to prevent Neon limits exhaust
+    max: process.env.NODE_ENV !== 'production' ? 20 : 10, // Optimized connection pool for Supabase
     idleTimeoutMillis: 10000, // close idle connections quickly
     connectionTimeoutMillis: 15000 // wait up to 15 seconds to establish connection
   })

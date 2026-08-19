@@ -118,6 +118,21 @@ class CategoryOut(BaseModel):
         from_attributes = True
 
 
+class RestaurantOut(BaseModel):
+    id: str
+    name: str
+    slug: str
+    description: Optional[str] = None
+    logoUrl: Optional[str] = None
+    bannerUrl: Optional[str] = None
+    rating: float = 4.0
+    deliveryTime: str = "30-40 mins"
+    isOpen: bool = True
+
+    class Config:
+        from_attributes = True
+
+
 class ProductOut(BaseModel):
     id: str
     readableId: Optional[int] = None
@@ -147,6 +162,7 @@ class ProductOut(BaseModel):
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
     category: Optional[CategoryOut] = None
+    restaurant: Optional[RestaurantOut] = None
 
     class Config:
         from_attributes = True

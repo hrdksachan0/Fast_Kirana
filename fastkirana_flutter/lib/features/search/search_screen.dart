@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../providers/product_provider.dart';
@@ -329,7 +330,62 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       future: repo.getProducts(search: _query, limit: 100),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator(color: AppDesignSystem.primary));
+          return Skeletonizer(
+            enabled: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Text(
+                    'Loading search results...',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignSystem.textSecondary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.65,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: 4,
+                    itemBuilder: (context, index) {
+                      return ProductCard(
+                        product: Product(
+                          id: 'skeleton_$index',
+                          name: 'Dummy Product Name Here',
+                          slug: 'dummy-slug',
+                          categoryId: 'cat',
+                          mrp: 150.0,
+                          price: 120.0,
+                          discount: 20.0,
+                          unit: '1 unit',
+                          stock: 99,
+                          isAvailable: true,
+                          tags: const [],
+                          minStock: 0,
+                          costPrice: 0,
+                          isFlashDeal: false,
+                          isTopPick: false,
+                          isBestSeller: false,
+                          sortOrder: 0,
+                          createdAt: DateTime.now(),
+                        ),
+                        onTap: () {},
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         final results = snapshot.data ?? [];
@@ -363,6 +419,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
         }
 
+        final restaurantProducts = results.where((p) => p.restaurantId != null && p.restaurant != null).toList();
+        final groceryProducts = results.where((p) => p.restaurantId == null || p.restaurant == null).toList();
+
+        final Map<String, List<Product>> groupedByRestaurant = {};
+        for (var p in restaurantProducts) {
+          final restName = p.restaurant?.name ?? 'Other Restaurant';
+          if (!groupedByRestaurant.containsKey(restName)) {
+            groupedByRestaurant[restName] = [];
+          }
+          groupedByRestaurant[restName]!.add(p);
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -378,29 +446,111 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
             Expanded(
-              child: GridView.builder(
+              child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.65,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: results.length,
-                itemBuilder: (context, index) {
-                  final product = results[index];
-                  return ProductCard(
-                    product: product,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(product: product),
-                        ),
+                children: [
+                  // 1. Render Restaurant items grouped restaurant-wise
+                  if (groupedByRestaurant.isNotEmpty) ...[
+                    ...groupedByRestaurant.entries.map((entry) {
+                      final restaurantName = entry.key;
+                      final products = entry.value;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 12),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.restaurant, size: 15, color: Color(0xFFEA580C)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  restaurantName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.65,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: products.length,
+                            itemBuilder: (context, idx) {
+                              final product = products[idx];
+                              return ProductCard(
+                                product: product,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ProductDetailScreen(product: product),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       );
-                    },
-                  );
-                },
+                    }).toList(),
+                  ],
+
+                  // 2. Render Grocery (Darkstore) items
+                  if (groceryProducts.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 16, color: Color(0xFF0D9488)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'FastKirana Darkstore (Grocery)',
+                            style: GoogleFonts.inter(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.65,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: groceryProducts.length,
+                      itemBuilder: (context, idx) {
+                        final product = groceryProducts[idx];
+                        return ProductCard(
+                          product: product,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProductDetailScreen(product: product),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

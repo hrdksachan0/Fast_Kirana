@@ -1,161 +1,283 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import desc
-from typing import List, Optional, Dict, Any
+from sqlalchemy import func, not_
+from typing import Dict, Any, Optional
 import uuid
 
 from database import get_db
-from models import Address, User
+from models import Address, Order
 from routers.auth import require_auth
 
-router = APIRouter(prefix="/addresses", tags=["User Addresses"])
+
+router = APIRouter(prefix="/addresses", tags=["Addresses"])
 
 
-def generate_id(prefix: str = "addr_") -> str:
-    return f"{prefix}{uuid.uuid4().hex[:20]}"
+def get_last_10_digits(phone: str) -> str:
+    """Normalize phone number to return last 10 digits."""
+    digits = "".join(c for c in str(phone) if c.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
 
 
-def get_user_id(user: Dict[str, Any]) -> str:
+def get_user_id(user: dict) -> str:
     return user.get("id") or user.get("sub") or ""
 
 
 @router.get("")
-async def get_user_addresses(
+async def get_addresses(
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all saved addresses for current authenticated user.
+    Get all delivery addresses for the current user (excluding pickup stores).
     """
     user_id = get_user_id(current_user)
-    stmt = select(Address).where(Address.userId == user_id).order_by(desc(Address.isDefault))
-    result = await db.execute(stmt)
-    addresses = result.scalars().all()
-    return addresses
+    try:
+        stmt = select(Address).where(
+            Address.userId == user_id,
+            not_(Address.label.in_(['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE']))
+        ).order_by(Address.isDefault.desc())
+        
+        res = await db.execute(stmt)
+        return res.scalars().all()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch addresses: {str(e)}"
+        )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("")
 async def create_address(
     payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create a new address for current user.
-    Accepts addressLine or houseNo/street/area fields.
+    Create a new delivery address.
     """
     user_id = get_user_id(current_user)
-
-    label = payload.get("label", "Home")
-    address_line = payload.get("addressLine", "")
-    house_no = payload.get("houseNo", address_line or "123")
-    street = payload.get("street", address_line or "Main St")
-    area = payload.get("area", payload.get("city", "City Area"))
-    city = payload.get("city", "Bangalore")
-    pincode = payload.get("pincode", "560001")
-    phone = payload.get("phone", current_user.get("phone", ""))
+    label = payload.get("label")
+    house_no = payload.get("houseNo")
+    street = payload.get("street")
+    area = payload.get("area")
+    city = payload.get("city")
+    pincode = payload.get("pincode")
+    phone = payload.get("phone")
+    is_default = payload.get("isDefault", False)
     lat = payload.get("lat")
     lng = payload.get("lng")
-    is_default = bool(payload.get("isDefault", False))
 
-    # If this address is set as default, unset other default addresses for user
-    if is_default:
-        existing_defaults = await db.execute(
-            select(Address).where(Address.userId == user_id, Address.isDefault == True)
+    if not all([label, house_no, street, area, city, pincode, phone]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+
+    clean_phone = get_last_10_digits(str(phone))
+    if len(clean_phone) != 10:
+        raise HTTPException(status_code=400, detail="Mobile number must be a valid 10-digit number")
+
+    try:
+        # If setting default, clear other defaults first
+        if is_default:
+            await db.execute(
+                select(Address).where(Address.userId == user_id).with_for_update()
+            )
+            # Update all to false
+            await db.execute(
+                Address.__table__.update().where(Address.userId == user_id).values(isDefault=False)
+            )
+
+        address = Address(
+            id=f"addr_{uuid.uuid4().hex[:16]}",
+            userId=user_id,
+            label=label,
+            houseNo=house_no,
+            street=street,
+            area=area,
+            city=city,
+            pincode=str(pincode).strip(),
+            phone=clean_phone,
+            isDefault=bool(is_default),
+            lat=float(lat) if lat is not None else None,
+            lng=float(lng) if lng is not None else None
         )
-        for addr in existing_defaults.scalars().all():
-            addr.isDefault = False
 
-    new_address = Address(
-        id=generate_id("cmr"),
-        userId=user_id,
-        label=label,
-        houseNo=house_no,
-        street=street,
-        area=area,
-        city=city,
-        pincode=pincode,
-        phone=phone,
-        lat=lat,
-        lng=lng,
-        isDefault=is_default,
-    )
-    db.add(new_address)
-    await db.commit()
-    await db.refresh(new_address)
-    return new_address
+        db.add(address)
+        await db.commit()
+        await db.refresh(address)
+        return address
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create address: {str(e)}"
+        )
 
 
-@router.patch("/{address_id}")
+@router.put("")
 async def update_address(
-    address_id: str,
     payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update an existing address.
+    Update an existing delivery address.
     """
     user_id = get_user_id(current_user)
-    stmt = select(Address).where(Address.id == address_id, Address.userId == user_id)
-    result = await db.execute(stmt)
-    address = result.scalars().first()
+    address_id = payload.get("id")
+    label = payload.get("label")
+    house_no = payload.get("houseNo")
+    street = payload.get("street")
+    area = payload.get("area")
+    city = payload.get("city")
+    pincode = payload.get("pincode")
+    phone = payload.get("phone")
+    is_default = payload.get("isDefault", False)
+    lat = payload.get("lat")
+    lng = payload.get("lng")
 
-    if not address:
-        raise HTTPException(status_code=404, detail="Address not found")
+    if not all([address_id, label, house_no, street, area, city, pincode, phone]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
 
-    if "label" in payload:
-        address.label = payload["label"]
-    if "addressLine" in payload:
-        address.street = payload["addressLine"]
-    if "houseNo" in payload:
-        address.houseNo = payload["houseNo"]
-    if "street" in payload:
-        address.street = payload["street"]
-    if "area" in payload:
-        address.area = payload["area"]
-    if "city" in payload:
-        address.city = payload["city"]
-    if "pincode" in payload:
-        address.pincode = payload["pincode"]
-    if "phone" in payload:
-        address.phone = payload["phone"]
-    if "lat" in payload:
-        address.lat = payload["lat"]
-    if "lng" in payload:
-        address.lng = payload["lng"]
+    clean_phone = get_last_10_digits(str(phone))
+    if len(clean_phone) != 10:
+        raise HTTPException(status_code=400, detail="Mobile number must be a valid 10-digit number")
 
-    if payload.get("isDefault"):
-        existing_defaults = await db.execute(
-            select(Address).where(Address.userId == user_id, Address.isDefault == True)
+    try:
+        stmt = select(Address).where(Address.id == address_id)
+        res = await db.execute(stmt)
+        address = res.scalars().first()
+
+        if not address or address.userId != user_id:
+            raise HTTPException(status_code=404, detail="Address not found or unauthorized")
+
+        # If setting default, reset other defaults
+        if is_default:
+            await db.execute(
+                Address.__table__.update().where(Address.userId == user_id).values(isDefault=False)
+            )
+
+        address.label = label
+        address.houseNo = house_no
+        address.street = street
+        address.area = area
+        address.city = city
+        address.pincode = str(pincode).strip()
+        address.phone = clean_phone
+        address.isDefault = bool(is_default)
+        address.lat = float(lat) if lat is not None else None
+        address.lng = float(lng) if lng is not None else None
+
+        await db.commit()
+        await db.refresh(address)
+        return address
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update address: {str(e)}"
         )
-        for addr in existing_defaults.scalars().all():
-            addr.isDefault = False
-        address.isDefault = True
-
-    await db.commit()
-    await db.refresh(address)
-    return address
 
 
-@router.delete("/{address_id}")
-async def delete_address(
-    address_id: str,
+@router.patch("")
+async def update_address_coordinates(
+    payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Delete an address.
+    Partially update coordinates (lat/lng) of an address.
     """
     user_id = get_user_id(current_user)
-    stmt = select(Address).where(Address.id == address_id, Address.userId == user_id)
-    result = await db.execute(stmt)
-    address = result.scalars().first()
+    address_id = payload.get("id")
+    lat = payload.get("lat")
+    lng = payload.get("lng")
 
-    if not address:
-        raise HTTPException(status_code=404, detail="Address not found")
+    if not address_id:
+        raise HTTPException(status_code=400, detail="Address ID is required")
 
-    await db.delete(address)
-    await db.commit()
-    return {"success": True, "message": "Address deleted successfully"}
+    try:
+        stmt = select(Address).where(Address.id == address_id)
+        res = await db.execute(stmt)
+        address = res.scalars().first()
+
+        if not address or address.userId != user_id:
+            raise HTTPException(status_code=404, detail="Address not found or unauthorized")
+
+        address.lat = float(lat) if lat is not None else None
+        address.lng = float(lng) if lng is not None else None
+
+        await db.commit()
+        await db.refresh(address)
+        return address
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update address coordinates: {str(e)}"
+        )
+
+
+@router.delete("")
+async def delete_address(
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a delivery address. Validates that the user keeps at least one delivery address,
+    and that the address is not linked to any active orders.
+    """
+    user_id = get_user_id(current_user)
+    address_id = payload.get("id")
+
+    if not address_id:
+        raise HTTPException(status_code=400, detail="Address ID is required")
+
+    try:
+        stmt = select(Address).where(Address.id == address_id)
+        res = await db.execute(stmt)
+        address = res.scalars().first()
+
+        if not address or address.userId != user_id:
+            raise HTTPException(status_code=404, detail="Address not found or unauthorized")
+
+        # 1. Enforce: user must keep at least 1 delivery address
+        count_stmt = select(func.count(Address.id)).where(
+            Address.userId == user_id,
+            not_(Address.label.in_(['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE']))
+        )
+        count_res = await db.execute(count_stmt)
+        user_address_count = count_res.scalar()
+
+        if user_address_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="You must keep at least one delivery address. Add a new address before deleting this one."
+            )
+
+        # 2. Check if this address is linked to any existing orders
+        order_stmt = select(func.count(Order.id)).where(Order.addressId == address_id)
+        order_res = await db.execute(order_stmt)
+        linked_orders_count = order_res.scalar()
+
+        if linked_orders_count > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"This address is linked to {linked_orders_count} order(s) and cannot be deleted."
+            )
+
+        await db.delete(address)
+        await db.commit()
+        return {"message": "Address deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete address: {str(e)}"
+        )

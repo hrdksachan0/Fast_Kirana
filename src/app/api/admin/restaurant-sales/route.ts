@@ -68,12 +68,19 @@ export async function GET(request: NextRequest) {
         orderId: string
         name: string
         quantity: number
+        price: number
         restaurantId: string
+        prodRestaurantId?: string | null
+        categoryName?: string | null
+        categorySlug?: string | null
       }>
     >`
-      SELECT oi."orderId", oi.name, oi.quantity, o."restaurantId"
+      SELECT oi."orderId", oi.name, oi.quantity, oi.price, o."restaurantId", 
+             p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
+      LEFT JOIN products p ON oi."productId" = p.id
+      LEFT JOIN categories c ON p."categoryId" = c.id
       WHERE o.status::text = 'DELIVERED'
         AND o."restaurantId" IS NOT NULL
         AND o."createdAt" >= ${start}
@@ -144,11 +151,46 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Map order items by order ID for easier processing
+    const itemsByOrder: Record<string, typeof orderItems> = {}
+    for (const item of orderItems) {
+      if (!itemsByOrder[item.orderId]) {
+        itemsByOrder[item.orderId] = []
+      }
+      itemsByOrder[item.orderId].push(item)
+    }
+
+    // Define helper to identify grocery items (cold drinks, snacks, etc.)
+    const isPureGroceryItem = (item: typeof orderItems[0]) => {
+      if (item.prodRestaurantId) return false
+      const catNameLower = (item.categoryName || '').toLowerCase().trim()
+      const catSlugLower = (item.categorySlug || '').toLowerCase().trim()
+      return (
+        catNameLower.includes('beverage') ||
+        catNameLower.includes('drink') ||
+        catNameLower.includes('cold drink') ||
+        catSlugLower.includes('beverage') ||
+        catNameLower.includes('ice cream') ||
+        catSlugLower.includes('ice-cream') ||
+        catNameLower.includes('snack') ||
+        catSlugLower.includes('snacks') ||
+        catNameLower.includes('grocery')
+      )
+    }
+
     for (const o of orders) {
       const rStats = restaurantMap.get(o.restaurantId)
       if (!rStats) continue
 
-      const productSales = (Number(o.subtotal) || 0) - (Number(o.discount) || 0)
+      const items = itemsByOrder[o.id] || []
+      const orderRestSalesRaw = items.reduce((sum, item) => {
+        if (isPureGroceryItem(item)) return sum
+        return sum + (Number(item.price) * Number(item.quantity))
+      }, 0)
+
+      const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
+      const productSales = orderRestSalesRaw - discountShare
+
       const commRate = rStats.commissionRate
       const adminComm = productSales * commRate
       const restShare = productSales - adminComm
@@ -176,6 +218,8 @@ export async function GET(request: NextRequest) {
     }
 
     for (const oi of orderItems) {
+      if (isPureGroceryItem(oi)) continue // Skip grocery/cold drinks
+      
       const rStats = restaurantMap.get(oi.restaurantId)
       if (!rStats) continue
 

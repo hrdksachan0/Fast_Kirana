@@ -23,6 +23,7 @@ import Script from 'next/script'
 import { Suspense } from 'react'
 import { TopProgressBar } from '@/components/shared/top-progress-bar'
 import { SwipeToBack } from '@/components/shared/swipe-to-back'
+import { SupabaseAuthBridge } from '@/components/auth/auth-bridge'
 
 
 const jakarta = Plus_Jakarta_Sans({
@@ -102,6 +103,7 @@ export default function RootLayout({
       </head>
       <body className={`${jakarta.className} bg-background text-text-primary antialiased`}>
         <AuthProvider>
+          <SupabaseAuthBridge />
           <ThemeProvider>
             <LiveStockProvider>
               <CartSyncProvider>

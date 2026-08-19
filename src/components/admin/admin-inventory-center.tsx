@@ -79,12 +79,12 @@ export function AdminInventoryCenter() {
   const fetchCatalog = async () => {
     try {
       setLoadingCatalog(true)
-      const res = await fetch('/api/products?limit=1000&admin=true&includeUnavailable=true')
+      const res = await fetch(`/api/products?limit=1000&admin=true&includeUnavailable=true&t=${Date.now()}`)
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
       
-      const catRes = await fetch('/api/categories')
+      const catRes = await fetch(`/api/categories?t=${Date.now()}`)
       if (catRes.ok) {
         const catData = await catRes.json()
         setCategories(catData.categories || [])

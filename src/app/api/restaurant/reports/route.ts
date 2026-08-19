@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
       name: string
       costPrice: number
       categoryName: string
+      categorySlug?: string
+      restaurantId?: string | null
       variants: any
       selectedVariant: string | null
     }
@@ -84,6 +86,8 @@ export async function GET(request: NextRequest) {
         SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
                COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
                c.name as "categoryName",
+               c.slug as "categorySlug",
+               p."restaurantId" as "restaurantId",
                COALESCE(oi.variants, p.variants) as "variants", 
                oi."selectedVariant"
         FROM order_items oi
@@ -110,6 +114,8 @@ export async function GET(request: NextRequest) {
         SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
                COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
                c.name as "categoryName",
+               c.slug as "categorySlug",
+               p."restaurantId" as "restaurantId",
                COALESCE(oi.variants, p.variants) as "variants", 
                oi."selectedVariant"
         FROM order_items oi
@@ -184,6 +190,24 @@ export async function GET(request: NextRequest) {
       return { cost: ingredientCost, sales: totalItemSales, profit: netKitchenProfit, restaurantProfit, adminProfit }
     }
 
+    // Define helper to identify grocery items (cold drinks, snacks, etc.)
+    const isPureGroceryItem = (item: ItemRow) => {
+      if (item.restaurantId) return false
+      const catNameLower = (item.categoryName || '').toLowerCase().trim()
+      const catSlugLower = (item.categorySlug || '').toLowerCase().trim()
+      return (
+        catNameLower.includes('beverage') ||
+        catNameLower.includes('drink') ||
+        catNameLower.includes('cold drink') ||
+        catSlugLower.includes('beverage') ||
+        catNameLower.includes('ice cream') ||
+        catSlugLower.includes('ice-cream') ||
+        catNameLower.includes('snack') ||
+        catSlugLower.includes('snacks') ||
+        catNameLower.includes('grocery')
+      )
+    }
+
     // 3. Process Financials Summary (with Channel Separation)
     let totalSales = 0
     let totalCost = 0
@@ -205,16 +229,25 @@ export async function GET(request: NextRequest) {
 
     orders.forEach(o => {
       const isPickup = o.deliveryMethod === 'PICKUP'
-      const foodSales = (o.subtotal || 0) - (o.discount || 0)
-      totalSales += foodSales
       totalDiscount += o.discount || 0
       totalTaxes += o.taxes || 0
       totalMisc += o.miscFee || 0
 
+      const items = itemsByOrder[o.id] || []
+      const orderRestSalesRaw = items.reduce((sum, item) => {
+        if (isPureGroceryItem(item)) return sum
+        return sum + (item.price * item.quantity)
+      }, 0)
+
+      const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
+      const foodSales = orderRestSalesRaw - discountShare
+      totalSales += foodSales
+
       let orderRestProfit = 0
       let orderAdmProfit = 0
-      const items = itemsByOrder[o.id] || []
       items.forEach(item => {
+        if (isPureGroceryItem(item)) return
+        
         const metrics = getItemMetrics(item)
         orderRestProfit += metrics.restaurantProfit
         orderAdmProfit += metrics.adminProfit
@@ -250,13 +283,19 @@ export async function GET(request: NextRequest) {
       const dayData = dailyTrendMap.get(dateStr)!
       dayData.orders++
       
-      const foodSales = (o.subtotal || 0) - (o.discount || 0)
+      const items = itemsByOrder[o.id] || []
+      const orderRestSalesRaw = items.reduce((sum, item) => {
+        if (isPureGroceryItem(item)) return sum
+        return sum + (item.price * item.quantity)
+      }, 0)
+      const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
+      const foodSales = orderRestSalesRaw - discountShare
       dayData.sales += foodSales
 
-      const items = itemsByOrder[o.id] || []
       let orderRestaurantProfit = 0
       let orderAdminProfit = 0
       items.forEach(item => {
+        if (isPureGroceryItem(item)) return
         const metrics = getItemMetrics(item)
         orderRestaurantProfit += metrics.restaurantProfit
         orderAdminProfit += metrics.adminProfit
@@ -267,9 +306,11 @@ export async function GET(request: NextRequest) {
 
     const dailySales = Array.from(dailyTrendMap.values())
 
-    // 5. Top Selling Products
+    // 5. Dishes & Items Sold (Excluding general grocery products)
     const productStatsMap = new Map<string, { name: string; quantity: number; sales: number; profit: number; adminProfit: number }>()
     orderItems.forEach(item => {
+      if (isPureGroceryItem(item)) return // Skip grocery/cold drinks
+      
       const metrics = getItemMetrics(item)
       const key = `${item.productId}_${item.selectedVariant || ''}`
 
@@ -292,7 +333,6 @@ export async function GET(request: NextRequest) {
 
     const topProducts = Array.from(productStatsMap.values())
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10)
 
     const latestPayout = await prisma.restaurantPayout.findFirst({
       where: {

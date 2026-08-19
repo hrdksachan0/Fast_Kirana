@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { supabase } from '@/lib/supabase-client'
 import { triggerHaptic } from '@/lib/haptic'
 import { formatOrderTime } from '@/lib/date-helpers'
 import { 
@@ -356,24 +357,29 @@ export default function PickerDashboard() {
     }
   }, [])
 
-  // Connect to SSE for real-time order notifications
+  // Connect to Supabase Realtime for order notifications
   useEffect(() => {
     if (status !== 'authenticated') return
     
-    let eventSource: EventSource | null = null
     let updateTimeout: NodeJS.Timeout | null = null
     
-    const connectSSE = () => {
-      eventSource = new EventSource('/api/sse/orders')
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          
-          if (data.type === 'status-change') {
-            const { orderId, status: newStatus } = data
+    const channel = supabase
+      .channel('picker-orders-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const oldOrder = payload.old as any
+            const newOrder = payload.new as any
+            const orderId = newOrder.id
+            const newStatus = newOrder.status
             
-            // Check if active order cancelled
+            // Check if active order cancelled or packed
             const currentActive = activeOrderRef.current
             if (currentActive && currentActive.id === orderId) {
               if (newStatus === 'CANCELLED') {
@@ -440,38 +446,30 @@ export default function PickerDashboard() {
                 }
               })
             }
-          }
 
-          if (data.type === 'new-order' || data.type === 'status-change') {
-            // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
             }, 1000)
-            
+          } else if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as any
+            if (updateTimeout) clearTimeout(updateTimeout)
+            updateTimeout = setTimeout(() => {
+              fetchOrders(true)
+            }, 1000)
+
             // Urgent sound if new grocery order
-            if (data.type === 'new-order' && !data.restaurantId && data.orderType !== 'RESTAURANT') {
+            if (!newOrder.restaurantId && newOrder.orderType !== 'RESTAURANT') {
               playNotificationChime()
               triggerHaptic()
             }
           }
-        } catch (err) {
-          console.error('SSE parse error:', err)
         }
-      }
-      
-      eventSource.onerror = (err) => {
-        eventSource?.close()
-        setTimeout(connectSSE, 5000)
-      }
-    }
-    
-    connectSSE()
+      )
+      .subscribe()
     
     return () => {
-      if (eventSource) {
-        eventSource.close()
-      }
+      supabase.removeChannel(channel)
       if (updateTimeout) {
         clearTimeout(updateTimeout)
       }

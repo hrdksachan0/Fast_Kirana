@@ -4,7 +4,11 @@ Migrated from Next.js API routes to FastAPI.
 Covers: dashboard, products, orders, users, coupons, inventory, reports, etc.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks
+from utils.push import send_push_notification
+import logging
+
+logger = logging.getLogger("admin_extended")
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, and_, desc, text, or_, case
@@ -400,7 +404,8 @@ async def admin_update_order_status(
     order_id: str,
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """Update order status."""
     result = await db.execute(select(Order).where(Order.id == order_id))
@@ -420,6 +425,44 @@ async def admin_update_order_status(
 
     await db.commit()
     await db.refresh(order)
+
+    # Trigger push notifications for status updates in the background
+    if new_status:
+        status_notification_map = {
+            OrderStatus.CONFIRMED: ("Order Confirmed! 🛒", f"Order #{order.readableId or order.id[:8]} has been confirmed by the store."),
+            OrderStatus.PACKED: ("Order Packed! 📦", "Your items have been packed and are ready to deliver."),
+            OrderStatus.SHIPPED: ("Out for Delivery! 🛵", "Our rider is on the way with your order. Keep your phone nearby!"),
+            OrderStatus.DELIVERED: ("Order Delivered! 🎉", "Thank you for ordering with FastKirana. Enjoy your groceries!"),
+            OrderStatus.CANCELLED: ("Order Cancelled ❌", f"Order #{order.readableId or order.id[:8]} has been cancelled.")
+        }
+        
+        notify_data = status_notification_map.get(order.status)
+        if notify_data:
+            title, body = notify_data
+            background_tasks.add_task(
+                send_push_notification,
+                user_id=order.userId,
+                title=title,
+                body=body,
+                data={"orderId": order.id, "status": order.status.value}
+            )
+            # If there is a companion order, notify them too
+            if order.combinedId:
+                try:
+                    comp_stmt = select(Order).where(and_(Order.combinedId == order.combinedId, Order.id != order.id))
+                    comp_res = await db.execute(comp_stmt)
+                    companion = comp_res.scalars().first()
+                    if companion and companion.userId != order.userId:
+                        background_tasks.add_task(
+                            send_push_notification,
+                            user_id=companion.userId,
+                            title=title,
+                            body=body,
+                            data={"orderId": companion.id, "status": companion.status.value}
+                        )
+                except Exception as e:
+                    logger.error(f"Error notifying companion user in admin status update: {str(e)}")
+
     return {"order": {"id": order.id, "status": order.status.value}}
 
 

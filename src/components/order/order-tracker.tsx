@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 import { useRouter } from 'next/navigation'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
+import { supabase } from '@/lib/supabase-client'
 import {
   Check,
   ShoppingBag,
@@ -428,49 +429,58 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     return () => clearInterval(pollInterval)
   }, [order.id, order.status, compOrder?.id])
 
-  // SSE connection to listen for updates (status changes, edits)
+  // Supabase Realtime connection to listen for updates (status changes, edits)
   useEffect(() => {
-    const eventSource = new EventSource('/api/sse/orders')
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.orderId === order.id && (data.type === 'order-edited' || data.type === 'status-change')) {
-          fetch(`/api/orders/${order.id}`)
-            .then(res => res.json())
-            .then(updatedOrder => {
-              if (updatedOrder && updatedOrder.status) {
-                setOrder(updatedOrder)
-                if (data.type === 'order-edited') {
-                  toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
-                    icon: '📝'
-                  })
-                }
-              }
-            })
-        }
+    const channel = supabase
+      .channel(`order-tracker-${order.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          const updatedOrder = payload.new as any
+          const orderId = updatedOrder.id
 
-        if (compOrder && data.orderId === compOrder.id && (data.type === 'order-edited' || data.type === 'status-change')) {
-          fetch(`/api/orders/${compOrder.id}`)
-            .then(res => res.json())
-            .then(updatedOrder => {
-              if (updatedOrder && updatedOrder.status) {
-                setCompOrder(updatedOrder)
-                if (data.type === 'order-edited') {
-                  toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
-                    icon: '📝'
-                  })
+          if (orderId === order.id) {
+            fetch(`/api/orders/${order.id}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.status) {
+                  const wasEdited = data.status === order.status && data.total !== order.total
+                  setOrder(data)
+                  if (wasEdited) {
+                    toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
+                      icon: '📝'
+                    })
+                  }
                 }
-              }
-            })
+              })
+          }
+
+          if (compOrder && orderId === compOrder.id) {
+            fetch(`/api/orders/${compOrder.id}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.status) {
+                  const wasEdited = data.status === compOrder.status && data.total !== compOrder.total
+                  setCompOrder(data)
+                  if (wasEdited) {
+                    toast.info('⚠️ Your order has been modified by the store. Bill details updated.', {
+                      icon: '📝'
+                    })
+                  }
+                }
+              })
+          }
         }
-      } catch (err) {
-        console.error('SSE message parsing error in tracker:', err)
-      }
-    }
+      )
+      .subscribe()
 
     return () => {
-      eventSource.close()
+      supabase.removeChannel(channel)
     }
   }, [order.id, compOrder?.id])
 

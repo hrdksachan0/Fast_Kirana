@@ -1,13 +1,4 @@
-/**
- * Phone number normalization utilities.
- *
- * Handles common Indian phone formats:
- *   "9876543210"           → "+919876543210"
- *   "+919876543210"        → "+919876543210"
- *   "+91 98765-43210"      → "+919876543210"
- *   "919876543210"         → "+919876543210"
- *   "whatsapp:+91-9876543210" → "+919876543210" (after stripping prefix)
- */
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 
 /** Extract only digits from any phone string */
 function digitsOnly(phone: string): string {
@@ -36,12 +27,16 @@ export function normalizePhone(phone: string): string {
     cleaned = cleaned.slice(3)
   }
 
-  const digits = digitsOnly(cleaned)
+  const parsed = parsePhoneNumberFromString(cleaned, 'IN')
+  if (parsed && parsed.isValid()) {
+    return parsed.number // E.164 format: +919876543210
+  }
 
+  // Fallback to basic cleaning if parsing fails
+  const digits = digitsOnly(cleaned)
   if (digits.length === 10) return `+91${digits}`
   if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`
 
-  // Return trimmed original for unrecognized formats
   return phone.trim()
 }
 
@@ -49,6 +44,10 @@ export function normalizePhone(phone: string): string {
  * Get the last 10 digits of a phone number (for OTP lookup, validation, etc.)
  */
 export function getLast10Digits(phone: string): string {
+  const parsed = parsePhoneNumberFromString(phone, 'IN')
+  if (parsed && parsed.isValid()) {
+    return parsed.nationalNumber as string
+  }
   return digitsOnly(phone).slice(-10)
 }
 
@@ -57,14 +56,19 @@ export function getLast10Digits(phone: string): string {
  * Accepts 10-digit (XXXXXXXXXX) or 12-digit with 91 prefix (91XXXXXXXXXX)
  */
 export function isValidIndianPhone(phone: string): boolean {
-  const digits = digitsOnly(phone)
-  return digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))
+  const parsed = parsePhoneNumberFromString(phone, 'IN')
+  return parsed ? parsed.isValid() : false
 }
 
 /**
  * Format a phone for display: "+91 98765 43210"
  */
 export function formatPhoneDisplay(phone: string): string {
+  const parsed = parsePhoneNumberFromString(phone, 'IN')
+  if (parsed && parsed.isValid()) {
+    const formatted = parsed.formatNational() // e.g. "98765 43210"
+    return `+91 ${formatted}`
+  }
   const digits = getLast10Digits(phone)
   if (digits.length !== 10) return phone
   return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`

@@ -1,26 +1,20 @@
-"""
-Picker Routes
-Migrated from Next.js API routes to FastAPI.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, and_, desc, or_
+from sqlalchemy import func, and_, desc, or_, text
 from sqlalchemy.orm import selectinload
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-import uuid
+import re
 
 from database import get_db
-from models import Order, OrderItem, User, Product, OrderStatus, OrderType, Role, CartItem
+from models import Order, OrderItem, User, Product, Address, Restaurant, OrderStatus, OrderType, Role
 from routers.auth import require_auth
 
-picker_router = APIRouter(prefix="/picker", tags=["Picker & Chef"])
+picker_router = APIRouter(prefix="/picker", tags=["Picker & Chef Operations"])
 
 
 def require_picker_or_chef(current_user: dict) -> dict:
-    """Allow PICKER, CHEF, RESTAURANT_OWNER, ADMIN."""
     role = current_user.get("role")
     if role not in ["PICKER", "CHEF", "RESTAURANT_OWNER", "ADMIN"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
@@ -33,116 +27,172 @@ async def get_picker_orders(
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get orders for picker/chef dashboard."""
-    user_role = current_user.get("role")
-    user_id = current_user.get("id") or current_user.get("sub")
+    """
+    Get list of active PENDING/CONFIRMED orders to pick or cook (returns flat array matching Next.js).
+    """
     require_picker_or_chef(current_user)
+    user_role = current_user.get("role")
+    assigned_restaurant_id = current_user.get("assignedRestaurantId")
 
-    if user_role in ("CHEF", "RESTAURANT_OWNER") and type not in ("cafe", "restaurant"):
-        if user_role == "RESTAURANT_OWNER":
-            pass  # allow
+    # Staff checks
+    if user_role in ["CHEF", "RESTAURANT_OWNER"]:
+        email_str = current_user.get("email", "").lower()
+        is_restaurant_chef = email_str.startswith("restaurant") or user_role == "RESTAURANT_OWNER"
+        if is_restaurant_chef and type != "restaurant":
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        if not is_restaurant_chef and type != "cafe":
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if user_role == "PICKER" and type in ["cafe", "restaurant"]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Build filters
+    filters = [Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED])]
+
+    if type == "cafe":
+        if assigned_restaurant_id:
+            filters.append(Order.restaurantId == assigned_restaurant_id)
         else:
-            raise HTTPException(status_code=403, detail="Unauthorized for this type")
+            filters.append(or_(Order.restaurantId != None, Order.orderType == OrderType.RESTAURANT))
+    elif type == "restaurant":
+        if assigned_restaurant_id:
+            filters.append(Order.restaurantId == assigned_restaurant_id)
+        else:
+            filters.append(or_(Order.restaurantId != None, Order.orderType == OrderType.RESTAURANT))
+    else:
+        filters.append(Order.restaurantId == None)
+        filters.append(or_(Order.orderType == OrderType.GROCERY, Order.orderType == None))
 
-    if user_role == "PICKER" and type in ("cafe", "restaurant"):
-        raise HTTPException(status_code=403, detail="Pickers only handle grocery orders")
-
-    # Build query
     stmt = select(Order).options(
         selectinload(Order.items),
-        selectinload(Order.user),
         selectinload(Order.address),
-    )
+        selectinload(Order.user)
+    ).where(*filters).order_by(Order.createdAt.asc())
 
-    statuses = [OrderStatus.PENDING, OrderStatus.CONFIRMED]
-    if type == "cafe":
-        stmt = stmt.where(
-            and_(
-                Order.status.in_(statuses),
-                Order.orderType == OrderType.RESTAURANT
-            )
-        )
-    elif type == "restaurant":
-        stmt = stmt.where(
-            and_(
-                Order.status.in_(statuses),
-                Order.orderType == OrderType.RESTAURANT
-            )
-        )
-    else:
-        # Grocery orders
-        stmt = stmt.where(
-            and_(
-                Order.status.in_(statuses),
-                Order.orderType == OrderType.GROCERY
-            )
-        )
+    res = await db.execute(stmt)
+    orders = res.scalars().all()
 
-    stmt = stmt.order_by(Order.createdAt.asc()).limit(50)
-    result = await db.execute(stmt)
-    orders = result.scalars().all()
+    if not orders:
+        return []
 
-    return {
-        "orders": [
-            {
-                "id": o.id,
-                "readableId": o.readableId,
-                "userId": o.userId,
-                "status": o.status.value if hasattr(o.status, 'value') else str(o.status),
-                "total": float(o.total),
-                "subtotal": float(o.subtotal),
-                "paymentMethod": o.paymentMethod.value if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
-                "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
-                "createdAt": o.createdAt.isoformat() if o.createdAt else None,
-                "user": {"name": o.user.name if o.user else "Customer", "phone": o.user.phone if o.user else None} if o.user else None,
-                "address": {
-                    "houseNo": o.address.houseNo if o.address else "",
-                    "street": o.address.street if o.address else "",
-                    "area": o.address.area if o.address else "",
-                    "city": o.address.city if o.address else "",
-                    "pincode": o.address.pincode if o.address else "",
-                } if o.address else None,
-                "items": [
-                    {"id": i.id, "productId": i.productId, "quantity": i.quantity,
-                     "selectedVariant": i.selectedVariant, "notes": i.notes}
-                    for i in o.items
-                ] if hasattr(o, 'items') else [],
-            }
-            for o in orders
-        ]
-    }
+    # Get companion orders sharing combinedId
+    combined_ids = list(set([o.combinedId for o in orders if o.combinedId]))
+    companion_orders = []
+    if combined_ids:
+        comp_stmt = select(Order).options(selectinload(Order.items)).where(Order.combinedId.in_(combined_ids))
+        comp_res = await db.execute(comp_stmt)
+        companion_orders = comp_res.scalars().all()
 
+    # Hydrate active worker names
+    picker_ids = [o.assignedPickerId for o in orders if o.assignedPickerId]
+    chef_ids = [o.assignedChefId for o in orders if o.assignedChefId]
+    worker_ids = list(set(picker_ids + chef_ids))
+    
+    workers = {}
+    if worker_ids:
+        w_stmt = select(User.id, User.name, User.phone).where(User.id.in_(worker_ids))
+        w_res = await db.execute(w_stmt)
+        for w in w_res.all():
+            workers[w.id] = {"name": w.name or "Staff", "phone": w.phone}
 
-@picker_router.patch("/orders/{order_id}/status")
-async def picker_update_order_status(
-    order_id: str,
-    data: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
-):
-    """Update order status from picker/chef view."""
-    require_picker_or_chef(current_user)
+    # Fetch restaurants
+    restaurant_ids = list(set([o.restaurantId for o in orders if o.restaurantId]))
+    restaurants = {}
+    if restaurant_ids:
+        r_stmt = select(Restaurant).where(Restaurant.id.in_(restaurant_ids))
+        r_res = await db.execute(r_stmt)
+        for r in r_res.scalars().all():
+            restaurants[r.id] = r
 
-    result = await db.execute(select(Order).where(Order.id == order_id))
-    order = result.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+    result = []
+    for o in orders:
+        order_items = []
+        for i in o.items:
+            # Query product details to populate relations
+            p_stmt = select(Product).options(selectinload(Product.category)).where(Product.id == i.productId)
+            p_res = await db.execute(p_stmt)
+            p_obj = p_res.scalars().first()
+            
+            order_items.append({
+                "id": i.id,
+                "productId": i.productId,
+                "name": i.name,
+                "price": float(i.price),
+                "quantity": i.quantity,
+                "imageUrl": i.imageUrl,
+                "selectedVariant": i.selectedVariant,
+                "notes": i.notes,
+                "product": {
+                    "id": p_obj.id,
+                    "name": p_obj.name,
+                    "imageUrl": p_obj.imageUrl,
+                    "variants": p_obj.variants,
+                    "category": {
+                        "id": p_obj.category.id,
+                        "name": p_obj.category.name,
+                        "slug": p_obj.category.slug
+                    } if p_obj and p_obj.category else None
+                } if p_obj else None
+            })
 
-    new_status = data.get("status")
-    if new_status:
-        try:
-            order.status = OrderStatus(new_status)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status")
+        user_data = {"name": o.user.name or "Customer", "phone": o.user.phone} if o.user else {"name": "Customer", "phone": None}
+        assigned_picker = workers.get(o.assignedPickerId)
+        assigned_chef = workers.get(o.assignedChefId)
+        rest_obj = restaurants.get(o.restaurantId)
 
-    # Timestamp fields
-    if new_status == "CONFIRMED" and not order.confirmedAt:
-        order.confirmedAt = datetime.utcnow()
-    elif new_status == "PACKED" and not order.packedAt:
-        order.packedAt = datetime.utcnow()
-    elif new_status == "SHIPPED" and not order.shippedAt:
-        order.shippedAt = datetime.utcnow()
+        # Companion order formatting
+        companion_data = None
+        if o.combinedId:
+            matching = next((c for c in companion_orders if c.combinedId == o.combinedId and c.id != o.id), None)
+            if matching:
+                companion_data = {
+                    "id": matching.id,
+                    "status": matching.status.value,
+                    "shopName": matching.shopName,
+                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity} for i in matching.items]
+                }
 
-    await db.commit()
-    await db.refresh(order)
-    return {"order": {"id": order.id, "status": order.status.value if hasattr(order.status, 'value') else str(order.status)}}
+        result.append({
+            "id": o.id,
+            "readableId": o.readableId,
+            "userId": o.userId,
+            "addressId": o.addressId,
+            "status": o.status.value,
+            "subtotal": float(o.subtotal),
+            "discount": float(o.discount),
+            "deliveryFee": float(o.deliveryFee),
+            "taxes": float(o.taxes),
+            "miscFee": float(o.miscFee),
+            "total": float(o.total),
+            "paymentMethod": o.paymentMethod.value,
+            "paymentStatus": o.paymentStatus.value,
+            "estimatedDelivery": o.estimatedDelivery.isoformat() if o.estimatedDelivery else None,
+            "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+            "deliveryMethod": o.deliveryMethod,
+            "shopName": o.shopName,
+            "notes": o.notes,
+            "restaurantId": o.restaurantId,
+            "items": order_items,
+            "user": user_data,
+            "assignedPicker": assigned_picker,
+            "assignedChef": assigned_chef,
+            "address": {
+                "houseNo": o.address.houseNo if o.address else "",
+                "street": o.address.street if o.address else "",
+                "area": o.address.area if o.address else "",
+                "city": o.address.city if o.address else "",
+                "pincode": o.address.pincode if o.address else "",
+                "phone": o.address.phone if o.address else None,
+            } if o.address else None,
+            "restaurant": {
+                "id": rest_obj.id,
+                "name": rest_obj.name,
+                "address": rest_obj.address,
+                "logoUrl": rest_obj.logoUrl,
+                "ownerPhone": rest_obj.ownerPhone
+            } if rest_obj else None,
+            "restaurantName": rest_obj.name if rest_obj else o.shopName,
+            "companionOrder": companion_data
+        })
+
+    return result

@@ -32,19 +32,20 @@ async def get_restaurants(
 ):
     """Get all restaurants (public)."""
     from models import Restaurant
+    from sqlalchemy import cast, String
     stmt = select(Restaurant).where(Restaurant.isActive == True)
     if search:
         stmt = stmt.where(or_(
             Restaurant.name.ilike(f"%{search}%"),
-            Restaurant.cuisine.ilike(f"%{search}%"),
+            cast(Restaurant.cuisineTags, String).ilike(f"%{search}%"),
         ))
     stmt = stmt.order_by(Restaurant.rating.desc().nullslast())
     result = await db.execute(stmt)
     restaurants = result.scalars().all()
     return {"restaurants": [
-        {"id": r.id, "name": r.name, "slug": r.slug, "cuisine": r.cuisine,
-         "imageUrl": r.imageUrl, "rating": r.rating, "deliveryTime": r.deliveryTime,
-         "minOrder": r.minOrder, "isActive": r.isActive}
+        {"id": r.id, "name": r.name, "slug": r.slug, "cuisine": ", ".join(r.cuisineTags) if r.cuisineTags else "",
+         "imageUrl": r.logoUrl, "rating": r.rating, "deliveryTime": r.deliveryTime,
+         "minOrder": 0.0, "isActive": r.isActive}
         for r in restaurants
     ]}
 
@@ -63,10 +64,10 @@ async def get_restaurant(
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return {"restaurant": {
         "id": restaurant.id, "name": restaurant.name, "slug": restaurant.slug,
-        "cuisine": restaurant.cuisine, "description": restaurant.description,
-        "imageUrl": restaurant.imageUrl, "rating": restaurant.rating,
-        "deliveryTime": restaurant.deliveryTime, "minOrder": restaurant.minOrder,
-        "phone": restaurant.phone, "address": restaurant.address
+        "cuisine": ", ".join(restaurant.cuisineTags) if restaurant.cuisineTags else "", "description": restaurant.description,
+        "imageUrl": restaurant.logoUrl, "rating": restaurant.rating,
+        "deliveryTime": restaurant.deliveryTime, "minOrder": 0.0,
+        "phone": restaurant.ownerPhone, "address": restaurant.address
     }}
 
 

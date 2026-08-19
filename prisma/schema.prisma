@@ -120,6 +120,7 @@ model User {
   chefOrders     Order[]   @relation("ChefOrders")
   pushSubscriptions PushSubscription[]
   wishlistItems WishlistItem[]
+  fcmTokens     FcmToken[]
   assignedStore  DarkStore? @relation("StoreStaff", fields: [assignedStoreId], references: [id])
   assignedRestaurant Restaurant? @relation("RestaurantStaff", fields: [assignedRestaurantId], references: [id])
   riderWallet    RiderWallet?
@@ -362,6 +363,8 @@ model OrderItem {
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -675,5 +678,18 @@ model CashDepositTransaction {
   @@index([adminId])
   @@index([createdAt])
   @@map("cash_deposit_transactions")
+}
+
+model FcmToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  deviceType String?  // 'android', 'ios', 'web'
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("fcm_tokens")
 }
 

@@ -358,8 +358,13 @@ export function getOutletName(product: any): string {
   if (!product) return 'Wedson Restaurant'
 
   const rId = product.restaurantId || product.restaurant?.id
+  if (rId) return String(rId)
+
+  const rName = product.restaurantName || product.restaurant?.name
+  if (rName) return String(rName)
+
   const rSlug = (product.restaurant?.slug || '').toLowerCase()
-  const rName = (product.restaurantName || product.restaurant?.name || '').toLowerCase()
+  const lowerRName = (product.restaurantName || product.restaurant?.name || '').toLowerCase()
   const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
   const pName = (product.name || '').toLowerCase()
 
@@ -370,10 +375,10 @@ export function getOutletName(product: any): string {
     rId === 'as-cafe' ||
     rSlug === 'as-restaurant' ||
     rSlug === 'as-cafe' ||
-    rName.includes('a.s') ||
-    rName.includes('as-restaurant') ||
-    rName.includes('as restaurant') ||
-    rName.includes('as cafe') ||
+    lowerRName.includes('a.s') ||
+    lowerRName.includes('as-restaurant') ||
+    lowerRName.includes('as restaurant') ||
+    lowerRName.includes('as cafe') ||
     tags.some((t: string) => t === 'as-restaurant' || t === 'as-cafe' || t === 'a.s. restaurant' || t === 'a.s restaurant' || t === 'as_restaurant' || t === 'as-cafe-restaurant') ||
     pName.includes('a.s special') ||
     pName.includes('a.s. special')
@@ -387,7 +392,7 @@ export function getOutletName(product: any): string {
     rId === 'wedson' ||
     rSlug === 'wedson' ||
     rSlug === 'restaurant-kitchen' ||
-    rName.includes('wedson') ||
+    lowerRName.includes('wedson') ||
     tags.some((t: string) => t === 'wedson' || t === 'wedson-restaurant' || t === 'wedson_restaurant')
   ) {
     return 'Wedson Restaurant'

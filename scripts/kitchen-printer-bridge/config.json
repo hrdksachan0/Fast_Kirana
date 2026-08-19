@@ -1,7 +1,7 @@
 {
   "SUPABASE_URL": "https://xzgrwwghfdsrfhbqlzwc.supabase.co",
   "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6Z3J3d2doZmRzcmZoYnFsendjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5ODg3NjgsImV4cCI6MjEwMjU2NDc2OH0.jXVFUCPJ2xAufnWdcMe0gKs42OyelBkyrGwnEk27Az4",
-  "PRINTER_NAME": "XP-80",
+  "PRINTER_NAME": "POS-80C",
   "AUTO_PRINT_ON_CONFIRM": false,
   "RESTAURANT_ID": ""
 }

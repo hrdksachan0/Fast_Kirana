@@ -83,6 +83,7 @@ class User(Base):
     riderWallet = relationship("RiderWallet", uselist=False, back_populates="user", cascade="all, delete-orphan")
     riderDeposits = relationship("CashDepositTransaction", foreign_keys="[CashDepositTransaction.riderId]", back_populates="rider")
     adminCollectedCash = relationship("CashDepositTransaction", foreign_keys="[CashDepositTransaction.adminId]", back_populates="admin")
+    fcmTokens = relationship("FcmToken", back_populates="user", cascade="all, delete-orphan")
 
 
 class Category(Base):
@@ -109,7 +110,7 @@ class Product(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     categoryId: Mapped[str] = mapped_column(String, ForeignKey("categories.id"), index=True)
-    restaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id"), nullable=True, index=True)
     mrp: Mapped[float] = mapped_column(Float)
     price: Mapped[float] = mapped_column(Float)
     discount: Mapped[float] = mapped_column(Float, default=0.0)
@@ -133,7 +134,10 @@ class Product(Base):
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     category = relationship("Category", back_populates="products")
+    restaurant = relationship("Restaurant")
     reviews = relationship("Review", back_populates="product", cascade="all, delete-orphan")
+    batches = relationship("ProductBatch", back_populates="product", cascade="all, delete-orphan")
+    stockLogs = relationship("StockLog", back_populates="product", cascade="all, delete-orphan")
 
 
 class Address(Base):
@@ -338,18 +342,35 @@ class Restaurant(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String)
-    slug: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
-    ownerId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)
-    cuisine: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    slug: Mapped[str] = mapped_column(String, unique=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    deliveryTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    minOrder: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    logoUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bannerUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    cuisineTags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    rating: Mapped[float] = mapped_column(Float, default=4.0)
+    reviewCount: Mapped[int] = mapped_column(Integer, default=0)
+    deliveryTime: Mapped[str] = mapped_column(String, default="30-40 mins")
+    distance: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    isVeg: Mapped[bool] = mapped_column(Boolean, default=False)
+    isPureVeg: Mapped[bool] = mapped_column(Boolean, default=False)
+    isOpen: Mapped[bool] = mapped_column(Boolean, default=True)
+    openTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    closeTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0)
+    discountOffer: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    discountBadge: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    commissionRate: Mapped[float] = mapped_column(Float, default=0.15)
+    ownerPhone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    ownerEmail: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    menuSections: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
 class Coupon(Base):
@@ -366,6 +387,7 @@ class Coupon(Base):
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
     expiresAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     categoryId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=True)
     oncePerCustomer: Mapped[bool] = mapped_column(Boolean, default=False)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -393,3 +415,81 @@ class InventoryLog(Base):
     newStock: Mapped[int] = mapped_column(Integer)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class FcmToken(Base):
+    __tablename__ = "fcm_tokens"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    userId: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token: Mapped[str] = mapped_column(String, unique=True)
+    deviceType: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="fcmTokens")
+
+
+class OtpToken(Base):
+    __tablename__ = "otp_tokens"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    email: Mapped[str] = mapped_column(String)
+    token: Mapped[str] = mapped_column(String)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PromoBanner(Base):
+    __tablename__ = "promo_banners"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    title: Mapped[str] = mapped_column(String)
+    description: Mapped[str] = mapped_column(String)
+    code: Mapped[str] = mapped_column(String)
+    gradient: Mapped[str] = mapped_column(String, default="from-primary via-rose-500 to-orange-400")
+    type: Mapped[str] = mapped_column(String, default="custom")
+    imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    linkUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StoreInventory(Base):
+    __tablename__ = "store_inventories"
+
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
+    storeId: Mapped[str] = mapped_column(String, ForeignKey("dark_stores.id", ondelete="CASCADE"), primary_key=True)
+    stock: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ProductBatch(Base):
+    __tablename__ = "product_batches"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    batchCode: Mapped[str] = mapped_column(String)
+    quantity: Mapped[int] = mapped_column(Integer)
+    initialQty: Mapped[int] = mapped_column(Integer)
+    costPrice: Mapped[float] = mapped_column(Float)
+    expiryDate: Mapped[datetime] = mapped_column(DateTime, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    product = relationship("Product", back_populates="batches")
+
+
+class StockLog(Base):
+    __tablename__ = "stock_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    quantity: Mapped[int] = mapped_column(Integer)
+    type: Mapped[str] = mapped_column(String)
+    prevStock: Mapped[int] = mapped_column(Integer)
+    newStock: Mapped[int] = mapped_column(Integer)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    product = relationship("Product", back_populates="stockLogs")

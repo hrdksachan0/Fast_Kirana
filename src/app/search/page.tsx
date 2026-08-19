@@ -33,9 +33,25 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query = q?.trim() || ''
 
   let products: Product[] = []
+  let restaurants: any[] = []
 
   if (query) {
     const words = query.split(/\s+/).filter(Boolean)
+
+    const restaurantsRaw = await prisma.restaurant.findMany({
+      where: {
+        isActive: true,
+        AND: words.map((word) => ({
+          OR: [
+            { name: { contains: word, mode: 'insensitive' } },
+            { description: { contains: word, mode: 'insensitive' } },
+            { cuisineTags: { hasSome: [word.toLowerCase()] } },
+          ],
+        })),
+      },
+    }).catch(() => [])
+
+    restaurants = restaurantsRaw || []
 
     const productsRaw = await prisma.product.findMany({
       where: {
@@ -46,6 +62,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             { description: { contains: word, mode: 'insensitive' } },
             { tags: { hasSome: [word.toLowerCase()] } },
             { category: { name: { contains: word, mode: 'insensitive' } } },
+            { restaurant: { name: { contains: word, mode: 'insensitive' } } },
           ],
         })),
       },
@@ -247,6 +264,48 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </p>
         )}
       </div>
+
+      {/* Matching Restaurant Outlets */}
+      {query && restaurants.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-black text-text-secondary uppercase tracking-wider">Matching Outlets</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {restaurants.map((restaurant) => (
+              <Link
+                key={restaurant.id}
+                href={`/restaurants/${restaurant.slug}`}
+                className="flex items-center gap-3 bg-card border border-border/80 hover:border-primary/40 rounded-2xl p-3 min-w-[250px] shadow-sm transition-all"
+              >
+                {restaurant.logoUrl ? (
+                  <img
+                    src={restaurant.logoUrl}
+                    alt={restaurant.name}
+                    className="h-10 w-10 rounded-xl object-cover border border-zinc-200"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-zinc-400 border border-zinc-200">
+                    <Search size={16} />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-black text-text-primary truncate">{restaurant.name}</h4>
+                  <p className="text-[9px] text-text-secondary truncate mt-0.5 font-bold">
+                    {restaurant.cuisineTags && restaurant.cuisineTags.length > 0
+                      ? restaurant.cuisineTags.join(', ')
+                      : 'Delicious Foods'}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${restaurant.isOpen ? 'bg-[#00b140]' : 'bg-red-500'}`} />
+                    <span className="text-[9px] font-extrabold text-text-secondary uppercase">
+                      {restaurant.isOpen ? 'Open Now' : 'Closed'}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search results listing */}
       {!query ? (
