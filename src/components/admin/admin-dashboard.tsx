@@ -79,13 +79,14 @@ import {
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
-import { CreateOrderModal } from './create-order-modal'
-import ProductEditModal from './product-edit-modal'
-import { CategoryEditModal } from './category-edit-modal'
-import { ReviewEditModal } from './review-edit-modal'
-import { BlockCustomerModal } from './block-customer-modal'
-import OrderTrackingModal from './order-tracking-modal'
-import MediaLibraryModal from './media-library-modal'
+
+const CreateOrderModal = dynamic(() => import('./create-order-modal').then((m) => m.CreateOrderModal), { ssr: false })
+const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
+const CategoryEditModal = dynamic(() => import('./category-edit-modal').then((m) => m.CategoryEditModal), { ssr: false })
+const ReviewEditModal = dynamic(() => import('./review-edit-modal').then((m) => m.ReviewEditModal), { ssr: false })
+const BlockCustomerModal = dynamic(() => import('./block-customer-modal').then((m) => m.BlockCustomerModal), { ssr: false })
+const OrderTrackingModal = dynamic(() => import('./order-tracking-modal'), { ssr: false })
+const MediaLibraryModal = dynamic(() => import('./media-library-modal'), { ssr: false })
 import { AdminSortManager } from './admin-sort-manager'
 import { getLast10Digits } from '@/lib/phone'
 
