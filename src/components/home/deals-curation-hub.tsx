@@ -731,9 +731,9 @@ export function DealsCurationHub({
         </p>
       </div>
 
-      {/* Premium Curation Tab Bar: Sticky on mobile while scrolling through products */}
-      {/* Mobile view: Sticky Category Circles Strip */}
-      <div className="sticky top-[92px] sm:top-[96px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-y border-zinc-200/60 dark:border-zinc-800/60 -mx-4 px-4 py-2 flex md:hidden items-center gap-4 overflow-x-auto select-none w-[calc(100%+2rem)] justify-start scroll-smooth snap-x snap-mandatory scrollbar-none shadow-2xs">
+      {/* Premium Curation Tab Bar */}
+      {/* Mobile view: Category Circles Strip */}
+      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-y border-zinc-200/60 dark:border-zinc-800/60 -mx-4 px-4 py-2 flex md:hidden items-center gap-4 overflow-x-auto select-none w-[calc(100%+2rem)] justify-start scroll-smooth snap-x snap-mandatory scrollbar-none shadow-2xs">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (

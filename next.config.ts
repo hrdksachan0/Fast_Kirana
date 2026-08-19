@@ -93,6 +93,12 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/cart/:path*`,
       },
 
+      // ── Orders ──
+      {
+        source: '/api/orders/:path*',
+        destination: `${apiDest}/api/orders/:path*`,
+      },
+
       // ── Addresses ──
       {
         source: '/api/addresses/:path*',
@@ -117,6 +123,12 @@ const nextConfig: NextConfig = {
       {
         source: '/api/picker/:path*',
         destination: `${apiDest}/api/picker/:path*`,
+      },
+
+      // ── Admin (all sub-routes) ──
+      {
+        source: '/api/admin/:path*',
+        destination: `${apiDest}/api/admin/:path*`,
       },
 
       // ── Profile ──
@@ -159,6 +171,10 @@ const nextConfig: NextConfig = {
       {
         source: '/api/restaurant-dashboard/:path*',
         destination: `${apiDest}/api/restaurant-dashboard/:path*`,
+      },
+      {
+        source: '/api/restaurant/:path*',
+        destination: `${apiDest}/api/restaurant/:path*`,
       },
 
       // ── Cafe Reports ──
@@ -213,7 +229,7 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/cron/:path*`,
       },
     ];
-    // NOTE: Admin, Restaurant, and Auth routes are handled by Next.js natively for 100% NextAuth session compatibility
+    // NOTE: /api/auth/[...nextauth] handles NextAuth session creation natively
   },
   async headers() {
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app';

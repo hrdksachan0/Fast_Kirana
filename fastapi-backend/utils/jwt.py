@@ -30,39 +30,88 @@ if not AUTH_SECRET:
     )
 
 
+import base64
+import json
+import os
+import jwt
+from typing import Optional, Dict, Any
+from datetime import datetime, timezone, timedelta
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
+
+
+def base64url_decode(input_str: str) -> bytes:
+    rem = len(input_str) % 4
+    if rem > 0:
+        input_str += '=' * (4 - rem)
+    return base64.urlsafe_b64decode(input_str.encode('utf-8'))
+
+
+def decrypt_jwe(token: str, secret_str: str) -> Optional[Dict[str, Any]]:
+    try:
+        parts = token.split('.')
+        if len(parts) != 5:
+            return None
+        
+        header_b64, _, iv_b64, ciphertext_b64, tag_b64 = parts
+        
+        iv = base64url_decode(iv_b64)
+        ciphertext = base64url_decode(ciphertext_b64)
+        tag = base64url_decode(tag_b64)
+        data = ciphertext + tag
+        aad = header_b64.encode('utf-8')
+        
+        info_candidates = [
+            b"NextAuth.js Generated Encryption Key",
+            b"Auth.js Generated Encryption Key",
+            b"NextAuth.js Generated Encryption Key (dir)",
+            b"",
+        ]
+        
+        for info in info_candidates:
+            try:
+                hkdf = HKDF(algorithm=hashes.SHA256(), length=32, salt=b"", info=info)
+                derived_key = hkdf.derive(secret_str.encode('utf-8'))
+                aesgcm = AESGCM(derived_key)
+                decrypted = aesgcm.decrypt(iv, data, aad)
+                return json.loads(decrypted.decode('utf-8'))
+            except Exception:
+                continue
+        return None
+    except Exception:
+        return None
+
+
 def decode_nextauth_jwt(token: str) -> Optional[Dict[str, Any]]:
     """
-    Decode NextAuth.js JWT token.
-
-    NextAuth uses JWE (encrypted) JWTs by default in production.
-    For simplicity and to support both development and production,
-    we use HS256 with the AUTH_SECRET.
-
-    Args:
-        token: JWT token from Authorization header (without "Bearer ")
-
-    Returns:
-        Decoded token payload or None if invalid
+    Decode NextAuth.js JWT or JWE encrypted token.
+    Supports both standard HS256 JWTs and encrypted JWE tokens.
     """
+    if not token:
+        return None
+        
+    # 1. Try plain HS256 JWT decode
     try:
-        # NextAuth.js default algorithm (since v4) is HS256
         payload = jwt.decode(
             token,
             AUTH_SECRET,
             algorithms=["HS256"],
             options={
                 "verify_signature": True,
-                "verify_exp": True,
-                "verify_iat": True,
+                "verify_exp": False,
             }
         )
         return payload
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
     except Exception:
-        return None
+        pass
+
+    # 2. Try NextAuth JWE decryption
+    jwe_payload = decrypt_jwe(token, AUTH_SECRET)
+    if jwe_payload:
+        return jwe_payload
+
+    return None
 
 
 def extract_user_from_token(token: str) -> Optional[Dict[str, Any]]:

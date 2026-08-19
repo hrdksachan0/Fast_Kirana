@@ -92,9 +92,9 @@ export function StorefrontClient({
         )}
       </AnimatePresence>
 
-      {/* Premium Grocery / Food Slider */}
-      <div className="flex justify-center mt-6 sm:mt-8 mb-4 sm:mb-5 px-4">
-        <div className="relative flex items-center w-full max-w-[420px] h-[60px] sm:h-[66px] p-1.5 rounded-full bg-white/80 dark:bg-zinc-950/85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10),0_4px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.06)] border border-zinc-200/50 dark:border-zinc-800/70" role="tablist" aria-label="Store mode">
+      {/* Premium Sticky Grocery / Food Slider */}
+      <div className="sticky top-[68px] sm:top-[74px] z-40 bg-[#fafafa]/90 dark:bg-[#09090b]/90 backdrop-blur-xl py-2.5 px-4 flex justify-center transition-all duration-300 border-b border-zinc-200/40 dark:border-zinc-800/40 shadow-xs mb-3 sm:mb-4">
+        <div className="relative flex items-center w-full max-w-[420px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl shadow-[0_16px_36px_-12px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.4)] border border-zinc-200/60 dark:border-zinc-800/70" role="tablist" aria-label="Store mode">
           <motion.button
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
