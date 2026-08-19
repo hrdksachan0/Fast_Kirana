@@ -1317,12 +1317,19 @@ async def update_order(
     role = current_user.get("role")
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
 
-    stmt = select(Order).where(or_(Order.id == id, Order.readableId == id))
+    stmt = select(Order).where(or_(
+        Order.id == id,
+        Order.readableId == id,
+        Order.readableId.ilike(f"{id}%"),
+        Order.combinedId == id
+    ))
     res = await db.execute(stmt)
-    order = res.scalars().first()
+    orders_matched = res.scalars().all()
 
-    if not order:
+    if not orders_matched:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    order = orders_matched[0]
 
     target_status_str = payload.get("status")
     delivery_photo = payload.get("deliveryPhoto")

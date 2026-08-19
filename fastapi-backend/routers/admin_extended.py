@@ -408,7 +408,12 @@ async def admin_update_order_status(
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """Update order status."""
-    result = await db.execute(select(Order).where(Order.id == order_id))
+    result = await db.execute(select(Order).where(or_(
+        Order.id == order_id,
+        Order.readableId == order_id,
+        Order.readableId.ilike(f"{order_id}%"),
+        Order.combinedId == order_id
+    )))
     order = result.scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")

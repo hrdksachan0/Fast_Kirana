@@ -1261,12 +1261,13 @@ export function AdminDashboard({
       if (res.ok) {
         const updated = await res.json()
         setOrders(orders.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)))
-        toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus]}`)
+        toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus] || newStatus}`)
       } else {
-        toast.error('Failed to update order status')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.detail || errData.error || 'Failed to update order status')
       }
-    } catch (err) {
-      toast.error('Failed to update status')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update status')
     } finally {
       setUpdatingOrderId(null)
     }
