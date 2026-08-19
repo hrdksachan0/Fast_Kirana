@@ -93,12 +93,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/cart/:path*`,
       },
 
-      // ── Orders ──
-      {
-        source: '/api/orders/:path*',
-        destination: `${apiDest}/api/orders/:path*`,
-      },
-
       // ── Addresses ──
       {
         source: '/api/addresses/:path*',
