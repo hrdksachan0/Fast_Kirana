@@ -104,12 +104,47 @@ export async function POST(request: NextRequest) {
       finalSlug = `${slug}-${Date.now().toString().slice(-4)}`
     }
 
-    const restaurant = await prisma.restaurant.create({
-      data: {
-        name,
-        slug: finalSlug,
-        ...rest
+    const allowedKeys = [
+      'description', 'logoUrl', 'bannerUrl', 'address', 'city',
+      'cuisineTags', 'deliveryTime', 'distance', 'lat', 'lng', 'isVeg',
+      'isPureVeg', 'isOpen', 'openTime', 'closeTime', 'sortOrder',
+      'discountOffer', 'discountBadge', 'commissionRate', 'ownerPhone',
+      'ownerEmail', 'isActive', 'rating', 'menuSections'
+    ]
+
+    const createData: any = {
+      name,
+      slug: finalSlug,
+    }
+    for (const key of allowedKeys) {
+      if (rest[key] !== undefined) {
+        createData[key] = rest[key]
       }
+    }
+
+    if (createData.lat !== undefined && createData.lat !== null) {
+      const p = parseFloat(createData.lat)
+      createData.lat = isNaN(p) ? null : p
+    }
+    if (createData.lng !== undefined && createData.lng !== null) {
+      const p = parseFloat(createData.lng)
+      createData.lng = isNaN(p) ? null : p
+    }
+    if (createData.sortOrder !== undefined && createData.sortOrder !== null) {
+      const p = parseInt(createData.sortOrder)
+      createData.sortOrder = isNaN(p) ? 0 : p
+    }
+    if (createData.commissionRate !== undefined && createData.commissionRate !== null) {
+      const p = parseFloat(createData.commissionRate)
+      createData.commissionRate = isNaN(p) ? 0 : p
+    }
+    if (createData.rating !== undefined && createData.rating !== null) {
+      const p = parseFloat(createData.rating)
+      createData.rating = isNaN(p) ? 4.0 : p
+    }
+
+    const restaurant = await prisma.restaurant.create({
+      data: createData
     })
 
     // Assign owner if ownerUserId provided
@@ -128,6 +163,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(restaurant, { status: 201 })
   } catch (error: any) {
     console.error('Restaurants API POST Error:', error)
-    return NextResponse.json({ error: 'Failed to create restaurant' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to create restaurant' }, { status: 500 })
   }
 }

@@ -457,6 +457,22 @@ class PromoBanner(Base):
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class DarkStore(Base):
+    __tablename__ = "dark_stores"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    deliveryPolygon: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    surgeCharge: Mapped[float] = mapped_column(Float, default=0.0)
+    groceryOpen: Mapped[bool] = mapped_column(Boolean, default=True)
+    cafeOpen: Mapped[bool] = mapped_column(Boolean, default=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class StoreInventory(Base):
     __tablename__ = "store_inventories"
 

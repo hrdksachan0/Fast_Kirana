@@ -1686,7 +1686,7 @@ export function AdminDashboard({
     if (!editingProduct) return
 
     const requiresBasePrice = !hasVariantsEdit
-    const isSpecialProduct = isEditProductCafe || isEditProductRestaurant
+    const isSpecialProduct = isEditProductCafe || isEditProductRestaurant || !!productEditForm.restaurantId
     const hasCategory = productEditForm.categoryId || isSpecialProduct
     if (!productEditForm.name || !hasCategory || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
       toast.error('Please fill in all required fields')
@@ -1703,6 +1703,14 @@ export function AdminDashboard({
         ? productEditForm.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
         : []
 
+      let parsedExpiryISO: string | null = null
+      if (productEditForm.expiryDate) {
+        const d = new Date(productEditForm.expiryDate)
+        if (!isNaN(d.getTime())) {
+          parsedExpiryISO = d.toISOString()
+        }
+      }
+
       const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1715,11 +1723,11 @@ export function AdminDashboard({
           mrp: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].mrp) : parseFloat(productEditForm.mrp),
           price: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].price) : parseFloat(productEditForm.price),
           unit: productEditForm.unit,
-          stock: (isEditProductCafe || isEditProductRestaurant) ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
-          minStock: (isEditProductCafe || isEditProductRestaurant) ? 0 : (parseInt(productEditForm.minStock) || 10),
+          stock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
+          minStock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 0 : (parseInt(productEditForm.minStock) || 10),
           isAvailable: productEditForm.isAvailable,
           tags: tagsArray,
-          expiryDate: productEditForm.expiryDate ? new Date(productEditForm.expiryDate).toISOString() : null,
+          expiryDate: parsedExpiryISO,
           costPrice: parseFloat(productEditForm.costPrice) || 0,
           location: productEditForm.location || null,
           isFlashDeal: productEditForm.isFlashDeal,
@@ -1735,7 +1743,6 @@ export function AdminDashboard({
             stock: parseInt(v.stock) || 0,
           })) : null,
         }),
-
       })
 
       if (res.ok) {
@@ -1745,10 +1752,12 @@ export function AdminDashboard({
         toast.success('Product updated successfully!')
         setEditingProduct(null)
       } else {
-        toast.error('Failed to update product details')
+        const errorData = await res.json().catch(() => ({}))
+        toast.error(errorData.error || 'Failed to update product details')
       }
-    } catch (err) {
-      toast.error('Error saving product changes')
+    } catch (err: any) {
+      console.error('Error saving product changes:', err)
+      toast.error(err?.message || 'Error saving product changes')
     } finally {
       setSavingProductId(null)
     }

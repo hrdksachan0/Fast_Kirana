@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:skeletonizer/skeletonizer.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
@@ -515,8 +515,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
               },
             );
           },
-          loading: () => Skeletonizer(
-            enabled: true,
+          loading: () => Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
               itemCount: 4,

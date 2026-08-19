@@ -107,13 +107,7 @@ export async function broadcastPushNotification(payload: PushPayload) {
   }
 
   try {
-    const subscriptions = await prisma.pushSubscription.findMany({
-      where: {
-        user: {
-          role: 'USER',
-        },
-      },
-    })
+    const subscriptions = await prisma.pushSubscription.findMany()
 
     if (subscriptions.length === 0) {
       return { successCount: 0, failureCount: 0 }

@@ -314,8 +314,9 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProductImage(Product product) {
     if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {

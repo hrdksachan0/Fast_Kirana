@@ -239,7 +239,7 @@ export function ProductsTab({
             </select>
             <select
               value={selectedCategoryFilter}
-              onChange={(e) => setSelectedTypeFilter(e.target.value)}
+              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
               className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
             >
               <option value="">All Categories</option>

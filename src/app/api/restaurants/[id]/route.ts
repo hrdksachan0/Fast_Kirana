@@ -119,6 +119,28 @@ export async function PATCH(
     }
     updateData.slug = finalSlug
 
+    // Sanitize numeric fields to prevent NaN crashes in Prisma
+    if (updateData.lat !== undefined && updateData.lat !== null) {
+      const p = parseFloat(updateData.lat)
+      updateData.lat = isNaN(p) ? restaurant.lat : p
+    }
+    if (updateData.lng !== undefined && updateData.lng !== null) {
+      const p = parseFloat(updateData.lng)
+      updateData.lng = isNaN(p) ? restaurant.lng : p
+    }
+    if (updateData.rating !== undefined && updateData.rating !== null) {
+      const p = parseFloat(updateData.rating)
+      updateData.rating = isNaN(p) ? restaurant.rating : p
+    }
+    if (updateData.sortOrder !== undefined && updateData.sortOrder !== null) {
+      const p = parseInt(updateData.sortOrder)
+      updateData.sortOrder = isNaN(p) ? restaurant.sortOrder : p
+    }
+    if (updateData.commissionRate !== undefined && updateData.commissionRate !== null) {
+      const p = parseFloat(updateData.commissionRate)
+      updateData.commissionRate = isNaN(p) ? restaurant.commissionRate : p
+    }
+
     // Strictly enforce: Non-admin outlet heads CANNOT modify commissionRate or isActive status
     if (role !== 'ADMIN') {
       delete updateData.commissionRate
@@ -180,7 +202,7 @@ export async function PATCH(
     return NextResponse.json(finalUpdatedRestaurant)
   } catch (error: any) {
     console.error('Failed to update restaurant:', error)
-    return NextResponse.json({ error: 'Failed to update restaurant' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to update restaurant' }, { status: 500 })
   }
 }
 

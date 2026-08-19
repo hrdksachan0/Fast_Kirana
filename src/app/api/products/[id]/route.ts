@@ -87,27 +87,57 @@ export async function PATCH(
     const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
 
     const updateData: any = {}
-    if (name !== undefined) updateData.name = name
+    if (name !== undefined && typeof name === 'string') updateData.name = name.trim()
     if (description !== undefined) updateData.description = description
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl
-    if (categoryId !== undefined) updateData.categoryId = categoryId
+    if (categoryId !== undefined && categoryId !== '') {
+      updateData.categoryId = categoryId
+    }
     if (restaurantId !== undefined) updateData.restaurantId = restaurantId || null
     if (unit !== undefined) updateData.unit = (unit && typeof unit === 'string') ? unit.trim() : ''
-    if (stock !== undefined) updateData.stock = parseInt(stock)
+    
+    if (stock !== undefined) {
+      const parsedStock = parseInt(stock)
+      updateData.stock = isNaN(parsedStock) ? product.stock : parsedStock
+    }
     if (isAvailable !== undefined) updateData.isAvailable = !!isAvailable
     if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : []
-    if (minStock !== undefined) updateData.minStock = parseInt(minStock)
-    if (expiryDate !== undefined) updateData.expiryDate = expiryDate ? new Date(expiryDate) : null
-    if (costPrice !== undefined) updateData.costPrice = parseFloat(costPrice)
+    
+    if (minStock !== undefined) {
+      const parsedMinStock = parseInt(minStock)
+      updateData.minStock = isNaN(parsedMinStock) ? product.minStock : parsedMinStock
+    }
+    
+    if (expiryDate !== undefined) {
+      if (!expiryDate) {
+        updateData.expiryDate = null
+      } else {
+        const time = Date.parse(expiryDate)
+        updateData.expiryDate = !isNaN(time) ? new Date(time) : product.expiryDate
+      }
+    }
+    
+    if (costPrice !== undefined) {
+      const parsedCostPrice = parseFloat(costPrice)
+      updateData.costPrice = isNaN(parsedCostPrice) ? product.costPrice : parsedCostPrice
+    }
+    
     if (location !== undefined) updateData.location = location || null
     if (isFlashDeal !== undefined) updateData.isFlashDeal = !!isFlashDeal
     if (isTopPick !== undefined) updateData.isTopPick = !!isTopPick
     if (isBestSeller !== undefined) updateData.isBestSeller = !!isBestSeller
-    if (sortOrder !== undefined) updateData.sortOrder = parseInt(sortOrder) || 0
+    
+    if (sortOrder !== undefined) {
+      const parsedSortOrder = parseInt(sortOrder)
+      updateData.sortOrder = isNaN(parsedSortOrder) ? 0 : parsedSortOrder
+    }
+    
     if (barcode !== undefined) updateData.barcode = (barcode && typeof barcode === 'string') ? barcode.trim() : null
 
-    let finalMrp = mrp !== undefined ? parseFloat(mrp) : product.mrp
-    let finalPrice = price !== undefined ? parseFloat(price) : product.price
+    let parsedMrp = mrp !== undefined ? parseFloat(mrp) : NaN
+    let parsedPrice = price !== undefined ? parseFloat(price) : NaN
+    let finalMrp = !isNaN(parsedMrp) ? parsedMrp : product.mrp
+    let finalPrice = !isNaN(parsedPrice) ? parsedPrice : product.price
     let sortedVariants = variants
 
     if (variants && Array.isArray(variants) && variants.length > 0) {
@@ -122,10 +152,10 @@ export async function PATCH(
     }
 
     if (mrp !== undefined && (!variants || !Array.isArray(variants) || variants.length === 0)) {
-      updateData.mrp = parseFloat(mrp)
+      if (!isNaN(parsedMrp)) updateData.mrp = parsedMrp
     }
     if (price !== undefined && (!variants || !Array.isArray(variants) || variants.length === 0)) {
-      updateData.price = parseFloat(price)
+      if (!isNaN(parsedPrice)) updateData.price = parsedPrice
     }
 
     updateData.discount = finalMrp > finalPrice
@@ -157,6 +187,11 @@ export async function PATCH(
       updateData.stock = 999
     }
 
+    // Ensure categoryId is valid and not empty
+    if (!updateData.categoryId) {
+      updateData.categoryId = product.categoryId
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id: product.id },
       data: updateData,
@@ -171,7 +206,7 @@ export async function PATCH(
     return NextResponse.json(updatedProduct)
   } catch (error: any) {
     console.error('Failed to update product:', error)
-    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to update product' }, { status: 500 })
   }
 }
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:skeletonizer/skeletonizer.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../providers/product_provider.dart';
@@ -330,8 +330,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       future: repo.getProducts(search: _query, limit: 100),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Skeletonizer(
-            enabled: true,
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

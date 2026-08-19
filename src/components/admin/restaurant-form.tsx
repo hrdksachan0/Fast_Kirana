@@ -215,14 +215,46 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     setIsSubmitting(true)
 
     try {
+      const parseNum = (v: any) => {
+        if (v === null || v === undefined || v === '') return null
+        const n = parseFloat(String(v))
+        return isNaN(n) ? null : n
+      }
+
+      const parseNumDefault = (v: any, def: number) => {
+        if (v === null || v === undefined || v === '') return def
+        const n = parseFloat(String(v))
+        return isNaN(n) ? def : n
+      }
+
       const payload = {
-        ...formData,
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        logoUrl: formData.logoUrl,
+        bannerUrl: formData.bannerUrl,
+        address: formData.address,
+        city: formData.city,
+        cuisineTags: formData.cuisineTags,
+        deliveryTime: formData.deliveryTime,
+        distance: formData.distance,
+        isVeg: !!formData.isVeg,
+        isPureVeg: !!formData.isPureVeg,
+        isOpen: !!formData.isOpen,
+        openTime: formData.openTime,
+        closeTime: formData.closeTime,
+        discountOffer: formData.discountOffer,
+        discountBadge: formData.discountBadge,
+        ownerPhone: formData.ownerPhone,
+        ownerEmail: formData.ownerEmail,
+        isActive: !!formData.isActive,
+        menuSections: restaurant?.menuSections || undefined,
         ownerUserId: ownerUserId || undefined,
-        commissionRate: parseFloat(formData.commissionRate) || 0,
-        sortOrder: parseInt(formData.sortOrder) || 0,
-        rating: parseFloat(String(formData.rating)) || 4.0,
-        lat: formData.lat ? parseFloat(formData.lat) : null,
-        lng: formData.lng ? parseFloat(formData.lng) : null,
+        commissionRate: parseNumDefault(formData.commissionRate, 0),
+        sortOrder: Math.round(parseNumDefault(formData.sortOrder, 0)),
+        rating: parseNumDefault(formData.rating, 4.0),
+        lat: parseNum(formData.lat),
+        lng: parseNum(formData.lng),
       }
 
       const url = isEditing ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
@@ -234,16 +266,15 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         body: JSON.stringify(payload)
       })
 
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || errorData.message || 'Failed to save restaurant')
-      }
+      const responseData = await res.json().catch(() => ({}))
 
-      const savedData = await res.json()
+      if (!res.ok) {
+        throw new Error(responseData.error || responseData.message || 'Failed to save restaurant')
+      }
 
       toast.success(isEditing ? 'Outlet profile updated successfully! 🎉' : 'New Outlet created and Head assigned successfully! 🎉')
       if (onSaved) {
-        onSaved(savedData)
+        onSaved(responseData)
       } else {
         router.refresh()
         if (isAdmin) {
@@ -251,8 +282,8 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         }
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred')
-      console.error(error)
+      toast.error(error.message || 'Failed to save restaurant details')
+      console.error('Restaurant save error:', error)
     } finally {
       setIsSubmitting(false)
     }

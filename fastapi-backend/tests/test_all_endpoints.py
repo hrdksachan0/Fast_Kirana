@@ -22,16 +22,18 @@ async def test_all_api_routes():
         print("[OK] /health PASSED:", res_health.json())
 
         # 2. Categories
-        res_cat = await ac.get("/api/products/categories")
+        res_cat = await ac.get("/api/categories")
         assert res_cat.status_code == 200
-        cats = res_cat.json()
+        cats_data = res_cat.json()
+        cats = cats_data.get("categories", cats_data) if isinstance(cats_data, dict) else cats_data
         assert isinstance(cats, list)
-        print(f"[OK] /api/products/categories PASSED: {len(cats)} categories found")
+        print(f"[OK] /api/categories PASSED: {len(cats)} categories found")
 
         # 3. Products
         res_prod = await ac.get("/api/products?limit=5")
         assert res_prod.status_code == 200
-        prods = res_prod.json()
+        prods_data = res_prod.json()
+        prods = prods_data.get("products", prods_data) if isinstance(prods_data, dict) else prods_data
         assert isinstance(prods, list)
         print(f"[OK] /api/products PASSED: {len(prods)} products found")
 

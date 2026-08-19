@@ -63,67 +63,185 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const apiDest = process.env.NEXT_PUBLIC_API_URL || 'https://fast-kirana-0ezx.onrender.com';
     return [
+      // Generic Python API passthrough
       {
         source: '/api/python/:path*',
         destination: `${apiDest}/:path*`,
       },
-      {
-        source: '/api/categories',
-        destination: `${apiDest}/api/categories`,
-      },
-      {
-        source: '/api/categories/:id',
-        destination: `${apiDest}/api/categories/:id`,
-      },
-      {
-        source: '/api/profile/:path*',
-        destination: `${apiDest}/api/profile/:path*`,
-      },
-      {
-        source: '/api/banners',
-        destination: `${apiDest}/api/banners`,
-      },
-      {
-        source: '/api/settings',
-        destination: `${apiDest}/api/settings`,
-      },
+
+      // ── Products ──
       {
         source: '/api/products/:path*',
         destination: `${apiDest}/api/products/:path*`,
       },
+
+      // ── Categories ──
+      {
+        source: '/api/categories/:path*',
+        destination: `${apiDest}/api/categories/:path*`,
+      },
+
+      // ── Restaurants ──
       {
         source: '/api/restaurants/:path*',
         destination: `${apiDest}/api/restaurants/:path*`,
       },
+
+      // ── Cart ──
       {
         source: '/api/cart/:path*',
         destination: `${apiDest}/api/cart/:path*`,
       },
+
+      // ── Orders ──
+      {
+        source: '/api/orders/:path*',
+        destination: `${apiDest}/api/orders/:path*`,
+      },
+
+      // ── Addresses ──
       {
         source: '/api/addresses/:path*',
         destination: `${apiDest}/api/addresses/:path*`,
       },
+
+      // ── Coupons ──
       {
         source: '/api/coupons/:path*',
         destination: `${apiDest}/api/coupons/:path*`,
       },
+
+      // ── Delivery & Rider ──
       {
         source: '/api/delivery/:path*',
         destination: `${apiDest}/api/delivery/:path*`,
       },
       {
+        source: '/api/delivery-check',
+        destination: `${apiDest}/api/delivery-check`,
+      },
+      {
         source: '/api/picker/:path*',
         destination: `${apiDest}/api/picker/:path*`,
       },
+
+      // ── Admin (all sub-routes) ──
       {
         source: '/api/admin/:path*',
         destination: `${apiDest}/api/admin/:path*`,
       },
+
+      // ── Profile ──
+      {
+        source: '/api/profile/:path*',
+        destination: `${apiDest}/api/profile/:path*`,
+      },
+
+      // ── Banners ──
+      {
+        source: '/api/banners',
+        destination: `${apiDest}/api/banners`,
+      },
+
+      // ── Settings ──
+      {
+        source: '/api/settings',
+        destination: `${apiDest}/api/settings`,
+      },
+
+      // ── Forecast / AI ──
       {
         source: '/api/forecast/:path*',
         destination: `${apiDest}/api/forecast/:path*`,
       },
+
+      // ── Payments (Paytm) ──
+      {
+        source: '/api/payment/:path*',
+        destination: `${apiDest}/api/payment/:path*`,
+      },
+
+      // ── Push Notifications (FCM) ──
+      {
+        source: '/api/push/:path*',
+        destination: `${apiDest}/api/push/:path*`,
+      },
+
+      // ── Restaurant Dashboard (Owner/Chef panel) ──
+      {
+        source: '/api/restaurant-dashboard/:path*',
+        destination: `${apiDest}/api/restaurant-dashboard/:path*`,
+      },
+      {
+        source: '/api/restaurant/:path*',
+        destination: `${apiDest}/api/restaurant/:path*`,
+      },
+
+      // ── Cafe Reports ──
+      {
+        source: '/api/cafe/:path*',
+        destination: `${apiDest}/api/cafe/:path*`,
+      },
+
+      // ── Location / Geocode / Store Check ──
+      {
+        source: '/api/geocode/:path*',
+        destination: `${apiDest}/api/geocode/:path*`,
+      },
+      {
+        source: '/api/location/:path*',
+        destination: `${apiDest}/api/location/:path*`,
+      },
+
+      // ── Upload ──
+      {
+        source: '/api/upload',
+        destination: `${apiDest}/api/upload`,
+      },
+
+      // ── Wishlist ──
+      {
+        source: '/api/wishlist',
+        destination: `${apiDest}/api/wishlist`,
+      },
+
+      // ── Health ──
+      {
+        source: '/api/health',
+        destination: `${apiDest}/api/health`,
+      },
+
+      // ── Diagnostics ──
+      {
+        source: '/api/diagnostics',
+        destination: `${apiDest}/api/diagnostics`,
+      },
+
+      // ── Revalidate Bridge (webhook for cache busting) ──
+      {
+        source: '/api/revalidate-bridge',
+        destination: `${apiDest}/api/revalidate-bridge`,
+      },
+
+      // ── Custom Auth Routes (Gradual Zero-Logout Migration) ──
+      {
+        source: '/api/auth/login',
+        destination: `${apiDest}/api/auth/login`,
+      },
+      {
+        source: '/api/auth/signup',
+        destination: `${apiDest}/api/auth/signup`,
+      },
+      {
+        source: '/api/auth/otp/:path*',
+        destination: `${apiDest}/api/auth/otp/:path*`,
+      },
+      {
+        source: '/api/auth/email/:path*',
+        destination: `${apiDest}/api/auth/email/:path*`,
+      },
     ];
+    // NOTE: /api/auth/[...nextauth] is preserved for seamless zero-logout session verification
   },
   async headers() {
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app';
