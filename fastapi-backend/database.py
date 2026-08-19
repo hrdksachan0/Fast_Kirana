@@ -14,7 +14,7 @@ def clean_async_db_url(url: str) -> str:
     query_params = parse_qs(parsed.query)
 
     # Filter out query parameters not supported in URL query string by asyncpg driver
-    unsupported = ["connection_limit", "pool_timeout", "schema", "sslmode", "ssl"]
+    unsupported = ["connection_limit", "pool_timeout", "schema", "sslmode", "ssl", "pgbouncer", "prepared_statement_cache_size"]
     filtered_params = {k: v for k, v in query_params.items() if k not in unsupported}
 
     new_query = urlencode(filtered_params, doseq=True)
