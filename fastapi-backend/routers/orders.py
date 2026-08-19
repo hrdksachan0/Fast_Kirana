@@ -23,30 +23,11 @@ from models import (
 from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
 from utils.firebase import send_fcm_notification
+from routers.orders_service import generate_id, get_last_10_digits, get_distance_km, validate_order_status_transition
 
 logger = logging.getLogger("orders")
 
 router = APIRouter(prefix="/orders", tags=["Orders & Checkout Engine"])
-
-
-def generate_id(prefix: str = "ord_") -> str:
-    return f"{prefix}{uuid.uuid4().hex[:20]}"
-
-
-def get_last_10_digits(phone: str) -> str:
-    digits = "".join(c for c in str(phone) if c.isdigit())
-    return digits[-10:] if len(digits) >= 10 else digits
-
-
-def get_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371.0  # Earth radius in km
-    d_lat = math.radians(lat2 - lat1)
-    d_lng = math.radians(lng2 - lng1)
-    a = (math.sin(d_lat / 2.0) ** 2 +
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-         (math.sin(d_lng / 2.0) ** 2))
-    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
-    return R * c
 
 
 def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee: float = 0.0) -> dict:
