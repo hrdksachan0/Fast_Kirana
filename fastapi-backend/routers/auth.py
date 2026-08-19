@@ -56,7 +56,15 @@ async def get_current_user(
             res = await db.execute(select(User).where(User.id == x_user_id))
             db_user = res.scalars().first()
             if db_user:
-                return {"id": db_user.id, "email": db_user.email, "role": str(db_user.role), "name": db_user.name}
+                role_str = db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
+                return {
+                    "id": db_user.id,
+                    "email": db_user.email,
+                    "role": role_str,
+                    "name": db_user.name,
+                    "phone": db_user.phone,
+                    "assignedRestaurantId": db_user.assignedRestaurantId
+                }
 
     return None
 

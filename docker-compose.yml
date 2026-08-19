@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: fastkirana-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: fastkirana_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  fastapi:
+    build:
+      context: ./fastapi-backend
+      dockerfile: Dockerfile
+    container_name: fastkirana-fastapi
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgrespassword@postgres:5432/fastkirana_db
+      - AUTH_SECRET=your_auth_secret_here
+    depends_on:
+      - postgres
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastkirana-nextjs
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/fastkirana_db
+      - NEXT_PUBLIC_FASTAPI_URL=http://fastapi:8000
+      - AUTH_SECRET=your_auth_secret_here
+    depends_on:
+      - fastapi
+      - postgres
+
+volumes:
+  pgdata:

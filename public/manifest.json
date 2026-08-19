@@ -1,12 +1,14 @@
 {
-  "name": "FastKirana - 10-Minute Grocery Delivery",
+  "name": "FastKirana - 10-Minute Grocery & Food Delivery",
   "short_name": "FastKirana",
-  "description": "Premium quick-commerce grocery delivery in 10 minutes, simple and friendly.",
+  "description": "Instant 10-minute grocery and restaurant food delivery, simple, fast, and friendly.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#DC2626",
+  "categories": ["shopping", "food", "groceries", "lifestyle"],
   "icons": [
     {
       "src": "/icons/icon-192.png?v=2",
@@ -19,6 +21,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Items",
+      "short_name": "Search",
+      "description": "Quick search for food and groceries",
+      "url": "/search",
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View active and past orders",
+      "url": "/account",
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }]
     }
   ]
 }
