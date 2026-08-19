@@ -840,11 +840,10 @@ export function AdminDashboard({
     setUserPage(1)
   }, [userSearch, userRoleFilter, userStatusFilter])
 
-  // Fetch paginated/filtered orders
+  // Fetch paginated/filtered orders with 5-second live auto-refresh
   useEffect(() => {
     let active = true
     const fetchOrders = async () => {
-      setIsLoadingOrders(true)
       try {
         const res = await fetch(`/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(orderSearchQuery)}&t=${Date.now()}`)
         if (res.ok && active) {
@@ -865,7 +864,11 @@ export function AdminDashboard({
       }
     }
     fetchOrders()
-    return () => { active = false }
+    const interval = setInterval(fetchOrders, 5000)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
   }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey])
 
   // Fetch active carts count once on mount for the badge count

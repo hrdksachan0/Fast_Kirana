@@ -122,9 +122,31 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // Forward user session headers to FastAPI backend for all /api requests
+  if (nextUrl.pathname.startsWith('/api/')) {
+    const requestHeaders = new Headers(req.headers)
+    if (isLoggedIn && token) {
+      const userId = (token.id || token.sub) as string
+      if (userId) {
+        requestHeaders.set('x-user-id', userId)
+      }
+      if (userRole) {
+        requestHeaders.set('x-user-role', userRole)
+      }
+      if (token.email) {
+        requestHeaders.set('x-user-email', token.email as string)
+      }
+    }
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|products/|categories/|icons/).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/).*)'],
 }
