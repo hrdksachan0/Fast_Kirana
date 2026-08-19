@@ -111,14 +111,16 @@ export default async function AdminPage() {
           category: { slug: { not: 'cafe' } },
         },
       }),
-      prisma.order.groupBy({
-        by: ['shopName', 'status'],
-        where: {
-          deliveryMethod: { not: 'RETAIL' },
-        },
-        _sum: { total: true, subtotal: true, discount: true },
-        _count: { id: true },
-      }),
+      prisma.$queryRaw`
+        SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
+               COUNT(id)::int as count,
+               COALESCE(SUM(total), 0)::float as total,
+               COALESCE(SUM(subtotal), 0)::float as subtotal,
+               COALESCE(SUM(discount), 0)::float as discount
+        FROM orders
+        WHERE "deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL
+        GROUP BY "shopName", "restaurantId", "orderType", status
+      `,
       prisma.order.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -139,14 +141,14 @@ export default async function AdminPage() {
       }),
     ]))
 
-    todayOrdersCount = todayOrders as number
-    todayRevenue = (todayRevAgg as any)._sum?.total || 0
-    todayNetRevenue = (todayDeliveredAgg as any)._sum?.total || 0
-    userCount = results[0] as number
-    lowStockCount = results[1] as number
-    const groupStats = results[2] as any[]
-    const recentOrdersList = results[3] as any[]
-    categoriesRaw = results[4] as any[]
+    todayOrdersCount = (todayOrders as number) || 0
+    todayRevenue = (todayRevAgg as any)?._sum?.total || 0
+    todayNetRevenue = (todayDeliveredAgg as any)?._sum?.total || 0
+    userCount = (results[0] as number) || 0
+    lowStockCount = (results[1] as number) || 0
+    const groupStats = (results[2] as any[]) || []
+    const recentOrdersList = (results[3] as any[]) || []
+    categoriesRaw = (results[4] as any[]) || []
 
     productsRaw = []
     reviewsRaw = []
@@ -168,9 +170,9 @@ export default async function AdminPage() {
     groupStats.forEach((group: any) => {
       const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT' || (group.shopName && group.shopName.toLowerCase().includes('restaurant'))
       
-      const count = group._count?.id || 0
-      const foodNetSales = (group._sum?.subtotal || 0) - (group._sum?.discount || 0)
-      const sum = isRestaurant && foodNetSales > 0 ? foodNetSales : (group._sum?.total || 0)
+      const count = group.count || 0
+      const foodNetSales = (group.subtotal || 0) - (group.discount || 0)
+      const sum = isRestaurant && foodNetSales > 0 ? foodNetSales : (group.total || 0)
 
       if (group.status && statusCountsMap[group.status] !== undefined) {
         statusCountsMap[group.status] += count
@@ -211,33 +213,7 @@ export default async function AdminPage() {
       CANCELLED: statusCountsMap.CANCELLED,
     }
   } catch (error) {
-    console.error('Database connection error in admin page:', error)
-    return (
-      <div className="container mx-auto px-4 py-24 flex items-center justify-center min-h-[70vh]">
-        <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-lg text-center space-y-6 animate-fade-in">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
-            <AlertTriangle className="h-7 w-7" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-text-primary">Database Waking Up</h2>
-            <p className="text-sm text-text-secondary">
-              The store database is currently resuming from its serverless sleep. This typically takes 5 to 7 seconds.
-            </p>
-          </div>
-          <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 text-xs text-text-muted text-left border border-border/40">
-            <strong>What happened?</strong> To save resources, our Neon Postgres database pauses when idle. It automatically starts up the moment a new request comes in.
-          </div>
-          <div className="pt-2">
-            <a 
-              href="/admin" 
-              className="inline-flex w-full items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold py-3 px-4 text-sm transition-colors shadow-sm active:scale-[0.98]"
-            >
-              Refresh Admin Panel
-            </a>
-          </div>
-        </div>
-      </div>
-    )
+    console.error('Database connection warning in admin page:', error)
   }
 
   // Compute total revenue
