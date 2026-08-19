@@ -41,10 +41,18 @@ async def get_current_user(
     # 2. Check NextAuth Session Cookie & Headers if request object is present
     if request is not None:
         session_cookie = (
-            request.cookies.get("next-auth.session-token") or
+            request.cookies.get("__Secure-authjs.session-token") or
             request.cookies.get("__Secure-next-auth.session-token") or
-            request.cookies.get("authjs.session-token")
+            request.cookies.get("authjs.session-token") or
+            request.cookies.get("next-auth.session-token") or
+            request.cookies.get("__Host-authjs.session-token")
         )
+        if not session_cookie:
+            for k, v in request.cookies.items():
+                if "session-token" in k:
+                    session_cookie = v
+                    break
+
         if session_cookie:
             user = extract_user_from_token(session_cookie)
             if user and not is_token_expired(user):

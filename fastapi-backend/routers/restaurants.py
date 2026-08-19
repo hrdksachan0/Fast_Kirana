@@ -318,7 +318,7 @@ async def update_restaurant(
             if not is_admin and key in ['commissionRate', 'isActive']:
                 continue
             val = payload[key]
-            if key in float_keys:
+            if key in ['lat', 'lng']:
                 if val is None or val == "":
                     val = None
                 else:
@@ -326,14 +326,22 @@ async def update_restaurant(
                         val = float(val)
                     except (ValueError, TypeError):
                         val = getattr(restaurant, key)
+            elif key in ['commissionRate', 'rating']:
+                if val is None or val == "":
+                    val = getattr(restaurant, key, 10.0) or 10.0
+                else:
+                    try:
+                        val = float(val)
+                    except (ValueError, TypeError):
+                        val = getattr(restaurant, key, 10.0) or 10.0
             elif key in int_keys:
                 if val is None or val == "":
-                    val = 0
+                    val = getattr(restaurant, key, 0) or 0
                 else:
                     try:
                         val = int(val)
                     except (ValueError, TypeError):
-                        val = getattr(restaurant, key)
+                        val = getattr(restaurant, key, 0) or 0
             setattr(restaurant, key, val)
 
     restaurant.slug = final_slug

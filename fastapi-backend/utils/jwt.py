@@ -144,8 +144,11 @@ def is_token_expired(token_payload: Dict[str, Any]) -> bool:
     """Check if token is expired (with 30s buffer)."""
     exp = token_payload.get("exp")
     if not exp:
-        return True
-    return datetime.now(timezone.utc).timestamp() > (exp - 30)
+        return False
+    try:
+        return datetime.now(timezone.utc).timestamp() > (float(exp) - 30)
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[Any] = None) -> str:
