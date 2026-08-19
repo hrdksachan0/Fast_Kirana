@@ -7,15 +7,14 @@ import { revalidatePath, revalidateTag } from 'next/cache'
  */
 export function revalidateStorefront(categorySlug?: string | null, restaurantSlug?: string | null) {
   try {
-    // 1. Purge all product-level ISR caches (covers stock/price/availability
-    //    changes surfaced in home, category, trending, search, etc.)
-    revalidateTag('products', 'max')
+    // 1. Purge all product-level ISR caches
+    revalidateTag('products')
     
-    // Purge cached restaurant list (home page, etc.)
-    revalidateTag('restaurants', 'max')
+    // Purge cached restaurant list
+    revalidateTag('restaurants')
 
     // Purge cached store settings
-    revalidateTag('settings', 'max')
+    revalidateTag('settings')
 
     // 2. Revalidate landing page (home)
     revalidatePath('/')
