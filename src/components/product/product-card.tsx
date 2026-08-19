@@ -256,15 +256,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 ease-out cursor-pointer",
+        "group relative flex flex-col overflow-hidden rounded-3xl p-1 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] cursor-pointer",
         isRestaurant 
-          ? "border-zinc-200/70 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-orange-500/40"
-          : "border-zinc-100 dark:border-zinc-900/60 bg-white/95 dark:bg-zinc-950/70 backdrop-blur-xs shadow-xs hover:shadow-md hover:border-zinc-200 dark:hover:border-zinc-800",
+          ? "bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 hover:border-orange-500/40 shadow-xs hover:shadow-md"
+          : "bg-slate-200/60 dark:bg-zinc-900/80 border border-black/5 dark:border-white/10 shadow-xs hover:shadow-lg",
         isCompact 
-          ? "p-1.5 min-[375px]:p-2 h-[200px] min-[375px]:h-[220px] sm:h-[240px]" 
-          : "p-2 min-[375px]:p-2.5 h-[235px] min-[375px]:h-[258px] sm:h-[280px]"
+          ? "h-[208px] min-[375px]:h-[228px] sm:h-[248px]" 
+          : "h-[243px] min-[375px]:h-[266px] sm:h-[288px]"
       )}
     >
+      <div className="flex flex-col h-full w-full rounded-[calc(1.5rem-0.25rem)] bg-card p-2 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] relative overflow-hidden">
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
@@ -552,5 +553,6 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           )}
         </Link>
       </div>
+    </div>
   )
 }
