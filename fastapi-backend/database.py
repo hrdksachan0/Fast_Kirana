@@ -4,33 +4,22 @@ from sqlalchemy.orm import declarative_base
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
 
-def clean_async_db_url(url: str) -> str:
+def clean_async_db_url(raw_url: str) -> str:
+    url = raw_url or os.getenv("DATABASE_URL", "")
+    if not url:
+        return url
+
+    # Force driver scheme
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-    parsed = urlparse(url)
-    query_params = parse_qs(parsed.query)
+    # Strip ALL query parameters from URL string to prevent asyncpg keyword argument crashes
+    if "?" in url:
+        url = url.split("?")[0]
 
-    # Filter out query parameters not supported in URL query string by asyncpg driver
-    unsupported = {
-        "connection_limit", "pool_timeout", "schema", "sslmode", "ssl",
-        "pgbouncer", "prepared_statement_cache_size", "statement_cache_size",
-        "channel_binding"
-    }
-    filtered_params = {k: v for k, v in query_params.items() if k.lower() not in unsupported}
-
-    new_query = urlencode(filtered_params, doseq=True)
-    cleaned = urlunparse((
-        parsed.scheme,
-        parsed.netloc,
-        parsed.path,
-        parsed.params,
-        new_query,
-        parsed.fragment
-    ))
-    return cleaned
+    return url
 
 async_db_url = clean_async_db_url(settings.DATABASE_URL)
 
