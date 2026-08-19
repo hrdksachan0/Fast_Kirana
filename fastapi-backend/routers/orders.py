@@ -14,7 +14,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from database import get_db
+from database import get_db, AsyncSessionLocal
 from models import (
     Order, OrderItem, Product, User, Address, RiderWallet, 
     OrderStatus, PaymentStatus, PaymentMethod, OrderType, Role,

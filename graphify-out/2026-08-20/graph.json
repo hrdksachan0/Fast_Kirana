@@ -511,6 +511,19 @@
       "norm_label": "user"
     },
     {
+      "label": "SearchResult",
+      "file_type": "code",
+      "source_file": "src/lib/search-cache.ts",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_search_cache_searchresult",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "searchresult"
+    },
+    {
       "label": "Settings",
       "file_type": "code",
       "source_file": "src/hooks/use-settings.ts",
@@ -1029,6 +1042,45 @@
       "community": 16,
       "community_name": "triggerHaptic",
       "norm_label": "usercoords"
+    },
+    {
+      "label": "ApiMeta",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L14",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_api_response_apimeta",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": "apimeta"
+    },
+    {
+      "label": "ApiResponder",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L29",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_api_response_apiresponder",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": "apiresponder"
+    },
+    {
+      "label": "ApiResponse",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L21",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_api_response_apiresponse",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": "apiresponse"
     },
     {
       "label": "AddressCreate",
@@ -2994,45 +3046,6 @@
       "norm_label": "address"
     },
     {
-      "label": "ApiMeta",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L14",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_lib_api_response_apimeta",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "apimeta"
-    },
-    {
-      "label": "ApiResponder",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L29",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_lib_api_response_apiresponder",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "apiresponder"
-    },
-    {
-      "label": "ApiResponse",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L21",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_lib_api_response_apiresponse",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "apiresponse"
-    },
-    {
       "label": "RateLimitOptions",
       "file_type": "code",
       "source_file": "src/lib/rate-limit.ts",
@@ -3042,7 +3055,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_ratelimitoptions",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "ratelimitoptions"
     },
     {
@@ -3055,21 +3068,8 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_tokenentry",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "tokenentry"
-    },
-    {
-      "label": "SearchResult",
-      "file_type": "code",
-      "source_file": "src/lib/search-cache.ts",
-      "source_location": "L3",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_lib_search_cache_searchresult",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "searchresult"
     },
     {
       "label": "BlockCustomerModalProps",
@@ -5385,6 +5385,126 @@
       "norm_label": "loadgooglemapsscript()"
     },
     {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/products/route.ts",
+      "source_location": "L32",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_products_route_get",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "get()"
+    },
+    {
+      "label": "getFuzzyScore()",
+      "file_type": "code",
+      "source_file": "src/app/api/products/route.ts",
+      "source_location": "L543",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_products_route_getfuzzyscore",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "getfuzzyscore()"
+    },
+    {
+      "label": "getLevenshteinDistance()",
+      "file_type": "code",
+      "source_file": "src/app/api/products/route.ts",
+      "source_location": "L521",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_products_route_getlevenshteindistance",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "getlevenshteindistance()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/products/upsell/route.ts",
+      "source_location": "L6",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_products_upsell_route_get",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "get()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
+      "source_location": "L6",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_reviews_route_get",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "get()"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
+      "source_location": "L54",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_reviews_route_post",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "post()"
+    },
+    {
+      "label": "FoodRestaurantPage()",
+      "file_type": "code",
+      "source_file": "src/app/food/[slug]/page.tsx",
+      "source_location": "L48",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_food_slug_page_foodrestaurantpage",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "foodrestaurantpage()"
+    },
+    {
+      "label": "generateMetadata()",
+      "file_type": "code",
+      "source_file": "src/app/food/[slug]/page.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_food_slug_page_generatemetadata",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "generatemetadata()"
+    },
+    {
+      "label": "getCachedSearch()",
+      "file_type": "code",
+      "source_file": "src/lib/search-cache.ts",
+      "source_location": "L19",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_search_cache_getcachedsearch",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "getcachedsearch()"
+    },
+    {
+      "label": "setCachedSearch()",
+      "file_type": "code",
+      "source_file": "src/lib/search-cache.ts",
+      "source_location": "L23",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_search_cache_setcachedsearch",
+      "community": 120,
+      "community_name": "api/products/route.ts",
+      "norm_label": "setcachedsearch()"
+    },
+    {
       "label": "test_health_endpoint()",
       "file_type": "code",
       "source_file": "fastapi-backend/tests/test_api.py",
@@ -6331,6 +6451,30 @@
       "community": 17,
       "community_name": "getLast10Digits",
       "norm_label": "profilesetupform()"
+    },
+    {
+      "label": ".error()",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L53",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_api_response_apiresponder_error",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": ".error()"
+    },
+    {
+      "label": ".success()",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L36",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_api_response_apiresponder_success",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": ".success()"
     },
     {
       "label": "getCleanEnv()",
@@ -7569,42 +7713,6 @@
       "norm_label": "ispointinpolygon()"
     },
     {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/products/upsell/route.ts",
-      "source_location": "L6",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_products_upsell_route_get",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
-      "source_location": "L6",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_restaurants_id_reviews_route_get",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "POST()",
-      "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
-      "source_location": "L54",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_restaurants_id_reviews_route_post",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "post()"
-    },
-    {
       "label": "CafePage()",
       "file_type": "code",
       "source_file": "src/app/cafe/page.tsx",
@@ -7615,30 +7723,6 @@
       "community": 23,
       "community_name": "prisma.ts",
       "norm_label": "cafepage()"
-    },
-    {
-      "label": "FoodRestaurantPage()",
-      "file_type": "code",
-      "source_file": "src/app/food/[slug]/page.tsx",
-      "source_location": "L48",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_food_slug_page_foodrestaurantpage",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "foodrestaurantpage()"
-    },
-    {
-      "label": "generateMetadata()",
-      "file_type": "code",
-      "source_file": "src/app/food/[slug]/page.tsx",
-      "source_location": "L9",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_food_slug_page_generatemetadata",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "generatemetadata()"
     },
     {
       "label": "requireRole()",
@@ -11573,7 +11657,7 @@
       "_origin": "ast",
       "id": "src_app_api_admin_push_notifications_route_get",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "get()"
     },
     {
@@ -11585,7 +11669,7 @@
       "_origin": "ast",
       "id": "src_app_api_admin_push_notifications_route_post",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "post()"
     },
     {
@@ -11597,7 +11681,7 @@
       "_origin": "ast",
       "id": "src_app_api_coupons_validate_route_post",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "post()"
     },
     {
@@ -11609,44 +11693,8 @@
       "_origin": "ast",
       "id": "src_app_api_products_live_stock_route_post",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "post()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/products/route.ts",
-      "source_location": "L32",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_products_route_get",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "getFuzzyScore()",
-      "file_type": "code",
-      "source_file": "src/app/api/products/route.ts",
-      "source_location": "L543",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_products_route_getfuzzyscore",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "getfuzzyscore()"
-    },
-    {
-      "label": "getLevenshteinDistance()",
-      "file_type": "code",
-      "source_file": "src/app/api/products/route.ts",
-      "source_location": "L521",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_products_route_getlevenshteindistance",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "getlevenshteindistance()"
     },
     {
       "label": "DELETE()",
@@ -11657,7 +11705,7 @@
       "_origin": "ast",
       "id": "src_app_api_push_subscribe_route_delete",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "delete()"
     },
     {
@@ -11669,32 +11717,8 @@
       "_origin": "ast",
       "id": "src_app_api_push_subscribe_route_post",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "post()"
-    },
-    {
-      "label": ".error()",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L53",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_api_response_apiresponder_error",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": ".error()"
-    },
-    {
-      "label": ".success()",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L36",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_api_response_apiresponder_success",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": ".success()"
     },
     {
       "label": "broadcastPushNotification()",
@@ -11705,7 +11729,7 @@
       "_origin": "ast",
       "id": "src_lib_push_notification_broadcastpushnotification",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "broadcastpushnotification()"
     },
     {
@@ -11717,7 +11741,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_getclientip",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "getclientip()"
     },
     {
@@ -11729,32 +11753,8 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_ratelimit",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "ratelimit()"
-    },
-    {
-      "label": "getCachedSearch()",
-      "file_type": "code",
-      "source_file": "src/lib/search-cache.ts",
-      "source_location": "L19",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_search_cache_getcachedsearch",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "getcachedsearch()"
-    },
-    {
-      "label": "setCachedSearch()",
-      "file_type": "code",
-      "source_file": "src/lib/search-cache.ts",
-      "source_location": "L23",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_search_cache_setcachedsearch",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "setcachedsearch()"
     },
     {
       "label": "Loading()",
@@ -19561,7 +19561,7 @@
       "_origin": "ast",
       "id": "consumerstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "consumerstate"
     },
     {
@@ -19572,30 +19572,8 @@
       "_origin": "ast",
       "id": "consumerstatefulwidget",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "consumerstatefulwidget"
-    },
-    {
-      "label": "ConsumerWidget",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "consumerwidget",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "consumerwidget"
-    },
-    {
-      "label": "../data/models/address.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "data_models_address_dart",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "../data/models/address.dart"
     },
     {
       "label": "DeliveryLoginScreen",
@@ -19605,7 +19583,7 @@
       "_origin": "ast",
       "id": "deliveryloginscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "deliveryloginscreen"
     },
     {
@@ -19616,7 +19594,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "auth/delivery_login.dart"
     },
     {
@@ -19627,7 +19605,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_build",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "build"
     },
     {
@@ -19638,7 +19616,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_createstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "createstate"
     },
     {
@@ -19649,7 +19627,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_deliveryloginscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "deliveryloginscreen"
     },
     {
@@ -19660,7 +19638,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_deliveryloginscreenstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_deliveryloginscreenstate"
     },
     {
@@ -19671,7 +19649,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_isloading",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_isloading"
     },
     {
@@ -19682,7 +19660,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_otpcontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_otpcontroller"
     },
     {
@@ -19693,7 +19671,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_phonecontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_phonecontroller"
     },
     {
@@ -19704,7 +19682,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_delivery_login_showotp",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_showotp"
     },
     {
@@ -19715,7 +19693,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "restaurant_login.dart"
     },
     {
@@ -19726,7 +19704,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_build",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "build"
     },
     {
@@ -19737,7 +19715,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_createstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "createstate"
     },
     {
@@ -19748,7 +19726,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_emailcontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_emailcontroller"
     },
     {
@@ -19759,7 +19737,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_passwordcontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_passwordcontroller"
     },
     {
@@ -19770,7 +19748,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_restaurantloginscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "restaurantloginscreen"
     },
     {
@@ -19781,7 +19759,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_restaurant_login_restaurantloginscreenstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_restaurantloginscreenstate"
     },
     {
@@ -19792,7 +19770,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_categories_categories_screen_categoriesscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "categoriesscreen"
     },
     {
@@ -19803,7 +19781,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "delivery_dashboard.dart"
     },
     {
@@ -19814,7 +19792,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_build",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "build"
     },
     {
@@ -19825,7 +19803,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_createstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "createstate"
     },
     {
@@ -19836,7 +19814,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_deliverydashboard",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "deliverydashboard"
     },
     {
@@ -19847,7 +19825,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_deliverydashboardstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_deliverydashboardstate"
     },
     {
@@ -19858,7 +19836,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_isonline",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_isonline"
     },
     {
@@ -19869,7 +19847,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_ordercard",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_ordercard"
     },
     {
@@ -19880,7 +19858,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_dashboard_statcard",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_statcard"
     },
     {
@@ -19891,7 +19869,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "delivery/delivery_login.dart"
     },
     {
@@ -19902,7 +19880,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_build",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "build"
     },
     {
@@ -19913,7 +19891,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_createstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "createstate"
     },
     {
@@ -19924,7 +19902,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_deliveryloginscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "deliveryloginscreen"
     },
     {
@@ -19935,7 +19913,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_deliveryloginscreenstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_deliveryloginscreenstate"
     },
     {
@@ -19946,7 +19924,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_isloading",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_isloading"
     },
     {
@@ -19957,7 +19935,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_otpcontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_otpcontroller"
     },
     {
@@ -19968,7 +19946,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_phonecontroller",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_phonecontroller"
     },
     {
@@ -19979,195 +19957,8 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_delivery_delivery_login_showotp",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "_showotp"
-    },
-    {
-      "label": "ProductsScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/products_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_products_screen_productsscreen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "productsscreen"
-    },
-    {
-      "label": "address_book_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "address_book_screen.dart"
-    },
-    {
-      "label": "AddressBookScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addressbookscreen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "addressbookscreen"
-    },
-    {
-      "label": "_AddressBookScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addressbookscreenstate",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "_addressbookscreenstate"
-    },
-    {
-      "label": "_addresses",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addresses",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "_addresses"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_build",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildEmptyState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_buildemptystate",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "_buildemptystate"
-    },
-    {
-      "label": "createState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_createstate",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "createstate"
-    },
-    {
-      "label": "addresses_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_addresses_screen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "addresses_screen.dart"
-    },
-    {
-      "label": "AddressesScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_addressesscreen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "addressesscreen"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_build",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildAddressCard",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_buildaddresscard",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "_buildaddresscard"
-    },
-    {
-      "label": "_iconForLabel",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_iconforlabel",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "_iconforlabel"
-    },
-    {
-      "label": "ProfileScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/profile_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_profile_screen_profilescreen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "profilescreen"
-    },
-    {
-      "label": "profile/wallet_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wallet_screen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "profile/wallet_screen.dart"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wallet_screen_build",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "WalletScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wallet_screen_walletscreen",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "walletscreen"
     },
     {
       "label": "SplashScreen",
@@ -20177,415 +19968,151 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_splash_splash_screen_splashscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community_name": "ConsumerState",
       "norm_label": "splashscreen"
     },
     {
-      "label": "addressesProvider",
+      "label": "_SplashScreenState",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/providers/address_provider.dart",
+      "source_file": "fastkirana_flutter/lib/features/splash/splash_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_providers_address_provider_addressesprovider",
+      "id": "fastkirana_flutter_lib_features_splash_splash_screen_splashscreenstate",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "addressesprovider"
+      "community_name": "ConsumerState",
+      "norm_label": "_splashscreenstate"
     },
     {
-      "label": "addressRepositoryProvider",
+      "label": "SplashScreen",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/providers/address_provider.dart",
+      "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_providers_address_provider_addressrepositoryprovider",
+      "id": "splashscreen",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "addressrepositoryprovider"
+      "community_name": "ConsumerState",
+      "norm_label": "splashscreen"
     },
     {
-      "label": "package:flutter_riverpod/flutter_riverpod.dart",
+      "label": "TickerProviderStateMixin",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "package_flutter_riverpod_flutter_riverpod_dart",
+      "id": "tickerproviderstatemixin",
       "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "package:flutter_riverpod/flutter_riverpod.dart"
+      "community_name": "ConsumerState",
+      "norm_label": "tickerproviderstatemixin"
     },
     {
-      "label": "../../providers/address_provider.dart",
+      "label": "api/products/route.ts",
       "file_type": "code",
-      "source_file": null,
-      "source_location": null,
+      "source_file": "src/app/api/products/route.ts",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "providers_address_provider_dart",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "../../providers/address_provider.dart"
-    },
-    {
-      "label": "../../widgets/brand_card.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "widgets_brand_card_dart",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "../../widgets/brand_card.dart"
-    },
-    {
-      "label": "../../widgets/brand_input.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "widgets_brand_input_dart",
-      "community": 12,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
-      "norm_label": "../../widgets/brand_input.dart"
-    },
-    {
-      "label": "product_card.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card",
+      "id": "src_app_api_products_route",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "product_card.dart"
+      "community_name": "api/products/route.ts",
+      "norm_label": "api/products/route.ts"
     },
     {
-      "label": "_buildProductImage",
+      "label": "SYNONYM_DICTIONARY",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/app/api/products/route.ts",
+      "source_location": "L12",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_buildproductimage",
+      "id": "src_app_api_products_route_synonym_dictionary",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_buildproductimage"
+      "community_name": "api/products/route.ts",
+      "norm_label": "synonym_dictionary"
     },
     {
-      "label": "createState",
+      "label": "upsell/route.ts",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/app/api/products/upsell/route.ts",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_createstate",
+      "id": "src_app_api_products_upsell_route",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "createstate"
+      "community_name": "api/products/route.ts",
+      "norm_label": "upsell/route.ts"
     },
     {
-      "label": "_getEmojiForProduct",
+      "label": "[id]/reviews/route.ts",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_getemojiforproduct",
+      "id": "src_app_api_restaurants_id_reviews_route",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_getemojiforproduct"
+      "community_name": "api/products/route.ts",
+      "norm_label": "[id]/reviews/route.ts"
     },
     {
-      "label": "_getThemeColor",
+      "label": "food/[slug]/page.tsx",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/app/food/[slug]/page.tsx",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_getthemecolor",
+      "id": "src_app_food_slug_page",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_getthemecolor"
+      "community_name": "api/products/route.ts",
+      "norm_label": "food/[slug]/page.tsx"
     },
     {
-      "label": "isCompact",
+      "label": "dynamic",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/app/food/[slug]/page.tsx",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_iscompact",
+      "id": "src_app_food_slug_page_dynamic",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "iscompact"
+      "community_name": "api/products/route.ts",
+      "norm_label": "dynamic"
     },
     {
-      "label": "_isFavorite",
+      "label": "OUTLET_AS_RESTAURANT_ID",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/lib/constants.ts",
+      "source_location": "L14",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_isfavorite",
+      "id": "src_lib_constants_outlet_as_restaurant_id",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_isfavorite"
+      "community_name": "api/products/route.ts",
+      "norm_label": "outlet_as_restaurant_id"
     },
     {
-      "label": "_isFoodProduct",
+      "label": "OUTLET_WEDSON_ID",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/lib/constants.ts",
+      "source_location": "L13",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_isfoodproduct",
+      "id": "src_lib_constants_outlet_wedson_id",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_isfoodproduct"
+      "community_name": "api/products/route.ts",
+      "norm_label": "outlet_wedson_id"
     },
     {
-      "label": "_isPressed",
+      "label": "search-cache.ts",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/lib/search-cache.ts",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_ispressed",
+      "id": "src_lib_search_cache",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_ispressed"
+      "community_name": "api/products/route.ts",
+      "norm_label": "search-cache.ts"
     },
     {
-      "label": "_isVeg",
+      "label": "searchCache",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
+      "source_file": "src/lib/search-cache.ts",
+      "source_location": "L14",
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_isveg",
+      "id": "src_lib_search_cache_searchcache",
       "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_isveg"
-    },
-    {
-      "label": "onTap",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_ontap",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "ontap"
-    },
-    {
-      "label": "product",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_product",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "product"
-    },
-    {
-      "label": "ProductCard",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_productcard",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "productcard"
-    },
-    {
-      "label": "_ProductCardState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_productcardstate",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "_productcardstate"
-    },
-    {
-      "label": "width",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_width",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "width"
-    },
-    {
-      "label": "../features/products/product_detail_screen.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "features_products_product_detail_screen_dart",
-      "community": 120,
-      "community_name": "product_card.dart",
-      "norm_label": "../features/products/product_detail_screen.dart"
-    },
-    {
-      "label": "../admin/admin_dashboard.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "admin_admin_dashboard_dart",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "../admin/admin_dashboard.dart"
-    },
-    {
-      "label": "../../core/config/app_config.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "core_config_app_config_dart",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "../../core/config/app_config.dart"
-    },
-    {
-      "label": "admin_login.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "admin_login.dart"
-    },
-    {
-      "label": "AdminLoginScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_adminloginscreen",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "adminloginscreen"
-    },
-    {
-      "label": "_AdminLoginScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_adminloginscreenstate",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_adminloginscreenstate"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_build",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "createState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_createstate",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "createstate"
-    },
-    {
-      "label": "dispose",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_dispose",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "dispose"
-    },
-    {
-      "label": "_emailController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_emailcontroller",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_emailcontroller"
-    },
-    {
-      "label": "_errorMessage",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_errormessage",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_errormessage"
-    },
-    {
-      "label": "_handleAdminLogin",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_handleadminlogin",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_handleadminlogin"
-    },
-    {
-      "label": "_isLoading",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_isloading",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_isloading"
-    },
-    {
-      "label": "_obscurePassword",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_obscurepassword",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_obscurepassword"
-    },
-    {
-      "label": "_passwordController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_passwordcontroller",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "_passwordcontroller"
-    },
-    {
-      "label": "primaryRed",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_admin_login_primaryred",
-      "community": 121,
-      "community_name": "checkout_screen.dart",
-      "norm_label": "primaryred"
+      "community_name": "api/products/route.ts",
+      "norm_label": "searchcache"
     },
     {
       "label": "checkout_screen.dart",
@@ -22098,7 +21625,7 @@
       "label": "config",
       "file_type": "code",
       "source_file": "src/proxy.ts",
-      "source_location": "L128",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "src_proxy_config",
       "community": 132,
@@ -23140,6 +22667,182 @@
       "norm_label": "upgrade techniques"
     },
     {
+      "label": "../data/models/product.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "data_models_product_dart",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "../data/models/product.dart"
+    },
+    {
+      "label": "combo_builder_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "combo_builder_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen_build",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "ComboBuilderScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen_combobuilderscreen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "combobuilderscreen"
+    },
+    {
+      "label": "recently_viewed_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "recently_viewed_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen_build",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "RecentlyViewedScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen_recentlyviewedscreen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "recentlyviewedscreen"
+    },
+    {
+      "label": "wishlist_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "wishlist_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_build",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "wishlistProvider",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_wishlistprovider",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "wishlistprovider"
+    },
+    {
+      "label": "WishlistScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_wishlistscreen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "wishlistscreen"
+    },
+    {
+      "label": "search_results_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_results_screen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "search_results_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_results_screen_build",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "query",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_results_screen_query",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "query"
+    },
+    {
+      "label": "SearchResultsScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_results_screen_searchresultsscreen",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "searchresultsscreen"
+    },
+    {
+      "label": "../../widgets/product_card.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_product_card_dart",
+      "community": 143,
+      "community_name": "../data/models/product.dart",
+      "norm_label": "../../widgets/product_card.dart"
+    },
+    {
       "label": "next.config.ts",
       "file_type": "code",
       "source_file": "next.config.ts",
@@ -23171,6 +22874,171 @@
       "community": 144,
       "community_name": "next.config.ts",
       "norm_label": "note: /api/auth/[...nextauth] handles nextauth session creation natively"
+    },
+    {
+      "label": "../admin/admin_dashboard.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "admin_admin_dashboard_dart",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "../admin/admin_dashboard.dart"
+    },
+    {
+      "label": "../../core/config/app_config.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "core_config_app_config_dart",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "../../core/config/app_config.dart"
+    },
+    {
+      "label": "admin_login.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "admin_login.dart"
+    },
+    {
+      "label": "AdminLoginScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_adminloginscreen",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "adminloginscreen"
+    },
+    {
+      "label": "_AdminLoginScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_adminloginscreenstate",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_adminloginscreenstate"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_build",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_createstate",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "createstate"
+    },
+    {
+      "label": "dispose",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_dispose",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "dispose"
+    },
+    {
+      "label": "_emailController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_emailcontroller",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_emailcontroller"
+    },
+    {
+      "label": "_errorMessage",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_errormessage",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_errormessage"
+    },
+    {
+      "label": "_handleAdminLogin",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_handleadminlogin",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_handleadminlogin"
+    },
+    {
+      "label": "_isLoading",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_isloading",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_isloading"
+    },
+    {
+      "label": "_obscurePassword",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_obscurepassword",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_obscurepassword"
+    },
+    {
+      "label": "_passwordController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_passwordcontroller",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "_passwordcontroller"
+    },
+    {
+      "label": "primaryRed",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/admin_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_admin_login_primaryred",
+      "community": 145,
+      "community_name": "admin_login.dart",
+      "norm_label": "primaryred"
     },
     {
       "label": "FASTAPI_MIGRATION_PLAN.md",
@@ -23866,6 +23734,160 @@
       "norm_label": "../models/order.dart"
     },
     {
+      "label": "add_address_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "add_address_screen.dart"
+    },
+    {
+      "label": "AddAddressScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_addaddressscreen",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "addaddressscreen"
+    },
+    {
+      "label": "_AddAddressScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_addaddressscreenstate",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_addaddressscreenstate"
+    },
+    {
+      "label": "_areaController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_areacontroller",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_areacontroller"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_build",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "_buildField",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_buildfield",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_buildfield"
+    },
+    {
+      "label": "_cityController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_citycontroller",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_citycontroller"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_createstate",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "createstate"
+    },
+    {
+      "label": "_houseController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_housecontroller",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_housecontroller"
+    },
+    {
+      "label": "_isDefault",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_isdefault",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_isdefault"
+    },
+    {
+      "label": "_pincodeController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_pincodecontroller",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_pincodecontroller"
+    },
+    {
+      "label": "_streetController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_streetcontroller",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_streetcontroller"
+    },
+    {
+      "label": "_type",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_type",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_type"
+    },
+    {
+      "label": "_typeChip",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_typechip",
+      "community": 149,
+      "community_name": "add_address_screen.dart",
+      "norm_label": "_typechip"
+    },
+    {
       "label": "Animation",
       "file_type": "code",
       "source_file": null,
@@ -23897,6 +23919,17 @@
       "community": 15,
       "community_name": "splash/splash_screen.dart",
       "norm_label": "../auth/otp_screen.dart"
+    },
+    {
+      "label": "Color?",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "color",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "color?"
     },
     {
       "label": "auth/splash_screen.dart",
@@ -23987,17 +24020,6 @@
       "norm_label": "_scaleanimation"
     },
     {
-      "label": "_SplashScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/splash_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_splash_screen_splashscreenstate",
-      "community": 15,
-      "community_name": "splash/splash_screen.dart",
-      "norm_label": "_splashscreenstate"
-    },
-    {
       "label": "splash/splash_screen.dart",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/splash/splash_screen.dart",
@@ -24086,17 +24108,6 @@
       "norm_label": "_navigatetonextscreen"
     },
     {
-      "label": "_SplashScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/splash/splash_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_splash_splash_screen_splashscreenstate",
-      "community": 15,
-      "community_name": "splash/splash_screen.dart",
-      "norm_label": "_splashscreenstate"
-    },
-    {
       "label": "_textController",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/splash/splash_screen.dart",
@@ -24119,37 +24130,125 @@
       "norm_label": "_textfade"
     },
     {
-      "label": "SingleTickerProviderStateMixin",
+      "label": "brand_button.dart",
       "file_type": "code",
-      "source_file": null,
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "singletickerproviderstatemixin",
+      "id": "fastkirana_flutter_lib_widgets_brand_button",
       "community": 15,
       "community_name": "splash/splash_screen.dart",
-      "norm_label": "singletickerproviderstatemixin"
+      "norm_label": "brand_button.dart"
     },
     {
-      "label": "SplashScreen",
+      "label": "backgroundColor",
       "file_type": "code",
-      "source_file": null,
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "splashscreen",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_backgroundcolor",
       "community": 15,
       "community_name": "splash/splash_screen.dart",
-      "norm_label": "splashscreen"
+      "norm_label": "backgroundcolor"
     },
     {
-      "label": "TickerProviderStateMixin",
+      "label": "BrandButton",
       "file_type": "code",
-      "source_file": null,
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "tickerproviderstatemixin",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_brandbutton",
       "community": 15,
       "community_name": "splash/splash_screen.dart",
-      "norm_label": "tickerproviderstatemixin"
+      "norm_label": "brandbutton"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_build",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "fullWidth",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_fullwidth",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "fullwidth"
+    },
+    {
+      "label": "gradientEnd",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_gradientend",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "gradientend"
+    },
+    {
+      "label": "gradientStart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_gradientstart",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "gradientstart"
+    },
+    {
+      "label": "isLoading",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_isloading",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "isloading"
+    },
+    {
+      "label": "onPressed",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_onpressed",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "onpressed"
+    },
+    {
+      "label": "text",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_text",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "text"
+    },
+    {
+      "label": "textColor",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_brand_button_textcolor",
+      "community": 15,
+      "community_name": "splash/splash_screen.dart",
+      "norm_label": "textcolor"
     },
     {
       "label": "../../widgets/brand_logo.dart",
@@ -25536,6 +25635,17 @@
       "community": 17,
       "community_name": "getLast10Digits",
       "norm_label": "update-phone/route.ts"
+    },
+    {
+      "label": "api-response.ts",
+      "file_type": "code",
+      "source_file": "src/lib/api-response.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_api_response",
+      "community": 17,
+      "community_name": "getLast10Digits",
+      "norm_label": "api-response.ts"
     },
     {
       "label": "mail.ts",
@@ -32985,28 +33095,6 @@
       "norm_label": "check-store/route.ts"
     },
     {
-      "label": "upsell/route.ts",
-      "file_type": "code",
-      "source_file": "src/app/api/products/upsell/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_api_products_upsell_route",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "upsell/route.ts"
-    },
-    {
-      "label": "[id]/reviews/route.ts",
-      "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/reviews/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_api_restaurants_id_reviews_route",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "[id]/reviews/route.ts"
-    },
-    {
       "label": "cafe/page.tsx",
       "file_type": "code",
       "source_file": "src/app/cafe/page.tsx",
@@ -33016,50 +33104,6 @@
       "community": 23,
       "community_name": "prisma.ts",
       "norm_label": "cafe/page.tsx"
-    },
-    {
-      "label": "food/[slug]/page.tsx",
-      "file_type": "code",
-      "source_file": "src/app/food/[slug]/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_food_slug_page",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "food/[slug]/page.tsx"
-    },
-    {
-      "label": "dynamic",
-      "file_type": "code",
-      "source_file": "src/app/food/[slug]/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_food_slug_page_dynamic",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "dynamic"
-    },
-    {
-      "label": "OUTLET_AS_RESTAURANT_ID",
-      "file_type": "code",
-      "source_file": "src/lib/constants.ts",
-      "source_location": "L14",
-      "_origin": "ast",
-      "id": "src_lib_constants_outlet_as_restaurant_id",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "outlet_as_restaurant_id"
-    },
-    {
-      "label": "OUTLET_WEDSON_ID",
-      "file_type": "code",
-      "source_file": "src/lib/constants.ts",
-      "source_location": "L13",
-      "_origin": "ast",
-      "id": "src_lib_constants_outlet_wedson_id",
-      "community": 23,
-      "community_name": "prisma.ts",
-      "norm_label": "outlet_wedson_id"
     },
     {
       "label": "master-catalog.ts",
@@ -37946,378 +37990,279 @@
       "norm_label": "restaurant-form.tsx"
     },
     {
-      "label": "../cart/cart_screen.dart",
+      "label": "ConsumerWidget",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "cart_cart_screen_dart",
+      "id": "consumerwidget",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "../cart/cart_screen.dart"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "consumerwidget"
     },
     {
-      "label": "core/providers/cart_provider.dart",
+      "label": "../data/models/address.dart",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/core/providers/cart_provider.dart",
+      "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_core_providers_cart_provider",
+      "id": "data_models_address_dart",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "core/providers/cart_provider.dart"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "../data/models/address.dart"
     },
     {
-      "label": "orders_screen.dart",
+      "label": "ProductsScreen",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/products/products_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen",
+      "id": "fastkirana_flutter_lib_features_products_products_screen_productsscreen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "orders_screen.dart"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "productsscreen"
+    },
+    {
+      "label": "address_book_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "address_book_screen.dart"
+    },
+    {
+      "label": "AddressBookScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addressbookscreen",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "addressbookscreen"
+    },
+    {
+      "label": "_AddressBookScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addressbookscreenstate",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "_addressbookscreenstate"
+    },
+    {
+      "label": "_addresses",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_addresses",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "_addresses"
     },
     {
       "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_build",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_build",
       "community": 30,
-      "community_name": "orders_screen.dart",
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "build"
     },
     {
       "label": "_buildEmptyState",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildemptystate",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_buildemptystate",
       "community": 30,
-      "community_name": "orders_screen.dart",
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "_buildemptystate"
     },
     {
-      "label": "_buildSearchBox",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildsearchbox",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_buildsearchbox"
-    },
-    {
-      "label": "_buildStatusFilterPills",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildstatusfilterpills",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_buildstatusfilterpills"
-    },
-    {
-      "label": "_buildSubTabs",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildsubtabs",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_buildsubtabs"
-    },
-    {
       "label": "createState",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/address_book_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_createstate",
+      "id": "fastkirana_flutter_lib_features_profile_address_book_screen_createstate",
       "community": 30,
-      "community_name": "orders_screen.dart",
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "createstate"
     },
     {
-      "label": "dispose",
+      "label": "addresses_screen.dart",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_dispose",
+      "id": "fastkirana_flutter_lib_features_profile_addresses_screen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "dispose"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "addresses_screen.dart"
     },
     {
-      "label": "_getStatusBg",
+      "label": "AddressesScreen",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_getstatusbg",
+      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_addressesscreen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_getstatusbg"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "addressesscreen"
     },
     {
-      "label": "_getStatusColor",
+      "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_getstatuscolor",
+      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_build",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_getstatuscolor"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "build"
     },
     {
-      "label": "ordersProvider",
+      "label": "_buildAddressCard",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersprovider",
+      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_buildaddresscard",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "ordersprovider"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "_buildaddresscard"
     },
     {
-      "label": "OrdersScreen",
+      "label": "_iconForLabel",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/addresses_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersscreen",
+      "id": "fastkirana_flutter_lib_features_profile_addresses_screen_iconforlabel",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "ordersscreen"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "_iconforlabel"
     },
     {
-      "label": "_OrdersScreenState",
+      "label": "ProfileScreen",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/profile_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersscreenstate",
+      "id": "fastkirana_flutter_lib_features_profile_profile_screen_profilescreen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_ordersscreenstate"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "profilescreen"
     },
     {
-      "label": "primaryRed",
+      "label": "profile/wallet_screen.dart",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_primaryred",
+      "id": "fastkirana_flutter_lib_features_profile_wallet_screen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "primaryred"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "profile/wallet_screen.dart"
     },
     {
-      "label": "_searchController",
+      "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_searchcontroller",
+      "id": "fastkirana_flutter_lib_features_profile_wallet_screen_build",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_searchcontroller"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "build"
     },
     {
-      "label": "_searchQuery",
+      "label": "WalletScreen",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/profile/wallet_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_searchquery",
+      "id": "fastkirana_flutter_lib_features_profile_wallet_screen_walletscreen",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_searchquery"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "walletscreen"
     },
     {
-      "label": "_selectedTab",
+      "label": "addressesProvider",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/providers/address_provider.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_selectedtab",
+      "id": "fastkirana_flutter_lib_providers_address_provider_addressesprovider",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_selectedtab"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "addressesprovider"
     },
     {
-      "label": "_statusFilter",
+      "label": "addressRepositoryProvider",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_file": "fastkirana_flutter/lib/providers/address_provider.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_statusfilter",
+      "id": "fastkirana_flutter_lib_providers_address_provider_addressrepositoryprovider",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_statusfilter"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "addressrepositoryprovider"
     },
     {
-      "label": "textDark",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_textdark",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "textdark"
-    },
-    {
-      "label": "textMuted",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_textmuted",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "textmuted"
-    },
-    {
-      "label": "product_detail_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "product_detail_screen.dart"
-    },
-    {
-      "label": "_buildQualityRow",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_buildqualityrow",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_buildqualityrow"
-    },
-    {
-      "label": "createState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_createstate",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "createstate"
-    },
-    {
-      "label": "_isFavorite",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_isfavorite",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_isfavorite"
-    },
-    {
-      "label": "primaryRed",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_primaryred",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "primaryred"
-    },
-    {
-      "label": "product",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_product",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "product"
-    },
-    {
-      "label": "ProductDetailScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_productdetailscreen",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "productdetailscreen"
-    },
-    {
-      "label": "_ProductDetailScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_productdetailscreenstate",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "_productdetailscreenstate"
-    },
-    {
-      "label": "successGreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_successgreen",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "successgreen"
-    },
-    {
-      "label": "currentUserIdProvider",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/providers/auth_provider.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_providers_auth_provider_currentuseridprovider",
-      "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "currentuseridprovider"
-    },
-    {
-      "label": "order_detail_screen.dart",
+      "label": "package:flutter_riverpod/flutter_riverpod.dart",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "order_detail_screen_dart",
+      "id": "package_flutter_riverpod_flutter_riverpod_dart",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "order_detail_screen.dart"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "package:flutter_riverpod/flutter_riverpod.dart"
     },
     {
-      "label": "../providers/cart_provider.dart",
+      "label": "../../providers/address_provider.dart",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "providers_cart_provider_dart",
+      "id": "providers_address_provider_dart",
       "community": 30,
-      "community_name": "orders_screen.dart",
-      "norm_label": "../providers/cart_provider.dart"
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "../../providers/address_provider.dart"
+    },
+    {
+      "label": "../../widgets/brand_card.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_brand_card_dart",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "../../widgets/brand_card.dart"
+    },
+    {
+      "label": "../../widgets/brand_input.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_brand_input_dart",
+      "community": 30,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "norm_label": "../../widgets/brand_input.dart"
     },
     {
       "label": "health.py",
@@ -45510,7 +45455,7 @@
       "_origin": "ast",
       "id": "src_app_api_admin_push_notifications_route",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "push-notifications/route.ts"
     },
     {
@@ -45521,7 +45466,7 @@
       "_origin": "ast",
       "id": "src_app_api_coupons_validate_route",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "validate/route.ts"
     },
     {
@@ -45532,30 +45477,8 @@
       "_origin": "ast",
       "id": "src_app_api_products_live_stock_route",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "live-stock/route.ts"
-    },
-    {
-      "label": "api/products/route.ts",
-      "file_type": "code",
-      "source_file": "src/app/api/products/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_api_products_route",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "api/products/route.ts"
-    },
-    {
-      "label": "SYNONYM_DICTIONARY",
-      "file_type": "code",
-      "source_file": "src/app/api/products/route.ts",
-      "source_location": "L12",
-      "_origin": "ast",
-      "id": "src_app_api_products_route_synonym_dictionary",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "synonym_dictionary"
     },
     {
       "label": "subscribe/route.ts",
@@ -45565,19 +45488,8 @@
       "_origin": "ast",
       "id": "src_app_api_push_subscribe_route",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "subscribe/route.ts"
-    },
-    {
-      "label": "api-response.ts",
-      "file_type": "code",
-      "source_file": "src/lib/api-response.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_api_response",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "api-response.ts"
     },
     {
       "label": "rate-limit.ts",
@@ -45587,7 +45499,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "rate-limit.ts"
     },
     {
@@ -45598,7 +45510,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_apireadlimiter",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "apireadlimiter"
     },
     {
@@ -45609,7 +45521,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_apiwritelimiter",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "apiwritelimiter"
     },
     {
@@ -45620,7 +45532,7 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_couponlimiter",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "couponlimiter"
     },
     {
@@ -45631,30 +45543,8 @@
       "_origin": "ast",
       "id": "src_lib_rate_limit_tokenbuckets",
       "community": 58,
-      "community_name": "api/products/route.ts",
+      "community_name": "rate-limit.ts",
       "norm_label": "tokenbuckets"
-    },
-    {
-      "label": "search-cache.ts",
-      "file_type": "code",
-      "source_file": "src/lib/search-cache.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_search_cache",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "search-cache.ts"
-    },
-    {
-      "label": "searchCache",
-      "file_type": "code",
-      "source_file": "src/lib/search-cache.ts",
-      "source_location": "L14",
-      "_origin": "ast",
-      "id": "src_lib_search_cache_searchcache",
-      "community": 58,
-      "community_name": "api/products/route.ts",
-      "norm_label": "searchcache"
     },
     {
       "label": "app/loading.tsx",
@@ -45721,50 +45611,6 @@
       "community": 6,
       "community_name": "category_products_screen.dart",
       "norm_label": "../data/repositories/product_repository.dart"
-    },
-    {
-      "label": "_buildFoodItemCard",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/cafe/cafe_menu_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_cafe_cafe_menu_screen_buildfooditemcard",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildfooditemcard"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_cart_cart_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildCartContent",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_cart_cart_screen_buildcartcontent",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildcartcontent"
-    },
-    {
-      "label": "_buildCartItemRow",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_cart_cart_screen_buildcartitemrow",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildcartitemrow"
     },
     {
       "label": "categories_screen.dart",
@@ -45864,17 +45710,6 @@
       "community": 6,
       "community_name": "category_products_screen.dart",
       "norm_label": "category_products_screen.dart"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/categories/category_products_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_categories_category_products_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
     },
     {
       "label": "_buildFilterPill",
@@ -46020,17 +45855,6 @@
       "norm_label": "subcategory_screen.dart"
     },
     {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/categories/subcategory_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_categories_subcategory_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
       "label": "category",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/categories/subcategory_screen.dart",
@@ -46097,50 +45921,6 @@
       "norm_label": "_subcategoryscreenstate"
     },
     {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/checkout/checkout_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_checkout_checkout_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_handlePlaceOrder",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/checkout/checkout_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_checkout_checkout_screen_handleplaceorder",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_handleplaceorder"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/home/home_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_home_home_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildApiProductSections",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/home/home_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_home_home_screen_buildapiproductsections",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildapiproductsections"
-    },
-    {
       "label": "_buildCircularCategoryCarousel",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/home/home_screen.dart",
@@ -46150,204 +45930,6 @@
       "community": 6,
       "community_name": "category_products_screen.dart",
       "norm_label": "_buildcircularcategorycarousel"
-    },
-    {
-      "label": "_buildOrderCard",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildordercard",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildordercard"
-    },
-    {
-      "label": "_reorderItems",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_orders_orders_screen_reorderitems",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_reorderitems"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/products_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_products_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "search_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "search_screen.dart"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildSearchResults",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_buildsearchresults",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildsearchresults"
-    },
-    {
-      "label": "_buildTrendingAndRecent",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_buildtrendingandrecent",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildtrendingandrecent"
-    },
-    {
-      "label": "_controller",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_controller",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_controller"
-    },
-    {
-      "label": "createState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_createstate",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "createstate"
-    },
-    {
-      "label": "dispose",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_dispose",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "dispose"
-    },
-    {
-      "label": "_onSearchTermSelected",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_onsearchtermselected",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_onsearchtermselected"
-    },
-    {
-      "label": "_query",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_query",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_query"
-    },
-    {
-      "label": "_recentSearches",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_recentsearches",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_recentsearches"
-    },
-    {
-      "label": "SearchScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_searchscreen",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "searchscreen"
-    },
-    {
-      "label": "_SearchScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_searchscreenstate",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_searchscreenstate"
-    },
-    {
-      "label": "_trending",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_screen_trending",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_trending"
-    },
-    {
-      "label": "cartProvider",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/providers/cart_provider.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_providers_cart_provider_cartprovider",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "cartprovider"
     },
     {
       "label": "product_provider.dart",
@@ -46394,17 +45976,6 @@
       "norm_label": "getproducts"
     },
     {
-      "label": "productRepositoryProvider",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/providers/product_provider.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_providers_product_provider_productrepositoryprovider",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "productrepositoryprovider"
-    },
-    {
       "label": "productsProvider",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/providers/product_provider.dart",
@@ -46438,28 +46009,6 @@
       "norm_label": "trendingproductsprovider"
     },
     {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_build",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildAddButton",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_product_card_buildaddbutton",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "_buildaddbutton"
-    },
-    {
       "label": "Map",
       "file_type": "code",
       "source_file": null,
@@ -46471,17 +46020,6 @@
       "norm_label": "map"
     },
     {
-      "label": "MaterialPageRoute",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "materialpageroute",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "materialpageroute"
-    },
-    {
       "label": "package:action_slider/action_slider.dart",
       "file_type": "code",
       "source_file": null,
@@ -46491,28 +46029,6 @@
       "community": 6,
       "community_name": "category_products_screen.dart",
       "norm_label": "package:action_slider/action_slider.dart"
-    },
-    {
-      "label": "package:shimmer/shimmer.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "package_shimmer_shimmer_dart",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "package:shimmer/shimmer.dart"
-    },
-    {
-      "label": "productsProvider",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "productsprovider",
-      "community": 6,
-      "community_name": "category_products_screen.dart",
-      "norm_label": "productsprovider"
     },
     {
       "label": "../../providers/product_provider.dart",
@@ -46537,6 +46053,17 @@
       "norm_label": "texteditingcontroller"
     },
     {
+      "label": "../cart/cart_screen.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "cart_cart_screen_dart",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "../cart/cart_screen.dart"
+    },
+    {
       "label": "../checkout/checkout_screen.dart",
       "file_type": "code",
       "source_file": null,
@@ -46548,15 +46075,26 @@
       "norm_label": "../checkout/checkout_screen.dart"
     },
     {
-      "label": "../data/models/product.dart",
+      "label": "core/providers/cart_provider.dart",
       "file_type": "code",
-      "source_file": null,
+      "source_file": "fastkirana_flutter/lib/core/providers/cart_provider.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "data_models_product_dart",
+      "id": "fastkirana_flutter_lib_core_providers_cart_provider",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "../data/models/product.dart"
+      "norm_label": "core/providers/cart_provider.dart"
+    },
+    {
+      "label": "_buildFoodItemCard",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/cafe/cafe_menu_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_cafe_cafe_menu_screen_buildfooditemcard",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildfooditemcard"
     },
     {
       "label": "cart_screen.dart",
@@ -46592,6 +46130,17 @@
       "norm_label": "_applycoupon"
     },
     {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_cart_cart_screen_build",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "build"
+    },
+    {
       "label": "_buildBillRow",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
@@ -46601,6 +46150,28 @@
       "community": 60,
       "community_name": "cart_screen.dart",
       "norm_label": "_buildbillrow"
+    },
+    {
+      "label": "_buildCartContent",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_cart_cart_screen_buildcartcontent",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildcartcontent"
+    },
+    {
+      "label": "_buildCartItemRow",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/cart/cart_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_cart_cart_screen_buildcartitemrow",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildcartitemrow"
     },
     {
       "label": "_buildEmptyState",
@@ -46746,37 +46317,202 @@
       "norm_label": "successgreen"
     },
     {
-      "label": "combo_builder_screen.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen",
-      "community": 60,
-      "community_name": "cart_screen.dart",
-      "norm_label": "combo_builder_screen.dart"
-    },
-    {
       "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/categories/category_products_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen_build",
+      "id": "fastkirana_flutter_lib_features_categories_category_products_screen_build",
       "community": 60,
       "community_name": "cart_screen.dart",
       "norm_label": "build"
     },
     {
-      "label": "ComboBuilderScreen",
+      "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/products/combo_builder_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/categories/subcategory_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_products_combo_builder_screen_combobuilderscreen",
+      "id": "fastkirana_flutter_lib_features_categories_subcategory_screen_build",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "combobuilderscreen"
+      "norm_label": "build"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/checkout/checkout_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_checkout_checkout_screen_build",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "_handlePlaceOrder",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/checkout/checkout_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_checkout_checkout_screen_handleplaceorder",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_handleplaceorder"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/home/home_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_home_home_screen_build",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "_buildApiProductSections",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/home/home_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_home_home_screen_buildapiproductsections",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildapiproductsections"
+    },
+    {
+      "label": "_buildOrderCard",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildordercard",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildordercard"
+    },
+    {
+      "label": "_reorderItems",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_reorderitems",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_reorderitems"
+    },
+    {
+      "label": "product_detail_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "product_detail_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_build",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "_buildQualityRow",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_buildqualityrow",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_buildqualityrow"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_createstate",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "createstate"
+    },
+    {
+      "label": "_isFavorite",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_isfavorite",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_isfavorite"
+    },
+    {
+      "label": "primaryRed",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_primaryred",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "primaryred"
+    },
+    {
+      "label": "product",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_product",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "product"
+    },
+    {
+      "label": "ProductDetailScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_productdetailscreen",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "productdetailscreen"
+    },
+    {
+      "label": "_ProductDetailScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_productdetailscreenstate",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_productdetailscreenstate"
+    },
+    {
+      "label": "successGreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/product_detail_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_product_detail_screen_successgreen",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "successgreen"
     },
     {
       "label": "products_screen.dart",
@@ -46790,6 +46526,17 @@
       "norm_label": "products_screen.dart"
     },
     {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/products/products_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_products_products_screen_build",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "build"
+    },
+    {
       "label": "productsProvider",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/products/products_screen.dart",
@@ -46801,125 +46548,378 @@
       "norm_label": "productsprovider"
     },
     {
-      "label": "recently_viewed_screen.dart",
+      "label": "search_screen.dart",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen",
+      "id": "fastkirana_flutter_lib_features_search_search_screen",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "recently_viewed_screen.dart"
+      "norm_label": "search_screen.dart"
     },
     {
       "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen_build",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_build",
       "community": 60,
       "community_name": "cart_screen.dart",
       "norm_label": "build"
     },
     {
-      "label": "RecentlyViewedScreen",
+      "label": "_buildSearchResults",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/recently_viewed_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_recently_viewed_screen_recentlyviewedscreen",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_buildsearchresults",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "recentlyviewedscreen"
+      "norm_label": "_buildsearchresults"
     },
     {
-      "label": "wishlist_screen.dart",
+      "label": "_buildTrendingAndRecent",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_buildtrendingandrecent",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "wishlist_screen.dart"
+      "norm_label": "_buildtrendingandrecent"
+    },
+    {
+      "label": "_controller",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_controller",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_controller"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_createstate",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "createstate"
+    },
+    {
+      "label": "dispose",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_dispose",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "dispose"
+    },
+    {
+      "label": "_onSearchTermSelected",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_onsearchtermselected",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_onsearchtermselected"
+    },
+    {
+      "label": "_query",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_query",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_query"
+    },
+    {
+      "label": "_recentSearches",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_recentsearches",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_recentsearches"
+    },
+    {
+      "label": "SearchScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_searchscreen",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "searchscreen"
+    },
+    {
+      "label": "_SearchScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_searchscreenstate",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_searchscreenstate"
+    },
+    {
+      "label": "_trending",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/search/search_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_search_search_screen_trending",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_trending"
+    },
+    {
+      "label": "cartProvider",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/providers/cart_provider.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_providers_cart_provider_cartprovider",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "cartprovider"
+    },
+    {
+      "label": "productRepositoryProvider",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/providers/product_provider.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_providers_product_provider_productrepositoryprovider",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "productrepositoryprovider"
+    },
+    {
+      "label": "product_card.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "product_card.dart"
     },
     {
       "label": "build",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_build",
+      "id": "fastkirana_flutter_lib_widgets_product_card_build",
       "community": 60,
       "community_name": "cart_screen.dart",
       "norm_label": "build"
     },
     {
-      "label": "wishlistProvider",
+      "label": "_buildAddButton",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_wishlistprovider",
+      "id": "fastkirana_flutter_lib_widgets_product_card_buildaddbutton",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "wishlistprovider"
+      "norm_label": "_buildaddbutton"
     },
     {
-      "label": "WishlistScreen",
+      "label": "_buildProductImage",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/wishlist_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_wishlist_screen_wishlistscreen",
+      "id": "fastkirana_flutter_lib_widgets_product_card_buildproductimage",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "wishlistscreen"
+      "norm_label": "_buildproductimage"
     },
     {
-      "label": "search_results_screen.dart",
+      "label": "createState",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_results_screen",
+      "id": "fastkirana_flutter_lib_widgets_product_card_createstate",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "search_results_screen.dart"
+      "norm_label": "createstate"
     },
     {
-      "label": "build",
+      "label": "_getEmojiForProduct",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_results_screen_build",
+      "id": "fastkirana_flutter_lib_widgets_product_card_getemojiforproduct",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "build"
+      "norm_label": "_getemojiforproduct"
     },
     {
-      "label": "query",
+      "label": "_getThemeColor",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_results_screen_query",
+      "id": "fastkirana_flutter_lib_widgets_product_card_getthemecolor",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "query"
+      "norm_label": "_getthemecolor"
     },
     {
-      "label": "SearchResultsScreen",
+      "label": "isCompact",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/search/search_results_screen.dart",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_search_search_results_screen_searchresultsscreen",
+      "id": "fastkirana_flutter_lib_widgets_product_card_iscompact",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "searchresultsscreen"
+      "norm_label": "iscompact"
+    },
+    {
+      "label": "_isFavorite",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_isfavorite",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_isfavorite"
+    },
+    {
+      "label": "_isFoodProduct",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_isfoodproduct",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_isfoodproduct"
+    },
+    {
+      "label": "_isPressed",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_ispressed",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_ispressed"
+    },
+    {
+      "label": "_isVeg",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_isveg",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_isveg"
+    },
+    {
+      "label": "onTap",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_ontap",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "ontap"
+    },
+    {
+      "label": "product",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_product",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "product"
+    },
+    {
+      "label": "ProductCard",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_productcard",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "productcard"
+    },
+    {
+      "label": "_ProductCardState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_productcardstate",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "_productcardstate"
+    },
+    {
+      "label": "width",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/widgets/product_card.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_widgets_product_card_width",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "width"
+    },
+    {
+      "label": "../features/products/product_detail_screen.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "features_products_product_detail_screen_dart",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "../features/products/product_detail_screen.dart"
+    },
+    {
+      "label": "MaterialPageRoute",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "materialpageroute",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "materialpageroute"
     },
     {
       "label": "package:cached_network_image/cached_network_image.dart",
@@ -46933,6 +46933,17 @@
       "norm_label": "package:cached_network_image/cached_network_image.dart"
     },
     {
+      "label": "package:shimmer/shimmer.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_shimmer_shimmer_dart",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "package:shimmer/shimmer.dart"
+    },
+    {
       "label": "../products/product_detail_screen.dart",
       "file_type": "code",
       "source_file": null,
@@ -46944,15 +46955,26 @@
       "norm_label": "../products/product_detail_screen.dart"
     },
     {
-      "label": "../../widgets/product_card.dart",
+      "label": "productsProvider",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "widgets_product_card_dart",
+      "id": "productsprovider",
       "community": 60,
       "community_name": "cart_screen.dart",
-      "norm_label": "../../widgets/product_card.dart"
+      "norm_label": "productsprovider"
+    },
+    {
+      "label": "../providers/cart_provider.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "providers_cart_provider_dart",
+      "community": 60,
+      "community_name": "cart_screen.dart",
+      "norm_label": "../providers/cart_provider.dart"
     },
     {
       "label": "../core/services/notification_service.dart",
@@ -48051,7 +48073,7 @@
       "_origin": "ast",
       "id": "core_utils_validators_dart",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "../../core/utils/validators.dart"
     },
     {
@@ -48062,7 +48084,7 @@
       "_origin": "ast",
       "id": "data_models_order_dart",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "../../data/models/order.dart"
     },
     {
@@ -48073,7 +48095,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "order_detail_screen.dart"
     },
     {
@@ -48084,7 +48106,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_build",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "build"
     },
     {
@@ -48095,7 +48117,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_buildbillrow",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_buildbillrow"
     },
     {
@@ -48106,7 +48128,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_buildstatusheadercard",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_buildstatusheadercard"
     },
     {
@@ -48117,7 +48139,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_buildtimelinestep",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_buildtimelinestep"
     },
     {
@@ -48128,7 +48150,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_getstatusbg",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_getstatusbg"
     },
     {
@@ -48139,7 +48161,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_getstatuscolor",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_getstatuscolor"
     },
     {
@@ -48150,7 +48172,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_getstatusstepindex",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_getstatusstepindex"
     },
     {
@@ -48161,7 +48183,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_makecall",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_makecall"
     },
     {
@@ -48172,7 +48194,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_openwhatsapp",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_openwhatsapp"
     },
     {
@@ -48183,7 +48205,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_order",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "order"
     },
     {
@@ -48194,7 +48216,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_orderdetailscreen",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "orderdetailscreen"
     },
     {
@@ -48205,7 +48227,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_primaryred",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "primaryred"
     },
     {
@@ -48216,7 +48238,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_textdark",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "textdark"
     },
     {
@@ -48227,7 +48249,227 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_orders_order_detail_screen_textmuted",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
+      "norm_label": "textmuted"
+    },
+    {
+      "label": "orders_screen.dart",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "orders_screen.dart"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_build",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "build"
+    },
+    {
+      "label": "_buildEmptyState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildemptystate",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_buildemptystate"
+    },
+    {
+      "label": "_buildSearchBox",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildsearchbox",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_buildsearchbox"
+    },
+    {
+      "label": "_buildStatusFilterPills",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildstatusfilterpills",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_buildstatusfilterpills"
+    },
+    {
+      "label": "_buildSubTabs",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_buildsubtabs",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_buildsubtabs"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_createstate",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "createstate"
+    },
+    {
+      "label": "dispose",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_dispose",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "dispose"
+    },
+    {
+      "label": "_getStatusBg",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_getstatusbg",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_getstatusbg"
+    },
+    {
+      "label": "_getStatusColor",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_getstatuscolor",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_getstatuscolor"
+    },
+    {
+      "label": "ordersProvider",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersprovider",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "ordersprovider"
+    },
+    {
+      "label": "OrdersScreen",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersscreen",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "ordersscreen"
+    },
+    {
+      "label": "_OrdersScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_ordersscreenstate",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_ordersscreenstate"
+    },
+    {
+      "label": "primaryRed",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_primaryred",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "primaryred"
+    },
+    {
+      "label": "_searchController",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_searchcontroller",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_searchcontroller"
+    },
+    {
+      "label": "_searchQuery",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_searchquery",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_searchquery"
+    },
+    {
+      "label": "_selectedTab",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_selectedtab",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_selectedtab"
+    },
+    {
+      "label": "_statusFilter",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_statusfilter",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "_statusfilter"
+    },
+    {
+      "label": "textDark",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_textdark",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "textdark"
+    },
+    {
+      "label": "textMuted",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/orders/orders_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_orders_orders_screen_textmuted",
+      "community": 67,
+      "community_name": "orders_screen.dart",
       "norm_label": "textmuted"
     },
     {
@@ -48238,7 +48480,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_support_help_support_screen",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "help_support_screen.dart"
     },
     {
@@ -48249,7 +48491,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_support_help_support_screen_build",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "build"
     },
     {
@@ -48260,7 +48502,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_support_help_support_screen_faqitem",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "_faqitem"
     },
     {
@@ -48271,8 +48513,19 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_support_help_support_screen_helpsupportscreen",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "helpsupportscreen"
+    },
+    {
+      "label": "currentUserIdProvider",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/providers/auth_provider.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_providers_auth_provider_currentuseridprovider",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "currentuseridprovider"
     },
     {
       "label": "Order",
@@ -48282,8 +48535,19 @@
       "_origin": "ast",
       "id": "order",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "order"
+    },
+    {
+      "label": "order_detail_screen.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "order_detail_screen_dart",
+      "community": 67,
+      "community_name": "orders_screen.dart",
+      "norm_label": "order_detail_screen.dart"
     },
     {
       "label": "package:url_launcher/url_launcher.dart",
@@ -48293,7 +48557,7 @@
       "_origin": "ast",
       "id": "package_url_launcher_url_launcher_dart",
       "community": 67,
-      "community_name": "order_detail_screen.dart",
+      "community_name": "orders_screen.dart",
       "norm_label": "package:url_launcher/url_launcher.dart"
     },
     {
@@ -50537,7 +50801,7 @@
       "_origin": "ast",
       "id": "data_models_restaurant_dart",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "../data/models/restaurant.dart"
     },
     {
@@ -50548,7 +50812,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "admin_coupon_detail.dart"
     },
     {
@@ -50559,7 +50823,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_admincouponsdetailscreen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "admincouponsdetailscreen"
     },
     {
@@ -50570,7 +50834,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_admincouponsdetailscreenstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_admincouponsdetailscreenstate"
     },
     {
@@ -50581,7 +50845,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_build",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "build"
     },
     {
@@ -50592,7 +50856,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_couponid",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "couponid"
     },
     {
@@ -50603,7 +50867,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_createstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "createstate"
     },
     {
@@ -50614,7 +50878,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_inforow",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_inforow"
     },
     {
@@ -50625,7 +50889,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_admin_admin_coupon_detail_isactive",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_isactive"
     },
     {
@@ -50636,7 +50900,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "onboarding_screen.dart"
     },
     {
@@ -50647,7 +50911,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_build",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "build"
     },
     {
@@ -50658,7 +50922,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_createstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "createstate"
     },
     {
@@ -50669,7 +50933,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_currentpage",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_currentpage"
     },
     {
@@ -50680,7 +50944,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_dispose",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "dispose"
     },
     {
@@ -50691,7 +50955,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_navigatetologin",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_navigatetologin"
     },
     {
@@ -50702,7 +50966,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_onboardingscreen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "onboardingscreen"
     },
     {
@@ -50713,7 +50977,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_onboardingscreenstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_onboardingscreenstate"
     },
     {
@@ -50724,7 +50988,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_pagecontroller",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_pagecontroller"
     },
     {
@@ -50735,7 +50999,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_onboarding_screen_pages",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_pages"
     },
     {
@@ -50746,162 +51010,19 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_auth_splash_screen_splashscreen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "splashscreen"
     },
     {
-      "label": "add_address_screen.dart",
+      "label": "_SplashScreenState",
       "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
+      "source_file": "fastkirana_flutter/lib/features/auth/splash_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen",
+      "id": "fastkirana_flutter_lib_features_auth_splash_screen_splashscreenstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "add_address_screen.dart"
-    },
-    {
-      "label": "AddAddressScreen",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_addaddressscreen",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "addaddressscreen"
-    },
-    {
-      "label": "_AddAddressScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_addaddressscreenstate",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_addaddressscreenstate"
-    },
-    {
-      "label": "_areaController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_areacontroller",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_areacontroller"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_build",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "_buildField",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_buildfield",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_buildfield"
-    },
-    {
-      "label": "_cityController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_citycontroller",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_citycontroller"
-    },
-    {
-      "label": "createState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_createstate",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "createstate"
-    },
-    {
-      "label": "_houseController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_housecontroller",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_housecontroller"
-    },
-    {
-      "label": "_isDefault",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_isdefault",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_isdefault"
-    },
-    {
-      "label": "_pincodeController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_pincodecontroller",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_pincodecontroller"
-    },
-    {
-      "label": "_streetController",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_streetcontroller",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_streetcontroller"
-    },
-    {
-      "label": "_type",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_type",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_type"
-    },
-    {
-      "label": "_typeChip",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/profile/add_address_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_profile_add_address_screen_typechip",
-      "community": 79,
-      "community_name": "add_address_screen.dart",
-      "norm_label": "_typechip"
+      "community_name": "restaurant_card.dart",
+      "norm_label": "_splashscreenstate"
     },
     {
       "label": "add_review_screen.dart",
@@ -50911,7 +51032,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "add_review_screen.dart"
     },
     {
@@ -50922,7 +51043,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_addreviewscreen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "addreviewscreen"
     },
     {
@@ -50933,7 +51054,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_addreviewscreenstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_addreviewscreenstate"
     },
     {
@@ -50944,7 +51065,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_build",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "build"
     },
     {
@@ -50955,7 +51076,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_createstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "createstate"
     },
     {
@@ -50966,7 +51087,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_productname",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "productname"
     },
     {
@@ -50977,7 +51098,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_rating",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_rating"
     },
     {
@@ -50988,7 +51109,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_add_review_screen_reviewcontroller",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_reviewcontroller"
     },
     {
@@ -50999,7 +51120,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "subscriptions_screen.dart"
     },
     {
@@ -51010,7 +51131,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen_build",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "build"
     },
     {
@@ -51021,7 +51142,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen_createstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "createstate"
     },
     {
@@ -51032,7 +51153,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen_subscriptions",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_subscriptions"
     },
     {
@@ -51043,7 +51164,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen_subscriptionsscreen",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "subscriptionsscreen"
     },
     {
@@ -51054,7 +51175,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_features_profile_subscriptions_screen_subscriptionsscreenstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_subscriptionsscreenstate"
     },
     {
@@ -51065,7 +51186,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "restaurant_card.dart"
     },
     {
@@ -51076,7 +51197,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_build",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "build"
     },
     {
@@ -51087,7 +51208,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_createstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "createstate"
     },
     {
@@ -51098,7 +51219,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_isfavorite",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_isfavorite"
     },
     {
@@ -51109,7 +51230,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_ontap",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "ontap"
     },
     {
@@ -51120,7 +51241,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_restaurant",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "restaurant"
     },
     {
@@ -51131,7 +51252,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_restaurantcard",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "restaurantcard"
     },
     {
@@ -51142,7 +51263,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_restaurant_card_restaurantcardstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_restaurantcardstate"
     },
     {
@@ -51153,7 +51274,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_shimmer_box_shimmerbox",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "shimmerbox"
     },
     {
@@ -51164,7 +51285,7 @@
       "_origin": "ast",
       "id": "fastkirana_flutter_lib_widgets_shimmer_box_shimmerboxstate",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "_shimmerboxstate"
     },
     {
@@ -51175,7 +51296,7 @@
       "_origin": "ast",
       "id": "features_cafe_cafe_menu_screen_dart",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "../features/cafe/cafe_menu_screen.dart"
     },
     {
@@ -51186,7 +51307,7 @@
       "_origin": "ast",
       "id": "login_screen_dart",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "login_screen.dart"
     },
     {
@@ -51197,7 +51318,7 @@
       "_origin": "ast",
       "id": "pagecontroller",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "pagecontroller"
     },
     {
@@ -51208,8 +51329,19 @@
       "_origin": "ast",
       "id": "restaurant",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "restaurant"
+    },
+    {
+      "label": "SingleTickerProviderStateMixin",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "singletickerproviderstatemixin",
+      "community": 79,
+      "community_name": "restaurant_card.dart",
+      "norm_label": "singletickerproviderstatemixin"
     },
     {
       "label": "State",
@@ -51219,7 +51351,7 @@
       "_origin": "ast",
       "id": "state",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "state"
     },
     {
@@ -51230,7 +51362,7 @@
       "_origin": "ast",
       "id": "statefulwidget",
       "community": 79,
-      "community_name": "add_address_screen.dart",
+      "community_name": "restaurant_card.dart",
       "norm_label": "statefulwidget"
     },
     {
@@ -51432,17 +51564,6 @@
       "norm_label": "globalforemitter"
     },
     {
-      "label": "Color?",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "color",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "color?"
-    },
-    {
       "label": "EdgeInsets?",
       "file_type": "code",
       "source_file": null,
@@ -51452,127 +51573,6 @@
       "community": 80,
       "community_name": "brand_input.dart",
       "norm_label": "edgeinsets?"
-    },
-    {
-      "label": "brand_button.dart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "brand_button.dart"
-    },
-    {
-      "label": "backgroundColor",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_backgroundcolor",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "backgroundcolor"
-    },
-    {
-      "label": "BrandButton",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_brandbutton",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "brandbutton"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_build",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "build"
-    },
-    {
-      "label": "fullWidth",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_fullwidth",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "fullwidth"
-    },
-    {
-      "label": "gradientEnd",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_gradientend",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "gradientend"
-    },
-    {
-      "label": "gradientStart",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_gradientstart",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "gradientstart"
-    },
-    {
-      "label": "isLoading",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_isloading",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "isloading"
-    },
-    {
-      "label": "onPressed",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_onpressed",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "onpressed"
-    },
-    {
-      "label": "text",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_text",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "text"
-    },
-    {
-      "label": "textColor",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/widgets/brand_button.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_widgets_brand_button_textcolor",
-      "community": 80,
-      "community_name": "brand_input.dart",
-      "norm_label": "textcolor"
     },
     {
       "label": "brand_card.dart",
@@ -60696,7 +60696,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/admin/admin-dashboard.tsx",
-      "source_location": "L1023",
+      "source_location": "L1026",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_admin_admin_dashboard_admindashboard",
@@ -60708,7 +60708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/admin/admin-dashboard.tsx",
-      "source_location": "L1338",
+      "source_location": "L1341",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_admin_admin_dashboard_admindashboard",
@@ -125014,7 +125014,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/proxy.ts",
-      "source_location": "L128",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_proxy",
@@ -151383,5 +151383,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "57ce601829d7590b1e913f79acae92847269bfef"
+  "built_at_commit": "21b65d4494467808fd8d0fa4d448ca11d0a665a0"
 }
