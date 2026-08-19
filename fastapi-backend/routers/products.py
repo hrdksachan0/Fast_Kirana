@@ -868,21 +868,45 @@ async def update_product(
     if not is_admin and not is_chef:
         raise HTTPException(status_code=403, detail="Unauthorized to edit this product")
 
+    def parse_float(val, default=0.0):
+        if val is None or val == "":
+            return default
+        try:
+            return float(val)
+        except Exception:
+            return default
+
+    def parse_int(val, default=0):
+        if val is None or val == "":
+            return default
+        try:
+            return int(val)
+        except Exception:
+            return default
+
     # Fields list mapping
     updatable_fields = [
         'name', 'description', 'imageUrl', 'categoryId', 'restaurantId', 'unit',
-        'isAvailable', 'tags', 'minStock', 'location', 'isFlashDeal',
-        'isTopPick', 'isBestSeller', 'sortOrder', 'barcode'
+        'isAvailable', 'tags', 'location', 'isFlashDeal',
+        'isTopPick', 'isBestSeller', 'barcode'
     ]
 
     for key in updatable_fields:
         if key in payload:
-            setattr(product, key, payload[key])
+            val = payload[key]
+            if val == "":
+                val = None
+            setattr(product, key, val)
 
     if 'stock' in payload:
-        product.stock = int(payload['stock'])
+        product.stock = parse_int(payload['stock'], product.stock or 0)
+    if 'minStock' in payload:
+        product.minStock = parse_int(payload['minStock'], product.minStock or 10)
+    if 'sortOrder' in payload:
+        product.sortOrder = parse_int(payload['sortOrder'], product.sortOrder or 0)
     if 'costPrice' in payload:
-        product.costPrice = float(payload['costPrice'])
+        product.costPrice = parse_float(payload['costPrice'], product.costPrice or 0.0)
+
     if 'expiryDate' in payload:
         if payload['expiryDate']:
             dt_str = str(payload['expiryDate']).replace('Z', '+00:00')
@@ -894,8 +918,10 @@ async def update_product(
             product.expiryDate = None
 
     # Resolve pricing & variants
-    final_mrp = float(payload.get("mrp", product.mrp)) if "mrp" in payload else product.mrp
-    final_price = float(payload.get("price", product.price)) if "price" in payload else product.price
+    raw_mrp = payload.get("mrp")
+    raw_price = payload.get("price")
+    final_mrp = parse_float(raw_mrp, product.mrp)
+    final_price = parse_float(raw_price, product.price)
     
     if "variants" in payload and isinstance(payload["variants"], list):
         sorted_variants = sorted(payload["variants"], key=lambda x: float(x.get("price", 0)))

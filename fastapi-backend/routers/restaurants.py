@@ -125,6 +125,22 @@ async def create_restaurant(
 
     owner_user_id = payload.get("ownerUserId")
 
+    def parse_float(val, default=None):
+        if val is None or val == "":
+            return default
+        try:
+            return float(val)
+        except Exception:
+            return default
+
+    def parse_int(val, default=0):
+        if val is None or val == "":
+            return default
+        try:
+            return int(val)
+        except Exception:
+            return default
+
     restaurant = Restaurant(
         id=str(uuid.uuid4()),
         name=name,
@@ -136,22 +152,22 @@ async def create_restaurant(
         city=payload.get("city"),
         cuisineTags=payload.get("cuisineTags", []),
         deliveryTime=payload.get("deliveryTime", "30-40 min"),
-        distance=float(payload.get("distance", 0.0)),
-        lat=float(payload.get("lat")) if payload.get("lat") is not None else None,
-        lng=float(payload.get("lng")) if payload.get("lng") is not None else None,
-        isVeg=payload.get("isVeg", False),
-        isPureVeg=payload.get("isPureVeg", False),
-        isOpen=payload.get("isOpen", True),
+        distance=payload.get("distance", "0 km"),
+        lat=parse_float(payload.get("lat")),
+        lng=parse_float(payload.get("lng")),
+        isVeg=bool(payload.get("isVeg", False)),
+        isPureVeg=bool(payload.get("isPureVeg", False)),
+        isOpen=bool(payload.get("isOpen", True)),
         openTime=payload.get("openTime", "09:00"),
         closeTime=payload.get("closeTime", "22:00"),
-        sortOrder=int(payload.get("sortOrder", 0)),
+        sortOrder=parse_int(payload.get("sortOrder"), 0),
         discountOffer=payload.get("discountOffer"),
         discountBadge=payload.get("discountBadge"),
-        commissionRate=float(payload.get("commissionRate", 10.0)),
+        commissionRate=parse_float(payload.get("commissionRate"), 0.15),
         ownerPhone=payload.get("ownerPhone"),
         ownerEmail=payload.get("ownerEmail"),
-        isActive=payload.get("isActive", True),
-        rating=float(payload.get("rating", 4.0)),
+        isActive=bool(payload.get("isActive", True)),
+        rating=parse_float(payload.get("rating"), 4.0),
         menuSections=payload.get("menuSections", [])
     )
 
@@ -293,12 +309,32 @@ async def update_restaurant(
         'ownerEmail', 'isActive', 'rating', 'menuSections'
     ]
 
+    float_keys = ['lat', 'lng', 'commissionRate', 'rating']
+    int_keys = ['sortOrder']
+
     for key in allowed_keys:
         if key in payload:
             # Enforce non-admin limits
             if not is_admin and key in ['commissionRate', 'isActive']:
                 continue
-            setattr(restaurant, key, payload[key])
+            val = payload[key]
+            if key in float_keys:
+                if val is None or val == "":
+                    val = None
+                else:
+                    try:
+                        val = float(val)
+                    except (ValueError, TypeError):
+                        val = getattr(restaurant, key)
+            elif key in int_keys:
+                if val is None or val == "":
+                    val = 0
+                else:
+                    try:
+                        val = int(val)
+                    except (ValueError, TypeError):
+                        val = getattr(restaurant, key)
+            setattr(restaurant, key, val)
 
     restaurant.slug = final_slug
 
