@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { 
@@ -52,6 +53,10 @@ const inputClass = "w-full px-3.5 py-2.5 text-sm font-semibold bg-background bor
 
 export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: RestaurantFormProps) {
   const router = useRouter()
+  const { data: session } = useSession()
+  const sessionUserId = (session?.user as any)?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+
   const isEditing = !!restaurant
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -259,12 +264,11 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       const url = isEditing ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
       const method = isEditing ? 'PATCH' : 'POST'
 
-      const sessionUserId = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.props?.pageProps?.session?.user?.id) || ''
       const res = await fetch(url, {
         method,
         headers: { 
           'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {})
+          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
         },
         body: JSON.stringify(payload)
       })

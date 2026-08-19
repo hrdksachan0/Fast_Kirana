@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { formatPrice, formatAddress, formatDisplayEmail } from '@/lib/utils'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
@@ -126,6 +127,10 @@ export function AdminDashboard({
   initialOrderCounts,
   stats
 }: AdminDashboardProps) {
+  const { data: session } = useSession()
+  const sessionUserId = (session?.user as any)?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+
   const [activeTab, setActiveTab] = useState<TabType>('orders')
   const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
 
@@ -1256,12 +1261,11 @@ export function AdminDashboard({
   const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingOrderId(orderId)
     try {
-      const sessionUserId = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.props?.pageProps?.session?.user?.id) || ''
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {})
+          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
         },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -1720,7 +1724,10 @@ export function AdminDashboard({
 
       const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
+        },
         body: JSON.stringify({
           name: productEditForm.name,
           description: productEditForm.description,
