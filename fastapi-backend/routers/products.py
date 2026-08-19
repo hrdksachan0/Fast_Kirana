@@ -884,7 +884,14 @@ async def update_product(
     if 'costPrice' in payload:
         product.costPrice = float(payload['costPrice'])
     if 'expiryDate' in payload:
-        product.expiryDate = datetime.fromisoformat(payload['expiryDate']) if payload['expiryDate'] else None
+        if payload['expiryDate']:
+            dt_str = str(payload['expiryDate']).replace('Z', '+00:00')
+            try:
+                product.expiryDate = datetime.fromisoformat(dt_str)
+            except Exception:
+                product.expiryDate = None
+        else:
+            product.expiryDate = None
 
     # Resolve pricing & variants
     final_mrp = float(payload.get("mrp", product.mrp)) if "mrp" in payload else product.mrp

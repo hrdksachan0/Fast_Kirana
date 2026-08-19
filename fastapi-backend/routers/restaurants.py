@@ -303,14 +303,15 @@ async def update_restaurant(
     restaurant.slug = final_slug
 
     try:
+        res_id = restaurant.id
         await db.commit()
 
         # Update owner assignment if requested by ADMIN
         if owner_user_id and is_admin:
             # Unassign previous heads
             await db.execute(
-                text("UPDATE users SET \"assignedRestaurantId\" = NULL WHERE \"assignedRestaurantId\" = :res_id AND id != :owner_id"),
-                {"res_id": restaurant.id, "owner_id": owner_user_id}
+                text('UPDATE users SET "assignedRestaurantId" = NULL WHERE "assignedRestaurantId" = :res_id AND id != :owner_id'),
+                {"res_id": res_id, "owner_id": owner_user_id}
             )
             
             # Assign the new head
@@ -318,12 +319,12 @@ async def update_restaurant(
             user_res = await db.execute(user_stmt)
             user = user_res.scalars().first()
             if user:
-                user.assignedRestaurantId = restaurant.id
+                user.assignedRestaurantId = res_id
                 user.role = "RESTAURANT_OWNER"
-                await db.commit()
+            await db.commit()
 
         # Fetch fresh hydrated details
-        fresh_dict = await get_restaurant_details(restaurant.id, db)
+        fresh_dict = await get_restaurant_details(res_id, db)
         return fresh_dict
     except Exception as e:
         await db.rollback()
