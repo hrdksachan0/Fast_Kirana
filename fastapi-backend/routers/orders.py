@@ -1336,7 +1336,7 @@ async def update_order(
         raise HTTPException(status_code=400, detail="status is required")
 
     try:
-        target_status = OrderStatus(target_status_str)
+        target_status = OrderStatus(str(target_status_str).upper())
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid order status: {target_status_str}")
 
@@ -1346,17 +1346,37 @@ async def update_order(
     is_picker = role == "PICKER"
     is_restaurant_staff = role in ["CHEF", "RESTAURANT_OWNER"]
     is_owner = order.userId == user_id
+    is_restaurant_order = bool(order.restaurantId or order.orderType == OrderType.RESTAURANT)
 
     if not is_owner and not is_admin and not is_delivery and not is_picker and not is_restaurant_staff:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    # Strict Role Assignment for Status Transitions
+    if target_status == OrderStatus.CANCELLED:
+        if not (is_owner or is_admin or is_picker or is_restaurant_staff or is_delivery):
+            raise HTTPException(status_code=403, detail="Unauthorized to cancel this order")
+    elif target_status in [OrderStatus.CONFIRMED, OrderStatus.PACKED]:
+        if is_restaurant_order:
+            if not (is_admin or is_restaurant_staff):
+                raise HTTPException(status_code=403, detail="Only restaurant staff can accept or pack restaurant orders")
+        else:
+            if not (is_admin or is_picker):
+                raise HTTPException(status_code=403, detail="Only Dark Store pickers can accept or pack grocery orders")
+    elif target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+        if not (is_admin or is_delivery):
+            raise HTTPException(status_code=403, detail="Only delivery riders can ship or deliver orders")
+
     if is_restaurant_staff and not is_admin:
-        if not assigned_restaurant_id or order.restaurantId != assigned_restaurant_id:
+        if not assigned_restaurant_id:
+            user_stmt = select(User.assignedRestaurantId).where(User.id == user_id)
+            user_res = await db.execute(user_stmt)
+            assigned_restaurant_id = user_res.scalar_one_or_none()
+        if assigned_restaurant_id and order.restaurantId and order.restaurantId != assigned_restaurant_id:
             raise HTTPException(status_code=403, detail="You can only manage orders for your assigned restaurant")
 
     # Claim locks
     if target_status == OrderStatus.CONFIRMED:
-        if role == Role.CHEF or order.orderType == OrderType.RESTAURANT or order.restaurantId:
+        if is_restaurant_order:
             if order.assignedChefId and order.assignedChefId != user_id:
                 raise HTTPException(status_code=409, detail="Order is already claimed by another chef")
         else:
@@ -1607,7 +1627,7 @@ async def update_order_status_alias(
     """
     Alias route for status updates.
     """
-    return await update_order(order_id=order_id, payload=payload, current_user=current_user, db=db, background_tasks=background_tasks)
+    return await update_order(id=order_id, payload=payload, current_user=current_user, db=db, background_tasks=background_tasks)
 
 
 @router.get("/{order_id}/track")

@@ -416,7 +416,7 @@ async def admin_update_order_status(
     new_status = data.get("status")
     if new_status:
         try:
-            order.status = OrderStatus(new_status)
+            order.status = OrderStatus(str(new_status).upper())
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
 

@@ -275,10 +275,8 @@ export async function PATCH(
     const existingOrder = existingOrders[0]
     const userRole = session.user.role
     const assignedRestaurantId = (session.user as any)?.assignedRestaurantId
+    const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
 
-    // Authorization: Admin, Delivery, Picker have full access.
-    // CHEF and RESTAURANT_OWNER can only update orders belonging to their assigned restaurant.
-    // Customers can only cancel their own orders.
     const isAdmin = userRole === 'ADMIN'
     const isDelivery = userRole === 'DELIVERY'
     const isPicker = userRole === 'PICKER'
@@ -289,16 +287,37 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Strict Role Assignment per status transition & order type
+    if (status === 'CANCELLED') {
+      if (!isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
+        return NextResponse.json({ error: 'Unauthorized to cancel this order' }, { status: 403 })
+      }
+    } else if (status === 'CONFIRMED' || status === 'PACKED') {
+      if (isRestaurantOrder) {
+        if (!isAdmin && !isRestaurantStaff) {
+          return NextResponse.json({ error: 'Only restaurant staff can accept or pack restaurant orders' }, { status: 403 })
+        }
+      } else {
+        if (!isAdmin && !isPicker) {
+          return NextResponse.json({ error: 'Only dark store pickers can accept or pack grocery orders' }, { status: 403 })
+        }
+      }
+    } else if (status === 'SHIPPED' || status === 'DELIVERED') {
+      if (!isAdmin && !isDelivery) {
+        return NextResponse.json({ error: 'Only delivery riders can ship or deliver orders' }, { status: 403 })
+      }
+    }
+
     // Restaurant staff can only modify their own restaurant's orders
     if (isRestaurantStaff && !isAdmin) {
-      if (!assignedRestaurantId || existingOrder.restaurantId !== assignedRestaurantId) {
+      if (assignedRestaurantId && existingOrder.restaurantId && existingOrder.restaurantId !== assignedRestaurantId) {
         return NextResponse.json({ error: 'You can only manage orders for your assigned restaurant' }, { status: 403 })
       }
     }
 
     // Claim checks / locking mechanisms
     if (status === 'CONFIRMED') {
-      if (session.user.role === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
+      if (isRestaurantOrder) {
         if (existingOrder.assignedChefId && existingOrder.assignedChefId !== session.user.id) {
           return NextResponse.json({ error: 'Order is already claimed by another chef' }, { status: 409 })
         }
