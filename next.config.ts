@@ -71,20 +71,24 @@ const nextConfig: NextConfig = {
 
       // ── Products ──
       {
-        source: '/api/products/:path*',
-        destination: `${apiDest}/api/products/:path*`,
+        source: '/api/products', // READ
+        destination: `${apiDest}/api/products`,
       },
 
       // ── Categories ──
       {
-        source: '/api/categories/:path*',
-        destination: `${apiDest}/api/categories/:path*`,
+        source: '/api/categories', // READ
+        destination: `${apiDest}/api/categories`,
       },
 
       // ── Restaurants ──
       {
-        source: '/api/restaurants/:path*',
-        destination: `${apiDest}/api/restaurants/:path*`,
+        source: '/api/restaurants', // READ
+        destination: `${apiDest}/api/restaurants`,
+      },
+      {
+        source: '/api/restaurants/:id', // READ
+        destination: `${apiDest}/api/restaurants/:id`,
       },
 
       // ── Cart ──
