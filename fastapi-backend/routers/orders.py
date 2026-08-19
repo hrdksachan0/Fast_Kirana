@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -1304,6 +1304,7 @@ async def get_order_details(
 
 @router.patch("/{id}")
 async def update_order(
+    request: Request,
     id: str,
     payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
@@ -1625,6 +1626,7 @@ async def update_order(
 
 @router.patch("/{order_id}/status")
 async def update_order_status_alias(
+    request: Request,
     order_id: str,
     payload: Dict[str, Any] = Body(...),
     current_user: dict = Depends(require_auth),
@@ -1634,7 +1636,7 @@ async def update_order_status_alias(
     """
     Alias route for status updates.
     """
-    return await update_order(id=order_id, payload=payload, current_user=current_user, db=db, background_tasks=background_tasks)
+    return await update_order(request=request, id=order_id, payload=payload, current_user=current_user, db=db, background_tasks=background_tasks)
 
 
 @router.get("/{order_id}/track")

@@ -27,7 +27,7 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    request: Request,
+    request: Optional[Request] = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> Optional[Dict[str, Any]]:
@@ -38,24 +38,25 @@ async def get_current_user(
         if user and not is_token_expired(user):
             return user
 
-    # 2. Check NextAuth Session Cookie
-    session_cookie = (
-        request.cookies.get("next-auth.session-token") or
-        request.cookies.get("__Secure-next-auth.session-token") or
-        request.cookies.get("authjs.session-token")
-    )
-    if session_cookie:
-        user = extract_user_from_token(session_cookie)
-        if user and not is_token_expired(user):
-            return user
+    # 2. Check NextAuth Session Cookie & Headers if request object is present
+    if request is not None:
+        session_cookie = (
+            request.cookies.get("next-auth.session-token") or
+            request.cookies.get("__Secure-next-auth.session-token") or
+            request.cookies.get("authjs.session-token")
+        )
+        if session_cookie:
+            user = extract_user_from_token(session_cookie)
+            if user and not is_token_expired(user):
+                return user
 
-    # 3. Check X-User-Id header fallback
-    x_user_id = request.headers.get("x-user-id")
-    if x_user_id:
-        res = await db.execute(select(User).where(User.id == x_user_id))
-        db_user = res.scalars().first()
-        if db_user:
-            return {"id": db_user.id, "email": db_user.email, "role": str(db_user.role), "name": db_user.name}
+        # 3. Check X-User-Id header fallback
+        x_user_id = request.headers.get("x-user-id")
+        if x_user_id:
+            res = await db.execute(select(User).where(User.id == x_user_id))
+            db_user = res.scalars().first()
+            if db_user:
+                return {"id": db_user.id, "email": db_user.email, "role": str(db_user.role), "name": db_user.name}
 
     return None
 

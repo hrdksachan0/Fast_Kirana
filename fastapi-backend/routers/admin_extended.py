@@ -4,7 +4,7 @@ Migrated from Next.js API routes to FastAPI.
 Covers: dashboard, products, orders, users, coupons, inventory, reports, etc.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks, Request
 from utils.push import send_push_notification
 import logging
 
@@ -401,6 +401,7 @@ async def admin_get_orders(
 
 @router.patch("/orders/{order_id}/status")
 async def admin_update_order_status(
+    request: Request,
     order_id: str,
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),
