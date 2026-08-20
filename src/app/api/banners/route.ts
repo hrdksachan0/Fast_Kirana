@@ -12,6 +12,8 @@ export async function GET(request: Request) {
 
     if (type === 'cafe') {
       whereClause.type = 'cafe'
+    } else if (type === 'festive') {
+      whereClause.type = 'festive'
     } else if (type === 'grocery') {
       whereClause.NOT = {
         type: 'cafe'

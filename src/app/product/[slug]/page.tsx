@@ -21,11 +21,40 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 import { Product } from '@/types'
 import { cn } from '@/lib/utils'
 
+import type { Metadata } from 'next'
+
 interface ProductPageProps {
   params: Promise<{ slug: string }>
 }
 
 export const revalidate = 60
+
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params
+  const product = await prisma.product.findUnique({
+    where: { slug },
+    select: { name: true, description: true, imageUrl: true, price: true, category: { select: { name: true } } }
+  }).catch(() => null)
+
+  if (!product) {
+    return {
+      title: 'Product Not Found - FastKirana Ghatampur',
+    }
+  }
+
+  const title = `${product.name} - Buy Online at ₹${product.price} | FastKirana Ghatampur`
+  const description = product.description || `Buy ${product.name} online in Ghatampur, Kanpur Nagar. 10-minute fast doorstep grocery delivery.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [product.imageUrl ? { url: product.imageUrl } : { url: '/brand/fastkirana_app_icon.png' }],
+    },
+  }
+}
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
@@ -112,8 +141,31 @@ const [productRaw, relatedRaw] = await Promise.all([
     ? (productRaw.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1)
     : null
 
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    image: [product.imageUrl || 'https://www.fastkirana.in/brand/fastkirana_app_icon.png'],
+    description: product.description || `Buy ${product.name} online in Ghatampur. 10-min fast delivery from FastKirana.`,
+    sku: product.id,
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'INR',
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: {
+        '@type': 'Organization',
+        name: 'FastKirana',
+      },
+    },
+  }
+
   return (
     <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-7xl space-y-6 md:space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">

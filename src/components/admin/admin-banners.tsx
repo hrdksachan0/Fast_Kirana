@@ -80,7 +80,8 @@ const FESTIVAL_TEMPLATES = [
     description: 'Celebrate Diwali with sweets, dry fruits, and diyas. Get flat ₹150 off on your purchase!',
     code: 'DIWALI150',
     gradient: 'from-amber-600 via-orange-500 to-yellow-500',
-    type: 'festival'
+    type: 'festive',
+    linkUrl: '/search?q=sweets'
   },
   {
     name: '🎨 Holi Splash',
@@ -88,7 +89,8 @@ const FESTIVAL_TEMPLATES = [
     description: 'Get natural herbal gulal, sweets, thandai, and pichkaris delivered in 10 minutes!',
     code: 'HOLI100',
     gradient: 'from-pink-500 via-purple-500 to-yellow-400',
-    type: 'festival'
+    type: 'festive',
+    linkUrl: '/search?q=holi'
   },
   {
     name: '🌙 Eid Mubarak',
@@ -96,15 +98,35 @@ const FESTIVAL_TEMPLATES = [
     description: 'Save 20% on fresh dates, sheer khurma ingredients, milk, and dry fruits today.',
     code: 'EIDSPECIAL',
     gradient: 'from-emerald-600 via-teal-500 to-cyan-500',
-    type: 'festival'
+    type: 'festive',
+    linkUrl: '/category/dairy-breakfast'
   },
   {
-    name: '🎉 New Year Celebration',
-    title: 'Happy New Year 2027 Bash!',
-    description: 'Fuel your party with sodas, chips, chocolates, and instant snacks. Flat ₹200 off!',
-    code: 'NY2027',
-    gradient: 'from-violet-600 via-fuchsia-600 to-pink-500',
-    type: 'festival'
+    name: '🍿 Midnight Munchies (Zepto Style)',
+    title: 'Late Night Craving Remedies 🌙',
+    description: 'Chips, Instant Noodles, Chocolates & Beverages under ₹49!',
+    code: 'NIGHT49',
+    gradient: 'from-purple-800 via-indigo-800 to-slate-950',
+    type: 'festive',
+    linkUrl: '/category/snacks-munchies'
+  },
+  {
+    name: '🍦 Summer Coolers (Blinkit Style)',
+    title: 'Beat the Heat with Cold Drinks 🍦',
+    description: 'Amul, Kwality Walls, Coke, Pepsi & Juices delivered in 10 mins.',
+    code: 'COOL20',
+    gradient: 'from-cyan-600 via-blue-600 to-indigo-600',
+    type: 'festive',
+    linkUrl: '/category/beverages'
+  },
+  {
+    name: '🛍️ Weekend Grocery Bazaar',
+    title: 'Weekend Kirana Super Savings 📦',
+    description: 'Stock up your kitchen with Atta, Rice, Ghee & Oil at wholesale prices!',
+    code: 'WEEKEND50',
+    gradient: 'from-emerald-700 via-teal-700 to-green-600',
+    type: 'festive',
+    linkUrl: '/category/atta-rice-dal'
   }
 ]
 
