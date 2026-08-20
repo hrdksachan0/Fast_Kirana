@@ -3,24 +3,32 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
-    const { orderId } = await req.json()
+    const { orderId, amount } = await req.json()
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
-    }
+    let totalAmount = 0
+    let receiptId = `rcpt_${Date.now()}`
+    let readableId = ''
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-    })
-
-    if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    if (orderId) {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+      })
+      if (!order) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      }
+      totalAmount = Number(order.total)
+      receiptId = order.id
+      readableId = String(order.readableId || '')
+    } else if (amount) {
+      totalAmount = Number(amount)
+    } else {
+      return NextResponse.json({ error: 'orderId or amount is required' }, { status: 400 })
     }
 
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
     const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
 
-    const amountInPaise = Math.round(Number(order.total) * 100)
+    const amountInPaise = Math.round(totalAmount * 100)
 
     if (amountInPaise < 100) {
       return NextResponse.json({ error: 'Minimum order amount for online payment is ₹1.00' }, { status: 400 })
@@ -37,9 +45,9 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         amount: amountInPaise,
         currency: 'INR',
-        receipt: order.id,
+        receipt: receiptId,
         notes: {
-          readableId: String(order.readableId || ''),
+          readableId,
         },
       }),
     })
@@ -60,7 +68,7 @@ export async function POST(req: Request) {
       keyId,
       amount: rzpData.amount,
       currency: rzpData.currency,
-      orderId: order.id,
+      orderId: orderId || null,
     })
   } catch (error: any) {
     console.error('Error creating Razorpay order:', error)
