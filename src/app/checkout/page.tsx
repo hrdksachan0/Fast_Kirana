@@ -842,6 +842,11 @@ export default function CheckoutPage() {
     })
   }
 
+  // Preload Razorpay SDK as soon as checkout page mounts for instant popup
+  useEffect(() => {
+    loadRazorpayScript()
+  }, [])
+
   const handleRazorpayCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
     const selectedMethod = overrideMethod || paymentMethod
     setIsPlacingOrder(true)
@@ -892,19 +897,11 @@ export default function CheckoutPage() {
         return
       }
 
-      let rzpRes = await fetch('/api/payments/razorpay/create-order', {
+      const rzpRes = await fetch('/api/payment/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: orderData.id }),
       })
-
-      if (!rzpRes.ok) {
-        rzpRes = await fetch('/api/payment/razorpay/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: orderData.id }),
-        })
-      }
 
       const rzpData = await rzpRes.json()
 
@@ -930,7 +927,7 @@ export default function CheckoutPage() {
         order_id: rzpData.razorpayOrderId,
         handler: async function (response: any) {
           try {
-            const verifyRes = await fetch('/api/payments/razorpay/verify-signature', {
+            const verifyRes = await fetch('/api/payment/razorpay/verify-signature', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import { sseEmitter } from '@/lib/sse-emitter'
+import { sendPushNotificationToRoles } from '@/lib/push-notifications'
+import { Role } from '@prisma/client'
 
 export async function POST(req: Request) {
   try {
@@ -37,6 +40,31 @@ export async function POST(req: Request) {
         status: 'CONFIRMED',
       },
     })
+
+    // NOW fire notifications — payment is confirmed!
+    try {
+      const displayId = (updatedOrder as any).readableId || updatedOrder.id.slice(-6).toUpperCase()
+
+      // SSE event for admin dashboard
+      sseEmitter.emit('order', {
+        type: 'new-order',
+        orderId: updatedOrder.id,
+        readableId: (updatedOrder as any).readableId,
+        status: updatedOrder.status,
+        total: updatedOrder.total,
+        createdAt: updatedOrder.createdAt,
+      })
+
+      // Push notification to all staff
+      sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
+        title: '💳 Online Payment Order Confirmed!',
+        body: `Order #${displayId} of ₹${updatedOrder.total} — PAID via Razorpay ✅`,
+        tag: `order-${updatedOrder.id}`,
+        data: { orderId: updatedOrder.id }
+      }).catch((err: any) => console.error('Error sending push notification:', err))
+    } catch (notifErr) {
+      console.error('Notification error after payment verification:', notifErr)
+    }
 
     return NextResponse.json({
       success: true,

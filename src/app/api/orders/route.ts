@@ -884,7 +884,15 @@ export async function POST(request: NextRequest) {
     }, { maxWait: 20000, timeout: 25000 })
 
     // Perform notifications asynchronously in the background
+    // SKIP notifications for online payment orders — they fire AFTER payment verification
+    const isOnlinePaymentOrder = paymentMethod !== 'COD'
     after(async () => {
+
+      if (isOnlinePaymentOrder) {
+        // Don't send SSE, push, or WhatsApp for online orders yet.
+        // Notifications will be sent when payment is verified via /api/payment/razorpay/verify-signature
+        return
+      }
 
       // Emit real-time SSE event for each newly created order and send push notifications to staff roles
       try {
