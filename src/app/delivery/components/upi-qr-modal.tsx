@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw } from 'lucide-react'
-import { formatPrice, triggerHaptic } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
+import { triggerHaptic } from '@/lib/haptic'
 
 interface UpiQrModalProps {
   order: any
