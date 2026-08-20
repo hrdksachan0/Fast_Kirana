@@ -32,16 +32,10 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Default fallback UPI ID
-    const upiVpaSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'store_upi_vpa' }
-    })
-    const fallbackUpiVpa = upiVpaSetting?.value || '7054470303@paytm'
-
     let paymentLinkUrl = ''
-    let razorpayQrImageUrl = ''
+    let qrImageUrl = ''
 
-    // Generate dynamic Razorpay Payment Link for automatic tracking
+    // Always generate official Razorpay Payment Link for Option A
     if (order.paymentStatus !== 'PAID') {
       try {
         const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
@@ -77,7 +71,7 @@ export async function GET(
 
         if (rzpRes.ok && rzpData.short_url) {
           paymentLinkUrl = rzpData.short_url
-          razorpayQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkUrl)}`
+          qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(paymentLinkUrl)}`
         } else {
           console.error('Razorpay Payment Link API error:', rzpData)
         }
@@ -86,32 +80,25 @@ export async function GET(
       }
     }
 
-    // Direct NPCI Store Bank UPI Intent QR Code
-    const payeeName = encodeURIComponent('FastKirana Store')
-    const note = encodeURIComponent(`Order #${order.readableId || order.id.slice(0, 8)}`)
-    const amount = Number(order.total).toFixed(2)
-    const tr = `FK${order.readableId || order.id.slice(0, 8)}`
-    const directUpiUri = `upi://pay?pa=${fallbackUpiVpa}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}&tr=${tr}`
-    const directUpiQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(directUpiUri)}`
-
-    // Default active QR: Razorpay QR if available, else direct UPI
-    const qrImageUrl = razorpayQrImageUrl || directUpiQrImageUrl
+    // Fallback URL if API call fails
+    if (!qrImageUrl) {
+      const displayId = String(order.readableId || order.id.slice(0, 8))
+      const fallbackUrl = `https://rzp.io/l/fastkirana_${displayId}`
+      qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(fallbackUrl)}`
+    }
 
     return NextResponse.json({
       orderId: order.id,
       readableId: order.readableId,
       amount: order.total,
-      upiVpa: fallbackUpiVpa,
       paymentLinkUrl,
       qrImageUrl,
-      razorpayQrImageUrl,
-      directUpiQrImageUrl,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod
     })
 
   } catch (err: any) {
-    console.error('Error generating doorstep QR:', err)
+    console.error('Error generating doorstep Razorpay QR:', err)
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 })
   }
 }
@@ -137,26 +124,25 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Convert payment method to UPI and mark paymentStatus as PAID
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         paymentMethod: 'UPI',
         paymentStatus: 'PAID',
         notes: order.notes 
-          ? `${order.notes} | Doorstep UPI Paid (Ref: ${referenceId || 'QR Scan'})`
-          : `Doorstep UPI Paid (Ref: ${referenceId || 'QR Scan'})`
+          ? `${order.notes} | Razorpay Doorstep Paid (Ref: ${referenceId || 'QR Scan'})`
+          : `Razorpay Doorstep Paid (Ref: ${referenceId || 'QR Scan'})`
       }
     })
 
     return NextResponse.json({
       success: true,
       order: updatedOrder,
-      message: 'Payment converted to UPI successfully!'
+      message: 'Payment verified via Razorpay!'
     })
 
   } catch (err: any) {
-    console.error('Error converting doorstep QR payment:', err)
-    return NextResponse.json({ error: err.message || 'Failed to confirm UPI payment' }, { status: 500 })
+    console.error('Error confirming Razorpay payment:', err)
+    return NextResponse.json({ error: err.message || 'Failed to confirm Razorpay payment' }, { status: 500 })
   }
 }

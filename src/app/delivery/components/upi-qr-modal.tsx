@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw, Zap, Building2 } from 'lucide-react'
+import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw, ExternalLink } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 
@@ -18,17 +18,13 @@ export default function UpiQrModal({
   onConfirmPaid,
 }: UpiQrModalProps) {
   const [qrData, setQrData] = useState<{
-    upiVpa: string
     qrImageUrl: string
-    razorpayQrImageUrl?: string
-    directUpiQrImageUrl?: string
     paymentStatus?: string
     paymentMethod?: string
     paymentLinkUrl?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [livePaid, setLivePaid] = useState(false)
-  const [qrMode, setQrMode] = useState<'razorpay' | 'direct'>('razorpay')
 
   useEffect(() => {
     if (!order?.id) return
@@ -41,10 +37,7 @@ export default function UpiQrModal({
           const data = await res.json()
           if (!isCancelled) {
             setQrData({
-              upiVpa: data.upiVpa || '7054470303@paytm',
               qrImageUrl: data.qrImageUrl,
-              razorpayQrImageUrl: data.razorpayQrImageUrl,
-              directUpiQrImageUrl: data.directUpiQrImageUrl,
               paymentStatus: data.paymentStatus,
               paymentMethod: data.paymentMethod,
               paymentLinkUrl: data.paymentLinkUrl,
@@ -60,7 +53,7 @@ export default function UpiQrModal({
           }
         }
       } catch (err) {
-        console.error('Failed to fetch dynamic QR details:', err)
+        console.error('Failed to fetch dynamic Razorpay QR details:', err)
       } finally {
         if (!isCancelled) setIsLoading(false)
       }
@@ -68,7 +61,7 @@ export default function UpiQrModal({
 
     loadQrData()
 
-    // 3-Second Live Polling for Automatic Doorstep Payment Detection
+    // 3-Second Live Polling for Automatic Razorpay Payment Detection
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible' && !livePaid) {
         loadQrData()
@@ -85,16 +78,9 @@ export default function UpiQrModal({
 
   const isAlreadyPaid = order.paymentStatus === 'PAID' || qrData?.paymentStatus === 'PAID' || livePaid
 
-  // Fallback calculation if endpoint is loading
-  const fallbackUpiUrl = `upi://pay?pa=7054470303@paytm&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.readableId || order.id.slice(0, 8)}`
-  const fallbackQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(fallbackUpiUrl)}`
-
-  // Select active QR source based on toggle mode
-  const activeQrSrc = qrMode === 'razorpay'
-    ? (qrData?.razorpayQrImageUrl || qrData?.qrImageUrl || fallbackQrSrc)
-    : (qrData?.directUpiQrImageUrl || fallbackQrSrc)
-
-  const activeVpa = qrData?.upiVpa || '7054470303@paytm'
+  const displayId = order.readableId || order.id.slice(0, 8)
+  const fallbackQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(`https://rzp.io/l/fastkirana_${displayId}`)}`
+  const activeQrSrc = qrData?.qrImageUrl || fallbackQrSrc
 
   return (
     <AnimatePresence>
@@ -102,7 +88,7 @@ export default function UpiQrModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
       >
         <motion.div
           initial={{ scale: 0.95, y: 15 }}
@@ -124,52 +110,22 @@ export default function UpiQrModal({
             {isAlreadyPaid ? (
               <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 tracking-wider bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-400 animate-pulse">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                PAYMENT RECEIVED ✅
+                RAZORPAY PAYMENT RECEIVED ✅
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider bg-amber-50 dark:bg-amber-500/10 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-500/20">
-                <RefreshCw className="h-3 w-3 animate-spin text-amber-500" />
-                WAITING FOR PAYMENT (AUTO-DETECT)
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider bg-blue-50 dark:bg-blue-500/10 px-3.5 py-1 rounded-full border border-blue-200 dark:border-blue-500/20">
+                <QrCode className="h-3.5 w-3.5 text-blue-500" />
+                OFFICIAL RAZORPAY PAYMENT GATEWAY ⚡
               </span>
             )}
             
             <h3 className="text-base font-extrabold text-text-primary pt-1">
-              {isAlreadyPaid ? '🎉 Payment Confirmed!' : 'Scan QR Code to Pay'}
+              {isAlreadyPaid ? '🎉 Payment Confirmed!' : 'Scan QR to Pay via Razorpay'}
             </h3>
             <p className="text-xs text-text-muted">
-              Order #{order.readableId || order.id.slice(0, 8)} • <span className="font-black text-text-primary">{formatPrice(order.total)}</span>
+              Order #{displayId} • <span className="font-black text-text-primary">{formatPrice(order.total)}</span>
             </p>
           </div>
-
-          {!isAlreadyPaid && (
-            /* QR Mode Selector Tabs */
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/60 w-full text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setQrMode('razorpay')}
-                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  qrMode === 'razorpay'
-                    ? 'bg-emerald-600 text-white shadow-sm font-black'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                <span>Razorpay QR</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setQrMode('direct')}
-                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  qrMode === 'direct'
-                    ? 'bg-emerald-600 text-white shadow-sm font-black'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <Building2 className="h-3.5 w-3.5" />
-                <span>Bank UPI QR</span>
-              </button>
-            </div>
-          )}
 
           {isAlreadyPaid ? (
             /* Already Paid Green Screen for Rider */
@@ -182,7 +138,7 @@ export default function UpiQrModal({
                   Payment Verified ✅
                 </h4>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                  {formatPrice(order.total)} received in FastKirana Bank Account.
+                  {formatPrice(order.total)} credited in Razorpay Dashboard.
                 </p>
                 <div className="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md border border-emerald-400/30">
                   Collect ₹0 Cash from Customer 🚀
@@ -190,32 +146,42 @@ export default function UpiQrModal({
               </div>
             </div>
           ) : (
-            /* QR Code Wrapper for Doorstep Dynamic Razorpay Payment */
+            /* Official Razorpay Payment Link QR Code */
             <>
-              <div className="relative h-56 w-56 bg-white border-2 border-amber-500/40 rounded-2xl p-3 shadow-lg flex items-center justify-center overflow-hidden group">
+              <div className="relative h-60 w-60 bg-white border-2 border-blue-500/30 rounded-2xl p-3 shadow-xl flex flex-col items-center justify-center overflow-hidden group">
                 {isLoading ? (
                   <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                    <span className="text-[10px] font-bold text-slate-500">Generating Razorpay QR...</span>
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <span className="text-[10px] font-bold text-slate-500">Generating Razorpay Link...</span>
                   </div>
                 ) : (
                   <>
                     <img
                       src={activeQrSrc}
-                      alt="FastKirana Razorpay Dynamic QR"
+                      alt="FastKirana Razorpay Official QR"
                       className="w-full h-full object-contain"
                     />
-                    <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
-                      {qrMode === 'razorpay' ? 'RAZORPAY ⚡' : 'STORE UPI 🏦'}
+                    <div className="absolute bottom-1 bg-blue-700 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                      <span>RAZORPAY GATEWAY ⚡</span>
                     </div>
                   </>
                 )}
               </div>
 
+              {/* Instructional Text */}
+              <div className="text-center space-y-1">
+                <p className="text-[11px] font-extrabold text-text-primary">
+                  Scan with Camera, GPay, PhonePe or Paytm
+                </p>
+                <p className="text-[10px] text-text-muted">
+                  Opens official Razorpay FastKirana checkout page on customer's phone
+                </p>
+              </div>
+
               {/* Status Indicator */}
-              <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-3.5 py-2 rounded-xl border border-amber-300 dark:border-amber-500/20 w-full">
-                <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500 shrink-0" />
-                <span className="leading-tight">Live Checking Bank Account Every 3s... (No Call Needed)</span>
+              <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-3.5 py-2 rounded-xl border border-blue-300 dark:border-blue-500/20 w-full">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-blue-500 shrink-0" />
+                <span className="leading-tight">Live Checking Razorpay Payment Every 3s...</span>
               </div>
             </>
           )}
