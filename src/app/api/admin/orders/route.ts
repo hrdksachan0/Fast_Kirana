@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
     } else if (status && status !== 'ALL') {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         WHERE o.status::text = ${status}
@@ -69,6 +71,7 @@ export async function GET(request: Request) {
       const searchLike = `%${search}%`
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
@@ -83,6 +86,7 @@ export async function GET(request: Request) {
     } else {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
         FROM orders o
         ORDER BY o."createdAt" DESC
@@ -161,6 +165,8 @@ export async function GET(request: Request) {
         id: o.id,
         readableId: o.readableId,
         status: o.status,
+        paymentStatus: o.paymentStatus || 'PENDING',
+        paymentMethod: o.paymentMethod || 'COD',
         total: o.total,
         createdAt: new Date(o.createdAt).toISOString(),
         updatedAt: new Date(o.updatedAt).toISOString(),
