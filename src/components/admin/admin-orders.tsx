@@ -15,6 +15,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
   const [orders, setOrders] = useState(initialOrders)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [filterMode, setFilterMode] = useState<'ALL' | 'PREMIUM' | 'COMBINED'>('ALL')
+  const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null)
 
   const premiumCount = orders.filter((o) => o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20).length
   const combinedCount = orders.filter((o) => !!o.combinedId).length
@@ -28,6 +29,14 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
     }
     return true
   })
+
+  const handleSelectStatusChange = (order: any, newStatus: string) => {
+    if (newStatus === 'CANCELLED') {
+      setCancelConfirmOrder(order)
+    } else {
+      handleStatusChange(order.id, newStatus)
+    }
+  }
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId)
@@ -161,7 +170,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                   <td className="py-3 px-4">
                     <select
                       value={o.status}
-                      onChange={(e) => handleStatusChange(o.id, e.target.value)}
+                      onChange={(e) => handleSelectStatusChange(o, e.target.value)}
                       disabled={updatingId === o.id}
                       className="bg-muted px-2 py-1 rounded-lg border text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
                     >
@@ -191,6 +200,65 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      {cancelConfirmOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+              <div className="h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-2xl shrink-0">
+                ⚠️
+              </div>
+              <div>
+                <h3 className="text-base font-black text-text-primary">
+                  Cancel Order #{cancelConfirmOrder.readableId || cancelConfirmOrder.id.slice(0, 8)}?
+                </h3>
+                <p className="text-xs text-text-secondary font-medium">Are you sure you want to cancel this order?</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3.5 rounded-xl border border-border/60 text-xs space-y-1">
+              <div className="flex justify-between text-text-secondary">
+                <span>Customer:</span>
+                <span className="font-bold text-text-primary">{cancelConfirmOrder.user?.name || cancelConfirmOrder.user?.email || 'Customer'}</span>
+              </div>
+              <div className="flex justify-between text-text-secondary">
+                <span>Total Amount:</span>
+                <span className="font-black text-emerald-600 dark:text-emerald-400">{formatPrice(cancelConfirmOrder.total)}</span>
+              </div>
+              <div className="flex justify-between text-text-secondary">
+                <span>Payment Method:</span>
+                <span className="font-bold text-text-primary">{cancelConfirmOrder.paymentMethod || 'COD'}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold leading-relaxed bg-rose-500/5 border border-rose-500/20 p-2.5 rounded-xl">
+              ⚠️ Warning: Cancelling will notify the customer and rider immediately. If paid online via Razorpay, please issue a refund from Razorpay Dashboard.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setCancelConfirmOrder(null)}
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-text-primary text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                No, Keep Order
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetId = cancelConfirmOrder.id
+                  setCancelConfirmOrder(null)
+                  handleStatusChange(targetId, 'CANCELLED')
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md shadow-rose-600/20 transition-all active:scale-95 cursor-pointer"
+              >
+                Yes, Cancel Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

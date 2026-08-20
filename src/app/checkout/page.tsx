@@ -1570,10 +1570,15 @@ export default function CheckoutPage() {
 
               {/* Integrated Payment Method Selection */}
               <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
-                <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  Choose Payment Method
-                </h2>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Choose Payment Method
+                  </h2>
+                  <span className="inline-flex items-center gap-1.5 bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
+                    🔒 Powered by Razorpay
+                  </span>
+                </div>
 
                 {onlyCod && (
                   <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
@@ -1608,7 +1613,7 @@ export default function CheckoutPage() {
                             </span>
                           </div>
                           <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Pay instantly with any UPI app on phone
+                            Razorpay Instant Mobile UPI Checkout
                           </p>
                         </div>
                       </div>
@@ -1641,7 +1646,7 @@ export default function CheckoutPage() {
                             Credit / Debit Card
                           </h4>
                           <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Visa, MasterCard, RuPay, Maestro & More
+                            Razorpay 256-Bit Secured Card Gateway
                           </p>
                         </div>
                       </div>
@@ -1674,7 +1679,7 @@ export default function CheckoutPage() {
                             Digital Wallets
                           </h4>
                           <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Paytm Wallet, Mobikwik, PhonePe Wallet
+                            Paytm, Mobikwik, PhonePe via Razorpay
                           </p>
                         </div>
                       </div>

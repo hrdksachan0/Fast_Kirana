@@ -15,6 +15,8 @@ from routers.auth import require_auth
 logger = logging.getLogger("fastapi-backend")
 
 router = APIRouter(prefix="/payment/razorpay", tags=["Razorpay Payment Integration"])
+alt_router = APIRouter(prefix="/payments/razorpay", tags=["Razorpay Payment Integration"])
+generic_router = APIRouter(prefix="", tags=["Razorpay Payment Integration"])
 
 
 def get_razorpay_client():
@@ -24,9 +26,12 @@ def get_razorpay_client():
 
 
 @router.post("/create-order")
+@alt_router.post("/create-order")
+@generic_router.post("/create-order")
+@generic_router.post("/payment/razorpay/create-order")
+@generic_router.post("/payments/razorpay/create-order")
 async def create_razorpay_order(
     payload: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -74,9 +79,13 @@ async def create_razorpay_order(
 
 
 @router.post("/verify-signature")
+@alt_router.post("/verify-signature")
+@generic_router.post("/verify-payment")
+@generic_router.post("/verify-signature")
+@generic_router.post("/payment/razorpay/verify-signature")
+@generic_router.post("/payments/razorpay/verify-signature")
 async def verify_razorpay_signature(
     payload: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
