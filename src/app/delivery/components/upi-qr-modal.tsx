@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw } from 'lucide-react'
+import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw, Zap, Building2 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 
@@ -20,12 +20,15 @@ export default function UpiQrModal({
   const [qrData, setQrData] = useState<{
     upiVpa: string
     qrImageUrl: string
+    razorpayQrImageUrl?: string
+    directUpiQrImageUrl?: string
     paymentStatus?: string
     paymentMethod?: string
     paymentLinkUrl?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [livePaid, setLivePaid] = useState(false)
+  const [qrMode, setQrMode] = useState<'razorpay' | 'direct'>('razorpay')
 
   useEffect(() => {
     if (!order?.id) return
@@ -40,6 +43,8 @@ export default function UpiQrModal({
             setQrData({
               upiVpa: data.upiVpa || '7054470303@paytm',
               qrImageUrl: data.qrImageUrl,
+              razorpayQrImageUrl: data.razorpayQrImageUrl,
+              directUpiQrImageUrl: data.directUpiQrImageUrl,
               paymentStatus: data.paymentStatus,
               paymentMethod: data.paymentMethod,
               paymentLinkUrl: data.paymentLinkUrl,
@@ -84,7 +89,11 @@ export default function UpiQrModal({
   const fallbackUpiUrl = `upi://pay?pa=7054470303@paytm&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.readableId || order.id.slice(0, 8)}`
   const fallbackQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(fallbackUpiUrl)}`
 
-  const activeQrSrc = qrData?.qrImageUrl || fallbackQrSrc
+  // Select active QR source based on toggle mode
+  const activeQrSrc = qrMode === 'razorpay'
+    ? (qrData?.razorpayQrImageUrl || qrData?.qrImageUrl || fallbackQrSrc)
+    : (qrData?.directUpiQrImageUrl || fallbackQrSrc)
+
   const activeVpa = qrData?.upiVpa || '7054470303@paytm'
 
   return (
@@ -99,7 +108,7 @@ export default function UpiQrModal({
           initial={{ scale: 0.95, y: 15 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 15 }}
-          className="bg-card w-full max-w-sm rounded-3xl border border-border/80 p-6 shadow-2xl space-y-5 flex flex-col items-center relative overflow-hidden"
+          className="bg-card w-full max-w-sm rounded-3xl border border-border/80 p-6 shadow-2xl space-y-4 flex flex-col items-center relative overflow-hidden"
         >
           {/* Close Button */}
           <button
@@ -131,6 +140,36 @@ export default function UpiQrModal({
               Order #{order.readableId || order.id.slice(0, 8)} • <span className="font-black text-text-primary">{formatPrice(order.total)}</span>
             </p>
           </div>
+
+          {!isAlreadyPaid && (
+            /* QR Mode Selector Tabs */
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/60 w-full text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setQrMode('razorpay')}
+                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  qrMode === 'razorpay'
+                    ? 'bg-emerald-600 text-white shadow-sm font-black'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span>Razorpay QR</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setQrMode('direct')}
+                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  qrMode === 'direct'
+                    ? 'bg-emerald-600 text-white shadow-sm font-black'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                <span>Bank UPI QR</span>
+              </button>
+            </div>
+          )}
 
           {isAlreadyPaid ? (
             /* Already Paid Green Screen for Rider */
@@ -167,7 +206,7 @@ export default function UpiQrModal({
                       className="w-full h-full object-contain"
                     />
                     <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
-                      RAZORPAY ⚡
+                      {qrMode === 'razorpay' ? 'RAZORPAY ⚡' : 'STORE UPI 🏦'}
                     </div>
                   </>
                 )}
