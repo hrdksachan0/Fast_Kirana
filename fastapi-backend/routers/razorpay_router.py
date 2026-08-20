@@ -54,7 +54,7 @@ async def create_razorpay_order(
             "receipt": order.id,
             "notes": {
                 "readableId": str(order.readableId or ""),
-                "customerName": current_user.get("name", "Customer")
+                "customerName": "Customer"
             }
         }
         rzp_order = client.order.create(data=data)
