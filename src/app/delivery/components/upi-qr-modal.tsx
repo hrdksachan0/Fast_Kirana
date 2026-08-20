@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CheckCircle2, ShieldCheck, QrCode, X } from 'lucide-react'
-import { formatPrice } from '@/lib/utils'
+import { Loader2, CheckCircle2, ShieldCheck, QrCode, X, RefreshCw } from 'lucide-react'
+import { formatPrice, triggerHaptic } from '@/lib/utils'
 
 interface UpiQrModalProps {
   order: any
@@ -21,17 +21,18 @@ export default function UpiQrModal({
     qrImageUrl: string
     paymentStatus?: string
     paymentMethod?: string
+    paymentLinkUrl?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [livePaid, setLivePaid] = useState(false)
 
   useEffect(() => {
     if (!order?.id) return
     let isCancelled = false
-    setIsLoading(true)
 
     async function loadQrData() {
       try {
-        const res = await fetch(`/api/delivery/orders/${order.id}/qr`)
+        const res = await fetch(`/api/delivery/orders/${order.id}/qr?t=${Date.now()}`)
         if (res.ok) {
           const data = await res.json()
           if (!isCancelled) {
@@ -40,7 +41,11 @@ export default function UpiQrModal({
               qrImageUrl: data.qrImageUrl,
               paymentStatus: data.paymentStatus,
               paymentMethod: data.paymentMethod,
+              paymentLinkUrl: data.paymentLinkUrl,
             })
+            if (data.paymentStatus === 'PAID') {
+              setLivePaid(true)
+            }
           }
         }
       } catch (err) {
@@ -51,15 +56,23 @@ export default function UpiQrModal({
     }
 
     loadQrData()
+
+    // 3-Second Live Polling for Automatic Doorstep Payment Detection
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible' && !livePaid) {
+        loadQrData()
+      }
+    }, 3000)
+
     return () => {
       isCancelled = true
+      clearInterval(pollInterval)
     }
-  }, [order?.id])
+  }, [order?.id, livePaid])
 
   if (!order) return null
 
-  const isAlreadyPaid = order.paymentStatus === 'PAID' || qrData?.paymentStatus === 'PAID'
-  const isOnlinePayment = order.paymentMethod !== 'COD'
+  const isAlreadyPaid = order.paymentStatus === 'PAID' || qrData?.paymentStatus === 'PAID' || livePaid
 
   // Fallback calculation if endpoint is loading
   const fallbackUpiUrl = `upi://pay?pa=7054470303@paytm&pn=FastKirana&am=${order.total}&cu=INR&tn=Order_${order.readableId || order.id.slice(0, 8)}`
@@ -95,18 +108,18 @@ export default function UpiQrModal({
           <div className="text-center space-y-1.5 w-full pt-1">
             {isAlreadyPaid ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 tracking-wider bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" />
-                ONLINE PAYMENT CONFIRMED ✅
+                <CheckCircle2 className="h-3 w-3 animate-pulse" />
+                AUTOMATIC PAYMENT CONFIRMED ✅
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 tracking-wider bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400">
                 <QrCode className="h-3 w-3" />
-                RAZORPAY / STORE UPI QR ACTIVE
+                RAZORPAY DYNAMIC QR ACTIVE ⚡
               </span>
             )}
             
             <h3 className="text-base font-extrabold text-text-primary pt-1">
-              {isAlreadyPaid ? 'Paid Online via Razorpay' : 'Scan QR Code to Pay'}
+              {isAlreadyPaid ? 'Payment Confirmed!' : 'Scan QR Code to Pay'}
             </h3>
             <p className="text-xs text-text-muted">
               Order #{order.readableId || order.id.slice(0, 8)} • <span className="font-black text-text-primary">{formatPrice(order.total)}</span>
@@ -115,44 +128,49 @@ export default function UpiQrModal({
 
           {isAlreadyPaid ? (
             /* Already Paid Screen for Rider */
-            <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 flex flex-col items-center text-center space-y-3">
-              <div className="h-16 w-16 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-10 w-10" />
+            <div className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-5 flex flex-col items-center text-center space-y-3 animate-card-enter">
+              <div className="h-16 w-16 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <CheckCircle2 className="h-10 w-10 text-emerald-500 animate-bounce-subtle" />
               </div>
               <div>
-                <h4 className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                <h4 className="text-base font-black text-emerald-700 dark:text-emerald-300">
                   Payment Verified ✅
                 </h4>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                  Customer has paid {formatPrice(order.total)} via {isOnlinePayment ? 'Razorpay Online' : 'UPI'}.
+                  Customer has paid {formatPrice(order.total)} online.
                 </p>
-                <div className="mt-3 bg-card/80 border border-emerald-500/20 px-3 py-1.5 rounded-xl text-[11px] font-black text-emerald-800 dark:text-emerald-200">
+                <div className="mt-3 bg-card border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-black text-emerald-600 dark:text-emerald-400 shadow-sm">
                   Collect ₹0 Cash from Customer 🚀
                 </div>
               </div>
             </div>
           ) : (
-            /* QR Code Wrapper for Doorstep UPI */
+            /* QR Code Wrapper for Doorstep Dynamic Razorpay Payment */
             <>
-              <div className="relative h-52 w-52 bg-white border-2 border-emerald-500/20 rounded-2xl p-3 shadow-md flex items-center justify-center overflow-hidden">
+              <div className="relative h-56 w-56 bg-white border-2 border-emerald-500/30 rounded-2xl p-3 shadow-lg flex items-center justify-center overflow-hidden group">
                 {isLoading ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                    <span className="text-[10px] font-bold text-slate-500">Loading Razorpay QR...</span>
+                    <span className="text-[10px] font-bold text-slate-500">Generating Razorpay QR...</span>
                   </div>
                 ) : (
-                  <img
-                    src={activeQrSrc}
-                    alt="FastKirana Razorpay Store QR"
-                    className="w-full h-full object-contain"
-                  />
+                  <>
+                    <img
+                      src={activeQrSrc}
+                      alt="FastKirana Razorpay Dynamic QR"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
+                      RAZORPAY ⚡
+                    </div>
+                  </>
                 )}
               </div>
 
-              {/* UPI ID Badge */}
-              <div className="bg-muted/40 border border-border/60 px-3.5 py-2 rounded-xl text-center w-full">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Store UPI ID</span>
-                <span className="text-xs font-mono font-black text-primary select-all">{activeVpa}</span>
+              {/* Status Indicator */}
+              <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Auto-detecting payment at doorstep... (No call needed)</span>
               </div>
             </>
           )}
@@ -163,16 +181,16 @@ export default function UpiQrModal({
               <button
                 type="button"
                 onClick={() => onConfirmPaid(order.id)}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Confirm Payment Received (UPI)
+                Manually Confirm Paid (If cash received)
               </button>
             )}
             <button
               type="button"
               onClick={onBack}
-              className="w-full py-2.5 border border-border hover:bg-muted/40 text-text-secondary font-bold text-xs rounded-xl transition-colors"
+              className="w-full py-2.5 border border-border hover:bg-muted/40 text-text-secondary font-bold text-xs rounded-xl transition-colors cursor-pointer"
             >
               {isAlreadyPaid ? 'Close Window' : 'Back to Order Details'}
             </button>

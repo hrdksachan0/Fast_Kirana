@@ -32,32 +32,74 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Fetch store UPI ID setting
-    const storeUpiSetting = await prisma.storeSetting.findUnique({
-      where: { key: 'contact_phone' }
-    })
+    // Default fallback UPI ID
     const upiVpaSetting = await prisma.storeSetting.findUnique({
       where: { key: 'store_upi_vpa' }
     })
+    const fallbackUpiVpa = upiVpaSetting?.value || '7054470303@paytm'
 
-    const upiVpa = upiVpaSetting?.value || '7054470303@paytm' // Default store UPI VPA
-    const payeeName = encodeURIComponent('FastKirana Store')
-    const note = encodeURIComponent(`Payment for Order #${order.readableId || order.id.slice(0, 8)}`)
-    const amount = order.total.toFixed(2)
-    const tr = `FK${order.readableId || order.id.slice(0, 8)}`
+    let paymentLinkUrl = ''
+    let qrImageUrl = ''
 
-    // Standard NPCI UPI Intent URI format
-    const upiUri = `upi://pay?pa=${upiVpa}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}&tr=${tr}`
+    // If order is still unpaid, generate dynamic Razorpay Payment Link for automatic tracking
+    if (order.paymentStatus !== 'PAID') {
+      try {
+        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
+        const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+        const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+        const displayId = order.readableId || order.id.slice(0, 8)
 
-    // Standard Google Chart QR Code API for high-resolution QR rendering
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiUri)}`
+        const rzpRes = await fetch('https://api.razorpay.com/v1/payment_links', {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: Math.round(Number(order.total) * 100),
+            currency: 'INR',
+            accept_partial: false,
+            reference_id: `FK_${displayId}_${Date.now().toString(36)}`,
+            description: `Doorstep Payment for FastKirana Order #${displayId}`,
+            notify: {
+              sms: false,
+              email: false,
+            },
+            reminder_enable: false,
+            notes: {
+              orderId: order.id,
+              readableId: displayId,
+            },
+          }),
+        })
+
+        if (rzpRes.ok) {
+          const rzpData = await rzpRes.json()
+          paymentLinkUrl = rzpData.short_url
+        }
+      } catch (e) {
+        console.warn('Failed to generate Razorpay Payment Link, falling back to static UPI QR:', e)
+      }
+    }
+
+    if (paymentLinkUrl) {
+      qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkUrl)}`
+    } else {
+      // NPCI UPI Intent fallback
+      const payeeName = encodeURIComponent('FastKirana Store')
+      const note = encodeURIComponent(`Payment for Order #${order.readableId || order.id.slice(0, 8)}`)
+      const amount = order.total.toFixed(2)
+      const tr = `FK${order.readableId || order.id.slice(0, 8)}`
+      const upiUri = `upi://pay?pa=${fallbackUpiVpa}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}&tr=${tr}`
+      qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUri)}`
+    }
 
     return NextResponse.json({
       orderId: order.id,
       readableId: order.readableId,
       amount: order.total,
-      upiVpa,
-      upiUri,
+      upiVpa: fallbackUpiVpa,
+      paymentLinkUrl,
       qrImageUrl,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod
