@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation'
 import { isCafeProduct, cn, getProductLimit, getProductType, isProductStoreClosed } from '@/lib/utils'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { checkDishTimeAvailability } from '@/lib/dish-timing'
+import { getOutletName } from '@/lib/constants'
 
 export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const router = useRouter()
@@ -545,10 +546,10 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           </div>
 
           {/* Restaurant Outlet Sub-label Identifier */}
-          {isRestaurant && ((product as any).restaurant?.name || (product as any).restaurantName) && (
+          {(isRestaurant || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) && (
             <div className="flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold text-red-600 dark:text-red-400 mt-auto min-w-0 leading-tight">
               <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
-              <span className="truncate tracking-tight">{((product as any).restaurant?.name || (product as any).restaurantName)}</span>
+              <span className="truncate tracking-tight">{getOutletName(product)}</span>
             </div>
           )}
         </Link>

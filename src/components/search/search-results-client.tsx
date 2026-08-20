@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/product/product-card'
 import { Product } from '@/types'
 import { Store, Utensils, ShoppingBag, SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getOutletName } from '@/lib/constants'
 
 interface SearchResultsClientProps {
   products: Product[]
@@ -140,24 +141,17 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
       const rest = (p as any).restaurant
       const isRest = Boolean(p.restaurantId || rest || p.category?.slug === 'restaurant' || p.tags?.includes('restaurant'))
       
-      const outletId = p.restaurantId || (isRest ? 'restaurant-general' : 'kirana-grocery')
-      
-      let outletName = rest?.name || (p as any).restaurantName
-      if (!outletName) {
-        if (outletId === 'kirana-grocery') outletName = 'FastKirana Store (Grocery)'
-        else if (outletId === 'as-restaurant' || outletId === 'as-cafe') outletName = 'A.S Restaurant'
-        else if (outletId === 'wedson' || outletId === 'restaurant-kitchen') outletName = 'Wedson Restaurant'
-        else outletName = isRest ? 'Restaurant Outlets' : 'FastKirana Store (Grocery)'
-      }
+      const outletName = isRest ? getOutletName(p) : 'FastKirana Store (Grocery)'
+      const groupKey = isRest ? (p.restaurantId || outletName) : 'kirana-grocery'
 
-      if (!groups[outletId]) {
-        groups[outletId] = {
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
           name: outletName,
           isRestaurant: isRest,
           items: []
         }
       }
-      groups[outletId].items.push(p)
+      groups[groupKey].items.push(p)
     })
     
     return Object.entries(groups).map(([id, g]) => ({ id, ...g }))

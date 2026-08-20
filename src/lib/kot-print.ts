@@ -79,6 +79,7 @@ async function processPrintQueue() {
  */
 export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): string {
   const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
     year: 'numeric',

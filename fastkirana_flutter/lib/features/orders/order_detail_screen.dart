@@ -107,6 +107,11 @@ class OrderDetailScreen extends StatelessWidget {
             _buildStatusHeaderCard(),
             const SizedBox(height: 16),
 
+            if (order.paymentStatus != 'PAID' && order.status != OrderStatus.cancelled) ...[
+              _buildPayOnlineCard(context),
+              const SizedBox(height: 16),
+            ],
+
             // 2. Order Tracking Timeline (Adaptive for Delivery vs Pickup)
             Container(
               padding: const EdgeInsets.all(18),
@@ -814,5 +819,199 @@ class OrderDetailScreen extends StatelessWidget {
       case OrderStatus.cancelled:
         return const Color(0xFFFEE2E2);
     }
+  }
+
+  // Pay Online Option Card (Swiggy / Zepto Style)
+  Widget _buildPayOnlineCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFECFDF5), Color(0xFFF0FDF4)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.emerald.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF047857)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'PAY ONLINE NOW',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF047857),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '100% Safe & Instant',
+                style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF059669),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Avoid Cash Hassle at Doorstep 💳',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: textDark,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Order is currently set to Cash on Delivery. Switch to Online Payment via UPI, GPay, PhonePe or Cards.',
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF374151),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                _showPayOnlineBottomSheet(context);
+              },
+              icon: const Icon(Icons.credit_card_rounded, size: 18, color: Colors.white),
+              label: Text(
+                'Pay ₹${order.total.toInt()} Online Now',
+                style: GoogleFonts.inter(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPayOnlineBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Online Payment Options',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: textDark),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select how you would like to complete your ₹${order.total.toInt()} payment:',
+              style: GoogleFonts.inter(fontSize: 12, color: textMuted),
+            ),
+            const SizedBox(height: 18),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF059669)),
+              ),
+              title: Text('Pay via Web Checkout / Razorpay', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800)),
+              subtitle: Text('Supports PhonePe, GPay, Paytm, BHIM & Cards', style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: textMuted),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final url = 'https://fast-kirana-gtm.vercel.app/order/${order.id}/track';
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF2563EB)),
+              ),
+              title: Text('Ask Rider to Show Doorstep UPI QR', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800)),
+              subtitle: Text('Rider can generate dynamic QR on delivery screen', style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: textMuted),
+              onTap: () {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('📱 Inform delivery rider at doorstep to show UPI QR on their app!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

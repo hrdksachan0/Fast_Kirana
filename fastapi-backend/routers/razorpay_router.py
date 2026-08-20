@@ -104,9 +104,11 @@ async def verify_razorpay_signature(
     if generated_signature != razorpay_signature:
         raise HTTPException(status_code=400, detail="Invalid Razorpay payment signature")
 
-    # Signature valid! Update Order status to PAID & CONFIRMED
+    # Signature valid! Update Order status to PAID & ONLINE
     order.paymentStatus = PaymentStatus.PAID
-    order.status = OrderStatus.CONFIRMED
+    order.paymentMethod = "ONLINE"
+    if order.status == OrderStatus.PENDING:
+        order.status = OrderStatus.CONFIRMED
     await db.commit()
     await db.refresh(order)
 

@@ -11,6 +11,7 @@ import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/
 import { Product } from '@/types'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
+import { getOutletName } from '@/lib/constants'
 
 interface SearchOverlayProps {
   open: boolean
@@ -394,9 +395,14 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                 <h4 className="text-xs sm:text-sm font-extrabold text-text-primary truncate leading-snug">
                                   {product.name}
                                 </h4>
-                                <span className="text-[10px] text-text-muted font-bold block">
-                                  {product.unit}
-                                </span>
+                                 <span className="text-[10px] text-text-muted font-bold block">
+                                   {product.unit}
+                                 </span>
+                                 {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) && (
+                                   <span className="inline-block text-[9px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded mt-0.5 border border-rose-500/20">
+                                     🏬 {getOutletName(product)}
+                                   </span>
+                                 )}
                                 
                                 {/* Pricing */}
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">

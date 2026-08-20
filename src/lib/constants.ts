@@ -358,8 +358,6 @@ export function getOutletName(product: any): string {
   if (!product) return 'Wedson Restaurant'
 
   const rId = product.restaurantId || product.restaurant?.id
-  if (rId) return String(rId)
-
   const rName = product.restaurantName || product.restaurant?.name
   if (rName) return String(rName)
 

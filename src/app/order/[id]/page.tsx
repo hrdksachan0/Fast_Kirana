@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/date-helpers'
 import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
+import { PayOnlineButton } from '@/components/order/pay-online-button'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
@@ -179,6 +180,16 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       </div>
 
       <LockscreenAlertMockup orderId={order.id} deliveryMethod={order.deliveryMethod} />
+
+      {/* Pay Online Option for COD Orders (Swiggy / Zepto Style) */}
+      {order.paymentStatus !== 'PAID' && (
+        <PayOnlineButton
+          orderId={order.id}
+          amount={order.total}
+          readableId={order.readableId}
+          variant="card"
+        />
+      )}
 
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">

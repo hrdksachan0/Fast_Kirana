@@ -482,6 +482,9 @@ export function OrdersTab({
                           <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                             ID: {o.id.slice(0, 10)}...
                           </div>
+                          <div className="text-[9.5px] font-bold text-text-secondary mt-1 flex items-center gap-1">
+                            ⏰ {o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                          </div>
                         </td>
 
                         <td className="py-3 px-3 whitespace-nowrap">
@@ -568,7 +571,19 @@ export function OrdersTab({
                             )
                           })()}
                         </td>
-                        <td className="py-3 px-3 font-black text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="font-black text-text-primary text-sm">{formatPrice(o.total)}</div>
+                          {o.paymentStatus === 'PAID' ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              PAID ONLINE ✅
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1">
+                              💰 {o.paymentMethod || 'COD'} (UNPAID)
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-3 text-center">
                           <div className="flex flex-col items-center justify-center gap-1.5 min-w-[105px]">
                             <select
@@ -915,7 +930,19 @@ export function OrdersTab({
                             )
                           })()}
                         </td>
-                        <td className="py-3 px-3 font-bold text-text-primary whitespace-nowrap">{formatPrice(o.total)}</td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="font-bold text-text-primary text-xs">{formatPrice(o.total)}</div>
+                          {o.paymentStatus === 'PAID' ? (
+                            <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full mt-0.5">
+                              <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                              PAID ✅
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5">
+                              💰 {o.paymentMethod || 'COD'}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-3 text-center">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
                             o.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'

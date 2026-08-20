@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
 
 export async function POST(req: Request) {
@@ -15,6 +16,10 @@ export async function POST(req: Request) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
+      include: {
+        user: true,
+        address: true,
+      }
     })
 
     if (!order) {
@@ -32,12 +37,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid Razorpay payment signature' }, { status: 400 })
     }
 
-    // Update order status to PAID and CONFIRMED
+    // Update order payment status to PAID and paymentMethod to ONLINE
+    // Advance status to CONFIRMED only if it was PENDING, else preserve (PACKED, SHIPPED, etc.)
+    const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
+
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: {
         paymentStatus: 'PAID',
-        status: 'CONFIRMED',
+        paymentMethod: 'UPI',
+        status: nextStatus,
       },
     })
 
@@ -52,6 +61,8 @@ export async function POST(req: Request) {
         readableId: (updatedOrder as any).readableId,
         status: updatedOrder.status,
         total: updatedOrder.total,
+        paymentStatus: updatedOrder.paymentStatus,
+        paymentMethod: updatedOrder.paymentMethod,
         createdAt: updatedOrder.createdAt,
       })
 
@@ -62,6 +73,22 @@ export async function POST(req: Request) {
         tag: `order-${updatedOrder.id}`,
         data: { orderId: updatedOrder.id }
       }).catch((err: any) => console.error('Error sending push notification:', err))
+
+      // WhatsApp Order Alert to Admin Phones
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+      const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+      const outletName = (order as any).shopName || ((order as any).restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+      const customerName = order.user?.name || 'Customer'
+      const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
+      
+      const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${updatedOrder.total} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
+
+      const adminPhones = ['7054470303', '8112849854']
+      for (const adminPhone of adminPhones) {
+        sendWhatsAppOrderAlert(adminPhone, adminText)
+          .catch((err: any) => console.error(`Failed to send WhatsApp alert to ${adminPhone}:`, err))
+      }
+
     } catch (notifErr) {
       console.error('Notification error after payment verification:', notifErr)
     }

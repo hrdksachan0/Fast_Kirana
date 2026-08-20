@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
+import { PayOnlineButton } from '@/components/order/pay-online-button'
 import { useRouter } from 'next/navigation'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { supabase } from '@/lib/supabase-client'
@@ -711,6 +712,20 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
       
+      {/* Pay Online Option for COD Orders (Swiggy / Zepto Style) */}
+      {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
+        <PayOnlineButton
+          orderId={order.id}
+          amount={combinedTotal || order.total}
+          readableId={order.readableId}
+          onPaymentSuccess={() => {
+            setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'ONLINE' }))
+            router.refresh()
+          }}
+          variant="card"
+        />
+      )}
+
       {/* Premium Visual Delivery Status Card */}
       <div className="bg-card border border-border/80 p-5 sm:p-7 rounded-3xl shadow-xl space-y-6 overflow-hidden relative">
         {/* Background Decorative Gradient Glow */}
