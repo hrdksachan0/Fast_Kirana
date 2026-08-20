@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import { sseEmitter } from '@/lib/sse-emitter'
-import { sendPushNotificationToRoles } from '@/lib/push-notifications'
+import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { Role } from '@prisma/client'
 
 export async function POST(req: Request) {
