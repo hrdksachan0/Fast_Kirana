@@ -181,7 +181,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
       <LockscreenAlertMockup orderId={order.id} deliveryMethod={order.deliveryMethod} />
 
-      {/* Pay Online Option for COD Orders (Swiggy / Zepto Style) */}
+      {/* Pay Online Option for COD Orders */}
       {order.paymentStatus !== 'PAID' && (
         <PayOnlineButton
           orderId={order.id}

@@ -712,14 +712,14 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
       
-      {/* Pay Online Option for COD Orders (Swiggy / Zepto Style) */}
+      {/* Pay Online Option for COD Orders */}
       {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
         <PayOnlineButton
           orderId={order.id}
           amount={combinedTotal || order.total}
           readableId={order.readableId}
           onPaymentSuccess={() => {
-            setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'ONLINE' }))
+            setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'UPI' }))
             router.refresh()
           }}
           variant="card"

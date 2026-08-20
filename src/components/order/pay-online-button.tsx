@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CreditCard, Loader2, Zap, ShieldCheck, ArrowRight } from 'lucide-react'
+import { CreditCard, Loader2, ShieldCheck, ArrowRight, Lock } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
@@ -90,7 +90,7 @@ export function PayOnlineButton({
           contact: customerPhone || '',
         },
         theme: {
-          color: '#E20A22',
+          color: '#059669',
         },
         handler: async function (response: any) {
           setIsVerifying(true)
@@ -154,7 +154,7 @@ export function PayOnlineButton({
         type="button"
         onClick={handlePayOnline}
         disabled={isProcessing || isVerifying}
-        className={`w-full py-3 px-5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs min-[375px]:text-sm rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/30 ${className}`}
+        className={`w-full py-3.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer ${className}`}
       >
         {isProcessing || isVerifying ? (
           <>
@@ -164,7 +164,7 @@ export function PayOnlineButton({
         ) : (
           <>
             <CreditCard className="h-4 w-4" />
-            <span>Pay {formatPrice(amount)} Online Now</span>
+            <span>Pay {formatPrice(amount)} Online</span>
             <ArrowRight className="h-4 w-4 ml-auto" />
           </>
         )}
@@ -174,18 +174,17 @@ export function PayOnlineButton({
 
   if (variant === 'banner') {
     return (
-      <div className={`p-4 bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-teal-500/15 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md ${className}`}>
+      <div className={`p-4 bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm ${className}`}>
         <div className="flex items-center gap-3 text-left">
-          <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-            <Zap className="h-5 w-5 fill-emerald-500" />
+          <div className="h-9 w-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <CreditCard className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-              <span>Paying Cash on Delivery?</span>
-              <span className="bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">Fast Pay</span>
+            <h4 className="text-xs font-bold text-text-primary">
+              Pay Online via UPI or Card
             </h4>
-            <p className="text-[11px] text-text-secondary font-medium mt-0.5">
-              Switch to Online Payment via UPI, GPay, PhonePe or Cards
+            <p className="text-[11px] text-text-secondary font-normal mt-0.5">
+              Avoid cash hassle at doorstep
             </p>
           </div>
         </div>
@@ -193,14 +192,14 @@ export function PayOnlineButton({
           type="button"
           onClick={handlePayOnline}
           disabled={isProcessing || isVerifying}
-          className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+          className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
         >
           {isProcessing || isVerifying ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              <CreditCard className="h-4 w-4" />
               <span>Pay {formatPrice(amount)}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </>
           )}
         </button>
@@ -208,62 +207,52 @@ export function PayOnlineButton({
     )
   }
 
-  // Default 'card' variant (Swiggy / Zepto Style prominent card)
+  // Default clean, minimalist, high-end card variant
   return (
-    <div className={`relative overflow-hidden p-5 bg-gradient-to-br from-emerald-950/20 via-card to-emerald-900/10 border-2 border-emerald-500/40 rounded-3xl shadow-xl transition-all hover:border-emerald-500/60 ${className}`}>
-      {/* Background glow circle */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
-
-      <div className="flex flex-col space-y-3.5 relative z-10">
-        {/* Top Header & Badge */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full">
-            <Zap className="h-3 w-3 text-emerald-500 fill-emerald-500" />
-            SWIGGY / ZEPTO STYLE ONLINE PAY
-          </span>
-          <div className="flex items-center gap-1 text-[10px] font-bold text-text-secondary">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            100% Safe & Instant
+    <div className={`p-5 min-[375px]:p-6 bg-card border border-emerald-500/30 dark:border-emerald-500/20 rounded-3xl shadow-sm space-y-4 hover:border-emerald-500/50 transition-all ${className}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs border border-emerald-500/20">
+            💳
           </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
+            Pay Online
+          </span>
         </div>
-
-        {/* Title & Description */}
-        <div>
-          <h3 className="text-base font-black text-text-primary tracking-tight">
-            Avoid Cash Hassle — Pay Online Now 💳
-          </h3>
-          <p className="text-xs font-medium text-text-secondary mt-1 leading-relaxed">
-            Order is currently set to <span className="font-bold text-amber-600 dark:text-amber-400 uppercase">Cash on Delivery</span>. You can pay online anytime via UPI, GPay, PhonePe, Paytm, QR or Cards.
-          </p>
+        <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/50">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Instant & Secure</span>
         </div>
-
-        {/* Payment Icons Bar */}
-        <div className="flex items-center gap-2 bg-muted/40 p-2.5 rounded-2xl border border-border/50 text-[11px] font-bold text-text-secondary">
-          <span className="text-sm">📱</span>
-          <span>Supports GPay, PhonePe, Paytm, BHIM, Cards & NetBanking</span>
-        </div>
-
-        {/* Action Button */}
-        <button
-          type="button"
-          onClick={handlePayOnline}
-          disabled={isProcessing || isVerifying}
-          className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/40"
-        >
-          {isProcessing || isVerifying ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-white" />
-              <span>{isVerifying ? 'Verifying Payment...' : 'Opening Payment Gateway...'}</span>
-            </>
-          ) : (
-            <>
-              <CreditCard className="h-4.5 w-4.5" />
-              <span>Pay {formatPrice(amount)} Online Now</span>
-              <ArrowRight className="h-4 w-4 ml-auto" />
-            </>
-          )}
-        </button>
       </div>
+
+      <div>
+        <h3 className="text-base font-bold text-text-primary tracking-tight">
+          Pay {formatPrice(amount)} Online
+        </h3>
+        <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+          Order is currently set to <span className="font-semibold text-amber-600 dark:text-amber-400">Cash on Delivery</span>. You can pay online using Google Pay, PhonePe, Paytm, BHIM, UPI or Cards.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={handlePayOnline}
+        disabled={isProcessing || isVerifying}
+        className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+      >
+        {isProcessing || isVerifying ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
+            <span>{isVerifying ? 'Verifying Payment...' : 'Opening Payment Gateway...'}</span>
+          </>
+        ) : (
+          <>
+            <Lock className="h-4 w-4" />
+            <span>Pay {formatPrice(amount)} Online Now</span>
+            <ArrowRight className="h-4 w-4 ml-auto" />
+          </>
+        )}
+      </button>
     </div>
   )
 }

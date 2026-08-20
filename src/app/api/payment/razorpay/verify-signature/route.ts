@@ -74,7 +74,21 @@ export async function POST(req: Request) {
         data: { orderId: updatedOrder.id }
       }).catch((err: any) => console.error('Error sending push notification:', err))
 
-      // WhatsApp Order Alert to Admin Phones
+      // WhatsApp Order Alert to Admin Phones (Strictly based on Admin Settings selection)
+      const settings = await prisma.storeSetting.findMany({
+        where: {
+          key: { in: ['whatsapp_notify_7054470303', 'whatsapp_notify_8112849854'] }
+        }
+      })
+      const settingsMap: Record<string, string> = {}
+      for (const s of settings) {
+        settingsMap[s.key] = s.value
+      }
+
+      const adminPhones: string[] = []
+      if (settingsMap['whatsapp_notify_7054470303'] !== 'false') adminPhones.push('7054470303')
+      if (settingsMap['whatsapp_notify_8112849854'] !== 'false') adminPhones.push('8112849854')
+
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
       const outletName = (order as any).shopName || ((order as any).restaurantId ? 'Restaurant' : 'FastKirana Grocery')
@@ -83,7 +97,6 @@ export async function POST(req: Request) {
       
       const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${updatedOrder.total} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
 
-      const adminPhones = ['7054470303', '8112849854']
       for (const adminPhone of adminPhones) {
         sendWhatsAppOrderAlert(adminPhone, adminText)
           .catch((err: any) => console.error(`Failed to send WhatsApp alert to ${adminPhone}:`, err))
