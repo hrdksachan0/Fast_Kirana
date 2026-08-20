@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase-client'
 
 import DeliveryHeader from './components/delivery-header'
 import CodPaymentModal from './components/cod-payment-modal'
+import UpiQrModal from './components/upi-qr-modal'
 import ActiveDeliveryCard from './components/active-delivery-card'
 import PendingPickupCard from './components/pending-pickup-card'
 import RiderWalletView from './components/rider-wallet-view'
@@ -165,6 +166,7 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
 
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
+  const [qrModalOrder, setQrModalOrder] = useState<any | null>(null)
 
   const [walletInfo, setWalletInfo] = useState<{
     cashInHand: number
@@ -694,7 +696,12 @@ export default function DeliveryDashboard() {
 
   const handleSelectOnline = (orderId: string) => {
     setPaymentChoiceOrderId(null)
-    executeDeliveryCompletion(orderId, false, 'ONLINE')
+    const targetOrder = orders.find((o) => o.id === orderId)
+    if (targetOrder) {
+      setQrModalOrder(targetOrder)
+    } else {
+      executeDeliveryCompletion(orderId, false, 'ONLINE')
+    }
   }
 
   const handleSelectCustomCash = (orderId: string, cashAmount: number) => {
@@ -743,6 +750,18 @@ export default function DeliveryDashboard() {
           onSelectCash={handleSelectCash}
           onSelectOnline={handleSelectOnline}
           onSelectCustomCash={handleSelectCustomCash}
+        />
+      )}
+
+      {/* Doorstep Razorpay Dynamic UPI QR Modal */}
+      {qrModalOrder && (
+        <UpiQrModal
+          order={qrModalOrder}
+          onBack={() => setQrModalOrder(null)}
+          onConfirmPaid={(orderId) => {
+            setQrModalOrder(null)
+            executeDeliveryCompletion(orderId, false, 'ONLINE')
+          }}
         />
       )}
 

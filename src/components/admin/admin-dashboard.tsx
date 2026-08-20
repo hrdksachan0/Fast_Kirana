@@ -406,18 +406,40 @@ export function AdminDashboard({
       )
       .subscribe()
 
-    // Fallback polling every 30 seconds (only if tab is visible)
+    // Dual-channel real-time fallback: SSE EventSource listener
+    let sseSource: EventSource | null = null
+    try {
+      sseSource = new EventSource('/api/sse/orders')
+      sseSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order') {
+            toast.success(`🛎️ New Order Received: #${data.readableId || data.orderId?.slice(0, 8)}`)
+            playNewOrderChime()
+            debouncedRefresh()
+          } else if (data.type === 'order-update') {
+            debouncedRefresh()
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('SSE connection failed:', e)
+    }
+
+    // Fallback polling every 10 seconds (only if tab is visible)
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchLiveOrdersList()
+        setOrderRefreshKey(prev => prev + 1)
       }
-    }, 30000)
+    }, 10000)
 
     // Initial load of live orders list
     fetchLiveOrdersList()
 
     return () => {
       supabase.removeChannel(channel)
+      if (sseSource) sseSource.close()
       clearInterval(interval)
       if (updateTimeout) clearTimeout(updateTimeout)
     }
