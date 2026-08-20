@@ -1582,112 +1582,141 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Cash on Delivery */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {/* Instant UPI (Google Pay, PhonePe, Paytm) */}
+                  {!onlyCod && (
+                    <div
+                      onClick={() => setPaymentMethod('UPI')}
+                      className={cn(
+                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
+                        paymentMethod === 'UPI'
+                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
+                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
+                          📱
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs sm:text-sm font-black text-text-primary">
+                              UPI (GPay / PhonePe / Paytm)
+                            </h4>
+                            <span className="bg-emerald-500 text-white text-[8px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full shadow-sm">
+                              FASTEST ⚡
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                            Pay instantly with any UPI app on phone
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                        paymentMethod === 'UPI' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
+                      )}>
+                        {paymentMethod === 'UPI' && <div className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Debit / Credit Card */}
+                  {!onlyCod && (
+                    <div
+                      onClick={() => setPaymentMethod('CARD')}
+                      className={cn(
+                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
+                        paymentMethod === 'CARD'
+                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
+                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
+                          💳
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-black text-text-primary">
+                            Credit / Debit Card
+                          </h4>
+                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                            Visa, MasterCard, RuPay, Maestro & More
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                        paymentMethod === 'CARD' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
+                      )}>
+                        {paymentMethod === 'CARD' && <div className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Digital Wallets */}
+                  {!onlyCod && (
+                    <div
+                      onClick={() => setPaymentMethod('WALLET')}
+                      className={cn(
+                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
+                        paymentMethod === 'WALLET'
+                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
+                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
+                          👛
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-black text-text-primary">
+                            Digital Wallets
+                          </h4>
+                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                            Paytm Wallet, Mobikwik, PhonePe Wallet
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                        paymentMethod === 'WALLET' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
+                      )}>
+                        {paymentMethod === 'WALLET' && <div className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cash on Delivery / Cash on Pickup */}
                   <div
                     onClick={() => setPaymentMethod('COD')}
                     className={cn(
-                      "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                      paymentMethod === 'COD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
+                      paymentMethod === 'COD'
+                        ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
+                        : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
                     )}
                   >
-                    <input
-                      type="radio"
-                      checked={paymentMethod === 'COD'}
-                      onChange={() => setPaymentMethod('COD')}
-                      className="cursor-pointer mt-1"
-                    />
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">💵</span>
-                        <h4 className="text-sm font-bold text-text-primary">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-600 to-green-700 flex items-center justify-center text-white text-xl shadow-md shrink-0">
+                        💵
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-black text-text-primary">
                           {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
                         </h4>
+                        <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                          {deliveryMethod === 'PICKUP' ? 'Pay cash or UPI at store counter' : 'Pay cash or UPI to delivery rider'}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                        {deliveryMethod === 'PICKUP' ? 'Pay in cash or UPI at the store' : 'Pay in cash or UPI at the door'}
-                      </p>
+                    </div>
+                    <div className={cn(
+                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                      paymentMethod === 'COD' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
+                    )}>
+                      {paymentMethod === 'COD' && <div className="h-2 w-2 rounded-full bg-white" />}
                     </div>
                   </div>
-
-                  {!onlyCod && (
-                    <>
-                      {/* Instant UPI */}
-                      <div
-                        onClick={() => setPaymentMethod('UPI')}
-                        className={cn(
-                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                          paymentMethod === 'UPI' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          checked={paymentMethod === 'UPI'}
-                          onChange={() => setPaymentMethod('UPI')}
-                          className="cursor-pointer mt-1"
-                        />
-                        <div className="flex-grow">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">📱</span>
-                            <h4 className="text-sm font-bold text-text-primary">Google Pay / PhonePe / Paytm UPI</h4>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                            Pay instantly from your mobile screen using any installed UPI application
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Credit / Debit Card */}
-                      <div
-                        onClick={() => setPaymentMethod('CARD')}
-                        className={cn(
-                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                          paymentMethod === 'CARD' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          checked={paymentMethod === 'CARD'}
-                          onChange={() => setPaymentMethod('CARD')}
-                          className="cursor-pointer mt-1"
-                        />
-                        <div className="flex-grow">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">💳</span>
-                            <h4 className="text-sm font-bold text-text-primary">Credit / Debit Card</h4>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                            Pay securely with Visa, MasterCard, RuPay, Maestro, or Diner's Club cards
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Paytm Wallet / Netbanking */}
-                      <div
-                        onClick={() => setPaymentMethod('WALLET')}
-                        className={cn(
-                          "flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 hover:bg-muted/30",
-                          paymentMethod === 'WALLET' ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          checked={paymentMethod === 'WALLET'}
-                          onChange={() => setPaymentMethod('WALLET')}
-                          className="cursor-pointer mt-1"
-                        />
-                        <div className="flex-grow">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🏦</span>
-                            <h4 className="text-sm font-bold text-text-primary">Wallet & Netbanking</h4>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
-                            Pay using Paytm Wallet, Amazon Pay, Mobikwik, or Netbanking (SBI, HDFC, ICICI, etc.)
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
 
@@ -1842,19 +1871,28 @@ export default function CheckoutPage() {
           disabled={isPlacingOrder}
           onClick={handlePlaceOrderClick}
           className={cn(
-            "group relative overflow-hidden bg-gradient-to-r from-accent to-accent-dark text-white rounded-full font-black text-sm tracking-wide uppercase px-6 h-11 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/40",
+            "group relative overflow-hidden text-white rounded-full font-black text-xs sm:text-sm tracking-wide uppercase px-6 h-12 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg",
+            paymentMethod !== 'COD'
+              ? "bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/25 hover:shadow-emerald-500/40"
+              : "bg-gradient-to-r from-accent to-accent-dark shadow-accent/25 hover:shadow-accent/40",
             isPlacingOrder && "opacity-60 cursor-not-allowed shadow-none"
           )}
         >
           {isPlacingOrder ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-white relative z-10" />
+              <Loader2 className="h-4 w-4 animate-spin text-white relative z-10" />
               <span className="relative z-10">Processing...</span>
+            </>
+          ) : paymentMethod !== 'COD' ? (
+            <>
+              <span className="relative z-10">Pay ₹{grandTotal.toFixed(0)} Online</span>
+              <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
             </>
           ) : (
             <>
               <span className="relative z-10">Place Order</span>
-              <ChevronsRight className="h-3.5 w-3.5 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+              <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
             </>
           )}
