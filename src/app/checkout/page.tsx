@@ -24,6 +24,7 @@ import {
   QrCode,
   Smartphone,
   ChevronsRight,
+  X,
 } from 'lucide-react'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -417,6 +418,7 @@ export default function CheckoutPage() {
 
   // Payment Method
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI' | 'CARD' | 'WALLET'>('COD')
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
   const [scheduledSlot, setScheduledSlot] = useState<string>('INSTANT')
   const [packagingOption, setPackagingOption] = useState<'NORMAL' | 'PREMIUM'>('NORMAL')
@@ -768,7 +770,8 @@ export default function CheckoutPage() {
   }
 
   // Place Order
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+    const selectedMethod = overrideMethod || paymentMethod
     setIsPlacingOrder(true)
     try {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
@@ -791,7 +794,7 @@ export default function CheckoutPage() {
 
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
-        paymentMethod,
+        paymentMethod: selectedMethod,
         items,
         deliveryMethod,
         scheduledSlot,
@@ -839,7 +842,8 @@ export default function CheckoutPage() {
     })
   }
 
-  const handleRazorpayCheckout = async () => {
+  const handleRazorpayCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+    const selectedMethod = overrideMethod || paymentMethod
     setIsPlacingOrder(true)
     try {
       // 1. Validate checkout eligibility
@@ -864,7 +868,7 @@ export default function CheckoutPage() {
       // 2. Create the order in the database
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
-        paymentMethod,
+        paymentMethod: selectedMethod,
         items,
         deliveryMethod,
         scheduledSlot,
@@ -888,7 +892,7 @@ export default function CheckoutPage() {
         return
       }
 
-      const rzpRes = await fetch('/api/payment/razorpay/create-order', {
+      const rzpRes = await fetch('/api/payments/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: orderData.id }),
@@ -939,7 +943,7 @@ export default function CheckoutPage() {
         },
         handler: async function (response: any) {
           try {
-            const verifyRes = await fetch('/api/payment/razorpay/verify-signature', {
+            const verifyRes = await fetch('/api/payments/razorpay/verify-signature', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1015,10 +1019,12 @@ export default function CheckoutPage() {
       }
     }
 
-    if (paymentMethod !== 'COD') {
-      handleRazorpayCheckout()
+    if (onlyCod) {
+      setPaymentMethod('COD')
+      handlePlaceOrder('COD')
     } else {
-      handlePlaceOrder()
+      triggerHaptic('light')
+      setIsPaymentModalOpen(true)
     }
   }
 
@@ -1568,163 +1574,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Integrated Payment Method Selection */}
-              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    Choose Payment Method
-                  </h2>
-                  <span className="inline-flex items-center gap-1.5 bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
-                    🔒 Powered by Razorpay
-                  </span>
-                </div>
-
-                {onlyCod && (
-                  <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                    <span>ℹ️</span>
-                    <span>Online payment options are temporarily disabled by the store. Please proceed with Cash on Delivery / Cash on Pickup.</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {/* Instant UPI (Google Pay, PhonePe, Paytm) */}
-                  {!onlyCod && (
-                    <div
-                      onClick={() => setPaymentMethod('UPI')}
-                      className={cn(
-                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
-                        paymentMethod === 'UPI'
-                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
-                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
-                          📱
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs sm:text-sm font-black text-text-primary">
-                              UPI (GPay / PhonePe / Paytm)
-                            </h4>
-                            <span className="bg-emerald-500 text-white text-[8px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full shadow-sm">
-                              FASTEST ⚡
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Razorpay Instant Mobile UPI Checkout
-                          </p>
-                        </div>
-                      </div>
-                      <div className={cn(
-                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                        paymentMethod === 'UPI' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
-                      )}>
-                        {paymentMethod === 'UPI' && <div className="h-2 w-2 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Debit / Credit Card */}
-                  {!onlyCod && (
-                    <div
-                      onClick={() => setPaymentMethod('CARD')}
-                      className={cn(
-                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
-                        paymentMethod === 'CARD'
-                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
-                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
-                          💳
-                        </div>
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-black text-text-primary">
-                            Credit / Debit Card
-                          </h4>
-                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Razorpay 256-Bit Secured Card Gateway
-                          </p>
-                        </div>
-                      </div>
-                      <div className={cn(
-                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                        paymentMethod === 'CARD' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
-                      )}>
-                        {paymentMethod === 'CARD' && <div className="h-2 w-2 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Digital Wallets */}
-                  {!onlyCod && (
-                    <div
-                      onClick={() => setPaymentMethod('WALLET')}
-                      className={cn(
-                        "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
-                        paymentMethod === 'WALLET'
-                          ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
-                          : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
-                          👛
-                        </div>
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-black text-text-primary">
-                            Digital Wallets
-                          </h4>
-                          <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                            Paytm, Mobikwik, PhonePe via Razorpay
-                          </p>
-                        </div>
-                      </div>
-                      <div className={cn(
-                        "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                        paymentMethod === 'WALLET' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
-                      )}>
-                        {paymentMethod === 'WALLET' && <div className="h-2 w-2 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Cash on Delivery / Cash on Pickup */}
-                  <div
-                    onClick={() => setPaymentMethod('COD')}
-                    className={cn(
-                      "relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 shadow-sm",
-                      paymentMethod === 'COD'
-                        ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
-                        : "border-border/80 bg-white dark:bg-zinc-900 hover:border-emerald-500/40"
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-600 to-green-700 flex items-center justify-center text-white text-xl shadow-md shrink-0">
-                        💵
-                      </div>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-black text-text-primary">
-                          {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
-                        </h4>
-                        <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                          {deliveryMethod === 'PICKUP' ? 'Pay cash or UPI at store counter' : 'Pay cash or UPI to delivery rider'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={cn(
-                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                      paymentMethod === 'COD' ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 dark:border-zinc-700"
-                    )}>
-                      {paymentMethod === 'COD' && <div className="h-2 w-2 rounded-full bg-white" />}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Secure Transaction notice */}
               <div className="flex items-center gap-2 border border-accent/20 bg-accent/5 p-3 rounded-xl text-xs font-semibold text-accent">
                 <ShieldCheck className="h-5 w-5 shrink-0" />
@@ -1888,21 +1737,118 @@ export default function CheckoutPage() {
               <Loader2 className="h-4 w-4 animate-spin text-white relative z-10" />
               <span className="relative z-10">Processing...</span>
             </>
-          ) : paymentMethod !== 'COD' ? (
-            <>
-              <span className="relative z-10">Pay ₹{grandTotal.toFixed(0)} Online</span>
-              <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
-            </>
           ) : (
             <>
-              <span className="relative z-10">Place Order</span>
+              <span className="relative z-10">Proceed to Pay</span>
               <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
             </>
           )}
         </button>
       </div>
+
+      {/* Payment Selection Popup Modal (Design 3: 2 Big Action Buttons) */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-border/80 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 transform transition-all animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border/40 pb-3.5">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                  💳 Select Payment Method
+                </h3>
+                <p className="text-xs text-text-secondary font-medium mt-0.5">
+                  Grand Total: <span className="font-extrabold text-emerald-600 dark:text-emerald-400">₹{grandTotal.toFixed(0)}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {onlyCod && (
+              <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <span>ℹ️</span>
+                <span>Online payment options are temporarily disabled by the store.</span>
+              </div>
+            )}
+
+            {/* 2 Big Action Buttons */}
+            <div className="space-y-3 pt-1">
+              {/* Option 1: Pay Online */}
+              {!onlyCod && (
+                <button
+                  type="button"
+                  disabled={isPlacingOrder}
+                  onClick={() => {
+                    setIsPaymentModalOpen(false)
+                    setPaymentMethod('UPI')
+                    handleRazorpayCheckout('UPI')
+                  }}
+                  className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+                      ⚡
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-black tracking-wide uppercase">Pay Online (₹{grandTotal.toFixed(0)})</span>
+                        <span className="bg-white/25 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
+                          RECOMMENDED ⚡
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-emerald-100 font-medium mt-0.5">
+                        UPI (GPay / PhonePe / Paytm), Cards, NetBanking
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+                </button>
+              )}
+
+              {/* Option 2: Cash on Delivery */}
+              <button
+                type="button"
+                disabled={isPlacingOrder}
+                onClick={() => {
+                  setIsPaymentModalOpen(false)
+                  setPaymentMethod('COD')
+                  handlePlaceOrder('COD')
+                }}
+                className="group relative w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700/80 text-text-primary font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xl shrink-0">
+                    💵
+                  </div>
+                  <div>
+                    <span className="text-xs sm:text-sm font-black tracking-wide uppercase">
+                      {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
+                    </span>
+                    <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                      {deliveryMethod === 'PICKUP' ? 'Pay cash or UPI at store counter' : 'Pay cash or UPI to delivery rider at doorstep'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+
+            {/* Footer Trust Badge */}
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-text-secondary pt-1">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>100% Safe Payment • Verified by FastKirana</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,13 +1,14 @@
 /**
  * Utility to trigger browser-native haptic feedback (vibration) on mobile devices
  */
-export type HapticType = 'light' | 'medium' | 'success' | 'warning'
+export type HapticType = 'light' | 'medium' | 'success' | 'warning' | 'selection'
 
 const PATTERNS: Record<HapticType, number | number[]> = {
   light: 12, // Short, subtle tick
   medium: 25, // Standard button click tick
   success: [200, 100, 200], // Double firm pulse
   warning: [50, 100, 50], // Double firm pulse
+  selection: 10,
 }
 
 export function triggerHaptic(type: HapticType = 'light') {
