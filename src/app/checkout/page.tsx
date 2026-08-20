@@ -892,11 +892,20 @@ export default function CheckoutPage() {
         return
       }
 
-      const rzpRes = await fetch('/api/payments/razorpay/create-order', {
+      let rzpRes = await fetch('/api/payments/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: orderData.id }),
       })
+
+      if (!rzpRes.ok) {
+        rzpRes = await fetch('/api/payment/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: orderData.id }),
+        })
+      }
+
       const rzpData = await rzpRes.json()
 
       if (!rzpRes.ok) {

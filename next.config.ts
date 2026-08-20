@@ -155,10 +155,14 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/forecast/:path*`,
       },
 
-      // ── Payments (Paytm) ──
+      // ── Payments (Razorpay / Payments) ──
       {
         source: '/api/payment/:path*',
         destination: `${apiDest}/api/payment/:path*`,
+      },
+      {
+        source: '/api/payments/:path*',
+        destination: `${apiDest}/api/payments/:path*`,
       },
 
       // ── Push Notifications (FCM) ──
