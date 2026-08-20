@@ -816,7 +816,7 @@ export default function CheckoutPage() {
         triggerHaptic('success')
         toast.success('Order placed successfully! Redirecting to tracking...')
         clearCart()
-        router.push(`/order/${data.id}`)
+        router.push(`/order/${data.id}/success`)
       } else {
         toast.error(data.error || 'Failed to place order')
       }
@@ -942,7 +942,7 @@ export default function CheckoutPage() {
               clearCart()
               triggerHaptic('success')
               toast.success('🎉 Payment Successful!')
-              router.push(`/order/${orderData.id}`)
+              router.push(`/order/${orderData.id}/success`)
             } else {
               toast.error(verifyData.detail || 'Payment verification failed')
             }
