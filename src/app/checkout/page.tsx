@@ -892,6 +892,8 @@ export default function CheckoutPage() {
         return
       }
 
+      let paymentSuccess = false
+
       const options = {
         key: rzpData.keyId,
         amount: rzpData.amount,
@@ -900,6 +902,7 @@ export default function CheckoutPage() {
         description: `FastKirana Order Payment`,
         order_id: rzpData.razorpayOrderId,
         handler: async function (response: any) {
+          paymentSuccess = true
           try {
             // Payment approved! NOW create DB order
             const payload = buildOrderPayload({
@@ -944,20 +947,22 @@ export default function CheckoutPage() {
               clearCart()
               triggerHaptic('success')
               toast.success('🎉 Payment Successful!')
-              router.push(`/order/${orderData.id}/success`)
+              window.location.href = `/order/${orderData.id}/success`
             } else {
-              toast.error(verifyData.detail || 'Payment verification failed')
+              toast.error(verifyData.error || verifyData.detail || 'Payment verification failed')
+              setIsPlacingOrder(false)
             }
           } catch (err) {
             toast.error('Payment verification error')
-          } finally {
             setIsPlacingOrder(false)
           }
         },
         modal: {
           ondismiss: function () {
-            setIsPlacingOrder(false)
-            toast.info('Payment window closed. Order was not placed.')
+            if (!paymentSuccess) {
+              setIsPlacingOrder(false)
+              toast.info('Payment window closed. Order was not placed.')
+            }
           },
         },
         prefill: {
