@@ -100,6 +100,9 @@ app.include_router(public.router)
 app.include_router(paytm.router)
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+
+from routers import razorpay_router
+app.include_router(razorpay_router.router, prefix="/api")
 app.include_router(health.health_router)
 
 @app.get("/")

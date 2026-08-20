@@ -824,61 +824,25 @@ export default function CheckoutPage() {
     }
   }
 
-  // Helper function to load Paytm script dynamically
-  const loadPaytmScript = (mid: string, env: string): Promise<boolean> => {
+  // Handle Razorpay Payment Gateway Checkout
+  const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      const host = env === 'prod' ? 'securegw.paytm.in' : 'securegw-stage.paytm.in'
-      const scriptUrl = `https://${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`
-      
-      const existingScript = document.getElementById('paytm-checkout-script')
-      if (existingScript) {
+      if ((window as any).Razorpay) {
         resolve(true)
         return
       }
-      
       const script = document.createElement('script')
-      script.type = 'text/javascript'
-      script.src = scriptUrl
-      script.id = 'paytm-checkout-script'
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
       script.onload = () => resolve(true)
       script.onerror = () => resolve(false)
       document.body.appendChild(script)
     })
   }
 
-  // Run simulated checkout fallback if Paytm is offline
-  const runSimulatedCheckout = async (orderId: string) => {
-    const toastId = toast.loading('Paytm Staging Gateway is offline. Simulating payment fallback for local demo...')
-    try {
-      const res = await fetch('/api/payment/paytm/mock-success', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        toast.dismiss(toastId)
-        toast.success('Demo payment successful! Order confirmed.')
-        triggerHaptic('success')
-        clearCart()
-        router.push(`/order/${orderId}`)
-      } else {
-        toast.dismiss(toastId)
-        toast.error(data.error || 'Demo payment simulation failed')
-        setIsPlacingOrder(false)
-      }
-    } catch (err) {
-      toast.dismiss(toastId)
-      toast.error('Failed to communicate with local checkout simulation service')
-      setIsPlacingOrder(false)
-    }
-  }
-
-  // Handle Paytm Payment Gateway Checkout
-  const handlePaytmCheckout = async () => {
+  const handleRazorpayCheckout = async () => {
     setIsPlacingOrder(true)
     try {
-      // 1. Validate checkout eligibility (shared logic)
+      // 1. Validate checkout eligibility
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings: SettingsMap = await settingsRes.json()
 
@@ -897,7 +861,7 @@ export default function CheckoutPage() {
         return
       }
 
-      // 2. Create the order in the database with PENDING payment status
+      // 2. Create the order in the database
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod,
@@ -924,70 +888,101 @@ export default function CheckoutPage() {
         return
       }
 
-      // 3. Initiate Paytm transaction to get txnToken
-      let initiateData;
-      try {
-        const initiateRes = await fetch('/api/payment/paytm/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: orderData.id }),
-        })
-        initiateData = await initiateRes.json()
-        if (!initiateRes.ok) {
-          console.warn('Paytm initiate failed:', initiateData.error)
-          await runSimulatedCheckout(orderData.id)
-          return
-        }
-      } catch (initiateError) {
-        console.error('Failed to initiate Paytm payment:', initiateError)
-        await runSimulatedCheckout(orderData.id)
+      const rzpRes = await fetch('/api/payment/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderData.id }),
+      })
+      const rzpData = await rzpRes.json()
+
+      if (!rzpRes.ok) {
+        toast.error(rzpData.detail || 'Razorpay order creation failed')
+        setIsPlacingOrder(false)
         return
       }
 
-      // 4. Load Paytm CheckoutJS script dynamically
-      const scriptLoaded = await loadPaytmScript(initiateData.mid, initiateData.env)
-      if (!scriptLoaded) {
-        console.warn('Paytm script failed to load, falling back to simulation.')
-        await runSimulatedCheckout(orderData.id)
+      const loaded = await loadRazorpayScript()
+      if (!loaded) {
+        toast.error('Failed to load Razorpay Checkout SDK.')
+        setIsPlacingOrder(false)
         return
       }
 
-      // 5. Initialize and invoke CheckoutJS
-      const config = {
-        root: "",
-        flow: "DEFAULT",
-        data: {
-          orderId: initiateData.orderId,
-          token: initiateData.txnToken,
-          tokenType: "TXN_TOKEN",
-          amount: initiateData.amount
+      const options = {
+        key: rzpData.keyId,
+        amount: rzpData.amount,
+        currency: rzpData.currency,
+        name: 'FastKirana',
+        description: `Order #${orderData.readableId || orderData.id.slice(0, 8)}`,
+        order_id: rzpData.razorpayOrderId,
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay via UPI (GPay, PhonePe, Paytm)',
+                instruments: [{ method: 'upi' }],
+              },
+              card: {
+                name: 'Pay via Debit / Credit Card',
+                instruments: [{ method: 'card' }],
+              },
+              wallet: {
+                name: 'Pay via Digital Wallet',
+                instruments: [{ method: 'wallet' }],
+              },
+            },
+            sequence: ['block.upi', 'block.card', 'block.wallet'],
+            preferences: {
+              show_default_blocks: false,
+            },
+          },
         },
-        handler: {
-          notifyMerchant: (eventName: string, response: any) => {
-            if (eventName === 'MERCHANT_CLOSE') {
-              setIsPlacingOrder(false)
-              toast.info('Payment window closed. You can retry from your orders page or select COD.')
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch('/api/payment/razorpay/verify-signature', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: orderData.id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            })
+            const verifyData = await verifyRes.json()
+            if (verifyRes.ok) {
+              clearCart()
+              triggerHaptic('success')
+              toast.success('🎉 Payment Successful!')
+              router.push(`/orders/${orderData.id}/success`)
+            } else {
+              toast.error(verifyData.detail || 'Payment verification failed')
             }
+          } catch (err) {
+            toast.error('Payment verification error')
+          } finally {
+            setIsPlacingOrder(false)
           }
-        }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsPlacingOrder(false)
+            toast.info('Payment window closed.')
+          },
+        },
+        prefill: {
+          name: session?.user?.name || '',
+          email: session?.user?.email || '',
+        },
+        theme: {
+          color: '#10b981',
+        },
       }
 
-      const paytmWindow = (window as any).Paytm
-      if (paytmWindow && paytmWindow.CheckoutJS) {
-        paytmWindow.CheckoutJS.init(config).then(() => {
-          paytmWindow.CheckoutJS.invoke()
-        }).catch(async (err: any) => {
-          console.error('Paytm CheckoutJS init error:', err)
-          await runSimulatedCheckout(orderData.id)
-        })
-      } else {
-        console.warn('Paytm SDK window object not available, falling back to simulation.')
-        await runSimulatedCheckout(orderData.id)
-      }
-
+      const rzp = new (window as any).Razorpay(options)
+      rzp.open()
     } catch (err) {
-      console.error('Paytm checkout exception:', err)
-      toast.error('An unexpected error occurred during checkout.')
+      toast.error('An unexpected error occurred during Razorpay checkout.')
       setIsPlacingOrder(false)
     }
   }
@@ -1021,7 +1016,7 @@ export default function CheckoutPage() {
     }
 
     if (paymentMethod !== 'COD') {
-      handlePaytmCheckout()
+      handleRazorpayCheckout()
     } else {
       handlePlaceOrder()
     }

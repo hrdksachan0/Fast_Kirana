@@ -12,6 +12,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/restaurant_card.dart';
+import '../../widgets/brand_logo.dart';
 import '../search/search_screen.dart';
 import '../cart/cart_screen.dart';
 import '../cafe/cafe_menu_screen.dart';
@@ -214,23 +215,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Top Row: Logo + Express ETA Badge + Location Dropdown + Profile Icon
           Row(
             children: [
-              // Brand Logo
-              Image.asset(
-                'assets/brand/fastkirana_exact_logo.png',
-                height: 30,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.primary,
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-                  ),
-                  child: Text(
-                    'FastKirana',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
-                ),
-              ),
+              // Brand Logo (uses exact brand image logo with stylish fallback)
+              const BrandLogo(size: 28, variant: true),
               const SizedBox(width: 8),
 
               // Express Delivery Pill (Web Style)

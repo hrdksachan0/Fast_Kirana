@@ -1478,8 +1478,18 @@ async def update_order(
         if safe_photo and safe_photo.startswith("data:") and len(safe_photo) > 200000:
             safe_photo = None
 
-        is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or not is_rider_cash
-        new_payment_method = "UPI" if is_owner_or_online else (order.paymentMethod.value if order.paymentMethod.value in ["COD", "UPI", "CARD", "WALLET"] else "COD")
+        cash_amount_custom = payload.get("cashAmount")
+        is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
+
+        if cash_amount_custom is not None:
+            try:
+                order_cash_collected = max(0.0, float(cash_amount_custom))
+            except (ValueError, TypeError):
+                order_cash_collected = float(order.total) if not is_owner_or_online else 0.0
+        else:
+            order_cash_collected = float(order.total) if not is_owner_or_online else 0.0
+
+        new_payment_method = "UPI" if (is_owner_or_online and order_cash_collected == 0) else (order.paymentMethod.value if order.paymentMethod.value in ["COD", "UPI", "CARD", "WALLET"] else "COD")
 
         order.paymentStatus = PaymentStatus.PAID
         order.paymentMethod = PaymentMethod(new_payment_method)
@@ -1488,24 +1498,22 @@ async def update_order(
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
         order.deliveredAt = datetime.utcnow()
 
-        # Update Rider Wallet for COD order
-        is_rider_cash_collected = not is_owner_or_online and (is_rider_cash is not False)
-        if order.paymentMethod == PaymentMethod.COD and is_rider_cash_collected and order.deliveryUserId:
+        # Update Rider Wallet for Cash collected
+        if order_cash_collected > 0 and order.deliveryUserId:
             wallet_stmt = select(RiderWallet).where(RiderWallet.userId == order.deliveryUserId)
             wallet_res = await db.execute(wallet_stmt)
             wallet = wallet_res.scalars().first()
 
-            order_total = float(order.total)
             if wallet:
-                wallet.cashInHand += order_total
-                wallet.totalCollected += order_total
+                wallet.cashInHand += order_cash_collected
+                wallet.totalCollected += order_cash_collected
             else:
                 wallet = RiderWallet(
                     id=f"rw_{order.deliveryUserId}",
                     userId=order.deliveryUserId,
-                    cashInHand=order_total,
+                    cashInHand=order_cash_collected,
                     cashLimit=2000.0,
-                    totalCollected=order_total,
+                    totalCollected=order_cash_collected,
                     totalDeposited=0.0
                 )
                 db.add(wallet)
@@ -1696,4 +1704,97 @@ async def track_order(
             "street": order.address.street,
             "city": order.address.city
         } if order.address else None
+    }
+
+
+@router.delete("/cancelled-orders")
+async def delete_all_cancelled_orders(
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Purge all cancelled orders and their child items from database. (ADMIN ONLY)
+    """
+    role = current_user.get("role")
+    if role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Only ADMIN can bulk delete cancelled orders")
+
+    res = await db.execute(select(Order.id).where(Order.status == OrderStatus.CANCELLED))
+    cancelled_ids = list(res.scalars().all())
+
+    if not cancelled_ids:
+        return {"message": "No cancelled orders found", "deletedCount": 0}
+
+    await db.execute(delete(OrderItem).where(OrderItem.orderId.in_(cancelled_ids)))
+    await db.execute(delete(Order).where(Order.id.in_(cancelled_ids)))
+    await db.commit()
+
+    return {"message": f"Successfully deleted {len(cancelled_ids)} cancelled orders", "deletedCount": len(cancelled_ids)}
+
+
+@router.patch("/{id}/payment")
+async def update_order_payment(
+    id: str,
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Admin route to edit/override order payment method (COD, UPI, CARD) and adjust Rider Cash In Hand.
+    """
+    role = current_user.get("role")
+    if role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Only ADMIN can edit order payment details")
+
+    stmt = select(Order).where(Order.id == id)
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    new_method = payload.get("paymentMethod")
+    new_status = payload.get("paymentStatus")
+    cash_collected = payload.get("cashAmount")
+
+    old_method = order.paymentMethod.value
+    order_total = float(order.total)
+
+    if new_method:
+        try:
+            order.paymentMethod = PaymentMethod(new_method.upper())
+        except ValueError:
+            pass
+
+    if new_status:
+        try:
+            order.paymentStatus = PaymentStatus(new_status.upper())
+        except ValueError:
+            pass
+
+    # Adjust Rider Wallet if rider was assigned
+    if order.deliveryUserId:
+        wallet_stmt = select(RiderWallet).where(RiderWallet.userId == order.deliveryUserId)
+        wallet_res = await db.execute(wallet_stmt)
+        wallet = wallet_res.scalars().first()
+
+        if wallet:
+            # If changing from COD to UPI -> reduce cashInHand by order_total
+            if old_method == "COD" and new_method in ["UPI", "CARD", "ONLINE"]:
+                wallet.cashInHand = max(0.0, float(wallet.cashInHand) - order_total)
+            # If changing from UPI to COD -> add order_total to cashInHand
+            elif old_method != "COD" and new_method == "COD":
+                wallet.cashInHand = float(wallet.cashInHand) + order_total
+
+            # If explicit custom cashAmount provided
+            if cash_collected is not None:
+                wallet.cashInHand = max(0.0, float(cash_collected))
+
+    await db.commit()
+    await db.refresh(order)
+
+    return {
+        "message": "Order payment updated successfully",
+        "orderId": order.id,
+        "paymentMethod": order.paymentMethod.value,
+        "paymentStatus": order.paymentStatus.value
     }

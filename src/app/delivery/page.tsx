@@ -697,35 +697,52 @@ export default function DeliveryDashboard() {
     executeDeliveryCompletion(orderId, false, 'ONLINE')
   }
 
-  if (status === 'loading' || isLoading) {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-3"
-        >
-          <div className="relative mx-auto w-14 h-14">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 opacity-20 animate-ping" />
-            <div className="relative h-14 w-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-              <Loader2 className="h-6 w-6 animate-spin text-white" />
-            </div>
-          </div>
-          <p className="text-xs font-bold text-text-secondary">Loading Delivery Queue…</p>
-        </motion.div>
-      </div>
-    )
+  const handleSelectCustomCash = (orderId: string, cashAmount: number) => {
+    setPaymentChoiceOrderId(null)
+    executeDeliveryCompletionWithCash(orderId, cashAmount)
+  }
+
+  const executeDeliveryCompletionWithCash = async (
+    orderId: string,
+    cashAmount: number
+  ) => {
+    setUpdatingId(orderId)
+    try {
+      const coords = await getCurrentCoords()
+      const success = await handleUpdateStatus(orderId, 'DELIVERED', {
+        deliveryLat: coords?.lat || null,
+        deliveryLng: coords?.lng || null,
+        isRiderCash: cashAmount > 0,
+        cashAmount: cashAmount,
+        paymentCollectedBy: cashAmount > 0 ? 'RIDER' : 'ONLINE',
+      })
+
+      if (success) {
+        const matchingOrder = orders.find((o) => o.id === orderId)
+        const displayId = matchingOrder?.readableId || orderId.slice(0, 8)
+        toast.success(`🎉 Order #${displayId} Delivered Successfully!`, {
+          description: `Delivered. Cash Collected: ₹${cashAmount}`,
+          duration: 4000,
+        })
+      }
+    } catch (err) {
+      toast.error('Failed to complete delivery')
+    } finally {
+      setUpdatingId(null)
+      setPaymentChoiceOrderId(null)
+    }
   }
 
   return (
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
-      {/* COD Payment Choice Modal (Cash vs Online) */}
+      {/* COD Payment Choice Modal (Cash vs Online vs Split) */}
       {paymentChoiceOrderId && (
         <CodPaymentModal
           order={orders.find((o) => o.id === paymentChoiceOrderId)}
           onClose={() => setPaymentChoiceOrderId(null)}
           onSelectCash={handleSelectCash}
           onSelectOnline={handleSelectOnline}
+          onSelectCustomCash={handleSelectCustomCash}
         />
       )}
 

@@ -2,23 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/design_system.dart';
 
-/// Premium Branded Logo with gradient effect
+/// Premium Branded Logo using brand image asset with elegant icon+text fallback
 class BrandLogo extends StatelessWidget {
   final double size;
   final bool withText;
   final bool variant; // true = dark, false = light
+  final bool useImageLogo;
 
   const BrandLogo({
     super.key,
     this.size = 40,
     this.withText = true,
     this.variant = false,
+    this.useImageLogo = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final textColor = variant ? AppDesignSystem.textPrimary : Colors.white;
 
+    if (useImageLogo) {
+      return Image.asset(
+        'assets/brand/fastkirana_exact_logo.png',
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/brand/fastkirana_app_icon.png',
+            height: size,
+            width: size,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildFallbackLogo(textColor);
+            },
+          );
+        },
+      );
+    }
+
+    return _buildFallbackLogo(textColor);
+  }
+
+  Widget _buildFallbackLogo(Color textColor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -34,10 +59,12 @@ class BrandLogo extends StatelessWidget {
             borderRadius: BorderRadius.circular(size * 0.225),
             boxShadow: AppDesignSystem.shadowCard,
           ),
-          child: Icon(
-            Icons.shopping_basket_rounded,
-            color: Colors.white,
-            size: size * 0.55,
+          child: Center(
+            child: Icon(
+              Icons.shopping_basket_rounded,
+              color: Colors.white,
+              size: size * 0.55,
+            ),
           ),
         ),
         if (withText) ...[
@@ -46,22 +73,38 @@ class BrandLogo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'FastKirana',
-                style: GoogleFonts.inter(
-                  fontSize: size * 0.55,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                  height: 1,
-                  letterSpacing: -0.5,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Fast',
+                    style: GoogleFonts.inter(
+                      fontSize: size * 0.55,
+                      fontWeight: FontWeight.w900,
+                      color: AppDesignSystem.primary,
+                      height: 1,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    'Kirana',
+                    style: GoogleFonts.inter(
+                      fontSize: size * 0.55,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      height: 1,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 2),
               Text(
                 'Grocery & Food',
                 style: GoogleFonts.inter(
                   fontSize: size * 0.22,
-                  fontWeight: FontWeight.w500,
-                  color: textColor.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                  color: AppDesignSystem.textSecondary,
                   height: 1,
                   letterSpacing: 0.5,
                 ),

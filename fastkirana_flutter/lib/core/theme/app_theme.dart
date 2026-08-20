@@ -83,10 +83,77 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppDesignSystem.primary,
         onPrimary: Colors.white,
+        secondary: AppDesignSystem.accent,
+        onSecondary: Colors.white,
+        error: AppDesignSystem.danger,
         surface: AppDesignSystem.darkSurface,
         onSurface: AppDesignSystem.darkTextPrimary,
       ),
       scaffoldBackgroundColor: AppDesignSystem.darkBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppDesignSystem.darkSurface,
+        foregroundColor: AppDesignSystem.darkTextPrimary,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppDesignSystem.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppDesignSystem.primary,
+          side: const BorderSide(color: AppDesignSystem.primary),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppDesignSystem.darkSurfaceMuted,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          borderSide: const BorderSide(color: AppDesignSystem.darkBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          borderSide: const BorderSide(color: AppDesignSystem.darkBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          borderSide: const BorderSide(color: AppDesignSystem.primary, width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      cardTheme: CardThemeData(
+        color: AppDesignSystem.darkSurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+          side: const BorderSide(color: AppDesignSystem.darkBorder),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppDesignSystem.darkBorder,
+        thickness: 1,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppDesignSystem.darkSurface,
+        modalBackgroundColor: AppDesignSystem.darkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
     );
   }

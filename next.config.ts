@@ -71,14 +71,14 @@ const nextConfig: NextConfig = {
 
       // ── Products ──
       {
-        source: '/api/products', // READ
-        destination: `${apiDest}/api/products`,
+        source: '/api/products/:path*',
+        destination: `${apiDest}/api/products/:path*`,
       },
 
       // ── Categories ──
       {
-        source: '/api/categories', // READ
-        destination: `${apiDest}/api/categories`,
+        source: '/api/categories/:path*',
+        destination: `${apiDest}/api/categories/:path*`,
       },
 
       // ── Restaurants ──

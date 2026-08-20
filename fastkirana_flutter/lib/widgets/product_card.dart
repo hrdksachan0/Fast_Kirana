@@ -31,8 +31,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   bool _isFavorite = false;
 
   bool _isFoodProduct(Product product) {
-    final cat = product.categoryId?.toLowerCase() ?? '';
-    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+    final cat = product.categoryId.toLowerCase();
+    final tags = product.tags.map((t) => t.toLowerCase()).toList();
     return cat.contains('cafe') ||
         cat.contains('restaurant') ||
         cat.contains('food') ||
@@ -40,7 +40,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   }
 
   bool _isVeg(Product product) {
-    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+    final tags = product.tags.map((t) => t.toLowerCase()).toList();
     if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) {
       return false;
     }
@@ -390,12 +390,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: Text(
-                '$inCartQty',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(scale: animation, child: child);
+                },
+                child: Text(
+                  '$inCartQty',
+                  key: ValueKey<int>(inCartQty),
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ),

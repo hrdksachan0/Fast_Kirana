@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # Store Defaults
     DEFAULT_RIDER_CASH_LIMIT: float = 2000.0
 
+    # Razorpay Payment Gateway Credentials
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_live_TRvyzlqHiRGWbr")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "4C54O0N5q841qdmQ8N1MTTiU")
+
     model_config = SettingsConfigDict(case_sensitive=True)
 
 settings = Settings()

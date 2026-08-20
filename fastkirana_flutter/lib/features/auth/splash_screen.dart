@@ -75,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
+                  // Logo Icon Container
                   Container(
                     width: 120,
                     height: 120,
@@ -90,10 +90,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.shopping_bag_rounded,
-                      size: 60,
-                      color: AppDesignSystem.primary,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Image.asset(
+                        'assets/brand/fastkirana_app_icon.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.shopping_bag_rounded,
+                          size: 60,
+                          color: AppDesignSystem.primary,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
