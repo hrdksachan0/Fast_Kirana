@@ -7,9 +7,10 @@ import Image from 'next/image'
 
 interface LockscreenAlertMockupProps {
   orderId?: string
+  deliveryMethod?: string
 }
 
-export function LockscreenAlertMockup({ orderId }: LockscreenAlertMockupProps) {
+export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAlertMockupProps) {
   const { isSubscribed, permission, subscribe, isSupported } = usePushNotification()
 
   if (isSubscribed || permission !== 'default' || !isSupported) {
@@ -22,6 +23,7 @@ export function LockscreenAlertMockup({ orderId }: LockscreenAlertMockupProps) {
   }
 
   const displayId = orderId || 'NCHWB4'
+  const isPickup = deliveryMethod === 'PICKUP'
 
   return (
     <div className="bg-card border border-border p-4 sm:p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in overflow-hidden relative">
@@ -39,7 +41,7 @@ export function LockscreenAlertMockup({ orderId }: LockscreenAlertMockupProps) {
         {/* === Notification Group (Swiggy / Blinkit style) === */}
         <div className="w-full max-w-[320px] space-y-2 relative z-10 select-none">
           
-          {/* Notification 1 — Rider on the way */}
+          {/* Notification 1 */}
           <div className="bg-[#1c1c1e]/95 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-3 shadow-2xl">
             {/* App header row with logo */}
             <div className="flex items-center gap-2 mb-2">
@@ -59,10 +61,12 @@ export function LockscreenAlertMockup({ orderId }: LockscreenAlertMockupProps) {
             <div className="flex items-start gap-2.5">
               <div className="flex-1 min-w-0">
                 <h5 className="text-[11px] font-extrabold text-white leading-tight">
-                  🚴 Rider is on the way!
+                  {isPickup ? '🏪 Ready for Store Pickup!' : '🚴 Rider is on the way!'}
                 </h5>
                 <p className="text-[10px] font-semibold text-zinc-400 mt-0.5 leading-snug line-clamp-2">
-                  Your order #{displayId} has been picked up and the rider is headed to you. Arriving in ~8 mins.
+                  {isPickup
+                    ? `Your order #${displayId} is packed and ready. Show Order ID at store counter.`
+                    : `Your order #${displayId} has been picked up and the rider is headed to you. Arriving in ~8 mins.`}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-lg overflow-hidden border border-zinc-700/50 shadow-md shrink-0">
@@ -97,10 +101,12 @@ export function LockscreenAlertMockup({ orderId }: LockscreenAlertMockupProps) {
             <div className="flex items-start gap-2.5">
               <div className="flex-1 min-w-0">
                 <h5 className="text-[11px] font-extrabold text-white leading-tight">
-                  📦 Order Packed & Ready
+                  📦 Order Packed &amp; Prepared
                 </h5>
                 <p className="text-[10px] font-semibold text-zinc-400 mt-0.5 leading-snug line-clamp-2">
-                  Your order #{displayId} is packed. A rider will pick it up shortly.
+                  {isPickup
+                    ? `Your store pickup order #${displayId} is packed with hygiene and care.`
+                    : `Your order #${displayId} is packed. A rider will pick it up shortly.`}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-lg overflow-hidden border border-zinc-700/50 shadow-md shrink-0">

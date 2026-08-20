@@ -178,7 +178,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         </div>
       </div>
 
-      <LockscreenAlertMockup orderId={order.id} />
+      <LockscreenAlertMockup orderId={order.id} deliveryMethod={order.deliveryMethod} />
 
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
