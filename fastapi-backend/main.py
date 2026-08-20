@@ -103,9 +103,6 @@ app.include_router(categories.router, prefix="/api")
 
 from routers import razorpay_router
 app.include_router(razorpay_router.router, prefix="/api")
-app.include_router(razorpay_router.alt_router, prefix="/api")
-app.include_router(razorpay_router.generic_router, prefix="/api")
-app.include_router(razorpay_router.generic_router)
 app.include_router(health.health_router)
 
 @app.get("/")

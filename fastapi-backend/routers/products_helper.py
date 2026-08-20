@@ -8,58 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, or_
 from sqlalchemy.orm import selectinload
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from database import get_db
 from models import Product, CartItem, OrderItem, Order, OrderStatus
 from routers.auth import require_auth
 
 helper_router = APIRouter(prefix="/products", tags=["Product Helpers"])
-
-
-@helper_router.get("/upsell")
-async def get_upsell_products(
-    cartId: Optional[str] = Query(None),
-    current_user: dict = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get upsell/cross-sell products based on cart contents."""
-    # Get cart items
-    user_id = current_user.get("id") or current_user.get("sub")
-    from models import Cart
-    cart_stmt = select(Cart).where(Cart.userId == user_id)
-    cart_result = await db.execute(cart_stmt)
-    cart = cart_result.scalars().first()
-
-    if not cart:
-        return {"products": []}
-
-    # Get categories in cart
-    items_stmt = select(CartItem).options(selectinload(CartItem.product)).where(CartItem.cartId == cart.id)
-    items_result = await db.execute(items_stmt)
-    items = items_result.scalars().all()
-
-    if not items:
-        return {"products": []}
-
-    categories = list(set(item.product.categoryId for item in items if item.product))
-    product_ids_in_cart = list(set(item.productId for item in items))
-
-    # Find related products from same categories, excluding already in cart
-    stmt = select(Product).where(
-        Product.categoryId.in_(categories),
-        ~Product.id.in_(product_ids_in_cart),
-        Product.isAvailable == True,
-    ).order_by(Product.sortOrder).limit(10)
-
-    result = await db.execute(stmt)
-    products = result.scalars().all()
-
-    return {"products": [
-        {"id": p.id, "name": p.name, "price": p.price, "imageUrl": p.imageUrl,
-         "mrp": p.mrp, "discount": p.discount}
-        for p in products
-    ]}
 
 
 @helper_router.post("/validate-cart")
