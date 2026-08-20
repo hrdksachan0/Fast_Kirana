@@ -928,28 +928,6 @@ export default function CheckoutPage() {
         name: 'FastKirana',
         description: `Order #${orderData.readableId || orderData.id.slice(0, 8)}`,
         order_id: rzpData.razorpayOrderId,
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: 'Pay via UPI (GPay, PhonePe, Paytm)',
-                instruments: [{ method: 'upi' }],
-              },
-              card: {
-                name: 'Pay via Debit / Credit Card',
-                instruments: [{ method: 'card' }],
-              },
-              wallet: {
-                name: 'Pay via Digital Wallet',
-                instruments: [{ method: 'wallet' }],
-              },
-            },
-            sequence: ['block.upi', 'block.card', 'block.wallet'],
-            preferences: {
-              show_default_blocks: false,
-            },
-          },
-        },
         handler: async function (response: any) {
           try {
             const verifyRes = await fetch('/api/payments/razorpay/verify-signature', {
@@ -978,14 +956,21 @@ export default function CheckoutPage() {
           }
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
             setIsPlacingOrder(false)
-            toast.info('Payment window closed.')
+            // Delete unpaid draft order if user cancelled/closed payment popup
+            try {
+              await fetch(`/api/orders/${orderData.id}`, { method: 'DELETE' })
+            } catch (e) {
+              console.error('Failed to cleanup unpaid order:', e)
+            }
+            toast.info('Payment was cancelled. Order was not placed.')
           },
         },
         prefill: {
-          name: session?.user?.name || '',
-          email: session?.user?.email || '',
+          name: session?.user?.name || 'Customer',
+          email: session?.user?.email || 'customer@fastkirana.in',
+          contact: selectedAddress?.phone || (session?.user as any)?.phone || contactPhone || '9999999999',
         },
         theme: {
           color: '#10b981',
@@ -1789,7 +1774,40 @@ export default function CheckoutPage() {
 
             {/* 2 Big Action Buttons */}
             <div className="space-y-3 pt-1">
-              {/* Option 1: Pay Online */}
+              {/* Option 1: Cash on Delivery (DEFAULT) */}
+              <button
+                type="button"
+                disabled={isPlacingOrder}
+                onClick={() => {
+                  setIsPaymentModalOpen(false)
+                  setPaymentMethod('COD')
+                  handlePlaceOrder('COD')
+                }}
+                className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 relative z-10">
+                  <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+                    💵
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-black tracking-wide uppercase">
+                        {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
+                      </span>
+                      <span className="bg-white/25 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
+                        DEFAULT ⚡
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-emerald-100 font-medium mt-0.5">
+                      {deliveryMethod === 'PICKUP' ? 'Pay cash or UPI at store counter' : 'Pay cash or UPI to delivery rider at doorstep'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+              </button>
+
+              {/* Option 2: Pay Online (Razorpay) */}
               {!onlyCod && (
                 <button
                   type="button"
@@ -1799,55 +1817,22 @@ export default function CheckoutPage() {
                     setPaymentMethod('UPI')
                     handleRazorpayCheckout('UPI')
                   }}
-                  className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
+                  className="group relative w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700/80 text-text-primary font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5 relative z-10">
-                    <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-10 w-10 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xl shrink-0">
                       ⚡
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm font-black tracking-wide uppercase">Pay Online (₹{grandTotal.toFixed(0)})</span>
-                        <span className="bg-white/25 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
-                          RECOMMENDED ⚡
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-emerald-100 font-medium mt-0.5">
-                        UPI (GPay / PhonePe / Paytm), Cards, NetBanking
+                      <span className="text-xs sm:text-sm font-black tracking-wide uppercase">Pay Online (₹{grandTotal.toFixed(0)})</span>
+                      <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                        Instant UPI (GPay / PhonePe / Paytm), Cards &amp; NetBanking
                       </p>
                     </div>
                   </div>
-                  <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+                  <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1" />
                 </button>
               )}
-
-              {/* Option 2: Cash on Delivery */}
-              <button
-                type="button"
-                disabled={isPlacingOrder}
-                onClick={() => {
-                  setIsPaymentModalOpen(false)
-                  setPaymentMethod('COD')
-                  handlePlaceOrder('COD')
-                }}
-                className="group relative w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700/80 text-text-primary font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xl shrink-0">
-                    💵
-                  </div>
-                  <div>
-                    <span className="text-xs sm:text-sm font-black tracking-wide uppercase">
-                      {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
-                    </span>
-                    <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                      {deliveryMethod === 'PICKUP' ? 'Pay cash or UPI at store counter' : 'Pay cash or UPI to delivery rider at doorstep'}
-                    </p>
-                  </div>
-                </div>
-                <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1" />
-              </button>
             </div>
 
             {/* Footer Trust Badge */}

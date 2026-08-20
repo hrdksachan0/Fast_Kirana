@@ -663,3 +663,38 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+    })
+
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Only allow deleting unpaid orders
+    if (order.paymentStatus === 'PAID') {
+      return NextResponse.json({ error: 'Paid orders cannot be deleted' }, { status: 400 })
+    }
+
+    // Delete order items first, then order
+    await prisma.orderItem.deleteMany({ where: { orderId: id } })
+    await prisma.order.delete({ where: { id } })
+
+    return NextResponse.json({ success: true, message: 'Unpaid order cancelled successfully' })
+  } catch (error) {
+    console.error('Delete order error:', error)
+    return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 })
+  }
+}
