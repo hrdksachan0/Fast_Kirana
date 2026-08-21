@@ -124,7 +124,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 child: Stack(
                   children: [
                     // Center Product Image
-                    Center(child: _buildProductImage(product)),
+                    Center(
+                      child: Hero(
+                        tag: 'product_image_${product.id}',
+                        child: _buildProductImage(product),
+                      ),
+                    ),
 
                     // Top Left: Discount Badge (Web Gradient Pill)
                     if (product.discountPercentage > 0)

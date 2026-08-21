@@ -62,6 +62,96 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
+  void _startVoiceSearch(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFEA580C).withOpacity(0.3), width: 2),
+                ),
+                child: const Icon(Icons.mic_rounded, size: 36, color: Color(0xFFEA580C)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Listening... Speak Item Name',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppDesignSystem.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Say "Amul Butter", "Maggi", "Burger", or "Fortune Oil" in Hindi / English',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppDesignSystem.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ['Amul Butter 🧈', 'Maggi 🍜', 'Veg Burger 🍔', 'Fortune Oil 🍾', 'Dairy Milk 🍫']
+                    .map((item) => GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            final cleanTerm = item.split(' ')[0] + ' ' + (item.split(' ').length > 1 ? item.split(' ')[1] : '');
+                            _onSearchTermSelected(cleanTerm.trim());
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            child: Text(
+                              item,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF374151),
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider).value;
@@ -105,7 +195,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         setState(() => _query = '');
                       },
                     )
-                  : null,
+                  : IconButton(
+                      icon: const Icon(Icons.mic_rounded, size: 18, color: Color(0xFFEA580C)),
+                      onPressed: () => _startVoiceSearch(context),
+                    ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

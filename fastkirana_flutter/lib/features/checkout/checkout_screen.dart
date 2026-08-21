@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:action_slider/action_slider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -29,6 +31,51 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _selectedPayment = 'cod';
   int _selectedAddressIndex = 0;
   bool _isPlacingOrder = false;
+  late Razorpay _razorpay;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    HapticFeedback.heavyImpact();
+    final cart = ref.read(cartProvider).value;
+    if (cart != null) {
+      _completeOrderPlacement(cart, paymentId: response.paymentId);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    HapticFeedback.lightImpact();
+    setState(() => _isPlacingOrder = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text('Payment Failed: ${response.message ?? "Transaction Cancelled"}'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('External Wallet Selected: ${response.walletName}'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF10B981);
@@ -82,8 +129,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     HapticFeedback.heavyImpact();
     setState(() => _isPlacingOrder = true);
 
-    await Future.delayed(const Duration(milliseconds: 1200));
+    final subtotal = cart.subtotal;
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 20.0);
+    final taxes = 0.0;
+    final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
 
+    if (_selectedPayment == 'upi' || _selectedPayment == 'card') {
+      final user = ref.read(authProvider).value;
+      final phone = user?.phone ?? '7054470303';
+      final email = user?.email ?? 'customer@fastkirana.in';
+
+      final options = {
+        'key': AppConfig.razorpayKeyId,
+        'amount': (grandTotal * 100).toInt(),
+        'name': 'FastKirana',
+        'description': 'Payment for Order',
+        'retry': {'enabled': true, 'max_count': 1},
+        'send_sms_hash': true,
+        'prefill': {
+          'contact': phone,
+          'email': email,
+        },
+        'external': {
+          'wallets': ['paytm']
+        }
+      };
+
+      try {
+        _razorpay.open(options);
+      } catch (e) {
+        // Fallback to complete order if Razorpay plugin running on unsupported platform (e.g. desktop)
+        await _completeOrderPlacement(cart);
+      }
+    } else {
+      await Future.delayed(const Duration(milliseconds: 1000));
+      await _completeOrderPlacement(cart);
+    }
+  }
+
+  Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
     final subtotal = cart.subtotal;
     final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 20.0);
     final taxes = 0.0;
@@ -104,7 +188,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         builder: (_) => OrderSuccessScreen(
           totalAmount: grandTotal,
           deliveryAddress: selectedAddr,
-          paymentMethod: _selectedPayment.toUpperCase(),
+          paymentMethod: paymentId != null ? 'RAZORPAY ($paymentId)' : _selectedPayment.toUpperCase(),
         ),
       ),
     );

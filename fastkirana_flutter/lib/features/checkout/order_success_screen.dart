@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../orders/orders_screen.dart';
 
-class OrderSuccessScreen extends StatelessWidget {
+class OrderSuccessScreen extends StatefulWidget {
   final String? orderId;
   final double totalAmount;
   final String deliveryAddress;
@@ -18,12 +18,23 @@ class OrderSuccessScreen extends StatelessWidget {
     this.paymentMethod = 'COD',
   });
 
+  @override
+  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+}
+
+class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF10B981);
 
   @override
+  void initState() {
+    super.initState();
+    HapticFeedback.heavyImpact();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final displayId = orderId ?? 'FK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final displayId = widget.orderId ?? 'FK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -102,9 +113,9 @@ class OrderSuccessScreen extends StatelessWidget {
                   children: [
                     _buildDetailRow('Order ID', displayId, isBold: true),
                     const Divider(height: 16, color: Color(0xFFF3F4F6)),
-                    _buildDetailRow('Total Paid / Due', '₹${totalAmount.toInt()}', isBold: true),
+                    _buildDetailRow('Total Paid / Due', '₹${widget.totalAmount.toInt()}', isBold: true),
                     const Divider(height: 16, color: Color(0xFFF3F4F6)),
-                    _buildDetailRow('Payment Mode', paymentMethod),
+                    _buildDetailRow('Payment Mode', widget.paymentMethod),
                     const Divider(height: 16, color: Color(0xFFF3F4F6)),
                     _buildDetailRow('Delivery ETA', '⚡ 10-15 Minutes', isHighlight: true),
                   ],

@@ -835,7 +835,7 @@ class OrderDetailScreen extends StatelessWidget {
         border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.emerald.withOpacity(0.08),
+            color: const Color(0xFF10B981).withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),

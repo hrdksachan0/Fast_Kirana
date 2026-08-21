@@ -31,4 +31,10 @@ class AppConfig {
     'ADMIN_PASSWORD',
     defaultValue: 'FastKirana@2026',
   );
+
+  // Razorpay Payment Gateway Key
+  static const String razorpayKeyId = String.fromEnvironment(
+    'RAZORPAY_KEY_ID',
+    defaultValue: 'rzp_live_fastkirana2026',
+  );
 }

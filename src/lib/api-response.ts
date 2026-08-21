@@ -41,7 +41,14 @@ export class ApiResponder {
     const body: ApiResponse<T> = { success: true, data }
     if (meta) body.meta = meta
 
-    return NextResponse.json(body, { status })
+    return NextResponse.json(body, {
+      status,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id',
+      },
+    })
   }
 
   /**
@@ -58,9 +65,16 @@ export class ApiResponder {
     const body: ApiResponse = {
       success: false,
       error: message,
-      ...(process.env.NODE_ENV === 'development' && details ? { details } : {}),
+      ...(details ? { details } : {}),
     }
 
-    return NextResponse.json(body, { status })
+    return NextResponse.json(body, {
+      status,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id',
+      },
+    })
   }
 }

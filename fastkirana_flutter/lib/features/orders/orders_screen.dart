@@ -44,7 +44,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 
   void _reorderItems(BuildContext context, Order order) {
-    HapticFeedback.mediumImpact();
+    HapticFeedback.heavyImpact();
     final items = order.items ?? [];
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,17 +65,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF16A34A),
-        content: Text('Reordered ${items.length} items to your cart!'),
+        content: Text('Reordered ${items.length} items to cart!'),
         behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: 'View Cart',
-          textColor: Colors.white,
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
-          },
-        ),
+        duration: const Duration(seconds: 2),
       ),
     );
+
+    // Open Cart Screen directly
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
   }
 
   @override

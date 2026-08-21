@@ -150,6 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: RefreshIndicator(
           color: AppDesignSystem.primary,
           onRefresh: () async {
+            HapticFeedback.mediumImpact();
             ref.invalidate(cartProvider);
             ref.invalidate(categoriesProvider);
             ref.invalidate(trendingProductsProvider);

@@ -8,6 +8,7 @@ import { ApiResponder } from '@/lib/api-response'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
+import { getSemanticAiScore } from '@/lib/vector-search'
 
 const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'aalu': ['potato', 'aloo'],
@@ -388,12 +389,13 @@ export async function GET(request: NextRequest) {
         matchedProducts = await prisma.product.findMany(fallbackOptions)
       }
 
-      // 2. Score each product using the fuzzy text matcher
+      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine
       const scoredProducts = matchedProducts.map((p) => {
         const nameScore = getFuzzyScore(normalizedSearch, p.name)
         const tagScore = p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
         const descScore = p.description ? getFuzzyScore(normalizedSearch, p.description) * 0.5 : 0
-        const score = Math.max(nameScore, tagScore, descScore)
+        const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
+        const score = Math.max(nameScore, tagScore, descScore, semanticAiScore)
         return { product: p, score }
       })
 
