@@ -167,6 +167,7 @@ export default function DeliveryDashboard() {
 
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [qrModalOrder, setQrModalOrder] = useState<any | null>(null)
+  const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState<any | null>(null)
 
   const [walletInfo, setWalletInfo] = useState<{
     cashInHand: number
@@ -682,10 +683,8 @@ export default function DeliveryDashboard() {
 
   const handleMarkDelivered = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId)
-    if (order && order.paymentMethod === 'COD') {
-      setPaymentChoiceOrderId(orderId)
-    } else {
-      executeDeliveryCompletion(orderId, false, 'ONLINE')
+    if (order) {
+      setConfirmDeliveryOrder(order)
     }
   }
 
@@ -742,6 +741,54 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
+      {/* Rider Delivery Confirmation Dialog (Prevents accidental clicks) */}
+      {confirmDeliveryOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-card border border-border w-full max-w-sm rounded-3xl p-5 space-y-4 text-center shadow-2xl"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center text-2xl">
+              📦
+            </div>
+            <div>
+              <h3 className="text-base font-black text-text-primary">Confirm Parcel Handover</h3>
+              <p className="text-xs text-text-muted mt-1">
+                Order #{confirmDeliveryOrder.readableId || confirmDeliveryOrder.id.slice(0, 8)} • ₹{confirmDeliveryOrder.total}
+              </p>
+              <p className="text-xs font-medium text-text-secondary mt-2 bg-secondary/50 p-2.5 rounded-xl border border-border/50">
+                Kya aapne customer ko parcel safely handover kar diya hai?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmDeliveryOrder(null)}
+                className="w-full py-3 px-3 rounded-2xl border border-border text-xs font-bold text-text-secondary hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = confirmDeliveryOrder
+                  setConfirmDeliveryOrder(null)
+                  if (target.paymentMethod === 'COD') {
+                    setPaymentChoiceOrderId(target.id)
+                  } else {
+                    executeDeliveryCompletion(target.id, false, 'ONLINE')
+                  }
+                }}
+                className="w-full py-3 px-3 rounded-2xl bg-emerald-600 text-white text-xs font-black shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition-colors"
+              >
+                Yes, Delivered ✅
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* COD Payment Choice Modal (Cash vs Online vs Split) */}
       {paymentChoiceOrderId && (
         <CodPaymentModal
