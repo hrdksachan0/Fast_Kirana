@@ -35,8 +35,8 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Fast Kirana - 10 Min Grocery Delivery in Ghatampur, Kanpur',
-  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, food & daily essentials online in Ghatampur, Kanpur Nagar. Fast 10-minute doorstep delivery with COD & UPI support.',
+  title: 'Fast Kirana - Online Grocery Delivery in Ghatampur, Kanpur',
+  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, food & daily essentials online in Ghatampur, Kanpur Nagar. Fast doorstep delivery with COD & UPI support.',
   keywords: [
     'grocery delivery in Ghatampur',
     'online grocery store Kanpur',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     'fast grocery delivery Kanpur',
     'kirana store near me Ghatampur',
     'dark store Ghatampur 209206',
-    '10 minute delivery Ghatampur'
+    'fast delivery Ghatampur'
   ],
   manifest: '/manifest.json?v=2',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
@@ -66,8 +66,8 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Fast Kirana - 10 Min Grocery Delivery in Ghatampur, Kanpur',
-    description: 'Order groceries online and get them delivered in 10 minutes in Ghatampur, Kanpur Nagar.',
+    title: 'Fast Kirana - Online Grocery Delivery in Ghatampur, Kanpur',
+    description: 'Order groceries online and get them delivered fast in Ghatampur, Kanpur Nagar.',
     url: 'https://www.fastkirana.in',
     siteName: 'Fast Kirana',
     images: [
@@ -83,8 +83,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fast Kirana - 10 Min Grocery Delivery in Ghatampur',
-    description: 'Order groceries online and get them delivered in 10 minutes in Ghatampur, Kanpur.',
+    title: 'Fast Kirana - Online Grocery Delivery in Ghatampur',
+    description: 'Order groceries online and get them delivered fast in Ghatampur, Kanpur.',
     images: ['/brand/fastkirana_app_icon.png'],
   },
 }

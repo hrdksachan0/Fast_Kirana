@@ -5,13 +5,13 @@ export function JsonLdSchema() {
     '@context': 'https://schema.org',
     '@type': 'GroceryStore',
     '@id': `${baseUrl}/#store`,
-    name: 'FastKirana - 10 Min Grocery Delivery Ghatampur',
+    name: 'FastKirana - Online Grocery Delivery Ghatampur',
     alternateName: 'Fast Kirana Ghatampur',
     url: baseUrl,
     logo: `${baseUrl}/brand/fastkirana_app_icon.png`,
     image: `${baseUrl}/brand/fastkirana_app_icon.png`,
     description:
-      'FastKirana is Ghatampur’s premier 10-minute online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and daily essentials with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
+      'FastKirana is Ghatampur’s premier online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and daily essentials with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
     telephone: '+91-8112849854',
     priceRange: '₹',
     currenciesAccepted: 'INR',
@@ -93,7 +93,7 @@ export function JsonLdSchema() {
         name: 'What is FastKirana?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana is Ghatampur’s premier 10-minute online grocery delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, beverage, and kirana items directly to your doorstep in Ghatampur, Kanpur Nagar.',
+          text: 'FastKirana is Ghatampur’s premier online grocery delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, beverage, and kirana items directly to your doorstep in Ghatampur, Kanpur Nagar.',
         },
       },
       {
@@ -101,7 +101,7 @@ export function JsonLdSchema() {
         name: 'How fast is grocery delivery in Ghatampur?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana delivers orders within 10 to 15 minutes across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
+          text: 'FastKirana delivers orders fast across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
         },
       },
       {

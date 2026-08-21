@@ -233,7 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const Text('⚡', style: TextStyle(fontSize: 9)),
                     const SizedBox(width: 3),
                     Text(
-                      '10-15 MINS',
+                      'EXPRESS DELIVERY',
                       style: GoogleFonts.inter(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w900,
