@@ -289,7 +289,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '⚡ ${r.deliveryTime}',
+                              '⚡ Fast Delivery',
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,

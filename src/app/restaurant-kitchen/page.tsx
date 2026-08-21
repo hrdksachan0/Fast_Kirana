@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee, SlidersHorizontal, Layers } from 'lucide-react'
+import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee, SlidersHorizontal, Layers, Star } from 'lucide-react'
 import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
 import { RestaurantSalesConsole } from '@/components/admin/restaurant-sales-console'
 import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
 import { RestaurantSettingsTab } from '@/components/admin/restaurant-settings-tab'
 import { RestaurantCatalogManager } from '@/components/admin/restaurant-catalog-manager'
 import { RestaurantMenuSectionsEditor } from '@/components/admin/restaurant-menu-sections-editor'
+import { RestaurantReviewsTab } from '@/components/admin/restaurant-reviews-tab'
 import { useUIStore } from '@/stores/ui-store'
 import { formatDate } from '@/lib/date-helpers'
 
@@ -18,7 +19,7 @@ export default function RestaurantKitchenPage() {
   const router = useRouter()
   const [currentTime, setCurrentTime] = useState(new Date())
   const { restaurantOpen } = useUIStore()
-  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'sections' | 'payouts' | 'settings'>('orders')
+  const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'sections' | 'payouts' | 'reviews' | 'settings'>('orders')
   const [restaurantName, setRestaurantName] = useState('Restaurant Console')
 
   useEffect(() => {
@@ -177,6 +178,17 @@ export default function RestaurantKitchenPage() {
             Payouts
           </button>
           <button
+            onClick={() => setActiveTab('reviews')}
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+              activeTab === 'reviews' 
+                ? 'bg-red-600 text-white shadow-xs' 
+                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            }`}
+          >
+            <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 fill-amber-400" />
+            Reviews & Ratings
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'settings' 
@@ -201,6 +213,11 @@ export default function RestaurantKitchenPage() {
             />
           )}
           {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} />}
+          {activeTab === 'reviews' && (
+            <RestaurantReviewsTab 
+              restaurantId={(session?.user as any)?.assignedRestaurantId} 
+            />
+          )}
           {activeTab === 'settings' && <RestaurantSettingsTab />}
         </div>
 

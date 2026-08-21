@@ -107,19 +107,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   Text(
                     'FastKirana',
                     style: TextStyle(
-                      fontSize: 36,
+                      fontSize: 38,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: 1.5,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Grocery. Cafe. Restaurant.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.85),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      '⚡ EXPRESS GROCERY & FOOD • GHATAMPUR',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ],

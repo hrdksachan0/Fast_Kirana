@@ -16,6 +16,8 @@ import '../../widgets/brand_logo.dart';
 import '../search/search_screen.dart';
 import '../cart/cart_screen.dart';
 import '../cafe/cafe_menu_screen.dart';
+import '../profile/address_book_screen.dart';
+import '../profile/notifications_screen.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -54,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     {
       'badge': 'SUPER SAVINGS',
       'title': 'Free Delivery on ₹200+',
-      'subtitle': 'Delivered in 10-15 minutes',
+      'subtitle': 'Express Fast Delivery',
       'code': 'FASTFREE',
       'gradient': [Color(0xFF00B140), Color(0xFF3CC070)],
       'emoji': '⚡',
@@ -202,125 +204,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 1. Header: Logo + Delivery ETA + Address + Search Pill
+  // 1. Header: Logo + Delivery ETA + Address + Search Pill (Pretty Top Bar)
   Widget _buildHeader(int cartCount) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Logo + Express ETA Badge + Location Dropdown + Profile Icon
+          // Top Row: Brand Logo + Location Capsule Pill + Notification / Profile Avatar
           Row(
             children: [
-              // Brand Logo (uses exact brand image logo with stylish fallback)
-              const BrandLogo(size: 28, variant: true),
-              const SizedBox(width: 8),
-
-              // Express Delivery Pill (Web Style)
+              // Brand Logo Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppDesignSystem.primaryBg,
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                  border: Border.all(color: AppDesignSystem.primaryLight.withOpacity(0.3)),
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFE4E6)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('⚡', style: TextStyle(fontSize: 9)),
-                    const SizedBox(width: 3),
-                    Text(
-                      'EXPRESS DELIVERY',
-                      style: GoogleFonts.inter(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.primary,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
-                ),
+                child: const BrandLogo(size: 24, variant: true),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
-              // Location Selector
+              // Location Capsule Pill (Pretty Dropdown)
               Expanded(
                 child: GestureDetector(
-                  onTap: () => HapticFeedback.lightImpact(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Delivery to',
-                            style: GoogleFonts.inter(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppDesignSystem.textSecondary,
-                            ),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressBookScreen()));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFFEA580C)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Delivering to',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppDesignSystem.textMuted,
+                                    ),
+                                  ),
+                                  const Icon(Icons.keyboard_arrow_down_rounded, size: 12, color: AppDesignSystem.textMuted),
+                                ],
+                              ),
+                              Text(
+                                'Ghatampur, Kanpur Nagar',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppDesignSystem.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const Icon(Icons.keyboard_arrow_down_rounded, size: 13, color: AppDesignSystem.textSecondary),
-                        ],
-                      ),
-                      Text(
-                        'Ghatampur, Kanpur',
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.textPrimary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
 
-              // Profile Avatar Icon
+              // Notifications Icon with Badge
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  ref.read(selectedTabProvider.notifier).state = 3;
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
                 },
                 child: Container(
-                  width: 34,
-                  height: 34,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: const Color(0xFFF9FAFB),
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
-                  child: const Icon(Icons.person_outline_rounded, size: 18, color: AppDesignSystem.textPrimary),
+                  child: const Icon(Icons.notifications_none_rounded, size: 19, color: AppDesignSystem.textPrimary),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // Search Bar (Web Pill Shape + Cycling Placeholder)
+          // Search Bar (Pretty Pill Shape + Mic + Cycling Placeholder)
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
             },
             child: Container(
-              height: 42,
+              height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                border: Border.all(color: AppDesignSystem.border),
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.primary),
+                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFFEA580C)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: AnimatedSwitcher(
@@ -339,8 +349,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         _searchPlaceholders[_searchPlaceholderIndex],
                         key: ValueKey<int>(_searchPlaceholderIndex),
                         style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                           color: AppDesignSystem.textMuted,
                         ),
                         maxLines: 1,
@@ -348,7 +358,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
-                  const Icon(Icons.mic_none_rounded, size: 18, color: AppDesignSystem.textSecondary),
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEA580C).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFFEA580C)),
+                  ),
                 ],
               ),
             ),
@@ -665,7 +682,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildPropItem('⚡ 10-15 Min', 'Dark Store Delivery'),
+            _buildPropItem('⚡ Express Fast', 'Dark Store Delivery'),
             Container(width: 1, height: 20, color: const Color(0xFFE5E7EB)),
             _buildPropItem('🎉 Free Delivery', 'On orders ₹200+'),
             Container(width: 1, height: 20, color: const Color(0xFFE5E7EB)),
