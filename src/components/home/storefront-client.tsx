@@ -19,7 +19,6 @@ import { triggerHaptic } from '@/lib/haptic'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
 import { FoodEditorialCuration } from '@/components/home/food-editorial-curation'
-import { FestiveBrandingGrid } from '@/components/home/festive-branding-grid'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -172,9 +171,6 @@ export function StorefrontClient({
             <div>
               <HeroArea initialBanners={promoBanners} />
             </div>
-
-            {/* Festive Specials & Deal Branding Cards Grid */}
-            <FestiveBrandingGrid />
 
             {/* 2. Trending Categories */}
             <div>

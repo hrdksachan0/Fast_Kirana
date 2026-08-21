@@ -854,6 +854,23 @@ export function AdminDashboard({
       .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
   }, [orders])
 
+  const currentActiveOrdersCount = useMemo(() => {
+    if (orderCounts) {
+      const pending = orderCounts.PENDING || 0
+      const confirmed = orderCounts.CONFIRMED || 0
+      const packed = orderCounts.PACKED || 0
+      const shipped = orderCounts.SHIPPED || 0
+      return pending + confirmed + packed + shipped
+    }
+    if (Array.isArray(orders) && orders.length > 0) {
+      return orders.filter((o: any) => {
+        const st = (o.status || '').toUpperCase().trim()
+        return st !== 'DELIVERED' && st !== 'CANCELLED'
+      }).length
+    }
+    return stats.activeOrderCount || 0
+  }, [orderCounts, orders, stats.activeOrderCount])
+
   // Pagination page resets
   useEffect(() => {
     setOrderPage(1)
@@ -891,12 +908,37 @@ export function AdminDashboard({
       }
     }
     fetchOrders()
-    const interval = setInterval(fetchOrders, 5000)
+    const interval = setInterval(fetchOrders, 10000) // 10s fallback polling
     return () => {
       active = false
       clearInterval(interval)
     }
   }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey])
+
+  // Supabase Realtime Listener (Zero Polling Delay for DB Order Changes)
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-dashboard-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          setOrderRefreshKey((prev) => prev + 1)
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'order-update' },
+        () => {
+          setOrderRefreshKey((prev) => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   // Fetch active carts count once on mount for the badge count
   useEffect(() => {
@@ -1295,6 +1337,7 @@ export function AdminDashboard({
       if (res.ok) {
         const updated = await res.json()
         setOrders(orders.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)))
+        setOrderRefreshKey((k) => k + 1)
         toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus] || newStatus}`)
       } else {
         const errData = await res.json().catch(() => ({}))
@@ -2496,7 +2539,7 @@ export function AdminDashboard({
           groceryRevenue: stats.groceryRevenue,
           restaurantRevenue: stats.restaurantRevenue,
           orderCount: stats.orderCount || orderTotal,
-          activeOrderCount: stats.activeOrderCount ?? liveOrders.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
+          activeOrderCount: currentActiveOrdersCount,
         }}
       />
 

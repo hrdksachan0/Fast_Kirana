@@ -7,15 +7,15 @@ import { Loader2 } from 'lucide-react'
 
 interface TrackingPageClientProps {
   orderId: string
+  initialOrder?: any
 }
 
-export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
-  const [order, setOrder] = useState<any>(null)
+export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClientProps) {
+  const [order, setOrder] = useState<any>(initialOrder || null)
   const [companionOrder, setCompanionOrder] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialOrder)
   const [error, setError] = useState<string | null>(null)
   const [isCafeOpen, setIsCafeOpen] = useState(true)
-
 
   useEffect(() => {
     let isMounted = true
@@ -39,7 +39,10 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
             window.location.href = '/login'
             return
           }
-          throw new Error(`Failed to fetch order (${res.status})`)
+          if (!order) {
+            throw new Error(`Failed to fetch order (${res.status})`)
+          }
+          return
         }
 
         const data = await res.json()
@@ -50,12 +53,12 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
         const mapped = {
           id: data.id,
           status: data.status,
-          subtotal: data.subtotal,
-          discount: data.discount,
-          deliveryFee: data.deliveryFee,
-          taxes: data.taxes,
-          miscFee: data.miscFee ?? 0,
-          total: data.total,
+          subtotal: Number(data.subtotal || 0),
+          discount: Number(data.discount || 0),
+          deliveryFee: Number(data.deliveryFee || 0),
+          taxes: Number(data.taxes || 0),
+          miscFee: Number(data.miscFee ?? 0),
+          total: Number(data.total || 0),
           paymentMethod: data.paymentMethod,
           paymentStatus: data.paymentStatus,
           estimatedDelivery: data.estimatedDelivery ? new Date(data.estimatedDelivery).toISOString() : null,
@@ -71,7 +74,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
             id: i.id,
             productId: i.productId,
             name: i.name,
-            price: i.price,
+            price: Number(i.price || 0),
             quantity: i.quantity,
             selectedVariant: i.selectedVariant || null,
             imageUrl: i.imageUrl || i.product?.imageUrl || null,
@@ -104,7 +107,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
         setError(null)
       } catch (err: any) {
         console.error('Error fetching order for tracking:', err)
-        if (isMounted) {
+        if (isMounted && !order) {
           setError(err.message || 'Failed to load order')
         }
       } finally {
@@ -121,7 +124,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
     }
   }, [orderId])
 
-  if (loading) {
+  if (loading && !order) {
     return (
       <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
@@ -132,7 +135,7 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
     )
   }
 
-  if (error || !order) {
+  if (error && !order) {
     return (
       <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-center">
@@ -155,16 +158,13 @@ export function TrackingPageClient({ orderId }: TrackingPageClientProps) {
     )
   }
 
-  const isCafeOrder = !!order.restaurantId || (order as any).orderType === 'RESTAURANT'
-  const isCompanionCafe = companionOrder ? (!!companionOrder.restaurantId || (companionOrder as any).orderType === 'RESTAURANT') : false
-
   return (
     <div className="container mx-auto px-2.5 min-[375px]:px-4 py-4 min-[375px]:py-8 max-w-3xl space-y-6">
       <div className="flex flex-col gap-4">
         <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Track Your Delivery</h1>
       </div>
 
-      <OrderTracker initialOrder={order} companionOrder={companionOrder} isCafeOpen={isCafeOpen} />
+      {order && <OrderTracker initialOrder={order} companionOrder={companionOrder} isCafeOpen={isCafeOpen} />}
     </div>
   )
 }
