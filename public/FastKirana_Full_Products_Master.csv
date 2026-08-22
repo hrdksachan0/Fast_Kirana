@@ -1,31 +1,31 @@
 Product ID,Name,Price (₹),MRP (₹),Unit,Assigned Restaurant / Outlet (Type: Grocery / Wedson Restaurant / A.S. Restaurant / Bal Udyan Restaurant),Category Name,Tags,Stock Qty,Is Available (TRUE/FALSE)
-cmrubmwbl000304laafxtiuwq,"American cup ",29,30,"1 Pc","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
-cmqhfj4wg000004i9xdzx7pm6,"Badam Pista",49,50,"110 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,FALSE
-cmr11i5l2000204jppwayex91,"Belgium Cone",49,50,"110 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
-cmqhg6i2s000004l5rre98dd1,"Butterscotch ",124,125,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99998,FALSE
-cmsfrg5b5000e04l1yyvl0o33,"Butterscotch Cone ",20,20,"1 Pc","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",42,TRUE
-cmqhg1ons000104l4fz9uv424,"Casata",49,50,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
-cmqvux86n000404icvt0duoax,"Chappan Bhog",149,160,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
-cmqvuusry000204ic8kxg6tb7,"Choclate",149,160,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,TRUE
-cmqhfy8vg000004jji9091jk7,"Choco Brownie Sundae ",49,50,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, as-restaurant, as-display",99995,TRUE
-cmr11hgh0000104jpgkcfbgk0,"Choco Surprise ",40,40,"1 Pc","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
-cmqhfd92t000204kz2rasvwig,"Chocolate  Cone",35,35,"1 Serving","Bal Udyan Restaurant","Ice Cream","desserts, desserts, ice-cream, ice cream, kulfi, dessert, sweet, veg, restaurant, restaurant",1998,TRUE
-cmqhfoca3000004kzzeo89uce,"Cookie Chips",39,40,"110 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",0,FALSE
-cmqvta0yb000104ic3hvrzjni,"Kruchy Twist",29,30,"1 Pc","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99995,TRUE
-cmqhfxac2000204l4ncrzkkq4,"Matka Kulfi",59,60,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99996,TRUE
-cmqhfu37r000004l4u8tx2von,"MaxYum Almond ",49,50,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,TRUE
-cmseypfxd000804laak2p1cgx,"Namaste India Choclate Cookies",40,40,"6","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, as-display",5,TRUE
-cmqhfr6fb000004l5gs8c9bsg,"Red Velvet ",29,30,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
-cmqhfvjgq000104l4jzjyxrur,"Shahi Mewa Kulfi",29,30,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99996,TRUE
-cmqhg9l74000004i9nnt8lhxb,"Shahi Tukda",97,99,"250 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",0,FALSE
-cmqhg55jp000304l47x2ncvoz,"Strawberry ",124,125,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,FALSE
-cmqhfzomx000004l4urg5mgm7,"Strawberry Sundae ",39,40,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,TRUE
-cmqhfyxnn000104jjkijr9vrp,"Super Duper Sundae ",39,40,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,TRUE
-cmqhg0k8u000004l4kdo9ugla,"Trixy Brownie ",29,30,"Qty 1","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
-cmqhg5x4m000404l40ial07dy,"Tuti Frutti",172,175,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99998,FALSE
-cmqhg46kk000204l4en3571ef,"Vanilla",99,100,"700 ml","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,FALSE
-cmrubrdye000004jrq5gxgmkp,"Vanilla cup",19,20,"1 Pc","Bal Udyan Restaurant","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99997,TRUE
-cmqhzcr2l000004icn0x4ex75,"Vanilla Dream",85,85,"300 ml","Bal Udyan Restaurant","Ice Cream","cold-coffee, cold-coffee, cold coffee, iced coffee, iced-coffee, coldcoffee, shake, shakes, veg, restaurant, restaurant",999,TRUE
+cmrubmwbl000304laafxtiuwq,"American cup ",29,30,"1 Pc","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
+cmqhfj4wg000004i9xdzx7pm6,"Badam Pista",49,50,"110 ml","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,FALSE
+cmr11i5l2000204jppwayex91,"Belgium Cone",49,50,"110 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
+cmqhg6i2s000004l5rre98dd1,"Butterscotch ",124,125,"700 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99998,FALSE
+cmsfrg5b5000e04l1yyvl0o33,"Butterscotch Cone ",20,20,"1 Pc","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",42,TRUE
+cmqhg1ons000104l4fz9uv424,"Casata",49,50,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
+cmqvux86n000404icvt0duoax,"Chappan Bhog",149,160,"700 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
+cmqvuusry000204ic8kxg6tb7,"Choclate",149,160,"700 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,TRUE
+cmqhfy8vg000004jji9091jk7,"Choco Brownie Sundae ",49,50,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, as-restaurant, as-display",99995,TRUE
+cmr11hgh0000104jpgkcfbgk0,"Choco Surprise ",40,40,"1 Pc","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
+cmqhfd92t000204kz2rasvwig,"Chocolate  Cone",35,35,"1 Serving","Grocery / Kirana","Ice Cream","desserts, desserts, ice-cream, ice cream, kulfi, dessert, sweet, veg, restaurant, restaurant",1998,TRUE
+cmqhfoca3000004kzzeo89uce,"Cookie Chips",39,40,"110 ml","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",0,FALSE
+cmqvta0yb000104ic3hvrzjni,"Kruchy Twist",29,30,"1 Pc","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99995,TRUE
+cmqhfxac2000204l4ncrzkkq4,"Matka Kulfi",59,60,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99996,TRUE
+cmqhfu37r000004l4u8tx2von,"MaxYum Almond ",49,50,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,TRUE
+cmseypfxd000804laak2p1cgx,"Namaste India Choclate Cookies",40,40,"6","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, as-display",5,TRUE
+cmqhfr6fb000004l5gs8c9bsg,"Red Velvet ",29,30,"Qty 1","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99999,TRUE
+cmqhfvjgq000104l4jzjyxrur,"Shahi Mewa Kulfi",29,30,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99996,TRUE
+cmqhg9l74000004i9nnt8lhxb,"Shahi Tukda",97,99,"250 ml","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",0,FALSE
+cmqhg55jp000304l47x2ncvoz,"Strawberry ",124,125,"700 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,FALSE
+cmqhfzomx000004l4urg5mgm7,"Strawberry Sundae ",39,40,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,TRUE
+cmqhfyxnn000104jjkijr9vrp,"Super Duper Sundae ",39,40,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,TRUE
+cmqhg0k8u000004l4kdo9ugla,"Trixy Brownie ",29,30,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,FALSE
+cmqhg5x4m000404l40ial07dy,"Tuti Frutti",172,175,"700 ml","Grocery / Kirana","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones",99998,FALSE
+cmqhg46kk000204l4en3571ef,"Vanilla",99,100,"700 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99999,FALSE
+cmrubrdye000004jrq5gxgmkp,"Vanilla cup",19,20,"1 Pc","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",99997,TRUE
+cmqhzcr2l000004icn0x4ex75,"Vanilla Dream",85,85,"300 ml","Grocery / Kirana","Ice Cream","cold-coffee, cold-coffee, cold coffee, iced coffee, iced-coffee, coldcoffee, shake, shakes, veg, restaurant, restaurant",999,TRUE
 cmqhfpzwg000104kzm5mvvtfb,"Waaah Aam",29,30,"Qty 1","A.S. Restaurant (Shared Ice Cream/Drink)","Ice Cream","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",0,TRUE
 cmqheox3i000504kz4kdyx8cs,"Campa",20,20,"500 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Beverages","beverages, as-restaurant, chilled, drinks, soft-drink, as-display, grocery",999,TRUE
 cmqhem3yg000304kza2tpu1ba,"Dew",20,20,"400 ml","A.S. Restaurant (Shared Ice Cream/Drink)","Beverages","beverages, as-restaurant, chilled, drinks, soft-drink, as-display, grocery",999,TRUE
@@ -166,23 +166,23 @@ cmrlvq7th000204jr4pmfpbbd,"Aloo Paratha (2 Pc)",99,99,"1 Pc","Wedson Restaurant"
 cmrlvtp5x000104l7wz43zkxl,"Aloo Paratha with Curd",139,139,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",999,FALSE
 cmsdn6ct9000104ji5g9vuc2c,"Amritsari Chole",199,199,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmsdn9w4r000204k1mjjm29k1,"Bal Udyan Special Paneer",290,290,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
-cmqhz0yci000304jufb2qkdmn,"Blue Lagoon Mojito",80,80,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
+cmqhz0yci000304jufb2qkdmn,"Blue Lagoon Mojito",80,80,"300 ml","A.S. Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
 cmrlwb6au000004l77w8i6gzs,"Bread Omlette ",99,99,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",999,FALSE
 cmqifvqlc000004jshcp8b9s2,"Butter Masala Dosa",75,75,"1 Plate","A.S. Restaurant","FastKirana Restaurant","south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",999,TRUE
 cmqifxp7m000104js435y9tki,"Butter Masala Paneer Dosa",90,90,"1 Plate","A.S. Restaurant","FastKirana Restaurant","south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",999,TRUE
-cmrm16cex000104jzrdd5ak3o,"Butter Naan",40,40,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmse8c1sl000604jwjoyutg94,"Butter Naan",30,30,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
+cmrm16cex000104jzrdd5ak3o,"Butter Naan",40,40,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmqifzr6s000204jsul1rpd2c,"Butter Paneer Dosa",110,110,"1 Plate","A.S. Restaurant","FastKirana Restaurant","south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",999,TRUE
 cmqrr3h59000004jybdt8dzx0,"Butter Paneer Pav bhaji",90,90,"1 Plate","A.S. Restaurant","FastKirana Restaurant","pav-bhaji, pav-bhaji, pav bhaji, pavbhaji, veg, restaurant, restaurant",999,TRUE
 cmqifu59o000j04l461989y9s,"Butter Paper Dosa",50,50,"1 Plate","A.S. Restaurant","FastKirana Restaurant","south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",999,TRUE
 cmqrr1vvz000004ldl3husnlc,"Butter Pavbhaji",75,75,"1 Plate","A.S. Restaurant","FastKirana Restaurant","pav-bhaji, pav-bhaji, pav bhaji, pavbhaji, veg, restaurant, restaurant",998,TRUE
 cmrss4lo7000304jxv5rckk78,"Butter scotch Shake",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","shake, restaurant",999,TRUE
 cmrubtlws000204l1sb2ty6m6,"Butterscotch Cup",19,20,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","ice-cream, desserts, as-restaurant, kulfi, cones, as-display",999,FALSE
-cmqhzmodz000104icef59dlgf,"Butterscotch Shake",85,85,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
-cmqht67tu000104jmsqnu8acz,"Capsicum Pizza",109,119,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",998,TRUE
+cmqhzmodz000104icef59dlgf,"Butterscotch Shake",85,85,"300 ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
+cmqht67tu000104jmsqnu8acz,"Capsicum Pizza",109,119,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",998,TRUE
 cmrt07a4f000104jpynr4oqs9,"Capsicum Tomato Onion Pizza ",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, pizza",999,TRUE
 cmsed9oqz000v04kvbp0a07kb,"Cheese Balls",130,130,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmrt3tslm000504jp5to4241z,"Cheese Burger",79,79,"1 Pc","A.S. Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
+cmrt3tslm000504jp5to4241z,"Cheese Burger",79,79,"1 Pc","Wedson Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
 cmrswq0qj000004lbowxwc4lg,"Cheese Chigar Roll",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, starter",999,TRUE
 cmsec8orc000004kvgi8ynd10,"Cheese Sigar Roll",140,140,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmqigj0ck000204l88l6148ni,"Cheeze Baking Pasta",135,135,"1 Plate","A.S. Restaurant","FastKirana Restaurant","italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",999,TRUE
@@ -190,7 +190,7 @@ cmqhv443d000204ib5occu1ux,"Cheeze Burger",65,65,"Qty 1","A.S. Restaurant","FastK
 cmqj7ilwq000004l520l9p1a0,"Cheeze Frankie Roll",85,85,"1 Roll","A.S. Restaurant","FastKirana Restaurant","frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",999,TRUE
 cmqhxu43w000004l8suhk40k1,"Cheeze Garlic Bread",95,95,"Qty 1 ( 4 pcs)","A.S. Restaurant","FastKirana Restaurant","garlic-bread, garlic-bread, garlic bread, garlic-breads, veg, restaurant, restaurant",999,TRUE
 cmqhvqqji000304jx0gvc4fu1,"Cheeze Sandwitch",85,85,"Qty 1","A.S. Restaurant","FastKirana Restaurant","sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",999,TRUE
-cmqhthroi000004jm7qs4w6yg,"Cheezy Paneer Pizza",129,139,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",998,TRUE
+cmqhthroi000004jm7qs4w6yg,"Cheezy Paneer Pizza",129,139,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",998,TRUE
 cmqi29esq000104jul11c2g04,"Chili Garlic Noodles",95,95,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",997,TRUE
 cmqjdrdpt000004jsmk69y8tb,"Chili Garlic Rice",95,95,"1 Plate","A.S. Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",999,TRUE
 cmqi33m21000004jj1jm44pjh,"Chili Paneer",145,145,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",999,TRUE
@@ -198,15 +198,15 @@ cmqi2saaw000004l79ak7g2sr,"Chili Potato",95,95,"1 Plate","A.S. Restaurant","Fast
 cmrm186ze000004l7yr23turt,"Chilli Garlic Naan",69,69,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmseddpb5000104l4bxq4dz2h,"Chilli Mushroom ",225,225,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmsedbns5000104l6vltn20ag,"Chilli Paneer",199,199,"1 Plate","Bal Udyan Restaurant","FastKirana Restaurant","starters-tandoori, special-starters, tandoori-nawab-nawab, starter, starters, kebabs, tikka, chaap, veg, restaurant, restaurant",999,TRUE
-cmrsrjxhp000204ktwuv4eqxx,"Choclate Shake",113,119,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","desserts, as-restaurant, shake, shakes, as-display, ice-cream",999,TRUE
-cmqhzjf0x000004l13sdhh9ws,"Choco Delight",85,85,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","cold-coffee, cold-coffee, cold coffee, iced coffee, iced-coffee, coldcoffee, shake, shakes, veg, restaurant, restaurant",999,TRUE
-cmqhztm5k000004jud47mx8o0,"Chocolate Shake",90,90,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
+cmrsrjxhp000204ktwuv4eqxx,"Choclate Shake",113,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","desserts, as-restaurant, shake, shakes, as-display, ice-cream",999,TRUE
+cmqhzjf0x000004l13sdhh9ws,"Choco Delight",85,85,"300 ml","A.S. Restaurant","FastKirana Restaurant","cold-coffee, cold-coffee, cold coffee, iced coffee, iced-coffee, coldcoffee, shake, shakes, veg, restaurant, restaurant",999,TRUE
+cmqhztm5k000004jud47mx8o0,"Chocolate Shake",90,90,"300 ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
 cmsdlgl7e000004l2ibqytuun,"Chola Kulcha",110,110,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, restaurant",999,TRUE
 cmrluzvl1000104l6e65kbwvs,"Chola Kulcha ( 2 Pc)",149,149,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",999,FALSE
 cmsdlhz7j000304l266vxi7sp,"Chola Paneer Kulcha",129,129,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, restaurant",999,TRUE
 cmsdl3o7z000104kyfe3g61yg,"Chole Bhature",110,110,"2 pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, paratha, poori, chole-bhature, nashta, poha, veg, restaurant",997,TRUE
 cmrluylaw000004l6vf9rhjgc,"Chole Bhature (2Pc)",129,129,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",999,FALSE
-cmqhykgmz000004jucm99q59h,"Classic Cold Coffee",60,60,"300ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",990,TRUE
+cmqhykgmz000004jucm99q59h,"Classic Cold Coffee",60,60,"300ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",990,TRUE
 cmqhe2f60000004js1qdbd61j,"Coca Cola ",29,30,"1 Can","Bal Udyan Restaurant","FastKirana Restaurant","beverages, as-restaurant, chilled, drinks, soft-drink",999,FALSE
 cmrsxo4uk000404l9roou2ogp,"Corn Cheese Ball",149,149,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, starter",999,TRUE
 cmrt08rum000204jpj1zgzdu6,"Corn Cheese Pizza",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
@@ -224,25 +224,25 @@ cmrmgyxvq000204jspcd2gq1i,"Dal Makhani",219,219,"1 Pc","Wedson Restaurant","Fast
 cmsegs7fw000i04juj0rlaxhq,"Dal Makhani ",180,180,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","dal, restaurant",999,TRUE
 cmrmgxs81000104jssg6x3tdb,"Dal tadka",169,169,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, dal",999,TRUE
 cmsegrkv9000g04jufcn3b1v5,"Dal Tadka",149,149,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","dal, restaurant",999,TRUE
-cmqhtemk7000004i6oc8bc5ee,"Desi Style Pizza",129,139,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
-cmrt3sf7u000204jpvz39vqv7,"Double Tikki Burger ",89,89,"1 Pc","A.S. Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
+cmqhtemk7000004i6oc8bc5ee,"Desi Style Pizza",129,139,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmrt3sf7u000204jpvz39vqv7,"Double Tikki Burger ",89,89,"1 Pc","Wedson Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
 cmqrr4sb4000104jy5bossral,"Extra Pav",25,39,"1 Pav ( 3Pcs)","A.S. Restaurant","FastKirana Restaurant","pav-bhaji, restaurant",999,TRUE
-cmsee6l2f000104jytdauw6o0,"Extra Pav ",30,30,"1 Pc","A.S. Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
+cmsee6l2f000104jytdauw6o0,"Extra Pav ",30,30,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmsecwr2g000404kvj5uc0tr2,"French Fries ",79,79,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmqi40nph000204l4doqm7pvl,"French Fries/ Finger",50,50,"1 Plate","Bal Udyan Restaurant","FastKirana Restaurant","hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",997,TRUE
-cmrm178zr000204jzhwyifbf4,"Garlic Naan",59,59,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
+cmqi40nph000204l4doqm7pvl,"French Fries/ Finger",50,50,"1 Plate","A.S. Restaurant","FastKirana Restaurant","hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",997,TRUE
 cmse8ki1y000404lalyxste54,"Garlic Naan",50,50,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
-cmqhz56ri000004juemwv5bqn,"Green Apple Mojito",80,80,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
-cmqhyzera000204juu848lxrz,"Green Mint Mojito",80,80,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
-cmrz8g1uk000g04l7jjp3mmy6,"Hakka Noodles",159,159,"1 Pc","A.S. Restaurant","FastKirana Restaurant","restaurant, special-starters",999,TRUE
+cmrm178zr000204jzhwyifbf4,"Garlic Naan",59,59,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
+cmqhz56ri000004juemwv5bqn,"Green Apple Mojito",80,80,"300 ml","A.S. Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
+cmqhyzera000204juu848lxrz,"Green Mint Mojito",80,80,"300 ml","A.S. Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
 cmqi1vyf3000004l8lf96p8qt,"Hakka Noodles",85,85,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",999,TRUE
+cmrz8g1uk000g04l7jjp3mmy6,"Hakka Noodles",159,159,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, special-starters",999,TRUE
 cmsdmpw6v000204lesdu8r1yy,"Handi Paneer",249,249,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","restaurant, main-course",998,TRUE
 cmrlmq9ia000904l58smri8vt,"Handi Paneer",299,299,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
 cmsechdyg000304jok87rnrqw,"Hara Bhara Kabab ",140,140,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmru4yl1q000304i8zehivp8a,"Hariyali Paneer Tikka",219,219,"1 Pc","Wedson Restaurant","FastKirana Restaurant","special-starters, restaurant",999,TRUE
 cmsedhkb1000404l4l8hbmoll,"Honey Chilli Potato ",169,169,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmrmfmc32000205jso77x37o0,"Hydrabadi Handi Biryani ",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
-cmqhtp68g000004i6zpv2x2vs,"Italian Pizza",129,139,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhtp68g000004i6zpv2x2vs,"Italian Pizza",129,139,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmrmf3dma000104joh21t7a2b,"Jeera Rice",129,129,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
 cmrlmvzcb000004l56sy2t36p,"Kadhai Mushroom ",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
 cmrlmx4xa000104l5s7bvtwfg,"Kadhai Paneer",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",998,TRUE
@@ -251,7 +251,7 @@ cmse8n44x000704la72kq1nsv,"Lachcha Paratha",30,30,"1 Pc","Bal Udyan Restaurant",
 cmrm1cpup000604l7kljgum7w,"Lachha Paratha ",39,39,"1 Paratha","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmsdlmtfi000904l1plhv5bds,"Maggie",70,70,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, restaurant",999,TRUE
 cmqi2xyx5000004jj44kl54wt,"Manchurian",95,95,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",999,TRUE
-cmqhr6jb4000004kyqmmyp7vt,"Margherita Pizza",99,109,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhr6jb4000004kyqmmyp7vt,"Margherita Pizza",99,109,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmrlmuw8i000104l74y76d28i,"Matar Mushroom ",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
 cmrlmr8xn000a04l50b7umfb1,"Matar Paneer",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmsdmgnrz000604l7peuxmqsb,"Matar Paneer ",200,200,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",998,TRUE
@@ -271,15 +271,15 @@ cmsegeeng000404l86cowx2kp,"Mushroom Tikka ",220,220,"1 Pc","Bal Udyan Restaurant
 cmsegf9lv000i04ldlv3qg9sm,"Mushroom Tikka Malai",249,249,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","tandoori-nawab-nawab, restaurant",999,TRUE
 cmrmz20np000404jp6irdfppn,"Mushroom Tikka Masala ",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, tandoori-nawab-nawab",999,TRUE
 cmse8o68v000804lajfl4vd4n,"Onion Kulcha",55,55,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
-cmqhrugyu000004i98zvpckjq,"Onion Pizza",109,119,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
-cmqhzvpd3000104l1zw5ckyhs,"Oreo Chocolate Shake",100,100,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
+cmqhrugyu000004i98zvpckjq,"Onion Pizza",109,119,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhzvpd3000104l1zw5ckyhs,"Oreo Chocolate Shake",100,100,"300 ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
 cmrsrzdeq000304kte45vq50j,"Oreo Shake",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","shake, restaurant",999,TRUE
 cmsdmle88000404l9qf8te46e,"Palak Paneer",125,125,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmsed8908000104jpzcbqokt0,"Paneer 65",130,130,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmrlmp3cg000404l5eqemt275,"Paneer Bhurji",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmsdmhqj3000205l6f9i3x09q,"Paneer Bhurji",199,199,"Full plate","Bal Udyan Restaurant","FastKirana Restaurant","main-course, north-indian, curry, dal-makhani, paneer-butter-masala, paneer, main-course, dal, veg, restaurant, restaurant",99999,TRUE
+cmrlmp3cg000404l5eqemt275,"Paneer Bhurji",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmqhv2kmm000104ib8qg2hypi,"Paneer Burger",50,50,"Qty 1","A.S. Restaurant","FastKirana Restaurant","burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",991,TRUE
-cmrt3vbmg000704jpx4tcnvd5,"Paneer Burger",109,109,"1 Pc","A.S. Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
+cmrt3vbmg000704jpx4tcnvd5,"Paneer Burger",109,109,"1 Pc","Wedson Restaurant","FastKirana Restaurant","burger, restaurant",999,TRUE
 cmsdmczca000104l7nbptmnn0,"Paneer Butter Masala",225,225,"Full ","Bal Udyan Restaurant","FastKirana Restaurant","main-course, north-indian, curry, dal-makhani, paneer-butter-masala, paneer, main-course, dal, veg, restaurant, restaurant",9999,TRUE
 cmrl24qmo000004jr7ev2408f,"Paneer Butter Masala ",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
 cmqhv67ku000004jxd0rt6tz2,"Paneer Cheeze Burger",75,75,"Qty 1","A.S. Restaurant","FastKirana Restaurant","burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",999,TRUE
@@ -291,12 +291,12 @@ cmrl2gmxh000004jst4bq85c1,"Paneer do pyaaza",289,289,"1 Pc","Wedson Restaurant",
 cmsdmeyah000304l79xltycux,"Paneer Do Pyaaza",240,240,"Full","Bal Udyan Restaurant","FastKirana Restaurant","main-course, north-indian, curry, dal-makhani, paneer-butter-masala, paneer, main-course, dal, veg, restaurant, restaurant",99999,TRUE
 cmqj7h4vv000104jv1m9nmhvo,"Paneer Frankie Roll",80,80,"1 Roll","A.S. Restaurant","FastKirana Restaurant","frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",999,TRUE
 cmqi3xox3000104l4gspat3pi,"Paneer Fried Momos",65,65,"8 Pcs","A.S. Restaurant","FastKirana Restaurant","hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",999,TRUE
-cmqjdbztr000104jswmqy0lxx,"Paneer Fried Rice",105,105,"1 Plate","Bal Udyan Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",999,TRUE
+cmqjdbztr000104jswmqy0lxx,"Paneer Fried Rice",105,105,"1 Plate","A.S. Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",999,TRUE
 cmqj7kgcm000304jvmx7w0kma,"Paneer Kathi Roll",90,90,"1 Roll","A.S. Restaurant","FastKirana Restaurant","frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",999,TRUE
 cmse8lu0t000504larmo0oh90,"Paneer Kulcha ",55,55,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
 cmsdmdyja000204l7a85zaut3,"Paneer Lababdaar",239,239,"Full","Bal Udyan Restaurant","FastKirana Restaurant","main-course, north-indian, curry, dal-makhani, paneer-butter-masala, paneer, main-course, dal, veg, restaurant, restaurant",99999,TRUE
 cmrl2dfi2000104jyehvgdun1,"Paneer Lababdaar",289,289,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
-cmqhts7vn000004l1tom75kqk,"Paneer Makhani Pizza",149,159,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhts7vn000004l1tom75kqk,"Paneer Makhani Pizza",149,159,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmsegc6ry000f04ldln5dhwnl,"Paneer Malai Tikka ",249,249,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","tandoori-nawab-nawab, restaurant",999,TRUE
 cmrmyaa1w000104ldi88g5p3c,"Paneer Malai Tikka ",269,269,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, tandoori-nawab-nawab",999,TRUE
 cmsedgeal000304l4gr1qu1gr,"Paneer Manchurian ",199,199,"1 Pc","A.S. Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
@@ -309,31 +309,31 @@ cmqhvpaww000204jx72plxjya,"Paneer Sandwitch",80,80,"Qty 1","A.S. Restaurant","Fa
 cmrmxv377000104l4cl826asl,"Paneer Tikka ",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, tandoori-nawab-nawab",999,TRUE
 cmsegb6j3000e04ldl76a3tf0,"Paneer Tikka ",220,220,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","tandoori-nawab-nawab, restaurant",999,TRUE
 cmrmflcmm000105jsautpv6kc,"Paneer Tikka Biryani",269,269,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",998,TRUE
-cmsdm5v2z000104kwpwb9t2be,"Paneer Tikka Masala ",239,239,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmrl1v5co000004il4r5m2ezn,"Paneer Tikka Masala ",289,289,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
+cmsdm5v2z000104kwpwb9t2be,"Paneer Tikka Masala ",239,239,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
 cmrt0h30j000004jr0k0642zs,"Paneer Tikka Pizza ",249,249,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmsdmyqdl000104k1w46oisim,"Paneer Tiranga ",290,290,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
-cmsee5xry001e04kv7925ozvk,"Pav bhaji ",110,110,"1 Pc","A.S. Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmrt0xqc2000d04jp0g6h4e69,"Pavbhaji ",149,149,"1 Pc","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmsee5xry001e04kv7925ozvk,"Pav bhaji ",110,110,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
+cmrt0xqc2000d04jp0g6h4e69,"Pavbhaji ",149,149,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmrswtpsz000004l7yn9z2oq0,"Peanut Masala ",129,129,"1 Pc","Wedson Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmsec9luz000104kvtkg2cumw,"Peanut Masala ",99,99,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmseei5qt001h04kvqs2rsq45,"Peri Peri French Fries ",100,100,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmrsryjif000204ktygqffk9g,"Pineapple Shake",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","shake, restaurant",999,TRUE
-cmrt5y0bg000604jp9i8240ay,"Pink Pasta ",239,239,"1 Pc","A.S. Restaurant","FastKirana Restaurant","pasta, restaurant",999,TRUE
+cmrt5y0bg000604jp9i8240ay,"Pink Pasta ",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pasta, restaurant",999,TRUE
 cmqhvyb4x000204i8q8a2npdz,"Pizza Sandwitch",135,135,"Qty 1","A.S. Restaurant","FastKirana Restaurant","sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",999,TRUE
 cmrm15fvf000004jzdgouciuz,"Plain Naan",35,35,"1 Naan","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmse84uag000004jpga7x2psr,"Plain Naan ",25,25,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
-cmsdlj1dp000604l2cap28x6u,"Poha",80,80,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, paratha, poori, chole-bhature, nashta, poha, veg, restaurant",999,TRUE
 cmrlvy1pv000204kz9f6xxprs,"Poha",99,99,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",998,FALSE
+cmsdlj1dp000604l2cap28x6u,"Poha",80,80,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, paratha, poori, chole-bhature, nashta, poha, veg, restaurant",999,TRUE
 cmrlvwuzi000304l7h82uwdvt,"Poori Bhaji (4 Pcs)",149,149,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, breakfast",999,FALSE
 cmsed29f7000104jp0gusilkk,"Potato Cheese Ball",130,130,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmru4s4eg000904jou5euhpg2,"Punjabi Paneer Tikka",259,259,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, special-starters",999,TRUE
 cmse8suxo000a04layqk56o1a,"Puri",10,10,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
 cmsdlbvdu000104la2hhqk2i8,"Puri bhaji",80,80,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","breakfast, restaurant",999,TRUE
-cmrt5udjm000204jpzo1is7y7,"Red Pasta",199,199,"1 Pc","A.S. Restaurant","FastKirana Restaurant","restaurant, pasta",999,TRUE
+cmrt5udjm000204jpzo1is7y7,"Red Pasta",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, pasta",999,TRUE
 cmqiggt09000004l86a1apssj,"Red Sauce Pasta",115,115,"1 Plate","A.S. Restaurant","FastKirana Restaurant","italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",999,TRUE
 cmqi273r1000004ic6e36qx4z,"Sezwan Noodles",90,90,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",999,TRUE
-cmqjdjt3i000004jseqdvheia,"Sezwan Rice",95,95,"1 Plate","Bal Udyan Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",999,TRUE
+cmqjdjt3i000004jseqdvheia,"Sezwan Rice",95,95,"1 Plate","A.S. Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",999,TRUE
 cmqigfcf4000004ldcqc58t9f,"Sezwan Sauce Pasta",95,95,"1 Plate","A.S. Restaurant","FastKirana Restaurant","italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",999,TRUE
 cmrlmo5cc000104l5g7w5dy8w,"Shahi Paneer",225,225,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",998,TRUE
 cmsdmqqz0000304le69scj6e1,"Shahi Paneer ",199,199,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","main-course, restaurant",999,TRUE
@@ -346,35 +346,35 @@ cmsee4zo5001d04kvsuxuhr3d,"Soya Malai Chaap",199,199,"1 Pc","Bal Udyan Restauran
 cmru4wy6w000004i8ld5xg142,"Soya Masala Chaap",239,239,"1 Pc","Wedson Restaurant","FastKirana Restaurant","special-starters, restaurant",999,TRUE
 cmsec7gub000704jvoad020fn,"Spanich Corn Roll",140,140,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
 cmqhw38rc000004l4wbswlwzc,"Special Sandwich",100,100,"Qty 1","A.S. Restaurant","FastKirana Restaurant","sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",999,TRUE
-cmqhtzt1t000004jorbi3qwp4,"Spicy Veggie Pizza",149,159,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhtzt1t000004jorbi3qwp4,"Spicy Veggie Pizza",149,159,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmqi41wcm000004jpiod6g5ko,"Spring Roll",50,50,"1 Plate","A.S. Restaurant","FastKirana Restaurant","hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",996,TRUE
 cmrmf1y7l000004jooq294z9e,"Steamed Rice",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
-cmrsrj1tm000104ktm7atwbgm,"Strawberry Shake",113,119,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","shake, desserts, as-restaurant, as-display, ice-cream",999,TRUE
-cmqhzo083000204ic1ujhimgj,"Strawberry Shake",85,85,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
+cmqhzo083000204ic1ujhimgj,"Strawberry Shake",85,85,"300 ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
+cmrsrj1tm000104ktm7atwbgm,"Strawberry Shake",113,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","shake, desserts, as-restaurant, as-display, ice-cream",999,TRUE
 cmrm1ariv000204l76ngsam10,"Stuffed Aloo Kulcha ",59,59,"1 Kulcha","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmse8y26z000c04jwqcr7pq6m,"Stuffed Kulcha ",50,50,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
 cmse8x5af000b04jwxbqv1mwl,"Stuffed Naan",50,50,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
 cmrm1bipx000504l7jzzj8ssh,"Stuffed Paneer Kulcha",79,79,"1 Kulcha","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmsecc5iv000304kvwmwi9neg,"Sweet Corn Masala ",99,99,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmqhtmaqg000004ld19thbri9,"Sweet Corn Pizza",129,139,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhtmaqg000004ld19thbri9,"Sweet Corn Pizza",129,139,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmse62i04000604lgwozys7m8,"Tandoori Butter Roti ",15,15,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
-cmqhtugvz000004jmp6yuo0xi,"Tandoori Paneer Pizza",149,159,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhtugvz000004jmp6yuo0xi,"Tandoori Paneer Pizza",149,159,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmse61b1w000204lgplv5l8yx,"Tandoori Plain Roti",10,10,"1 Pc","Bal Udyan Restaurant","FastKirana Restaurant","roti-naan-kulcha, restaurant",999,TRUE
 cmru58umu000504jxuxfb0gji,"Tandoori Plater ",299,299,"1 Pc","Wedson Restaurant","FastKirana Restaurant","special-starters, restaurant",999,TRUE
 cmrm13y8x000004kzj8994frg,"Tandoori Roti Butter",20,20,"1 Roti","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
 cmrm12nnp000i04jzdpefptef,"Tandoori Roti Plain",15,15,"1 Roti","Wedson Restaurant","FastKirana Restaurant","restaurant, roti-naan-kulcha",999,TRUE
-cmqht3pis000004jmml4tir0s,"Tomato Pizza",109,119,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqht3pis000004jmml4tir0s,"Tomato Pizza",109,119,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmrlmya70000804joqnuorx4w,"Turban Paneer Masala ",319,319,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, main-course",999,TRUE
+cmqhzlgby000004icf92dj6ua,"Vanilla Shake",85,85,"300 ml","A.S. Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
 cmrss5aar000404jx8x5l8p0y,"Vanilla Shake",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","desserts, as-restaurant, shake, shakes, restaurant",999,TRUE
-cmqhzlgby000004icf92dj6ua,"Vanilla Shake",85,85,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",999,TRUE
 cmrmfkc3w000005jsz6sq8xuw,"Veg biryani",229,229,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
 cmqhv1hej000004ibh5q6wzgg,"Veg Burger",40,40,"Qty 1","A.S. Restaurant","FastKirana Restaurant","burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",997,TRUE
-cmrt3qx89000104jp3ukhahpj,"Veg Burger ",69,69,"1 Pc","A.S. Restaurant","FastKirana Restaurant","restaurant, burger",998,TRUE
+cmrt3qx89000104jp3ukhahpj,"Veg Burger ",69,69,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, burger",998,TRUE
 cmrsuw5kk000104l14nl01rim,"Veg Cream of Mushroom ",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, soup",999,TRUE
 cmqj7g0ms000004jvs6xbmk8f,"Veg Frankie Roll",70,70,"1 Roll","A.S. Restaurant","FastKirana Restaurant","frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",998,TRUE
 cmqi3vz1u000004l4spawcpbv,"Veg Fried Momos",50,50,"8 pcs","A.S. Restaurant","FastKirana Restaurant","hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",999,TRUE
-cmqjd9nvb000004jsfg3ewbza,"Veg Fried Rice",80,80,"1 Plate","Bal Udyan Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",997,TRUE
-cmrt0taao000404jrmvvshf05,"Veg Grilled Sandwich ",149,149,"1 Pc","A.S. Restaurant","FastKirana Restaurant","restaurant, pizza",999,TRUE
+cmqjd9nvb000004jsfg3ewbza,"Veg Fried Rice",80,80,"1 Plate","A.S. Restaurant","FastKirana Restaurant","rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",997,TRUE
+cmrt0taao000404jrmvvshf05,"Veg Grilled Sandwich ",149,149,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, pizza",999,TRUE
 cmrsuqd84000104l7g989ogmi,"Veg Hot & Sour Soup",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","soup, restaurant",999,TRUE
 cmrsv3kmv000004l141nb4g7o,"Veg Manchow Soup",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","soup, restaurant",999,TRUE
 cmsedikrk000504l4sc97uyq2,"Veg Manchurian ",165,165,"1 Pc","A.S. Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
@@ -382,24 +382,24 @@ cmqhvmm7b000004jxhu7strzq,"Veg Masala Sandwitch",70,70,"Qty 1","A.S. Restaurant"
 cmrmfb6fc000004l0vpzzbqjj,"Veg Navratan Pulav",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
 cmqi1tksh000004icq037c12i,"Veg Noodles",60,60,"1 Plate","A.S. Restaurant","FastKirana Restaurant","chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",999,TRUE
 cmrmf7qus000004i9uwd6ldhc,"Veg Pulav",159,159,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, basmati-rice-/-biryani",999,TRUE
-cmrt0s447000204jr74hce80k,"Veg Sandwich ",139,139,"1 Pc","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmrt0s447000204jr74hce80k,"Veg Sandwich ",139,139,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmru565v2000304jxsbnmjmit,"Veg Seekh Kebab ",199,199,"1 Pc","Wedson Restaurant","FastKirana Restaurant","special-starters, restaurant",999,TRUE
-cmqhuctgp000004joxvh4wa9e,"Veg Special Pizza",169,179,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhuctgp000004joxvh4wa9e,"Veg Special Pizza",169,179,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
 cmrsukjvt000204l1dmv65rid,"Veg Sweet Corn Soup",119,119,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, soup",999,TRUE
-cmrswn8a0000004l45lulcjqj,"Vegetable Spring Roll",129,129,"1 Pc","A.S. Restaurant","FastKirana Restaurant","restaurant, starter",999,TRUE
+cmrswn8a0000004l45lulcjqj,"Vegetable Spring Roll",129,129,"1 Pc","Wedson Restaurant","FastKirana Restaurant","restaurant, starter",999,TRUE
 cmsec1i6w000104jva5v94zlt,"Vegetable Spring Rolls",110,110,"1 Pc","A.S. Restaurant","FastKirana Restaurant","starter, restaurant",999,TRUE
-cmqhuj9qq000004jod1cke6xa,"Veggie Delite Pizza",189,199,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
-cmqhuaceu000004ju23hbam9a,"Veggie Overloaded Pizza",165,169,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
-cmqhufwcw000104joyujs402c,"Veggie Paneer Pizza",189,199,"Qty 1","Bal Udyan Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
-cmqhypc4i000104juf55gz7m2,"Virgin Mojito",80,80,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
-cmqhz2aa5000404jufuw5zn2t,"Watermelon Mojito",80,80,"300 ml","Bal Udyan Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
-cmrt5wctn000504jp1ofd17bd,"White Pasta",229,229,"1 Pc","A.S. Restaurant","FastKirana Restaurant","pasta, restaurant",999,TRUE
+cmqhuj9qq000004jod1cke6xa,"Veggie Delite Pizza",189,199,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhuaceu000004ju23hbam9a,"Veggie Overloaded Pizza",165,169,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhufwcw000104joyujs402c,"Veggie Paneer Pizza",189,199,"Qty 1","A.S. Restaurant","FastKirana Restaurant","pizza, restaurant",999,TRUE
+cmqhypc4i000104juf55gz7m2,"Virgin Mojito",80,80,"300 ml","A.S. Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
+cmqhz2aa5000404jufuw5zn2t,"Watermelon Mojito",80,80,"300 ml","A.S. Restaurant","FastKirana Restaurant","mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",999,TRUE
+cmrt5wctn000504jp1ofd17bd,"White Pasta",229,229,"1 Pc","Wedson Restaurant","FastKirana Restaurant","pasta, restaurant",999,TRUE
 cmqighzcw000104l85q9krcrq,"White Sauce Pasta",125,125,"1 Plate","A.S. Restaurant","FastKirana Restaurant","italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",999,TRUE
 cmsgjtnfq000404l72j899uzc,"All Out Combo (Machine+ Refill)",105,105,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","",5,TRUE
 cmsgjnci7000104l7fv3c77zw,"All Out Refill ",85,85,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","",15,TRUE
 cmsgi55h0000104l7uddh1eup,"Detol Handwash",109,109,"675 ml","Grocery / Kirana","Home Needs and Cleaning ","",2,TRUE
-cmrv1cceg000604ibzcik3st3,"Emokleen Dishwash Liquid ",51,89,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",20,TRUE
 cmrv2i6hq000704jv73hzzv5d,"Emokleen Dishwash Liquid ",51,89,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",20,TRUE
+cmrv1cceg000604ibzcik3st3,"Emokleen Dishwash Liquid ",51,89,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",20,TRUE
 cmrv0w73c000304lanq1ougrk,"Emokleen Dishwash Tub",50,60,"400 gm","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",10,TRUE
 cmrv25a2m000104l9taxwdqvl,"Emokleen Floor Cleaner Lavender Fresh",60,99,"1 L","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",9,TRUE
 cmrv16z41000204jlyt9j6oa1,"Emokleen Glass Cleaner ",53,70,"1 Pc","Grocery / Kirana","Home Needs and Cleaning ","Home Cleaning",20,TRUE
@@ -414,13 +414,13 @@ cmsgikdan000104jtdg06y5n7,"Odonil Set",212,212,"1 Pc","Grocery / Kirana","Home N
 cmsephfz9000h04l8oy33s94b,"Amul Dark Chocolate ",45,45,"35 g","Grocery / Kirana","Chocolates","chocolates, sweets",7,TRUE
 cmsep9wtz000204k48kbtzwww,"Amul Dark Chocolate ",179,180,"150 g","Grocery / Kirana","Chocolates","chocolates, sweets",3,TRUE
 cmsfs7ikc000404jrbhtlgwmm,"Cadbury Celebrations",160,160,"153 g","Grocery / Kirana","Chocolates","",2,TRUE
-cmsfs4xqd000104jroyxyp16n,"Cadbury Celebrations ",110,110,"110 g","Grocery / Kirana","Chocolates","",4,TRUE
 cmsfsbyng000504jpv21qhtcj,"Cadbury Celebrations ",50,50,"55 g","Grocery / Kirana","Chocolates","",3,TRUE
+cmsfs4xqd000104jroyxyp16n,"Cadbury Celebrations ",110,110,"110 g","Grocery / Kirana","Chocolates","",4,TRUE
 cmsepnhwh000k04l80entfbof,"Cadbury Crespelo",20,20,"20 g","Grocery / Kirana","Chocolates","",9,TRUE
 cmsept0ks000p04l8urkysntd,"Cadbury Fuse",45,45,"43 g","Grocery / Kirana","Chocolates","",14,TRUE
 cmseq9luh000204iamj8ennfd,"Dairy Milk ",45,45,"45 g","Grocery / Kirana","Chocolates","",15,TRUE
-cmsepzedu000k04l5lam5jyfg,"Dairy Milk ",20,20,"20 g","Grocery / Kirana","Chocolates","",21,TRUE
 cmseq6sch000r04l551ub154j,"Dairy Milk ",99,100,"112 g","Grocery / Kirana","Chocolates","",6,TRUE
+cmsepzedu000k04l5lam5jyfg,"Dairy Milk ",20,20,"20 g","Grocery / Kirana","Chocolates","",21,TRUE
 cmqum8wtq000604jsdv3omtl5,"Dairy Milk Silk",89,90,"52 g","Grocery / Kirana","Chocolates","",21,TRUE
 cmser0vna000504jr102sn4nb,"Dairy Milk Silk ",204,205,"129 g","Grocery / Kirana","Chocolates","",14,TRUE
 cmser9kro000e04l8ugadrg2g,"Five Star Oreo",45,45,"42 g","Grocery / Kirana","Chocolates","",15,TRUE
