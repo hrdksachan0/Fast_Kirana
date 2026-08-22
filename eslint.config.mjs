@@ -43,6 +43,8 @@ const eslintConfig = defineConfig([
     "**/scratch/**",
     "**/scripts/**",
     "fastapi-backend/**",
+    "fastkirana_flutter/**",
+    "**/build/**",
     "e2e/**",
   ]),
 ]);
