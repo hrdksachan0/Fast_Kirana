@@ -7,7 +7,7 @@
     "web": "next dev",
     "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js .",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "flutter": "cd fastkirana_flutter && C:\\src\\flutter\\bin\\flutter.bat run",
