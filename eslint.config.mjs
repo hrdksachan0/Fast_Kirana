@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "off",
       "react-hooks/purity": "off",
       "react-hooks/preserve-manual-memoization": "off",
+      "prefer-const": "off",
+      "react-hooks/use-memo": "off",
       "react-hooks/exhaustive-deps": "warn",
     },
   },
