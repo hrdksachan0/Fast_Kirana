@@ -29,6 +29,7 @@ export default function MediaLibraryModal({
   setMediaSearchQuery,
   setMediaTarget,
   onSelectImage,
+}: MediaLibraryModalProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setShowMediaLibrary(false)
