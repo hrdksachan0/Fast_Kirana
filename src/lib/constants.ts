@@ -354,7 +354,15 @@ export const OUTLET_NAMES: Record<string, string> = {
   'restaurant-kitchen': 'Wedson Restaurant',
 }
 
-export function getOutletName(product: any): string {
+interface ProductData {
+  restaurantId?: string | null
+  restaurant?: { id?: string; name?: string; slug?: string }
+  restaurantName?: string
+  tags?: string[]
+  name?: string
+}
+
+export function getOutletName(product: ProductData): string {
   if (!product) return 'Wedson Restaurant'
 
   const rId = product.restaurantId || product.restaurant?.id
@@ -434,4 +442,3 @@ export function getOutletName(product: any): string {
 
   return 'Wedson Restaurant'
 }
-

@@ -5,13 +5,18 @@
 
 let mapsLoaderPromise: Promise<void> | null = null
 
+interface WindowWithGoogle extends Window {
+  google?: { maps?: unknown }
+}
+
 export function loadGoogleMapsScript(apiKey?: string): Promise<void> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Google Maps script can only be loaded in the browser.'))
   }
 
   // Already loaded globally
-  if ((window as any).google && (window as any).google.maps) {
+  const windowWithGoogle = window as WindowWithGoogle
+  if (windowWithGoogle.google && windowWithGoogle.google.maps) {
     return Promise.resolve()
   }
 

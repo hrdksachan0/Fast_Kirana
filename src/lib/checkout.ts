@@ -3,11 +3,8 @@
  * Used by both COD and Paytm checkout flows to avoid duplication.
  */
 
-import { toast } from 'sonner'
-import { triggerHaptic } from './haptic'
 import { getDistanceKm, getDeliveryRules } from './distance'
 import { getLast10Digits, isValidIndianPhone } from './phone'
-import type { CartItem } from '@/stores/cart-store'
 
 // ── Default store configuration (overridable via StoreSetting) ──────────────
 
@@ -48,7 +45,7 @@ export function resolveMinOrder(settings: SettingsMap): number {
   return parseInt(settings.min_order_value || String(DEFAULT_MIN_ORDER), 10)
 }
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface CartItemInput {
   product: {
@@ -92,9 +89,9 @@ export interface DeliveryMethod {
   PICKUP: 'PICKUP'
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function classifyItems(items: any[]) {
+function classifyItems(items: CartItemInput[]) {
   let hasCafe = false
   let hasRestaurant = false
   let hasGrocery = false
@@ -153,7 +150,7 @@ function validateAddress(
   return { valid: true }
 }
 
-// ── Main validation function ────────────────────────────────────────────────
+// ── Main validation function ────────────────────────────────────────────────────
 
 export interface CheckoutValidationResult {
   valid: boolean
@@ -223,7 +220,7 @@ export function buildOrderPayload(
   ctx: {
     finalAddressId: string
     paymentMethod: string
-    items: any[]
+    items: CartItemInput[]
     deliveryMethod: 'DELIVERY' | 'PICKUP'
     scheduledSlot: string
     appliedCouponCode: string | null
