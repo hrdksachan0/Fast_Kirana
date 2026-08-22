@@ -163,18 +163,11 @@ export async function PATCH(
       : 0
 
     // ── Restaurant product hardening ──
-    // Determine effective restaurantId (from update or existing product)
     const effectiveRestaurantId = updateData.restaurantId !== undefined
       ? updateData.restaurantId
       : product.restaurantId
 
     if (effectiveRestaurantId) {
-      // Force restaurant category
-      const restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
-      if (restCat) {
-        updateData.categoryId = restCat.id
-      }
-
       // Ensure 'restaurant' tag and remove 'cafe' tag
       let currentTags: string[] = updateData.tags || product.tags || []
       if (!currentTags.map((t: string) => t.toLowerCase()).includes('restaurant')) {
@@ -182,9 +175,6 @@ export async function PATCH(
       }
       currentTags = currentTags.filter((t: string) => t.toLowerCase() !== 'cafe')
       updateData.tags = currentTags
-
-      // Force unlimited stock
-      updateData.stock = 999
     }
 
     // Ensure categoryId is valid and not empty
