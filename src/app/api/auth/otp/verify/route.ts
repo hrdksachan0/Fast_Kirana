@@ -3,6 +3,17 @@ import { prisma } from '@/lib/prisma'
 import { authLimiter } from '@/lib/rate-limit'
 import { isValidIndianPhone, normalizePhone, getLast10Digits } from '@/lib/phone'
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+}
+
 export async function POST(request: NextRequest) {
   const limited = await authLimiter.check(request)
   if (limited) return limited

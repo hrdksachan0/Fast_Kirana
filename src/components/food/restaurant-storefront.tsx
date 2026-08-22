@@ -773,17 +773,17 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                   <div key={rev.id} className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl p-4 space-y-2.5 shadow-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        {rev.user.image ? (
+                        {rev.user?.image ? (
                           <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                            <Image src={rev.user.image} alt={rev.user.name || 'User'} fill className="object-cover" />
+                            <Image src={rev.user.image} alt={rev.user?.name || 'User'} fill className="object-cover" />
                           </div>
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center text-xs font-black">
-                            {(rev.user.name || 'U').slice(0, 1).toUpperCase()}
+                            {(rev.user?.name || 'U').slice(0, 1).toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">{rev.user.name || 'Anonymous'}</p>
+                          <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">{rev.user?.name || 'Anonymous'}</p>
                           <p className="text-[9px] font-bold text-zinc-400">{formatDate(rev.createdAt, 'dd MMM yyyy')}</p>
                         </div>
                       </div>

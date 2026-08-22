@@ -5,6 +5,17 @@ import { sendWhatsAppOtp } from '@/lib/whatsapp'
 import { otpLimiter } from '@/lib/rate-limit'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+}
+
 export async function POST(request: NextRequest) {
   const limited = await otpLimiter.check(request)
   if (limited) return limited

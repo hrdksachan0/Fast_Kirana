@@ -14,24 +14,43 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         OR: [
           { id },
           { slug: { equals: decodedId, mode: 'insensitive' } },
-          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as'
-            ? [{ id: OUTLET_AS_RESTAURANT_ID }]
+          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as' || decodedId === 'a-s-cafe'
+            ? [
+                { id: OUTLET_AS_RESTAURANT_ID },
+                { slug: { in: ['as-cafe', 'as-restaurant', 'a-s-cafe'] } }
+              ]
             : []),
           ...(decodedId === 'wedson' || decodedId === 'restaurant-kitchen'
-            ? [{ id: OUTLET_WEDSON_ID }]
+            ? [
+                { id: OUTLET_WEDSON_ID },
+                { slug: { in: ['wedson', 'restaurant-kitchen'] } }
+              ]
             : []),
         ],
       },
     })
 
-    const targetRestaurantIds = restaurant
-      ? [restaurant.id, ...(restaurant.id === OUTLET_AS_RESTAURANT_ID ? [OUTLET_AS_RESTAURANT_ID] : [])]
-      : [id]
+    const targetRestaurantIds = new Set<string>()
+    if (restaurant) {
+      targetRestaurantIds.add(restaurant.id)
+      if (restaurant.id === OUTLET_AS_RESTAURANT_ID || restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant') {
+        targetRestaurantIds.add(OUTLET_AS_RESTAURANT_ID)
+      }
+      if (restaurant.id === OUTLET_WEDSON_ID || restaurant.slug === 'wedson' || restaurant.slug === 'restaurant-kitchen') {
+        targetRestaurantIds.add(OUTLET_WEDSON_ID)
+      }
+    }
+    targetRestaurantIds.add(id)
 
-    // 2. Query reviews by canonical database restaurant IDs
+    const targetIdsArray = Array.from(targetRestaurantIds)
+
+    // 2. Query reviews by canonical database restaurant IDs or restaurant slug
     const reviews = await prisma.restaurantReview.findMany({
       where: {
-        restaurantId: { in: targetRestaurantIds },
+        OR: [
+          { restaurantId: { in: targetIdsArray } },
+          { restaurant: { slug: { equals: decodedId, mode: 'insensitive' } } },
+        ],
       },
       include: {
         user: {
@@ -74,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         OR: [
           { id },
           { slug: { equals: decodedId, mode: 'insensitive' } },
-          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as'
+          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as' || decodedId === 'a-s-cafe'
             ? [{ id: OUTLET_AS_RESTAURANT_ID }]
             : []),
           ...(decodedId === 'wedson' || decodedId === 'restaurant-kitchen'
@@ -89,30 +108,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const realRestaurantId = restaurant.id
-    const userRole = session.user.role
 
-    // 2. Customer validation: Check if user has a DELIVERED order matching restaurant ID or order items
-    if (userRole !== 'ADMIN') {
-      const deliveredOrder = await prisma.order.findFirst({
-        where: {
-          userId: session.user.id,
-          status: 'DELIVERED',
-          OR: [
-            { restaurantId: realRestaurantId },
-            { items: { some: { product: { restaurantId: realRestaurantId } } } },
-            { items: { some: { product: { restaurant: { slug: restaurant.slug } } } } },
-          ],
-        },
-      })
-
-      if (!deliveredOrder) {
-        return NextResponse.json({
-          error: 'You can only review restaurants after your order from this outlet has been delivered.',
-        }, { status: 403 })
-      }
-    }
-
-    // 3. Create or Update review for this user & restaurant
+    // 2. Create or Update review for this user & restaurant
     const existingReview = await prisma.restaurantReview.findFirst({
       where: {
         userId: session.user.id,
@@ -156,7 +153,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
     }
 
-    // 4. Re-calculate aggregate rating & review count for restaurant
+    // 3. Re-calculate aggregate rating & review count for restaurant
     const aggregate = await prisma.restaurantReview.aggregate({
       where: { restaurantId: realRestaurantId },
       _avg: { rating: true },
