@@ -18,12 +18,11 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
-      case '/login':
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/home':
       case '/main':
         return MaterialPageRoute(builder: (_) => const MainShell());
+      case '/splash':
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
       case '/otp':
         final identifier = settings.arguments as String;
         return MaterialPageRoute(builder: (_) => OtpScreen(identifier: identifier));

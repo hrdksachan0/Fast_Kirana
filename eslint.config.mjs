@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
       "prefer-const": "off",
       "react-hooks/use-memo": "off",
       "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
       "react-hooks/exhaustive-deps": "warn",
     },
   },

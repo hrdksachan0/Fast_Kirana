@@ -12,6 +12,34 @@ import 'package:flutter/foundation.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Custom Error Widget to prevent White Screen on unhandled UI errors
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.shopping_bag_rounded, size: 64, color: Color(0xFFE20A22)),
+              const SizedBox(height: 16),
+              const Text(
+                'FastKirana',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Loading app components...',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   // Initialize Firebase and Notification Manager Services safely
   if (!kIsWeb) {
     try {

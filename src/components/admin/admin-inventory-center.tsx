@@ -252,8 +252,8 @@ export function AdminInventoryCenter() {
 
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
       try {
-        // @ts-ignore
-        barcodeDetector = new window.BarcodeDetector({
+        const BarcodeDetectorClass = (window as any).BarcodeDetector
+        barcodeDetector = new BarcodeDetectorClass({
           formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
         })
       } catch (e) {
