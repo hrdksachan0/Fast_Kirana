@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation'
 
 export function Footer() {
   const pathname = usePathname()
+  const settings = useUIStore((s) => s.settings) || {}
 
   // Hide storefront footer on admin & kitchen/staff consoles
   if (
@@ -20,7 +21,6 @@ export function Footer() {
   ) {
     return null
   }
-  const settings = useUIStore((s) => s.settings) || {}
   const isLoaded = Object.keys(settings).length > 0
 
   const trustedText = isLoaded ? (settings.trusted_text || '✨ Trusted by 5,000+ families in your town') : null
