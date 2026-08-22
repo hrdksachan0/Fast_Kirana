@@ -12,35 +12,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         OR: [
-          { id },
+          { id: id },
+          { id: decodedId },
           { slug: { equals: decodedId, mode: 'insensitive' } },
-          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as' || decodedId === 'a-s-cafe'
-            ? [
-                { id: OUTLET_AS_RESTAURANT_ID },
-                { slug: { in: ['as-cafe', 'as-restaurant', 'a-s-cafe'] } }
-              ]
+          { slug: { equals: id, mode: 'insensitive' } },
+          ...(decodedId.includes('as-') || decodedId.includes('cafe') || decodedId.includes('a.s') || decodedId === 'as'
+            ? [{ id: OUTLET_AS_RESTAURANT_ID }, { slug: 'as-restaurant' }, { slug: 'as-cafe' }]
             : []),
-          ...(decodedId === 'wedson' || decodedId === 'restaurant-kitchen'
-            ? [
-                { id: OUTLET_WEDSON_ID },
-                { slug: { in: ['wedson', 'restaurant-kitchen'] } }
-              ]
+          ...(decodedId.includes('wedson') || decodedId.includes('kitchen')
+            ? [{ id: OUTLET_WEDSON_ID }, { slug: 'wedson-restaurant' }, { slug: 'wedson' }]
             : []),
         ],
       },
     })
 
     const targetRestaurantIds = new Set<string>()
+    targetRestaurantIds.add(id)
+    targetRestaurantIds.add(decodedId)
+
     if (restaurant) {
       targetRestaurantIds.add(restaurant.id)
       if (restaurant.id === OUTLET_AS_RESTAURANT_ID || restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant') {
         targetRestaurantIds.add(OUTLET_AS_RESTAURANT_ID)
+        targetRestaurantIds.add('cms2p1lap0000n0id8alldboy')
       }
-      if (restaurant.id === OUTLET_WEDSON_ID || restaurant.slug === 'wedson' || restaurant.slug === 'restaurant-kitchen') {
+      if (restaurant.id === OUTLET_WEDSON_ID || restaurant.slug === 'wedson' || restaurant.slug === 'wedson-restaurant' || restaurant.slug === 'restaurant-kitchen') {
         targetRestaurantIds.add(OUTLET_WEDSON_ID)
+        targetRestaurantIds.add('cms2p1lyx0001n0idod904lfu')
       }
     }
-    targetRestaurantIds.add(id)
 
     const targetIdsArray = Array.from(targetRestaurantIds)
 
@@ -50,6 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         OR: [
           { restaurantId: { in: targetIdsArray } },
           { restaurant: { slug: { equals: decodedId, mode: 'insensitive' } } },
+          ...(restaurant ? [{ restaurantId: restaurant.id }] : []),
         ],
       },
       include: {
@@ -91,13 +92,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         OR: [
-          { id },
+          { id: id },
+          { id: decodedId },
           { slug: { equals: decodedId, mode: 'insensitive' } },
-          ...(decodedId === 'as-restaurant' || decodedId === 'as-cafe' || decodedId === 'as' || decodedId === 'a-s-cafe'
-            ? [{ id: OUTLET_AS_RESTAURANT_ID }]
+          { slug: { equals: id, mode: 'insensitive' } },
+          ...(decodedId.includes('as-') || decodedId.includes('cafe') || decodedId.includes('a.s') || decodedId === 'as'
+            ? [{ id: OUTLET_AS_RESTAURANT_ID }, { slug: 'as-restaurant' }, { slug: 'as-cafe' }]
             : []),
-          ...(decodedId === 'wedson' || decodedId === 'restaurant-kitchen'
-            ? [{ id: OUTLET_WEDSON_ID }]
+          ...(decodedId.includes('wedson') || decodedId.includes('kitchen')
+            ? [{ id: OUTLET_WEDSON_ID }, { slug: 'wedson-restaurant' }, { slug: 'wedson' }]
             : []),
         ],
       },
@@ -113,7 +116,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const existingReview = await prisma.restaurantReview.findFirst({
       where: {
         userId: session.user.id,
-        restaurantId: realRestaurantId,
+        OR: [
+          { restaurantId: realRestaurantId },
+          { restaurantId: id },
+          { restaurantId: decodedId },
+          { restaurant: { slug: { equals: decodedId, mode: 'insensitive' } } }
+        ]
       },
     })
 

@@ -83,7 +83,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`/api/restaurants/${restaurant.id}/reviews`)
+      const targetIdentifier = restaurant.id || restaurant.slug
+      const res = await fetch(`/api/restaurants/${targetIdentifier}/reviews?slug=${restaurant.slug || ''}`)
       if (res.ok) {
         const data = await res.json()
         setReviews(data.reviews || [])
@@ -97,14 +98,15 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
   useEffect(() => {
     fetchReviews()
-  }, [restaurant.id])
+  }, [restaurant.id, restaurant.slug])
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newRating < 1 || newRating > 5) return
     setIsSubmittingReview(true)
     try {
-      const res = await fetch(`/api/restaurants/${restaurant.id}/reviews`, {
+      const targetIdentifier = restaurant.id || restaurant.slug
+      const res = await fetch(`/api/restaurants/${targetIdentifier}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: newRating, comment: newComment }),
