@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
+interface WindowWithFetch extends Window {
+  fetch: typeof fetch
+}
+
 export function TopProgressBar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -86,16 +90,18 @@ export function TopProgressBar() {
 
     // Intercept client-side routing fetch requests
     const originalFetch = window.fetch
-    window.fetch = async (...args) => {
+    const windowWithFetch = window as unknown as WindowWithFetch
+    windowWithFetch.fetch = async (...args: Parameters<typeof fetch>) => {
       const url = args[0]
       const options = args[1]
 
       const isRSC =
         (typeof url === 'string' && (url.includes('_rsc=') || url.includes('/_next/data/'))) ||
-        (options?.headers && (
-          (options.headers as any)['RSC'] === '1' ||
-          (options.headers as any)['Next-Router-State-Tree']
-        ))
+        (options && typeof options === 'object' && 'headers' in options && options.headers && 
+         (typeof options.headers === 'object' ? (
+           ('RSC' in options.headers && (options.headers as Record<string, string>)['RSC'] === '1') ||
+           ('Next-Router-State-Tree' in options.headers && (options.headers as Record<string, string>)['Next-Router-State-Tree'])
+         ) : false))
 
       if (isRSC) {
         startLoading()
@@ -119,7 +125,7 @@ export function TopProgressBar() {
 
     return () => {
       document.removeEventListener('click', handleLinkClick, { capture: true })
-      window.fetch = originalFetch
+      windowWithFetch.fetch = originalFetch
     }
   }, [])
 

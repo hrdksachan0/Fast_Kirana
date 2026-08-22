@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export function SwipeToBack() {
   const router = useRouter()
@@ -98,7 +97,7 @@ export function SwipeToBack() {
                 if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
                   window.navigator.vibrate(12)
                 }
-              } catch (err) {
+              } catch {
                 // Ignore silent vibrate errors
               }
               hasVibrated.current = true
@@ -188,7 +187,7 @@ export function SwipeToBack() {
     <div
       ref={containerRef}
       style={{ display: 'none', position: 'fixed', left: 0, zIndex: 99999 }}
-      className="gpu-accelerated h-12 w-12 rounded-full flex items-center justify-center border border-border/80 dark:border-zinc-800 shadow-elevated backdrop-blur-md bg-background/80 dark:bg-zinc-900/80 text-text-primary pointer-events-none"
+      className="gpu-accelerated h-12 w-12 rounded-full flex items-center justify-center border border-border/80 dark:border-zinc-800 shadow-elevated backdrop-blur-md bg-background/80 dark:bg-zinc-900/80 text-text-primary"
     >
       {/* Circle Progress Tracker */}
       <svg className="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 36 36">

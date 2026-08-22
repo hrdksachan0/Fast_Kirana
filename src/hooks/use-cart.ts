@@ -52,7 +52,7 @@ export function useCart() {
   const addItem = useCallback((product: CartProduct) => {
     const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
     const categorySlug = product.category?.slug || ''
-    const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
+    const isCategoryOpen = (categoryStatus as Record<string, boolean>)?.[categorySlug] !== false
     
     if (!isCategoryOpen) {
       triggerHaptic('warning')
@@ -87,7 +87,7 @@ export function useCart() {
         return false
       }
 
-      // 2. Different restaurant outlets (e.g. Wedson vs A.S. Restaurant) CANNOT mix in the same cart
+      // 2. Different restaurant outlets (e.g Wedson vs A.S. Restaurant) CANNOT mix in the same cart
       const existOutlet = getOutletName(item.product)
       return newOutlet !== existOutlet
     })
@@ -139,7 +139,7 @@ export function useCart() {
           return
         }
         const categorySlug = item.product.category?.slug || ''
-        const isCategoryOpen = (categoryStatus as any)?.[categorySlug] !== false
+        const isCategoryOpen = (categoryStatus as Record<string, boolean>)?.[categorySlug] !== false
 
         if (!isCategoryOpen) {
           triggerHaptic('warning')
@@ -190,8 +190,6 @@ export function useCart() {
       id: `cart-remove-${productId}`,
     })
   }, [checkFreeDeliveryUnlock])
-
-  const storeState = useCartStore.getState()
 
   return {
     items,

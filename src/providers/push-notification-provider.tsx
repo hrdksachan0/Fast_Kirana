@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 
-function urlBase64ToUint8Array(base64String: string) {
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)
@@ -32,7 +32,7 @@ interface PushNotificationContextType {
 const PushNotificationContext = createContext<PushNotificationContextType | undefined>(undefined)
 
 export function PushNotificationProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession()
+  const { status: sessionStatus } = useSession()
   const [isSupported, setIsSupported] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission>('default')
@@ -58,8 +58,12 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           setIsSubscribed(!!subscription)
+        }).catch(() => {
+          // ignore errors
         })
-      }).catch(err => {})
+      }).catch(() => {
+        // ignore errors
+      })
     }
 
     const dismissed = localStorage.getItem('push-prompt-dismissed') === 'true'
@@ -68,9 +72,9 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
     }
   }, [])
 
-  const registerSubscription = async () => {
+  const registerSubscription = async (): Promise<boolean> => {
     try {
-      // Prevent infinite loading state if service worker activation is delayed or blocked (e.g. non-secure local HTTP context)
+      // Prevent infinite loading state if service worker activation is delayed or blocked (e.g non-secure local HTTP context)
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Service Worker registration timed out')), 6000)
       )
@@ -105,14 +109,15 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
         successCallbackRef.current = null
       }
       return true
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
       console.error('Push registration error:', error)
-      toast.error(`Failed to register notifications: ${error.message || error}`)
+      toast.error(`Failed to register notifications: ${errorMessage}`)
       return false
     }
   }
 
-  const subscribe = async (onSuccessCallback?: () => void) => {
+  const subscribe = async (onSuccessCallback?: () => void): Promise<boolean> => {
     if (!isSupported) {
       toast.error('Push notifications are not supported on this browser.')
       return false
@@ -139,7 +144,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
     return false
   }
 
-  const confirmSubscribe = async () => {
+  const confirmSubscribe = async (): Promise<boolean> => {
     setShowSoftPrompt(false)
     setIsLoading(true)
     try {
