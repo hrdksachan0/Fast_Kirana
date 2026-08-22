@@ -82,17 +82,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const allDisplayCategories = useMemo(() => {
-    return (categories || []).filter((c) => {
-      const slug = (c.slug || '').toLowerCase()
-      const name = (c.name || '').toLowerCase()
-      return (
-        slug !== 'cafe' &&
-        slug !== 'restaurant' &&
-        !slug.includes('restaurant') &&
-        !name.includes('fastkirana cafe') &&
-        !name.includes('fastkirana restaurant')
-      )
-    })
+    return categories || []
   }, [categories])
 
   // Map of category slugs to visual themes with glowing rings

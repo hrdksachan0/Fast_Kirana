@@ -68,9 +68,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, imageUrl, price, mrp, unit, stock, tags, categoryId, variants } = body
 
-    if (!name || price === undefined || price === null || !unit || !categoryId) {
-      return NextResponse.json({ error: 'Missing required fields: name, price, unit, categoryId' }, { status: 400 })
+    const effectiveRestId = body.restaurantId || (session.user as any).assignedRestaurantId
+    if (!effectiveRestId && role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No restaurant assigned' }, { status: 400 })
     }
+
+    if (!name || price === undefined || price === null) {
+      return NextResponse.json({ error: 'Missing required fields: name, price' }, { status: 400 })
+    }
+
+    let targetCategoryId = categoryId
+    if (!targetCategoryId) {
+      const anyCat = await prisma.category.findFirst()
+      targetCategoryId = anyCat?.id
+    }
+
+    const finalUnit = (unit && typeof unit === 'string' && unit.trim()) ? unit.trim() : '1 Serves'
 
     // Generate slug from name
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -86,11 +99,11 @@ export async function POST(request: NextRequest) {
         price: parseFloat(price),
         mrp: parseFloat(mrp || price),
         discount: mrp && parseFloat(mrp) > parseFloat(price) ? Math.round(((parseFloat(mrp) - parseFloat(price)) / parseFloat(mrp)) * 100) : 0,
-        unit,
+        unit: finalUnit,
         stock: parseInt(stock || '999'),
         tags: tags || [],
-        categoryId,
-        restaurantId: restaurantId || body.restaurantId,
+        categoryId: targetCategoryId,
+        restaurantId: effectiveRestId || null,
         variants: variants || null,
         isAvailable: true,
       },

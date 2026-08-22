@@ -21,7 +21,7 @@ export async function GET() {
           where: {
             stock: 0,
             isAvailable: true,
-            category: { slug: { not: 'cafe' } },
+            restaurantId: null,
           },
           select: {
             id: true,
@@ -249,7 +249,7 @@ export async function POST() {
           where: {
             stock: 0,
             isAvailable: true,
-            category: { slug: { not: 'cafe' } },
+            restaurantId: null,
           },
           select: { id: true, name: true, stock: true },
         }),
@@ -260,7 +260,7 @@ export async function POST() {
           WHERE stock > 0
             AND stock <= "minStock"
             AND "isAvailable" = true
-            AND "categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
+            AND "restaurantId" IS NULL
         `,
 
         prisma.product.findMany({

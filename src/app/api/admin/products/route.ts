@@ -56,31 +56,13 @@ export async function GET(request: Request) {
       })
     }
 
-    if (type === 'cafe') {
+    if (type === 'cafe' || type === 'restaurant') {
       andClauses.push({
-        OR: [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
-          { tags: { has: 'cafe' } }
-        ]
-      })
-    } else if (type === 'restaurant') {
-      andClauses.push({
-        OR: [
-          { category: { slug: 'restaurant' } },
-          { tags: { has: 'restaurant' } }
-        ]
+        restaurantId: { not: null }
       })
     } else if (type === 'grocery') {
       andClauses.push({
-        category: { slug: { notIn: ['cafe', 'fastkirana-cafe', 'restaurant'] } }
-      })
-      andClauses.push({
-        NOT: {
-          OR: [
-            { tags: { has: 'cafe' } },
-            { tags: { has: 'restaurant' } }
-          ]
-        }
+        restaurantId: null
       })
     }
 

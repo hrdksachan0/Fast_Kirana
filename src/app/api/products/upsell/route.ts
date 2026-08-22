@@ -21,43 +21,18 @@ export async function GET(request: NextRequest) {
 
     const cartTags = new Set(cartProducts.flatMap(p => p.tags || []).map(t => t.toLowerCase()))
 
-    const isASCart = cartProducts.some(p => 
-      p.restaurantId === OUTLET_AS_RESTAURANT_ID || 
-      p.tags?.some(t => ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant'].includes(t.toLowerCase()))
-    )
-    const isWedsonCart = cartProducts.some(p => 
-      p.restaurantId === OUTLET_WEDSON_ID || 
-      p.tags?.some(t => ['wedson', 'wedson-restaurant'].includes(t.toLowerCase()))
-    )
-    const isCafeCategoryCart = cartProducts.some(p => 
-      p.category?.slug === 'cafe' || p.category?.slug === 'fastkirana-cafe' || p.tags?.some(t => ['cafe', 'shakes'].includes(t.toLowerCase()))
-    )
+    const isASCart = cartProducts.some(p => p.restaurantId === OUTLET_AS_RESTAURANT_ID)
+    const isWedsonCart = cartProducts.some(p => p.restaurantId === OUTLET_WEDSON_ID)
 
-    // Enforce strict separation: A.S. Restaurant suggests A.S., Wedson suggests Wedson, Cafe suggests Cafe, Grocery suggests Grocery
+    // Enforce strict separation: strictly match restaurantId or null for grocery
     const typeFilter: Prisma.ProductWhereInput = {}
     if (isASCart) {
-      typeFilter.OR = [
-        { restaurantId: OUTLET_AS_RESTAURANT_ID },
-        { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
-        { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
-      ]
+      typeFilter.restaurantId = OUTLET_AS_RESTAURANT_ID
     } else if (isWedsonCart) {
-      typeFilter.OR = [
-        { restaurantId: OUTLET_WEDSON_ID },
-        { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
-        { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
-      ]
-    } else if (isCafeCategoryCart) {
-      typeFilter.OR = [
-        { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'ice-cream', 'beverages', 'shakes'] } } },
-        { tags: { hasSome: ['cafe', 'ice-cream', 'beverages', 'shakes', 'mocktails'] } }
-      ]
+      typeFilter.restaurantId = OUTLET_WEDSON_ID
     } else {
-      // Pure grocery cart: strictly exclude restaurant & cafe products!
-      typeFilter.AND = [
-        { restaurantId: null },
-        { NOT: { tags: { hasSome: ['as-restaurant', 'as-cafe', 'wedson', 'wedson-restaurant'] } } }
-      ]
+      // Pure grocery cart: strictly grocery products!
+      typeFilter.restaurantId = null
     }
 
     // 2. Try to find products frequently bought together in past orders
@@ -135,9 +110,6 @@ export async function GET(request: NextRequest) {
       const targetTags = new Set<string>()
       
       if (isASCart || isWedsonCart) {
-        // For restaurant, recommend curries, rotis, naans, biryanis or other restaurant tags
-        ['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'].forEach(t => targetTags.add(t))
-      } else if (isCafeCategoryCart) {
         if (cartTags.has('burgers') || cartTags.has('burger')) {
           ['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'].forEach(t => targetTags.add(t))
         }
@@ -150,6 +122,8 @@ export async function GET(request: NextRequest) {
         if (cartTags.has('chinese') || cartTags.has('noodles') || cartTags.has('frankie-rolls')) {
           ['drinks', 'beverages', 'mocktails', 'chilled'].forEach(t => targetTags.add(t))
         }
+        // For restaurant, recommend curries, rotis, naans, biryanis or other restaurant tags
+        ['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'].forEach(t => targetTags.add(t))
       } else {
         if (cartTags.has('staples') || cartTags.has('cooking')) {
           ['dairy', 'breakfast'].forEach(t => targetTags.add(t))

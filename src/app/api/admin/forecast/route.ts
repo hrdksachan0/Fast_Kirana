@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const products = await prisma.product.findMany({
       where: {
         isAvailable: true,
-        category: { slug: { not: 'cafe' } }
+        restaurantId: null
       },
       include: {
         category: true

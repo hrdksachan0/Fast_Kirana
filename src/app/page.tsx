@@ -115,7 +115,7 @@ const getCachedFlashDeals = unstable_cache(
           { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
         ],
         NOT: [
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+          { restaurantId: { not: null } }
         ],
       },
       orderBy: [
@@ -142,7 +142,7 @@ const getCachedBestSellers = unstable_cache(
           { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
         ],
         NOT: [
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
+          { restaurantId: { not: null } }
         ],
       },
       orderBy: [
@@ -168,7 +168,7 @@ const getCachedBreakfastDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'restaurant' } },
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
+          { restaurantId: { not: null } },
         ],
       },
       take: 100,
@@ -190,7 +190,7 @@ const getCachedLunchDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'restaurant' } },
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
+          { restaurantId: { not: null } },
         ],
       },
       take: 100,
@@ -212,7 +212,7 @@ const getCachedTeaDeals = unstable_cache(
         ],
         NOT: [
           { tags: { has: 'restaurant' } },
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant'] } } },
+          { restaurantId: { not: null } },
         ],
       },
       take: 100,
@@ -228,8 +228,9 @@ const getCachedNightCravings = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
         OR: [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'beverages', 'ice-cream', 'snacks-munchies', 'chocolates'] } } },
+          { category: { slug: { in: ['beverages', 'ice-cream', 'snacks-munchies', 'chocolates'] } } },
           { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night', 'chocolates'] } }
         ]
       },
@@ -282,7 +283,7 @@ const getCachedManualTopPicks = unstable_cache(
         isAvailable: true,
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { restaurantId: { not: null } },
         ]
       },
       select: productSelect,
@@ -301,7 +302,7 @@ const getCachedProductsByIds = unstable_cache(
         isAvailable: true,
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { restaurantId: { not: null } },
         ]
       },
       select: productSelect,
@@ -319,7 +320,7 @@ const getCachedPopularProducts = unstable_cache(
         tags: { has: 'popular' },
         NOT: [
           { tags: { has: 'cafe' } },
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } },
+          { restaurantId: { not: null } },
         ]
       },
       take: 12,

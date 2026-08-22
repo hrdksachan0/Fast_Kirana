@@ -94,32 +94,10 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       const slugs = category.split(',')
-      const isCafeQuery = slugs.some(s => s === 'cafe' || s === 'fastkirana-cafe')
-      const isRestaurantQuery = slugs.some(s => s === 'restaurant' || s === 'wedson-restaurant')
-
-      if (isCafeQuery) {
-        where.OR = [
-          { category: { slug: { in: ['cafe', 'fastkirana-cafe', 'hot-beverages', 'cold-beverages', 'drinks', 'shakes', 'mocktails', 'sandwiches', 'burgers', 'pizza', 'rolls', 'chinese', 'pasta', 'snacks', 'desserts', 'bakery', 'south-indian', 'fast-food', 'quick-bites', 'coffee', 'tea'] } } },
-          { tags: { hasSome: ['cafe', 'fastkirana-cafe', 'hot-beverage', 'hot-bite', 'sandwiches', 'frankie-rolls', 'chinese', 'italian-pasta', 'bombay-bites', 'rice-dishes', 'shakes', 'mocktails', 'cold-coffee', 'south-indian', 'chilled', 'bakery', 'pizza', 'burgers', 'garlic-bread', 'desserts', 'tea', 'coffee', 'food'] } },
-        ]
-      } else if (isRestaurantQuery) {
-        where.OR = [
-          { restaurantId: { not: null } },
-          { category: { slug: { in: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry'] } } },
-          { tags: { hasSome: ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'south-indian', 'chinese', 'main-course', 'combos', 'roti-naan-kulcha', 'biryani-rice'] } },
-        ]
-      } else {
-        where.category = {
-          slug: {
-            in: slugs,
-          },
-        }
-        if (!restaurantId && !restaurantSlug) {
-          where.restaurantId = null
-          where.NOT = [
-            { tags: { hasSome: ['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'] } }
-          ]
-        }
+      where.category = { slug: { in: slugs } }
+      // In grocery context (browsing by category without restaurant), enforce grocery only
+      if (!restaurantId && !restaurantSlug) {
+        where.restaurantId = null
       }
     }
 
@@ -582,23 +560,10 @@ export async function POST(request: NextRequest) {
       // Remove 'cafe' tag to prevent cross-contamination
       tagsList = tagsList.filter(t => t.toLowerCase() !== 'cafe')
     } else if (!finalCategoryId || finalCategoryId === '') {
-      const lowerTags = tagsList.map(t => t.toLowerCase())
-      if (lowerTags.includes('restaurant')) {
-        let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
-        if (!restCat) {
-          restCat = await prisma.category.create({
-            data: { name: 'FastKirana Restaurant', slug: 'restaurant', imageUrl: '🍽️', sortOrder: 10 }
-          })
-        }
-        finalCategoryId = restCat.id
-      } else if (lowerTags.includes('cafe')) {
-        let cafeCat = await prisma.category.findFirst({ where: { slug: { in: ['cafe', 'fastkirana-cafe'] } } })
-        if (!cafeCat) {
-          cafeCat = await prisma.category.create({
-            data: { name: 'FastKirana Cafe', slug: 'cafe', imageUrl: '☕', sortOrder: 11 }
-          })
-        }
-        finalCategoryId = cafeCat.id
+      // No category specified — use first available category as fallback
+      const firstCat = await prisma.category.findFirst()
+      if (firstCat) {
+        finalCategoryId = firstCat.id
       }
     }
 

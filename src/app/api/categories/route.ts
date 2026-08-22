@@ -11,9 +11,6 @@ export async function GET(request: Request) {
     const includeAll = searchParams.get('admin') === 'true' || searchParams.get('all') === 'true'
 
     const categories = await prisma.category.findMany({
-      where: includeAll ? {} : {
-        slug: { notIn: ['cafe', 'restaurant'] },
-      },
       orderBy: {
         sortOrder: 'asc',
       },

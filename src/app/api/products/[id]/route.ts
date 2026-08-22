@@ -162,21 +162,6 @@ export async function PATCH(
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
-    // ── Restaurant product hardening ──
-    const effectiveRestaurantId = updateData.restaurantId !== undefined
-      ? updateData.restaurantId
-      : product.restaurantId
-
-    if (effectiveRestaurantId) {
-      // Ensure 'restaurant' tag and remove 'cafe' tag
-      let currentTags: string[] = updateData.tags || product.tags || []
-      if (!currentTags.map((t: string) => t.toLowerCase()).includes('restaurant')) {
-        currentTags = [...currentTags, 'restaurant']
-      }
-      currentTags = currentTags.filter((t: string) => t.toLowerCase() !== 'cafe')
-      updateData.tags = currentTags
-    }
-
     // Ensure categoryId is valid and not empty
     if (!updateData.categoryId) {
       updateData.categoryId = product.categoryId

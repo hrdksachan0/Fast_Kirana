@@ -239,15 +239,7 @@ export function RestaurantCatalogManager() {
 
       if (catRes.ok) {
         const catData = await catRes.json()
-        const foodCategories = (catData.categories || catData || []).filter((c: any) => {
-          const s = c.slug.toLowerCase()
-          return s.includes('food') || s.includes('cafe') || s.includes('beverage') || 
-                 s.includes('snack') || s.includes('pizza') || s.includes('burger') || 
-                 s.includes('biryani') || s.includes('ice-cream') || s.includes('chinese') ||
-                 s.includes('south-indian') || s.includes('sweet') || s.includes('roll')
-        })
-        
-        setCategories(foodCategories.length > 0 ? foodCategories : (catData.categories || catData || []))
+        setCategories(catData.categories || (Array.isArray(catData) ? catData : []))
       }
     } catch (err) {
       console.error(err)

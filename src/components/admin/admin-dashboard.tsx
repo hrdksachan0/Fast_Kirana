@@ -630,88 +630,38 @@ export function AdminDashboard({
 
   const handleNewProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setNewProductType(type)
-    const cafeCategory = categories.find(c => c.slug === 'cafe')
-    const restaurantCategory = categories.find(c => c.slug === 'restaurant')
     
-    if (type === 'cafe') {
-      const cafeId = cafeCategory?.id || ''
-      let currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
-      if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
-        currentTags.push('cafe')
-      }
-      currentTags = currentTags.filter(t => t.toLowerCase() !== 'restaurant')
+    if (type === 'restaurant' || type === 'cafe') {
+      // Restaurant/Cafe products — keep current categoryId, it doesn't matter for restaurant scoping
       setNewProduct(prev => ({
         ...prev,
-        categoryId: cafeId,
         expiryDate: '',
-        tags: currentTags.join(', ')
-      }))
-    } else if (type === 'restaurant') {
-      const restaurantId = restaurantCategory?.id || 'cmrkghpcc0007lwidl816nhtv'
-      let currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
-      if (!currentTags.map(t => t.toLowerCase()).includes('restaurant')) {
-        currentTags.push('restaurant')
-      }
-      currentTags = currentTags.filter(t => t.toLowerCase() !== 'cafe')
-      setNewProduct(prev => ({
-        ...prev,
-        categoryId: restaurantId,
-        expiryDate: '',
-        tags: currentTags.join(', ')
       }))
     } else {
-      const firstGroceryId = categories.find(c => c.slug !== 'cafe' && c.slug !== 'restaurant')?.id || ''
-      const nonGroceryTags = ['cafe', 'restaurant']
-      const currentTags = newProduct.tags.split(',').map(t => t.trim()).filter(Boolean)
-      const filteredTags = currentTags.filter(t => !nonGroceryTags.includes(t.toLowerCase()))
+      // Grocery — use first available category
+      const firstCatId = categories[0]?.id || ''
       setNewProduct(prev => ({
         ...prev,
-        categoryId: firstGroceryId,
-        tags: filteredTags.join(', ')
+        categoryId: firstCatId,
       }))
     }
   }
 
   const handleEditProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setEditProductType(type)
-    const cafeCategory = categories.find(c => c.slug === 'cafe')
-    const restaurantCategory = categories.find(c => c.slug === 'restaurant')
     
-    if (type === 'cafe') {
-      const cafeId = cafeCategory?.id || ''
-      let currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-      if (!currentTags.map(t => t.toLowerCase()).includes('cafe')) {
-        currentTags.push('cafe')
-      }
-      currentTags = currentTags.filter(t => t.toLowerCase() !== 'restaurant')
+    if (type === 'restaurant' || type === 'cafe') {
+      // Restaurant/Cafe products — keep current categoryId
       setProductEditForm(prev => ({
         ...prev,
-        categoryId: cafeId,
         expiryDate: '',
-        tags: currentTags.join(', ')
-      }))
-    } else if (type === 'restaurant') {
-      const restaurantId = restaurantCategory?.id || ''
-      let currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-      if (!currentTags.map(t => t.toLowerCase()).includes('restaurant')) {
-        currentTags.push('restaurant')
-      }
-      currentTags = currentTags.filter(t => t.toLowerCase() !== 'cafe')
-      setProductEditForm(prev => ({
-        ...prev,
-        categoryId: restaurantId,
-        expiryDate: '',
-        tags: currentTags.join(', ')
       }))
     } else {
-      const firstGroceryId = categories.find(c => c.slug !== 'cafe' && c.slug !== 'restaurant')?.id || ''
-      const nonGroceryTags = ['cafe', 'restaurant']
-      const currentTags = productEditForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-      const filteredTags = currentTags.filter(t => !nonGroceryTags.includes(t.toLowerCase()))
+      // Grocery — use first available category
+      const firstCatId = categories[0]?.id || ''
       setProductEditForm(prev => ({
         ...prev,
-        categoryId: firstGroceryId,
-        tags: filteredTags.join(', ')
+        categoryId: firstCatId,
       }))
     }
   }

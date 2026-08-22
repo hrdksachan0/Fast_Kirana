@@ -71,15 +71,28 @@ const DEFAULT_SETTINGS = {
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
+  const isManuallyOpen = prefix === 'grocery' 
+    ? settingsMap['grocery_mart_open'] !== 'false'
+    : prefix === 'cafe'
+    ? settingsMap['cafe_open'] !== 'false'
+    : settingsMap['restaurant_open'] !== 'false'
+
+  // If manual toggle is explicitly turned OFF by admin, force closed
+  if (!isManuallyOpen) return false
+
   const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
+  // If auto timing is disabled, manual open toggle rules 100%!
   if (!autoTiming) {
-    if (prefix === 'grocery') return settingsMap['grocery_mart_open'] !== 'false'
-    if (prefix === 'cafe') return settingsMap['cafe_open'] !== 'false'
-    return settingsMap['restaurant_open'] !== 'false'
+    return isManuallyOpen
   }
 
-  const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
+  const openTime = settingsMap[`${prefix}_open_time`] || '00:00'
   const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
+
+  // Full 24-hour schedule check
+  if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) {
+    return true
+  }
 
   // Get current Indian Standard Time (IST) (UTC + 5:30)
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -93,16 +106,16 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
   const currentMinutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
   const currentTotal = currentHours * 60 + currentMinutes
 
-  const [openH, openM] = openTime.split(':').map(Number)
+  const [openH = 0, openM = 0] = openTime.split(':').map(Number)
   const openTotal = openH * 60 + openM
 
-  const [closeH, closeM] = closeTime.split(':').map(Number)
+  const [closeH = 23, closeM = 59] = closeTime.split(':').map(Number)
   const closeTotal = closeH * 60 + closeM
 
   if (closeTotal >= openTotal) {
     return currentTotal >= openTotal && currentTotal <= closeTotal
   } else {
-    // Midnight crossing
+    // Cross-midnight timing (e.g. 10:00 AM to 02:00 AM)
     return currentTotal >= openTotal || currentTotal <= closeTotal
   }
 }

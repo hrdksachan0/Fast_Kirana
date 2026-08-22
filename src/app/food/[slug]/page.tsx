@@ -77,30 +77,9 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const isASCafe = restaurant.slug === 'as-cafe' || restaurant.slug === 'as-restaurant' || restaurant.id === OUTLET_AS_RESTAURANT_ID
-  const isWedson = restaurant.slug === 'wedson' || restaurant.id === OUTLET_WEDSON_ID || restaurant.slug === 'restaurant-kitchen'
-
   const productWhere: any = {
     isAvailable: true,
-  }
-
-  if (isASCafe) {
-    productWhere.OR = [
-      { restaurantId: restaurant.id },
-      { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
-      { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
-    ]
-  } else if (isWedson) {
-    productWhere.OR = [
-      { restaurantId: restaurant.id },
-      { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
-      { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
-    ]
-  } else {
-    productWhere.OR = [
-      { restaurantId: restaurant.id },
-      { restaurant: { slug: restaurant.slug } },
-    ]
+    restaurantId: restaurant.id,
   }
 
   const products = await prisma.product.findMany({

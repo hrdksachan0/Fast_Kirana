@@ -12,6 +12,7 @@ import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
 import { getProductLimit } from '@/lib/utils'
 import { getLast10Digits } from '@/lib/phone'
+import { checkIsStoreOpen } from '@/app/api/settings/route'
 
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
@@ -185,42 +186,7 @@ export async function POST(request: NextRequest) {
 
     // settingsMap already fetched above (before delivery validation)
 
-    function getStoreStatus(prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
-      const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
-      if (!autoTiming) {
-        if (prefix === 'grocery') return settingsMap['grocery_mart_open'] !== 'false'
-        if (prefix === 'cafe') return settingsMap['cafe_open'] !== 'false'
-        return settingsMap['restaurant_open'] !== 'false'
-      }
-
-      const openTime = settingsMap[`${prefix}_open_time`] || '06:00'
-      const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
-
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false
-      })
-      const parts = formatter.formatToParts(new Date())
-      const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
-      const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
-      const currentTotal = currentH * 60 + currentM
-
-      const [openH, openM] = openTime.split(':').map(Number)
-      const openTotal = openH * 60 + openM
-
-      const [closeH, closeM] = closeTime.split(':').map(Number)
-      const closeTotal = closeH * 60 + closeM
-
-      if (closeTotal >= openTotal) {
-        return currentTotal >= openTotal && currentTotal <= closeTotal
-      } else {
-        return currentTotal >= openTotal || currentTotal <= closeTotal
-      }
-    }
-
-    const groceryMartOpen = getStoreStatus('grocery')
+    const groceryMartOpen = checkIsStoreOpen(settingsMap, 'grocery')
 
     // 2. Fetch products and calculate server-side subtotal (secure against client tampering)
     const productIds = items.map((i: any) => i.product.id.split('_')[0])

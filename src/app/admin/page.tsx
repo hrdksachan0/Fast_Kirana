@@ -108,7 +108,7 @@ export default async function AdminPage() {
         where: {
           stock: { lt: 15 },
           isAvailable: true,
-          category: { slug: { not: 'cafe' } },
+          restaurantId: null,
         },
       }),
       prisma.$queryRaw`

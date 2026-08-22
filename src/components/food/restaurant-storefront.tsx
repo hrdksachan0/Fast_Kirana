@@ -225,10 +225,7 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       const categoryGroups: Record<string, { title: string; products: any[] }> = {}
 
       unassigned.forEach((p: any) => {
-        let groupTitle = p.category?.name || 'Chef Specials'
-        if (groupTitle.toLowerCase().includes('fastkirana') || groupTitle.toLowerCase().includes('restaurant') || groupTitle.toLowerCase().includes('cafe')) {
-          groupTitle = 'Chef Specials'
-        }
+        const groupTitle = p.category?.name || 'Other Items'
         if (!categoryGroups[groupTitle]) {
           categoryGroups[groupTitle] = { title: groupTitle, products: [] }
         }
