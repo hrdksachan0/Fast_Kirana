@@ -25,10 +25,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {}
     if (effectiveRestId) {
-      where.OR = [
-        { restaurantId: effectiveRestId },
-        { tags: { has: 'as-display' } }
-      ]
+      where.restaurantId = effectiveRestId
     }
 
     const [products, restaurant] = await Promise.all([

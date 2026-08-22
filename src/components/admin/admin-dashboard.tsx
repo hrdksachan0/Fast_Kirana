@@ -217,7 +217,10 @@ export function AdminDashboard({
       try {
         const parsed = JSON.parse(customSectionsStr)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
+          return parsed.map((s: any) => ({
+            ...s,
+            title: s.title ? s.title.replace(/Wedson/gi, '').trim() : s.title
+          }))
         }
       } catch (e) {
         console.error('Error parsing RESTAURANT_MENU_SECTIONS from settings:', e)

@@ -81,43 +81,14 @@ export async function GET(request: NextRequest) {
       where.isAvailable = true
     }
 
-    // Filter by restaurant — or exclude restaurant items for grocery context
+    // Filter by restaurant — strictly by restaurantId or restaurant.slug
     const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
     if (restaurantId) {
-      if (restaurantId === OUTLET_AS_RESTAURANT_ID || restaurantId === 'as-restaurant' || restaurantId === 'as-cafe') {
-        where.OR = [
-          { restaurantId: restaurantId },
-          { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
-          { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
-        ]
-      } else if (restaurantId === OUTLET_WEDSON_ID || restaurantId === 'wedson') {
-        where.OR = [
-          { restaurantId: restaurantId },
-          { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
-          { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
-        ]
-      } else {
-        where.restaurantId = restaurantId
-      }
+      where.restaurantId = restaurantId
     } else if (restaurantSlug) {
-      if (restaurantSlug === 'as-restaurant' || restaurantSlug === 'as-cafe') {
-        where.OR = [
-          { restaurant: { slug: { in: ['as-restaurant', 'as-cafe'] } } },
-          { restaurantId: OUTLET_AS_RESTAURANT_ID },
-          { tags: { hasSome: ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant', 'a.s. restaurant'] } }
-        ]
-      } else if (restaurantSlug === 'wedson' || restaurantSlug === 'restaurant-kitchen') {
-        where.OR = [
-          { restaurant: { slug: { in: ['wedson', 'restaurant-kitchen'] } } },
-          { restaurantId: OUTLET_WEDSON_ID },
-          { tags: { hasSome: ['wedson', 'wedson-restaurant'] } }
-        ]
-      } else {
-        where.restaurant = { slug: restaurantSlug }
-      }
+      where.restaurant = { slug: restaurantSlug }
     } else if (excludeRestaurant || (!isWorker && !includeUnavailable && !category)) {
       // In grocery context (no restaurant specified, no category override), exclude restaurant products
-      // This prevents restaurant items from appearing in grocery search, home page, etc.
       where.restaurantId = null
     }
 
