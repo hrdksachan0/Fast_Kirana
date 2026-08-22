@@ -467,10 +467,19 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
           {/* Rating Badge */}
           {restaurant.rating && (
-            <div className="flex items-center gap-1 bg-emerald-600 text-white px-2.5 py-1 rounded-lg shrink-0">
+            <button
+              onClick={() => {
+                const el = document.getElementById('restaurant-reviews-section')
+                if (el) el.scrollIntoView({ behavior: 'smooth' })
+                triggerHaptic('light')
+              }}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg shrink-0 cursor-pointer transition-all active:scale-95 shadow-xs"
+              title="Click to view reviews"
+            >
               <Star size={12} className="fill-white" />
               <span className="text-xs font-black tabular-nums">{Number(restaurant.rating).toFixed(1)}</span>
-            </div>
+              <span className="text-[10px] opacity-90 font-bold">({reviews.length} reviews)</span>
+            </button>
           )}
           {/* Delivery Time */}
           <div className="flex items-center gap-1 text-xs font-bold text-zinc-600 dark:text-zinc-400 shrink-0">
@@ -478,7 +487,6 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
             <span>30-40 min</span>
           </div>
         </div>
-        {/* Share button (optional) */}
       </div>
 
       {/* Closed Kitchen Operating Hours Banner */}
@@ -706,8 +714,14 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
           </div>
         </>
       ) : (
-        /* Reviews Panel */
-        <div className={cn("mx-auto px-4 py-6 space-y-6 animate-fade-in", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+        /* Reviews Panel (Shown ONLY when Reviews Tab is active) */
+        <div 
+          id="restaurant-reviews-section" 
+          className={cn(
+            "mx-auto px-4 py-6 space-y-6 animate-fade-in", 
+            isCafe ? "max-w-4xl" : "max-w-3xl"
+          )}
+        >
           {/* Average Rating Stats Card */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60 rounded-3xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
             <div className="text-center sm:border-r border-zinc-200 dark:border-zinc-850 sm:pr-8 flex-shrink-0">

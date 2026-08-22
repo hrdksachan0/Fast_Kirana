@@ -356,10 +356,10 @@ export const OUTLET_NAMES: Record<string, string> = {
 
 interface ProductData {
   restaurantId?: string | null
-  restaurant?: { id?: string; name?: string; slug?: string }
-  restaurantName?: string
+  restaurant?: { id?: string; name?: string; slug?: string } | null
+  restaurantName?: string | null
   tags?: string[]
-  name?: string
+  name?: string | null
 }
 
 export function getOutletName(product: ProductData): string {

@@ -88,7 +88,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
 
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
       })
 
       const res = await fetch('/api/push/subscribe', {
