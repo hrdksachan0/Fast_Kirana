@@ -20,6 +20,7 @@ const eslintConfig = defineConfig([
       "react-hooks/preserve-manual-memoization": "off",
       "prefer-const": "off",
       "react-hooks/use-memo": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
       "react-hooks/exhaustive-deps": "warn",
     },
   },
