@@ -12,19 +12,25 @@ import '../../features/orders/orders_screen.dart';
 import '../../features/orders/order_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/auth/admin_login.dart';
 import '../theme/design_system.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
+      case '/splash':
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
       case '/home':
       case '/main':
         return MaterialPageRoute(builder: (_) => const MainShell());
-      case '/splash':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+      case '/login':
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
+      case '/admin':
+      case '/admin/login':
+        return MaterialPageRoute(builder: (_) => const AdminLoginScreen());
       case '/otp':
-        final identifier = settings.arguments as String;
+        final identifier = (settings.arguments as String?) ?? '+91 70544 70303';
         return MaterialPageRoute(builder: (_) => OtpScreen(identifier: identifier));
       case '/products':
         return MaterialPageRoute(builder: (_) => const ProductsScreen());

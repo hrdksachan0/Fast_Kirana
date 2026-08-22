@@ -870,11 +870,38 @@ export default function CheckoutPage() {
         return
       }
 
-      // 2. Create Razorpay Payment Order ID FIRST (amount only, NO DB order created yet!)
+      // 2. Pre-create DB Order in PENDING / UNPAID state BEFORE opening Razorpay
+      const payload = buildOrderPayload({
+        finalAddressId: validation.finalAddressId!,
+        paymentMethod: selectedMethod,
+        items,
+        deliveryMethod,
+        scheduledSlot,
+        appliedCouponCode,
+        contactPhone,
+        packagingOption,
+        packagingFee,
+      })
+
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const orderData = await orderRes.json()
+
+      if (!orderRes.ok) {
+        toast.error(orderData.error || 'Failed to initialize order')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      // 3. Create Razorpay Payment Order ID linked to DB order.id
       const rzpRes = await fetch('/api/payment/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: grandTotal }),
+        body: JSON.stringify({ orderId: orderData.id }),
       })
 
       const rzpData = await rzpRes.json()
@@ -899,38 +926,11 @@ export default function CheckoutPage() {
         amount: rzpData.amount,
         currency: rzpData.currency,
         name: 'FastKirana',
-        description: `FastKirana Order Payment`,
+        description: `FastKirana Order #${orderData.readableId || orderData.id.slice(-6).toUpperCase()}`,
         order_id: rzpData.razorpayOrderId,
         handler: async function (response: any) {
           paymentSuccess = true
           try {
-            // Payment approved! NOW create DB order
-            const payload = buildOrderPayload({
-              finalAddressId: validation.finalAddressId!,
-              paymentMethod: selectedMethod,
-              items,
-              deliveryMethod,
-              scheduledSlot,
-              appliedCouponCode,
-              contactPhone,
-              packagingOption,
-              packagingFee,
-            })
-
-            const orderRes = await fetch('/api/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            })
-
-            const orderData = await orderRes.json()
-
-            if (!orderRes.ok) {
-              toast.error(orderData.error || 'Failed to place order')
-              setIsPlacingOrder(false)
-              return
-            }
-
             // Verify signature & confirm payment status
             const verifyRes = await fetch('/api/payment/razorpay/verify-signature', {
               method: 'POST',
@@ -961,7 +961,7 @@ export default function CheckoutPage() {
           ondismiss: function () {
             if (!paymentSuccess) {
               setIsPlacingOrder(false)
-              toast.info('Payment window closed. Order was not placed.')
+              toast.info('Payment incomplete. Your order is saved as Pending in My Orders.')
             }
           },
         },

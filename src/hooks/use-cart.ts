@@ -68,7 +68,7 @@ export function useCart() {
       toast.error(`${storeName} is closed. Cannot add ${product.name}.`)
       return
     }
-    if (product.stock <= 0) {
+    if (product.stock <= 0 || product.isAvailable === false) {
       triggerHaptic('warning')
       toast.error(`Sorry, ${product.name} is out of stock!`)
       return

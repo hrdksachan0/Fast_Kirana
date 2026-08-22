@@ -75,7 +75,7 @@ class FastKiranaApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       onGenerateRoute: AppRouter.generateRoute,
-      initialRoute: '/home',
+      initialRoute: '/splash',
     );
   }
 }

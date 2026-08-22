@@ -15,14 +15,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const restaurantId = (session.user as any).assignedRestaurantId
-    if (!restaurantId && role !== 'ADMIN') {
+    const { searchParams } = new URL(request.url)
+    const paramRestId = searchParams.get('restaurantId')
+    const effectiveRestId = paramRestId || (session.user as any).assignedRestaurantId
+
+    if (!effectiveRestId && role !== 'ADMIN') {
       return NextResponse.json({ error: 'No restaurant assigned' }, { status: 400 })
     }
 
     const where: any = {}
-    if (role !== 'ADMIN') {
-      where.restaurantId = restaurantId
+    if (effectiveRestId) {
+      where.OR = [
+        { restaurantId: effectiveRestId },
+        { tags: { has: 'as-display' } }
+      ]
     }
 
     const [products, restaurant] = await Promise.all([
@@ -31,8 +37,8 @@ export async function GET(request: NextRequest) {
         include: { category: true, images: true },
         orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
       }),
-      restaurantId ? prisma.restaurant.findUnique({
-        where: { id: restaurantId },
+      effectiveRestId ? prisma.restaurant.findUnique({
+        where: { id: effectiveRestId },
         select: { id: true, name: true, slug: true, menuSections: true, cuisineTags: true }
       }) : null
     ])

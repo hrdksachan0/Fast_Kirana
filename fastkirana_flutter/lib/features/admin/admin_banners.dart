@@ -60,10 +60,10 @@ class AdminBannersScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: b['active'] ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
+                                color: (b['active'] as bool) ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text(b['active'] ? 'LIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: b['active'] ? AppDesignSystem.success : AppDesignSystem.danger)),
+                              child: Text((b['active'] as bool) ? 'LIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: (b['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
                             ),
                           ],
                         ),

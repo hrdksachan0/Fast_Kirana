@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../core/theme/design_system.dart';
 import '../data/models/product.dart';
 import '../providers/cart_provider.dart';
@@ -428,17 +429,23 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       );
     }
 
-    return GestureDetector(
+    return Bounceable(
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         ref.read(cartProvider.notifier).addItem(product.id, 1);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: themeColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-          border: Border.all(color: themeColor, width: 1.2),
+          color: themeColor,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: themeColor.withOpacity(0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -446,13 +453,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             Text(
               'ADD',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w900,
-                color: themeColor,
+                color: Colors.white,
+                letterSpacing: 0.5,
               ),
             ),
             const SizedBox(width: 2),
-            Icon(Icons.add, size: 12, color: themeColor),
+            const Icon(Icons.add_rounded, size: 14, color: Colors.white),
           ],
         ),
       ),

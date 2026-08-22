@@ -182,16 +182,28 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     return variantsList.reduce((sum, v) => sum + (v.stock || 0), 0)
   }, [hasVariants, variantsList, product.stock])
 
-  const resolvedStock = useMemo(() => {
-    if (isRestaurant || isCafe || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) return 999
-    if (liveState !== null) return liveState.stock
-    return totalStock
-  }, [isRestaurant, isCafe, product.restaurantId, liveState, totalStock])
-
   const resolvedIsAvailable = useMemo(() => {
-    if (liveState !== null) return liveState.isAvailable
-    return product.isAvailable
+    if (liveState !== null && typeof liveState.isAvailable === 'boolean') {
+      return liveState.isAvailable
+    }
+    return product.isAvailable !== false
   }, [liveState, product.isAvailable])
+
+  const resolvedStock = useMemo(() => {
+    if (liveState !== null && typeof liveState.stock === 'number') {
+      return liveState.stock
+    }
+    if (!resolvedIsAvailable || product.stock === 0 || (product as any).stock === 0) {
+      return 0
+    }
+    if (typeof product.stock === 'number' && product.stock > 0) {
+      return product.stock
+    }
+    if (isRestaurant || isCafe || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) {
+      return 999
+    }
+    return totalStock
+  }, [liveState, resolvedIsAvailable, product.stock, isRestaurant, isCafe, product.restaurantId, totalStock])
 
   // Calculate discount dynamically if price/mrp changed
   const resolvedDiscount = useMemo(() => {
@@ -398,6 +410,15 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               Only {resolvedStock} left
             </motion.div>
           )}
+
+          {/* Out of Stock Overlay */}
+          {(resolvedStock <= 0 || !resolvedIsAvailable) && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 backdrop-blur-[1px] rounded-2xl pointer-events-none select-none">
+              <span className="rounded-full bg-zinc-950/90 px-2 py-0.5 text-[8.5px] min-[375px]:text-[9.5px] font-black text-rose-400 border border-rose-500/40 shadow-lg tracking-wider uppercase">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -432,37 +453,39 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             <AnimatePresence mode="wait">
               {resolvedQuantity === 0 ? (
                 <motion.button
-                  whileTap={{ scale: 0.92 }}
+                  whileTap={resolvedStock <= 0 || !resolvedIsAvailable ? undefined : { scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                   type="button"
                   onClick={(e) => {
                     if (resolvedStock <= 0 || !resolvedIsAvailable) {
-                      handleNotifyMe(e)
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toast.error(`Sorry, ${product.name} is currently out of stock!`)
                     } else {
                       handleAdd(e)
                     }
                   }}
-                  disabled={(isStoreClosed && resolvedStock > 0) || !timingStatus.isAvailableNow}
+                  disabled={resolvedStock <= 0 || !resolvedIsAvailable || (isStoreClosed && resolvedStock > 0) || !timingStatus.isAvailableNow}
                   className={cn(
-                    "w-full h-full border font-black rounded-lg md:hover:scale-[1.03] transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-2xs px-1 outline-none",
+                    "w-full h-full border font-black rounded-lg transition-all duration-200 flex items-center justify-center gap-0.5 outline-none px-1",
                     isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
-                    !timingStatus.isAvailableNow
+                    resolvedStock <= 0 || !resolvedIsAvailable
+                      ? "border-zinc-300 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 cursor-not-allowed shadow-none"
+                      : !timingStatus.isAvailableNow
                       ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-not-allowed shadow-none"
                       : isStoreClosed && resolvedStock > 0
                       ? "border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
-                      : resolvedStock <= 0 || !resolvedIsAvailable
-                      ? "border-amber-500 bg-amber-500/5 text-amber-600"
                       : isCafe
-                      ? "border-orange-500 bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 md:hover:bg-orange-500 md:hover:text-white"
+                      ? "border-orange-500 bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 md:hover:bg-orange-500 md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
                       : isRestaurant
-                      ? "border-[#e20a22] bg-white dark:bg-zinc-900 text-[#e20a22] dark:text-red-400 md:hover:bg-[#e20a22] md:hover:text-white"
-                      : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white"
+                      ? "border-[#e20a22] bg-white dark:bg-zinc-900 text-[#e20a22] dark:text-red-400 md:hover:bg-[#e20a22] md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
+                      : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
                   )}
                 >
-                  {!timingStatus.isAvailableNow ? (
+                  {resolvedStock <= 0 || !resolvedIsAvailable ? (
+                    'Sold Out'
+                  ) : !timingStatus.isAvailableNow ? (
                     `Next @ ${timingStatus.nextAvailableTimeStr || 'Slot'}`
-                  ) : resolvedStock <= 0 || !resolvedIsAvailable ? (
-                    'Notify'
                   ) : isStoreClosed ? (
                     'Closed'
                   ) : (

@@ -62,7 +62,7 @@ export const useCartStore = create<CartState>()(
       setAppliedCouponCode: (code) => set({ appliedCouponCode: code }),
 
       addItem: (product: CartProduct) => {
-        if (product.stock <= 0) return
+        if (product.stock <= 0 || product.isAvailable === false) return
         const limit = getProductLimit(product)
         set((state) => {
           const existing = state.items.find((item) => item.product.id === product.id)

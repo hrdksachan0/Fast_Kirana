@@ -8,6 +8,7 @@ import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/brand_logo.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String identifier;
@@ -47,44 +48,33 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       _showError('Please enter the complete 6-digit OTP');
       return;
     }
+    setState(() => _isLoading = true);
     try {
       final authRepo = AuthRepository(ref.read(dioProvider));
-      final response =
-          await authRepo.verifyOtp(widget.identifier, otp);
-      if (response.success && response.user != null) {
+      final response = await authRepo.verifyOtp(widget.identifier, otp);
+      if (response.success) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            'user_data', jsonEncode(response.user!.toJson()));
-        await prefs.setString('auth_token', response.token ?? '');
+        final user = response.user ??
+            User(
+              id: 'user_${widget.identifier}',
+              name: 'User ${widget.identifier.length >= 4 ? widget.identifier.substring(widget.identifier.length - 4) : widget.identifier}',
+              email: '',
+              phone: widget.identifier,
+              role: 'USER',
+              isBlocked: false,
+            );
+        await prefs.setString('user_data', jsonEncode(user.toJson()));
+        await prefs.setString('auth_token', response.token ?? 'auth_${user.id}');
         // Update auth provider so all screens see the logged-in user
-        ref.read(authProvider.notifier).setUser(response.user!);
+        ref.read(authProvider.notifier).setUser(user);
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/home');
         return;
+      } else {
+        _showError('Invalid OTP code. Please try again.');
       }
     } catch (e) {
-      if (otp.length == 6) {
-        final prefs = await SharedPreferences.getInstance();
-        final demoUser = User(
-          id: 'demo_user',
-          name: 'Demo User',
-          email: '',
-          phone: widget.identifier,
-          role: 'USER',
-          isBlocked: false,
-        );
-        await prefs.setString(
-          'user_data',
-          jsonEncode(demoUser.toJson()),
-        );
-        await prefs.setString('auth_token', 'demo_token_${widget.identifier}');
-        // Update auth provider so all screens see the logged-in user
-        ref.read(authProvider.notifier).setUser(demoUser);
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/home');
-        return;
-      }
-      _showError(e.toString());
+      _showError('Verification failed: ${e.toString().replaceAll("Exception: ", "")}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -152,7 +142,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 10),
+              FastKiranaLogoWidget(size: 64),
+              const SizedBox(height: 24),
               Text(
                 'Verify OTP',
                 style: GoogleFonts.inter(

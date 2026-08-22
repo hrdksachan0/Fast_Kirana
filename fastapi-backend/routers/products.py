@@ -36,8 +36,10 @@ SYNONYM_DICTIONARY = {
 }
 
 # Constant Restaurant IDs
-OUTLET_AS_RESTAURANT_ID = "as-restaurant-id" # placeholder or matching next.js constants
-OUTLET_WEDSON_ID = "wedson-id"
+OUTLET_AS_RESTAURANT_ID = "cms2p1lap0000n0id8alldboy"
+OUTLET_WEDSON_ID = "cms2p1lyx0001n0idod904lfu"
+LEGACY_AS_RESTAURANT_ID = "as-restaurant-id"
+LEGACY_WEDSON_ID = "wedson-id"
 
 # Simple in-memory search cache to prevent heavy re-ranking
 search_cache = {}
@@ -171,17 +173,19 @@ async def get_products(
 
     # Restaurant separation rules
     if restaurantId:
-        if restaurantId in [OUTLET_AS_RESTAURANT_ID, "as-restaurant", "as-cafe"]:
+        if restaurantId in [OUTLET_AS_RESTAURANT_ID, LEGACY_AS_RESTAURANT_ID, "as-restaurant", "as-cafe"]:
             filters.append(or_(
                 Product.restaurantId == restaurantId,
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
+                Product.restaurantId == LEGACY_AS_RESTAURANT_ID,
                 Product.tags.op('?')('as-restaurant'),
                 Product.tags.op('?')('as-cafe')
             ))
-        elif restaurantId in [OUTLET_WEDSON_ID, "wedson"]:
+        elif restaurantId in [OUTLET_WEDSON_ID, LEGACY_WEDSON_ID, "wedson"]:
             filters.append(or_(
                 Product.restaurantId == restaurantId,
                 Product.restaurantId == OUTLET_WEDSON_ID,
+                Product.restaurantId == LEGACY_WEDSON_ID,
                 Product.tags.op('?')('wedson'),
                 Product.tags.op('?')('wedson-restaurant')
             ))
@@ -191,12 +195,14 @@ async def get_products(
         if restaurantSlug in ["as-restaurant", "as-cafe"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
+                Product.restaurantId == LEGACY_AS_RESTAURANT_ID,
                 Product.tags.op('?')('as-restaurant'),
                 Product.tags.op('?')('as-cafe')
             ))
         elif restaurantSlug in ["wedson", "restaurant-kitchen"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_WEDSON_ID,
+                Product.restaurantId == LEGACY_WEDSON_ID,
                 Product.tags.op('?')('wedson'),
                 Product.tags.op('?')('wedson-restaurant')
             ))

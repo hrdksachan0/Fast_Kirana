@@ -20,5 +20,5 @@ final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
 
 final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryId) async {
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(category: categoryId, limit: 50);
+  return repo.getProducts(category: categoryId, limit: 1000);
 });

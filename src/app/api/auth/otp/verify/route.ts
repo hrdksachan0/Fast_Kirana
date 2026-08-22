@@ -56,16 +56,46 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Check if user exists and has name and phone
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-      select: { name: true, phone: true }
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          isValidIndianPhone(trimmed) ? { phone: normalizePhone(trimmed) } : null
+        ].filter(Boolean) as any
+      }
     })
+
+    if (!user) {
+      const phoneDigits = isValidIndianPhone(trimmed) ? getLast10Digits(trimmed) : null
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          phone: isValidIndianPhone(trimmed) ? normalizePhone(trimmed) : null,
+          name: phoneDigits ? `User ${phoneDigits.slice(-4)}` : 'Customer',
+          role: 'USER',
+        }
+      })
+    }
 
     const needsProfileSetup = !user || !user.name || !user.phone
 
+    // Delete used OTP token
+    await prisma.otpToken.deleteMany({
+      where: { email: normalizedEmail }
+    })
+
     return NextResponse.json({
       success: true,
-      needsProfileSetup
+      needsProfileSetup,
+      token: `token_${user.id}_${Date.now()}`,
+      user: {
+        id: user.id,
+        name: user.name || 'Customer',
+        email: user.email,
+        phone: user.phone || trimmed,
+        role: user.role,
+        isBlocked: user.isBlocked,
+      }
     })
   } catch (error: any) {
     console.error('OTP Verify API error:', error)

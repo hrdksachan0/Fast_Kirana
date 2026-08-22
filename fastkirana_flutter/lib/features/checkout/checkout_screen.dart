@@ -9,6 +9,7 @@ import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/network/api_client.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _selectedPayment = 'cod';
   int _selectedAddressIndex = 0;
   bool _isPlacingOrder = false;
+  String? _pendingOrderId;
   late Razorpay _razorpay;
 
   @override
@@ -48,12 +50,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     super.dispose();
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     HapticFeedback.heavyImpact();
     final cart = ref.read(cartProvider).value;
-    if (cart != null) {
-      _completeOrderPlacement(cart, paymentId: response.paymentId);
+    if (cart == null) return;
+
+    final dio = ref.read(dioProvider);
+
+    // Verify signature with backend
+    if (_pendingOrderId != null && response.paymentId != null) {
+      try {
+        await dio.post('/api/payment/razorpay/verify-signature', data: {
+          'orderId': _pendingOrderId,
+          'razorpay_order_id': response.orderId,
+          'razorpay_payment_id': response.paymentId,
+          'razorpay_signature': response.signature,
+        });
+      } catch (e) {
+        debugPrint('Razorpay signature verification error: $e');
+      }
     }
+
+    _completeOrderPlacement(cart, paymentId: response.paymentId);
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -62,7 +80,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.red,
-        content: Text('Payment Failed: ${response.message ?? "Transaction Cancelled"}'),
+        content: Text('Payment Incomplete: ${response.message ?? "Transaction Cancelled"}. Order saved as Pending.'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -129,21 +147,78 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     HapticFeedback.heavyImpact();
     setState(() => _isPlacingOrder = true);
 
-    final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 20.0);
-    final taxes = 0.0;
-    final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
+    final dio = ref.read(dioProvider);
 
+    // 1. Pre-create DB Order in PENDING status FIRST
+    try {
+      final orderPayload = {
+        'deliveryMethod': _deliveryMethod,
+        'paymentMethod': _selectedPayment.toUpperCase(),
+        'couponCode': widget.couponCode,
+        'items': cart.items.map((item) => {
+          'product': {
+            'id': item.product.id,
+            'name': item.product.name,
+            'slug': item.product.slug,
+          },
+          'quantity': item.quantity,
+        }).toList(),
+      };
+
+      final orderRes = await dio.post('/api/orders', data: orderPayload);
+      if (orderRes.data != null) {
+        if (orderRes.data is List && (orderRes.data as List).isNotEmpty) {
+          _pendingOrderId = orderRes.data[0]['id'];
+        } else if (orderRes.data is Map) {
+          _pendingOrderId = orderRes.data['id'];
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPlacingOrder = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Failed to initialize order: ${e.toString()}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // 2. Launch Razorpay if Online Payment
     if (_selectedPayment == 'upi' || _selectedPayment == 'card') {
       final user = ref.read(authProvider).value;
       final phone = user?.phone ?? '7054470303';
       final email = user?.email ?? 'customer@fastkirana.in';
 
+      String? rzpOrderId;
+      String keyId = AppConfig.razorpayKeyId;
+
+      if (_pendingOrderId != null) {
+        try {
+          final rzpRes = await dio.post('/api/payment/razorpay/create-order', data: {
+            'orderId': _pendingOrderId,
+          });
+          if (rzpRes.data != null && rzpRes.data is Map) {
+            rzpOrderId = rzpRes.data['razorpayOrderId'];
+            if (rzpRes.data['keyId'] != null) {
+              keyId = rzpRes.data['keyId'];
+            }
+          }
+        } catch (e) {
+          debugPrint('Error creating Razorpay order: $e');
+        }
+      }
+
+      final grandTotal = (cart.subtotal + (_deliveryMethod == 'PICKUP' ? 0.0 : (cart.subtotal >= 199 ? 0.0 : 20.0)) - widget.discountAmount).clamp(0.0, 999999.0);
+
       final options = {
-        'key': AppConfig.razorpayKeyId,
+        'key': keyId,
         'amount': (grandTotal * 100).toInt(),
         'name': 'FastKirana',
         'description': 'Payment for Order',
+        if (rzpOrderId != null) 'order_id': rzpOrderId,
         'retry': {'enabled': true, 'max_count': 1},
         'send_sms_hash': true,
         'prefill': {
@@ -158,7 +233,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       try {
         _razorpay.open(options);
       } catch (e) {
-        // Fallback to complete order if Razorpay plugin running on unsupported platform (e.g. desktop)
         await _completeOrderPlacement(cart);
       }
     } else {

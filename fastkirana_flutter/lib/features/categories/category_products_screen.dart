@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:action_slider/action_slider.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
@@ -366,8 +367,26 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             },
                           );
                         },
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(color: primaryRed),
+                        loading: () => GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(8, 10, 8, 20),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.54,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 10,
+                          ),
+                          itemCount: 6,
+                          itemBuilder: (_, __) => Shimmer.fromColors(
+                            baseColor: const Color(0xFFF3F4F6),
+                            highlightColor: const Color(0xFFFFFFFF),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                            ),
+                          ),
                         ),
                         error: (e, _) => Center(
                           child: Text('Error loading products: $e'),

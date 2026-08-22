@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
@@ -13,6 +14,8 @@ import '../../providers/restaurant_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/brand_logo.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../categories/category_products_screen.dart';
 import '../search/search_screen.dart';
 import '../cart/cart_screen.dart';
 import '../cafe/cafe_menu_screen.dart';
@@ -188,10 +191,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // 8. Footer
                 SliverToBoxAdapter(child: _buildFooter()),
               ] else ...[
-                // Food & Cafe Mode
-                SliverToBoxAdapter(child: _buildFoodBanner()),
-                SliverToBoxAdapter(child: _buildFoodCuisineCategories()),
-                SliverToBoxAdapter(child: _buildFoodFilterChips()),
+                // Food & Cafe Mode — directly show restaurants
                 ..._buildFoodRestaurantListing(),
                 SliverToBoxAdapter(child: _buildFooter()),
               ],
@@ -204,117 +204,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 1. Header: Logo + Delivery ETA + Address + Search Pill (Pretty Top Bar)
+  // 1. Header: Logo + Location + Search Bar (Exact www.fastkirana.in Web Mobile Match)
   Widget _buildHeader(int cartCount) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Brand Logo + Location Capsule Pill + Notification / Profile Avatar
+          // Top Row: Branded 100% Exact F Logo + Location Dropdown + Dark Theme Icon
           Row(
             children: [
-              // Brand Logo Badge
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFE4E6)),
-                ),
-                child: const BrandLogo(size: 24, variant: true),
-              ),
+              // Native Vector FastKirana Speed Logo
+              FastKiranaLogoWidget(size: 34),
               const SizedBox(width: 10),
 
-              // Location Capsule Pill (Pretty Dropdown)
+              // Location Selector
               Expanded(
                 child: GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressBookScreen()));
                   },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFFEA580C)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Delivering to',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppDesignSystem.textMuted,
-                                    ),
-                                  ),
-                                  const Icon(Icons.keyboard_arrow_down_rounded, size: 12, color: AppDesignSystem.textMuted),
-                                ],
-                              ),
-                              Text(
-                                'Ghatampur, Kanpur Nagar',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppDesignSystem.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFFE20A22)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Fast Delivery',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF111827),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Select Location',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF6B7280),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Color(0xFF6B7280)),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
 
-              // Notifications Icon with Badge
+              // Theme / Notification Icon
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
                 },
                 child: Container(
-                  width: 38,
-                  height: 38,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
+                    color: const Color(0xFFF3F4F6),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
-                  child: const Icon(Icons.notifications_none_rounded, size: 19, color: AppDesignSystem.textPrimary),
+                  child: const Icon(Icons.nightlight_round, size: 18, color: Color(0xFF4B5563)),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Search Bar (Pretty Pill Shape + Mic + Cycling Placeholder)
+          // Search Bar (Exact Web Style Rounded Input)
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -324,13 +298,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFFEA580C)),
+                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFF9CA3AF)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: AnimatedSwitcher(
@@ -349,22 +323,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         _searchPlaceholders[_searchPlaceholderIndex],
                         key: ValueKey<int>(_searchPlaceholderIndex),
                         style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppDesignSystem.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF9CA3AF),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C).withOpacity(0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFFEA580C)),
                   ),
                 ],
               ),
@@ -668,25 +634,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 4. Value Proposition Strip
+  // 4. Value Proposition Strip (Exact www.fastkirana.in Web Match)
   Widget _buildValuePropositionStrip() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-          border: Border.all(color: AppDesignSystem.borderLight),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildPropItem('⚡ Express Fast', 'Dark Store Delivery'),
-            Container(width: 1, height: 20, color: const Color(0xFFE5E7EB)),
-            _buildPropItem('🎉 Free Delivery', 'On orders ₹200+'),
-            Container(width: 1, height: 20, color: const Color(0xFFE5E7EB)),
-            _buildPropItem('🛡️ 100% Fresh', 'Doorstep Guarantee'),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '⚡ Ghatampur',
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ],
+            ),
+            Container(width: 1, height: 16, color: const Color(0xFFE5E7EB)),
+            Text(
+              '📦 50+',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF111827),
+              ),
+            ),
+            Container(width: 1, height: 16, color: const Color(0xFFE5E7EB)),
+            Text(
+              '❤️ 1000+',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF111827),
+              ),
+            ),
           ],
         ),
       ),
@@ -729,11 +736,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Explore Categories',
+                'Trending Categories',
                 style: GoogleFonts.inter(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
-                  color: AppDesignSystem.textPrimary,
+                  color: const Color(0xFF111827),
                 ),
               ),
               GestureDetector(
@@ -742,18 +749,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ref.read(selectedTabProvider.notifier).state = 1; // Switch to categories tab
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppDesignSystem.primaryBg,
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                    border: Border.all(color: AppDesignSystem.primary.withOpacity(0.2)),
+                    color: const Color(0xFFFCE7F3),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'SEE ALL →',
+                    'SEE ALL',
                     style: GoogleFonts.inter(
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.w900,
-                      color: AppDesignSystem.primary,
+                      color: const Color(0xFFDB2777),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -766,7 +772,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             data: (categories) {
               if (categories.isEmpty) return const SizedBox.shrink();
               return SizedBox(
-                height: 98,
+                height: 102,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
@@ -774,17 +780,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final cat = categories[index];
-                    final assetPath = _categoryAssetMap[cat.slug] ?? 'assets/brand/fastkirana_app_icon.png';
+                    final imgUrl = cat.imageUrl ?? '';
 
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CategoryProductsScreen(category: cat),
+                          ),
+                        );
                       },
                       child: SizedBox(
-                        width: 66,
+                        width: 68,
                         child: Column(
                           children: [
-                            // Circular Avatar (Web Style)
+                            // Circular Avatar with High-Res Image
                             Container(
                               width: 62,
                               height: 62,
@@ -795,19 +807,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 boxShadow: AppDesignSystem.shadowSm,
                               ),
                               child: ClipOval(
-                                child: Image.asset(
-                                  assetPath,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Center(
-                                    child: Text(
-                                      cat.imageUrl ?? '🛒',
-                                      style: const TextStyle(fontSize: 26),
-                                    ),
-                                  ),
-                                ),
+                                child: imgUrl.startsWith('http')
+                                    ? CachedNetworkImage(
+                                        imageUrl: imgUrl,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => Shimmer.fromColors(
+                                          baseColor: const Color(0xFFE5E7EB),
+                                          highlightColor: const Color(0xFFF9FAFB),
+                                          child: Container(color: Colors.white),
+                                        ),
+                                        errorWidget: (_, __, ___) => const Center(
+                                          child: Icon(Icons.shopping_bag_outlined, color: Color(0xFF9CA3AF), size: 28),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Icon(Icons.shopping_bag_outlined, color: Color(0xFF9CA3AF), size: 28),
+                                      ),
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 5),
                             Text(
                               cat.name,
                               style: GoogleFonts.inter(
@@ -828,7 +846,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               );
             },
-            loading: () => const SizedBox(height: 98),
+            loading: () => SizedBox(
+              height: 102,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 5,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, __) => Shimmer.fromColors(
+                  baseColor: const Color(0xFFE5E7EB),
+                  highlightColor: const Color(0xFFF9FAFB),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 62,
+                        height: 62,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Container(width: 50, height: 10, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             error: (_, __) => const SizedBox.shrink(),
           ),
         ],
@@ -962,9 +1005,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          Shimmer.fromColors(
+            baseColor: const Color(0xFFE5E7EB),
+            highlightColor: const Color(0xFFF9FAFB),
+            child: Container(
+              width: 140,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -973,18 +1024,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               scrollDirection: Axis.horizontal,
               itemCount: 4,
               separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, __) => Container(
-                width: 150,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-                  border: Border.all(color: const Color(0xFFF3F4F6)),
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.primary),
+              itemBuilder: (_, __) => Shimmer.fromColors(
+                baseColor: const Color(0xFFF3F4F6),
+                highlightColor: const Color(0xFFFFFFFF),
+                child: Container(
+                  width: 150,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 100,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 12,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 10,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            height: 14,
+                            width: 45,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE5E7EB),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          Container(
+                            height: 28,
+                            width: 55,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE5E7EB),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1129,19 +1231,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // FOOD & CAFE STOREFRONT (1:1 Web App Parity)
   // ==========================================
 
-  static const List<Map<String, String>> _cuisineCategories = [
-    {'id': 'all', 'label': 'All', 'emoji': '🍽️'},
-    {'id': 'specials', 'label': 'Specials', 'emoji': '🔥'},
-    {'id': 'rolls', 'label': 'Rolls', 'emoji': '🌯'},
-    {'id': 'biryani', 'label': 'Biryani', 'emoji': '🍚'},
-    {'id': 'cakes', 'label': 'Cakes', 'emoji': '🎂'},
-    {'id': 'burgers', 'label': 'Burgers', 'emoji': '🍔'},
-    {'id': 'chinese', 'label': 'Chinese', 'emoji': '🥡'},
-    {'id': 'pizza', 'label': 'Pizza', 'emoji': '🍕'},
-    {'id': 'south-indian', 'label': 'South Indian', 'emoji': '🍛'},
-    {'id': 'beverages', 'label': 'Beverages', 'emoji': '☕'},
-    {'id': 'desserts', 'label': 'Desserts', 'emoji': '🍨'},
-  ];
 
   // 3. Time-Aware Greeting Card + Birthday Promo Banner (Matches 1_home_grocery.png 1:1)
   Widget _buildHeroPromoBanner() {
@@ -1338,142 +1427,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildFoodBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFEA580C), Color(0xFFE11D48), Color(0xFFD97706)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFEA580C).withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withOpacity(0.25)),
-              ),
-              child: const Center(child: Text('🍔', style: TextStyle(fontSize: 18))),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Craving Something Delicious?',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: Text(
-                          '⚡ HOT & FRESH',
-                          style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '“Good food is good mood” · Fast 20-30 min delivery',
-                    style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.92)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFoodCuisineCategories() {
-    return SizedBox(
-      height: 72,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _cuisineCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final cat = _cuisineCategories[index];
-          return Column(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppDesignSystem.border),
-                  boxShadow: AppDesignSystem.shadowSm,
-                ),
-                child: Center(child: Text(cat['emoji']!, style: const TextStyle(fontSize: 20))),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                cat['label']!,
-                style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFoodFilterChips() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Row(
-        children: [
-          _buildPillChip('🌿 Pure Veg'),
-          const SizedBox(width: 8),
-          _buildPillChip('⭐ Top Rated'),
-          const SizedBox(width: 8),
-          _buildPillChip('🔥 Offers'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPillChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-        border: Border.all(color: AppDesignSystem.border),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
-      ),
-    );
-  }
 
   List<Widget> _buildFoodRestaurantListing() {
     final restaurantsAsync = ref.watch(restaurantsProvider);

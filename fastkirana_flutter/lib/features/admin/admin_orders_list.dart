@@ -68,22 +68,22 @@ class AdminOrdersScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(o['id'], style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                            Text(o['customer'], style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                            Text(o['id'] as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                            Text(o['customer'] as String, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
                             const SizedBox(height: 4),
-                            Text(o['time'], style: GoogleFonts.inter(fontSize: 10, color: AppDesignSystem.textMuted)),
+                            Text(o['time'] as String, style: GoogleFonts.inter(fontSize: 10, color: AppDesignSystem.textMuted)),
                           ],
                         ),
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(o['amount'], style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                          Text(o['amount'] as String, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: colors[index % 5].withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                            child: Text(o['status'], style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: colors[index % 5])),
+                            child: Text(o['status'] as String, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: colors[index % 5])),
                           ),
                         ],
                       ),

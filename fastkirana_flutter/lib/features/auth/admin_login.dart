@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
+import '../../data/models/user.dart';
+import '../../providers/auth_provider.dart';
 import '../admin/admin_dashboard.dart';
 
 class AdminLoginScreen extends ConsumerStatefulWidget {
@@ -22,7 +26,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
   static const Color primaryRed = Color(0xFFE20A22);
 
-  void _handleAdminLogin() {
+  Future<void> _handleAdminLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -36,23 +40,37 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       _errorMessage = null;
     });
 
-    // Verify against AppConfig / Env password
-    Future.delayed(const Duration(milliseconds: 600), () {
+    if (email.toLowerCase() == AppConfig.defaultAdminEmail.toLowerCase() &&
+        (password == AppConfig.defaultAdminPassword || password == 'FastKirana@2026' || password == 'admin123')) {
+      final prefs = await SharedPreferences.getInstance();
+      final adminUser = User(
+        id: 'admin_master',
+        name: 'FastKirana Admin',
+        email: email,
+        phone: AppConfig.supportPhone,
+        role: 'ADMIN',
+        isBlocked: false,
+      );
+      await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
+      await prefs.setString('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
+      ref.read(authProvider.notifier).setUser(adminUser);
+
+      HapticFeedback.heavyImpact();
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (email.toLowerCase() == AppConfig.defaultAdminEmail.toLowerCase() &&
-          (password == AppConfig.defaultAdminPassword || password == 'FastKirana@2026' || password == 'admin123')) {
-        HapticFeedback.heavyImpact();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminDashboard()),
-        );
-      } else {
-        HapticFeedback.vibrate();
-        setState(() => _errorMessage = 'Invalid admin email or password.');
-      }
-    });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+      );
+    } else {
+      HapticFeedback.vibrate();
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Invalid admin email or password.';
+      });
+    }
   }
 
   @override

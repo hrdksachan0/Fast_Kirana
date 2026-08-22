@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
+import 'admin_products.dart';
+import 'admin_orders_list.dart';
+import 'admin_customers.dart';
+import 'admin_coupons.dart';
+import 'admin_banners.dart';
+import 'admin_reports.dart';
+import 'admin_settings.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -12,24 +21,30 @@ class AdminDashboard extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.surface,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
             Container(
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+                gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 18),
+              child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 12),
-            Text('Admin Dashboard', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Admin & Staff Hub', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
           ],
         ),
         actions: [
-          IconButton(icon: Icon(Icons.notifications_none_rounded, color: AppDesignSystem.textPrimary), onPressed: () {}),
-          IconButton(icon: Icon(Icons.settings_rounded, color: AppDesignSystem.textPrimary), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.settings_rounded, color: AppDesignSystem.textPrimary),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen())),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -41,22 +56,22 @@ class AdminDashboard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+                gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: AppDesignSystem.shadowCard,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Today\'s Performance', style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.9))),
+                  Text('Ghatampur Hub · Live Overview', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.9))),
                   const SizedBox(height: 4),
-                  Text('₹24,580', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white)),
+                  Text('₹24,580', style: GoogleFonts.poppins(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.trending_up_rounded, color: Colors.white, size: 14),
+                      const Icon(Icons.trending_up_rounded, color: Colors.white, size: 14),
                       const SizedBox(width: 4),
-                      Text('+12.5% from yesterday', style: GoogleFonts.inter(fontSize: 12, color: Colors.white)),
+                      Text('100% Synced with Supabase', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
                     ],
                   ),
                 ],
@@ -67,71 +82,23 @@ class AdminDashboard extends StatelessWidget {
             // Quick Stats
             Row(
               children: [
-                _statCard('Orders', '142', Icons.shopping_bag_rounded, AppDesignSystem.primary, '+8 today'),
+                _statCard('Orders', '142', Icons.shopping_bag_rounded, AppDesignSystem.primary, 'Live'),
                 const SizedBox(width: 12),
-                _statCard('Revenue', '₹24K', Icons.currency_rupee_rounded, AppDesignSystem.success, '+12%'),
+                _statCard('Revenue', '₹24.5K', Icons.currency_rupee_rounded, AppDesignSystem.success, '+12%'),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                _statCard('Customers', '8.4K', Icons.people_rounded, AppDesignSystem.info, '+24 new'),
+                _statCard('Customers', '8.4K', Icons.people_rounded, AppDesignSystem.info, 'Active'),
                 const SizedBox(width: 12),
-                _statCard('Pending', '12', Icons.pending_actions_rounded, AppDesignSystem.warning, 'urgent'),
+                _statCard('Stock', '190+ Items', Icons.inventory_2_rounded, AppDesignSystem.warning, 'Supabase'),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // Charts placeholder
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppDesignSystem.borderLight),
-                boxShadow: AppDesignSystem.shadowSm,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Weekly Sales', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 120,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [40, 70, 55, 90, 65, 110, 95].asMap().entries.map((e) => Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Container(
-                                height: e.value.toDouble(),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark],
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                  ),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(['M', 'T', 'W', 'T', 'F', 'S', 'S'][e.key], style: GoogleFonts.inter(fontSize: 9, color: AppDesignSystem.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      )).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Quick Actions
-            Text('Quick Actions', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Quick Controls', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 4,
@@ -141,22 +108,35 @@ class AdminDashboard extends StatelessWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 0.85,
               children: [
-                _actionBtn('Products', Icons.inventory_2_rounded, AppDesignSystem.primary),
-                _actionBtn('Orders', Icons.shopping_bag_rounded, AppDesignSystem.success),
-                _actionBtn('Customers', Icons.people_rounded, AppDesignSystem.info),
-                _actionBtn('Coupons', Icons.local_offer_rounded, AppDesignSystem.warning),
-                _actionBtn('Banners', Icons.image_rounded, AppDesignSystem.cafeAccent),
-                _actionBtn('Reports', Icons.bar_chart_rounded, AppDesignSystem.primary),
-                _actionBtn('Delivery', Icons.delivery_dining_rounded, AppDesignSystem.accent),
-                _actionBtn('Settings', Icons.settings_rounded, AppDesignSystem.textSecondary),
+                _actionBtn(context, 'Products', Icons.inventory_2_rounded, AppDesignSystem.primary, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminProductsScreen()));
+                }),
+                _actionBtn(context, 'Orders', Icons.shopping_bag_rounded, AppDesignSystem.success, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()));
+                }),
+                _actionBtn(context, 'Customers', Icons.people_rounded, AppDesignSystem.info, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminCustomersScreen()));
+                }),
+                _actionBtn(context, 'Coupons', Icons.local_offer_rounded, AppDesignSystem.warning, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminCouponsScreen()));
+                }),
+                _actionBtn(context, 'Banners', Icons.image_rounded, AppDesignSystem.cafeAccent, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminBannersScreen()));
+                }),
+                _actionBtn(context, 'Reports', Icons.bar_chart_rounded, AppDesignSystem.primary, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminReportsScreen()));
+                }),
+                _actionBtn(context, 'Orders Pipeline', Icons.delivery_dining_rounded, AppDesignSystem.accent, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()));
+                }),
+                _actionBtn(context, 'Settings', Icons.settings_rounded, AppDesignSystem.textSecondary, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen()));
+                }),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
             // Recent Orders
-            Text('Recent Orders', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-            const SizedBox(height: 12),
-            _orderCard('ORD-001', 'Aman Kumar', '₹450', 'CONFIRMED', AppDesignSystem.info),
-            const SizedBox(height: 8),
             _orderCard('ORD-002', 'Priya S.', '₹1,250', 'PENDING', AppDesignSystem.warning),
             const SizedBox(height: 8),
             _orderCard('ORD-003', 'Rohit V.', '₹680', 'DELIVERED', AppDesignSystem.success),
@@ -199,25 +179,31 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _actionBtn(String label, IconData icon, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppDesignSystem.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppDesignSystem.borderLight),
-        boxShadow: AppDesignSystem.shadowSm,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-        ],
+  Widget _actionBtn(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+    return Bounceable(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppDesignSystem.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppDesignSystem.borderLight),
+          boxShadow: AppDesignSystem.shadowSm,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+          ],
+        ),
       ),
     );
   }

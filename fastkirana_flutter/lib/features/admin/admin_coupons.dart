@@ -48,15 +48,15 @@ class AdminCouponsScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(c['code'], style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                          Text(c['code'] as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: c['active'] ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
+                              color: (c['active'] as bool) ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(c['active'] ? 'ACTIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: c['active'] ? AppDesignSystem.success : AppDesignSystem.danger)),
+                            child: Text((c['active'] as bool) ? 'ACTIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: (c['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
                           ),
                         ],
                       ),

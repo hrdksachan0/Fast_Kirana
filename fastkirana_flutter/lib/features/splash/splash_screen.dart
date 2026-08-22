@@ -56,7 +56,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     Navigator.pushReplacementNamed(
       context,
-      token != null ? '/home' : '/login',
+      '/home',
     );
   }
 
@@ -87,19 +87,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             children: [
               ScaleTransition(
                 scale: _logoScale,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: AppDesignSystem.shadowXl,
-                  ),
-                  child: const Icon(
-                    Icons.shopping_basket_rounded,
-                    size: 80,
-                    color: AppDesignSystem.primary,
-                  ),
-                ),
+                child: FastKiranaLogoWidget(size: 96),
               ),
               const SizedBox(height: 32),
               FadeTransition(

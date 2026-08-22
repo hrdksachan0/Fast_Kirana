@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/auth_provider.dart';
+import '../auth/login_screen.dart';
+import '../auth/admin_login.dart';
+import '../admin/admin_dashboard.dart';
 import '../orders/orders_screen.dart';
 import 'address_book_screen.dart';
 import 'wallet_screen.dart';
@@ -14,6 +18,45 @@ class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   static const Color primaryRed = Color(0xFFE20A22);
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Log Out of FastKirana?',
+          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF111827)),
+        ),
+        content: Text(
+          'You will need to enter your phone or email to log back in.',
+          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7280)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryRed,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(authProvider.notifier).clear();
+              HapticFeedback.heavyImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Logged out successfully')),
+              );
+            },
+            child: Text('Log Out', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,23 +84,92 @@ class ProfileScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   child: userAsync.when(
                     data: (user) {
-                      final name = user?.name ?? 'FastKirana Customer';
-                      final phone = user?.phone != null && user!.phone!.isNotEmpty
+                      if (user == null) {
+                        // GUEST STATE
+                        return Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+                              ),
+                              child: const Icon(Icons.person_outline_rounded, size: 30, color: Colors.white),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome to FastKirana 👋',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Log in for 10-min fast delivery',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      color: Colors.white.withOpacity(0.85),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Bounceable(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: AppDesignSystem.shadowSm,
+                                ),
+                                child: Text(
+                                  'LOGIN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    color: primaryRed,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      // LOGGED IN USER STATE
+                      final name = (user.name != null && user.name!.isNotEmpty) ? user.name! : 'Customer';
+                      final phone = user.phone != null && user.phone!.isNotEmpty
                           ? '+91 ${user.phone}'
-                          : '+91 70544 70303';
-                      final email = user?.email ?? 'customer@fastkirana.in';
+                          : user.email;
+                      final isAdmin = user.role == 'ADMIN';
 
                       return Row(
                         children: [
                           Container(
-                            width: 64,
-                            height: 64,
+                            width: 60,
+                            height: 60,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
                             ),
-                            child: const Icon(Icons.person_rounded, size: 34, color: Colors.white),
+                            child: const Icon(Icons.person_rounded, size: 32, color: Colors.white),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -66,23 +178,26 @@ class ProfileScreen extends ConsumerWidget {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                    Flexible(
+                                      child: Text(
+                                        name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFDE047),
+                                        color: isAdmin ? const Color(0xFFFEF08A) : const Color(0xFFFDE047),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        'VIP',
+                                        isAdmin ? 'ADMIN' : 'VIP',
                                         style: GoogleFonts.inter(
                                           fontSize: 9,
                                           fontWeight: FontWeight.w900,
@@ -101,28 +216,21 @@ class ProfileScreen extends ConsumerWidget {
                                     color: Colors.white.withOpacity(0.9),
                                   ),
                                 ),
-                                Text(
-                                  email,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: Colors.white.withOpacity(0.75),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
                         ],
                       );
                     },
-                    loading: () => const SizedBox(height: 64),
-                    error: (_, __) => const SizedBox(height: 64),
+                    loading: () => const SizedBox(height: 60),
+                    error: (_, __) => const SizedBox(height: 60),
                   ),
                 ),
               ),
             ),
           ),
 
-          // 2. FastKirana Wallet & Cashback Card
+          // 2. FastKirana Wallet Card
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -156,7 +264,7 @@ class ProfileScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'FastKirana Wallet',
+                            'FastKirana Wallet & Savings',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -187,7 +295,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
-          // 3. Quick Action Menu
+          // 3. Quick Action Menu & Controls
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -246,16 +354,24 @@ class ProfileScreen extends ConsumerWidget {
                     const Divider(height: 1, color: Color(0xFFF3F4F6)),
                     _buildMenuItem(
                       context,
-                      icon: Icons.notifications_rounded,
-                      iconBg: const Color(0xFFFFF7ED),
-                      iconColor: const Color(0xFFEA580C),
-                      title: 'Notifications',
-                      subtitle: 'Order updates & promotional offers',
+                      icon: Icons.admin_panel_settings_rounded,
+                      iconBg: const Color(0xFFFEF3C7),
+                      iconColor: const Color(0xFFD97706),
+                      title: 'Darkstore & Admin Hub',
+                      subtitle: 'Inventory, 428 products, pipeline & stats',
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                        );
+                        final currentUser = userAsync.valueOrNull;
+                        if (currentUser?.role == 'ADMIN') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                          );
+                        }
                       },
                     ),
                     const Divider(height: 1, color: Color(0xFFF3F4F6)),
@@ -268,6 +384,20 @@ class ProfileScreen extends ConsumerWidget {
                       subtitle: '+91 70544 70303 · Ghatampur Care',
                       onTap: () {},
                     ),
+
+                    // LOGOUT BUTTON (Only if user logged in)
+                    if (userAsync.valueOrNull != null) ...[
+                      const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                      _buildMenuItem(
+                        context,
+                        icon: Icons.logout_rounded,
+                        iconBg: const Color(0xFFFEF2F2),
+                        iconColor: primaryRed,
+                        title: 'Log Out / Switch Account',
+                        subtitle: 'Sign out from this device',
+                        onTap: () => _showLogoutDialog(context, ref),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -287,37 +417,40 @@ class ProfileScreen extends ConsumerWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: iconBg,
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 13.5,
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFF111827),
+        title: Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF111827),
+          ),
         ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFF6B7280),
+        subtitle: Text(
+          subtitle,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF6B7280),
+          ),
         ),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9CA3AF)),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9CA3AF)),
     );
   }
 }

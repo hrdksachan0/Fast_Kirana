@@ -190,16 +190,35 @@ export function RestaurantCatalogManager() {
   }
 
   const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+  const [outlets, setOutlets] = useState<any[]>([])
+  const [selectedOutletId, setSelectedOutletId] = useState<string>('')
+
+  useEffect(() => {
+    fetch('/api/restaurants')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.restaurants && Array.isArray(data.restaurants)) {
+          setOutlets(data.restaurants)
+          if (!selectedOutletId) {
+            const defaultId = assignedRestaurantId || data.restaurants[0]?.id || ''
+            setSelectedOutletId(defaultId)
+          }
+        }
+      })
+      .catch(console.error)
+  }, [assignedRestaurantId])
+
+  const effectiveRestId = selectedOutletId || assignedRestaurantId
 
   const fetchCatalogAndCategories = async () => {
-    if (!assignedRestaurantId) {
-      setLoading(false)
-      return
-    }
-
     try {
+      setLoading(true)
+      const url = effectiveRestId
+        ? `/api/restaurant-dashboard/products?restaurantId=${effectiveRestId}`
+        : '/api/restaurant-dashboard/products'
+
       const [prodRes, catRes] = await Promise.all([
-        fetch('/api/restaurant-dashboard/products', { cache: 'no-store' }),
+        fetch(url, { cache: 'no-store' }),
         fetch('/api/categories', { cache: 'no-store' })
       ])
 
@@ -239,8 +258,10 @@ export function RestaurantCatalogManager() {
   }
 
   useEffect(() => {
-    fetchCatalogAndCategories()
-  }, [assignedRestaurantId])
+    if (effectiveRestId) {
+      fetchCatalogAndCategories()
+    }
+  }, [effectiveRestId])
 
   // Open Form for Adding New Product
   const handleOpenAddForm = () => {
@@ -543,19 +564,35 @@ export function RestaurantCatalogManager() {
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       
       {/* Header controls */}
-      <div className="flex flex-row justify-between items-center gap-3 border-b border-border/40 pb-3.5 sm:pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-3.5 sm:pb-5">
         <div className="min-w-0">
           <h3 className="text-sm sm:text-base font-black text-text-primary uppercase tracking-tight truncate">Menu Catalog</h3>
           <p className="hidden sm:block text-xs text-text-secondary mt-0.5">Add new dishes, edit pricing, manage availability, and set photos.</p>
         </div>
 
-        <button
-          onClick={handleOpenAddForm}
-          className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-[11px] sm:text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
-        >
-          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          <span>Add Dish</span>
-        </button>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          {outlets.length > 0 && (
+            <select
+              value={selectedOutletId}
+              onChange={(e) => setSelectedOutletId(e.target.value)}
+              className="px-3 py-2 text-xs font-black bg-card border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer shadow-xs"
+            >
+              {outlets.map((o) => (
+                <option key={o.id} value={o.id}>
+                  🍽️ {o.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <button
+            onClick={handleOpenAddForm}
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-[11px] sm:text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>Add Dish</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters and search */}
