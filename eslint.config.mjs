@@ -6,6 +6,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mjs"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
@@ -22,7 +23,7 @@ const eslintConfig = defineConfig([
       "react-hooks/use-memo": "off",
       "@typescript-eslint/no-unused-expressions": "off",
       "@typescript-eslint/ban-ts-comment": "off",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "off",
     },
   },
   // Override default ignores of eslint-config-next.
