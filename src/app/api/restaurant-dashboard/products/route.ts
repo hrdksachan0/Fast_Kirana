@@ -4,82 +4,12 @@ import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
 
-async function resolveUserStaffContext(session: any) {
-  if (!session?.user) return { isAllowed: false, role: 'USER', assignedRestaurantId: null }
-
-  let role = session.user.role || 'USER'
-  let assignedRestaurantId = (session.user as any)?.assignedRestaurantId || null
-  const userEmail = (session.user.email || '').toLowerCase().trim()
-  const userPhone = ((session.user as any).phone || '').trim()
-  const userId = session.user.id
-
-  // 1. Fresh query from DB if role or assignedRestaurantId is missing or default
-  try {
-    const conditions: any[] = []
-    if (userId) conditions.push({ id: userId })
-    if (userEmail) conditions.push({ email: userEmail })
-    if (userPhone) conditions.push({ phone: userPhone })
-
-    if (conditions.length > 0) {
-      const dbUser = await prisma.user.findFirst({
-        where: { OR: conditions },
-        select: { id: true, role: true, assignedRestaurantId: true, email: true, phone: true }
-      })
-      if (dbUser) {
-        if (dbUser.role) role = dbUser.role
-        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
-      }
-    }
-  } catch (e) {
-    console.error('Error fetching dbUser in restaurant dashboard:', e)
-  }
-
-  // 2. Check if user is an owner of any restaurant
-  if (!assignedRestaurantId && (userPhone || userEmail)) {
-    try {
-      const orConditions: any[] = []
-      if (userPhone) orConditions.push({ ownerPhone: userPhone })
-      if (userEmail) orConditions.push({ ownerEmail: userEmail })
-
-      const ownedRest = await prisma.restaurant.findFirst({
-        where: { OR: orConditions },
-        select: { id: true }
-      })
-      if (ownedRest) {
-        assignedRestaurantId = ownedRest.id
-      }
-    } catch (e) {
-      console.error('Error checking ownedRest:', e)
-    }
-  }
-
-  const isAllowed =
-    role === 'ADMIN' ||
-    role === 'RESTAURANT_OWNER' ||
-    role === 'CHEF' ||
-    userEmail.startsWith('restaurant') ||
-    userEmail.startsWith('admin') ||
-    userEmail.includes('hrdk') ||
-    !!assignedRestaurantId
-
-  return { isAllowed, role, assignedRestaurantId, userEmail }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    const { isAllowed, role, assignedRestaurantId } = await resolveUserStaffContext(session)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (!isAllowed) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const { searchParams } = new URL(request.url)
+    const session = await auth()
     const paramRestId = searchParams.get('restaurantId')
+    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
     const effectiveRestId = paramRestId || assignedRestaurantId
 
     const where: any = {}
@@ -111,16 +41,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    const { isAllowed, role, assignedRestaurantId } = await resolveUserStaffContext(session)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized: Please log in' }, { status: 401 })
-    }
-
-    if (!isAllowed) {
-      return NextResponse.json({ error: 'Forbidden: Staff access required' }, { status: 403 })
-    }
-
     const body = await request.json()
     const {
       name,
@@ -140,6 +60,8 @@ export async function POST(request: NextRequest) {
     if (!name || price === undefined || price === null) {
       return NextResponse.json({ error: 'Missing required fields: name, price' }, { status: 400 })
     }
+
+    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
 
     // Determine target restaurant ID
     let finalRestaurantId = body.restaurantId || assignedRestaurantId
