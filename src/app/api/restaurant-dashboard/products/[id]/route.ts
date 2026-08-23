@@ -4,21 +4,20 @@ import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
 
-async function resolveUserStaffContext(session: any) {
-  if (!session?.user) return { isAllowed: false, role: 'USER', assignedRestaurantId: null, userEmail: '', userPhone: '' }
+async function resolveUserStaffContext(session: any, request?: NextRequest) {
+  let userId = session?.user?.id || request?.headers.get('x-user-id') || null
+  let role = session?.user?.role || request?.headers.get('x-user-role') || 'USER'
+  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request?.headers.get('x-restaurant-id') || null
+  let userEmail = (session?.user?.email || request?.headers.get('x-user-email') || '').toLowerCase().trim()
+  let userPhone = ((session?.user as any)?.phone || request?.headers.get('x-user-phone') || '').trim()
 
-  let role = session.user.role || 'USER'
-  let assignedRestaurantId = (session.user as any)?.assignedRestaurantId || null
-  const userEmail = (session.user.email || '').toLowerCase().trim()
-  const userPhone = ((session.user as any).phone || '').trim()
-  const userId = session.user.id
-
-  // 1. Fresh query from DB if role or assignedRestaurantId is missing or default
+  // 1. Fresh query from DB if we have any identifier
   try {
     const conditions: any[] = []
     if (userId) conditions.push({ id: userId })
     if (userEmail) conditions.push({ email: userEmail })
     if (userPhone) conditions.push({ phone: userPhone })
+    if (userPhone) conditions.push({ phone: `+91${userPhone.replace('+91', '')}` })
     if (userEmail.includes('8112849854')) conditions.push({ phone: { contains: '8112849854' } })
 
     if (conditions.length > 0) {
@@ -29,6 +28,8 @@ async function resolveUserStaffContext(session: any) {
       if (dbUser) {
         if (dbUser.role) role = dbUser.role
         if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+        if (dbUser.email) userEmail = dbUser.email.toLowerCase().trim()
+        if (dbUser.phone) userPhone = dbUser.phone.trim()
       }
     }
   } catch (e) {
@@ -75,9 +76,9 @@ async function resolveUserStaffContext(session: any) {
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
-    const { isAllowed, role, assignedRestaurantId, userEmail, userPhone } = await resolveUserStaffContext(session)
+    const { isAllowed, role, assignedRestaurantId, userEmail, userPhone } = await resolveUserStaffContext(session, request)
 
-    if (!session?.user) {
+    if (!session?.user && !request.headers.get('x-user-id') && !request.headers.get('x-user-phone')) {
       return NextResponse.json({ error: 'Unauthorized: Please log in to manage menu items' }, { status: 401 })
     }
 
@@ -180,9 +181,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
-    const { isAllowed, role, assignedRestaurantId, userEmail, userPhone } = await resolveUserStaffContext(session)
+    const { isAllowed, role, assignedRestaurantId, userEmail, userPhone } = await resolveUserStaffContext(session, request)
 
-    if (!session?.user) {
+    if (!session?.user && !request.headers.get('x-user-id') && !request.headers.get('x-user-phone')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

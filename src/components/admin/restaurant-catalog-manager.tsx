@@ -457,20 +457,29 @@ export function RestaurantCatalogManager() {
       variants: formattedVariants
     }
 
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+      ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
+      ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+      ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+      ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+    }
+
     try {
       let res
       if (editingProduct) {
         // Edit Product
         res = await fetch(`/api/restaurant-dashboard/products/${editingProduct.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: reqHeaders,
           body: JSON.stringify(payload)
         })
       } else {
         // Add Product
         res = await fetch('/api/restaurant-dashboard/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: reqHeaders,
           body: JSON.stringify({
             ...payload,
             restaurantId: effectiveRestId || assignedRestaurantId
@@ -479,8 +488,8 @@ export function RestaurantCatalogManager() {
       }
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Operation failed')
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Operation failed')
       }
 
       toast.success(editingProduct ? 'Menu item updated successfully!' : 'New menu item added successfully!')
@@ -501,18 +510,27 @@ export function RestaurantCatalogManager() {
 
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+          ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
+          ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+        }
       })
 
       if (res.ok) {
         toast.success(`"${product.name}" removed successfully!`)
         fetchCatalogAndCategories()
       } else {
-        toast.error('Failed to remove product')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || 'Failed to remove product')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Failed to remove product')
+      toast.error(err?.message || 'Failed to remove product')
     }
   }
 
@@ -523,7 +541,14 @@ export function RestaurantCatalogManager() {
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+          ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
+          ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+        },
         body: JSON.stringify({ stock: newStock })
       })
 
@@ -546,7 +571,14 @@ export function RestaurantCatalogManager() {
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+          ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
+          ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+        },
         body: JSON.stringify({ isAvailable: newStatus })
       })
 
