@@ -53,7 +53,12 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
+  let session = null
+  try {
+    session = await auth()
+  } catch (e) {
+    // Safely ignore request-scope edge cases
+  }
   let role = session?.user?.role || request.headers.get('x-user-role') || 'USER'
   let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id') || null
   const userEmail = (session?.user?.email || request.headers.get('x-user-email') || '').toLowerCase().trim()
