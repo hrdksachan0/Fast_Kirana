@@ -294,10 +294,11 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: newStatus } : p))
         toast.success(`"${product.name}" is now ${newStatus ? 'visible' : 'hidden'} on storefront!`)
       } else {
-        toast.error('Failed to update product status')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || 'Failed to update product status')
       }
-    } catch (err) {
-      toast.error('Failed to update product status')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update product status')
     } finally {
       setUpdatingId(null)
     }
@@ -317,10 +318,11 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: newStock } : p))
         toast.success(`"${product.name}" marked as ${newStock > 0 ? 'In Stock' : 'Sold Out'}!`)
       } else {
-        toast.error('Failed to update stock status')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || 'Failed to update stock status')
       }
-    } catch (err) {
-      toast.error('Failed to update stock status')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update stock status')
     } finally {
       setUpdatingId(null)
     }
@@ -343,13 +345,14 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
       })
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: priceNum, mrp: mrpNum } : p))
-        toast.success(`Price updated for "${product.name}"!`)
+        toast.success(`Price for "${product.name}" updated to ₹${priceNum}!`)
         setEditingPriceId(null)
       } else {
-        toast.error('Failed to save prices')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || 'Failed to update price')
       }
-    } catch (err) {
-      toast.error('Failed to save prices')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update price')
     } finally {
       setUpdatingId(null)
     }
