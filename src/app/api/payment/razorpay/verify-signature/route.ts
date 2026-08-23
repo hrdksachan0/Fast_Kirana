@@ -37,18 +37,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid Razorpay payment signature' }, { status: 400 })
     }
 
-    // Update order payment status to PAID and paymentMethod to ONLINE
-    // Advance status to CONFIRMED only if it was PENDING, else preserve (PACKED, SHIPPED, etc.)
+    // Update order and any companion sub-orders (combinedId) payment status to PAID and paymentMethod to UPI/ONLINE
     const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
+    const updateFilter = order.combinedId
+      ? { combinedId: order.combinedId }
+      : { id: orderId }
+
+    await prisma.order.updateMany({
+      where: updateFilter,
       data: {
         paymentStatus: 'PAID',
         paymentMethod: 'UPI',
         status: nextStatus,
       },
     })
+
+    const updatedOrder = (await prisma.order.findUnique({
+      where: { id: orderId },
+    })) || order
 
     // NOW fire notifications — payment is confirmed!
     try {

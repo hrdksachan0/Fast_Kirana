@@ -80,19 +80,26 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, message: 'Order already paid' }, { status: 200 })
       }
 
-      // Update order status to PAID and CONFIRMED
+      // Update order and any companion sub-orders (combinedId) payment status to PAID and paymentMethod
       const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
-
       const mappedPaymentMethod = paymentMethod === 'CARD' ? 'CARD' : (paymentMethod === 'WALLET' ? 'WALLET' : 'UPI')
 
-      const updatedOrder = await prisma.order.update({
-        where: { id: order.id },
+      const updateFilter = order.combinedId
+        ? { combinedId: order.combinedId }
+        : { id: order.id }
+
+      await prisma.order.updateMany({
+        where: updateFilter,
         data: {
           paymentStatus: 'PAID',
-          paymentMethod: mappedPaymentMethod,
-          status: nextStatus,
+          paymentMethod: mappedPaymentMethod as any,
+          status: nextStatus as any,
         },
       })
+
+      const updatedOrder = (await prisma.order.findUnique({
+        where: { id: order.id },
+      })) || order
 
       console.log(`✅ Order ${updatedOrder.id} updated to PAID & CONFIRMED via Razorpay Webhook`)
 

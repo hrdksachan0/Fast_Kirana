@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
         stock: true,
         minStock: true,
         isAvailable: true,
+        restaurantId: true,
         category: {
           select: {
             slug: true,
@@ -132,9 +133,9 @@ export async function POST(request: NextRequest) {
 
     // Compute changes for each product
     for (const product of products) {
-      const isCafe = (product as any).category?.slug === 'cafe'
-      if (isCafe && (updateType === 'STOCK' || updateType === 'MIN_STOCK')) {
-        // Skip bulk stock and min stock alert changes for Cafe products to preserve 99999/0 status
+      const isRestaurant = !!(product as any).restaurantId
+      if (isRestaurant && (updateType === 'STOCK' || updateType === 'MIN_STOCK')) {
+        // Skip bulk stock changes for restaurant items as they are made to order
         continue
       }
       if (updateType === 'PRICE') {

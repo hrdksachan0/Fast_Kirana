@@ -50,11 +50,16 @@ export async function GET(
             (p.notes?.orderId === order.id || p.notes?.readableId === String(order.readableId || ''))
           )
           if (paidTxn) {
-            await prisma.order.update({
-              where: { id: order.id },
+            const updateFilter = (order as any).combinedId
+              ? { combinedId: (order as any).combinedId }
+              : { id: order.id }
+
+            await prisma.order.updateMany({
+              where: updateFilter,
               data: { paymentStatus: 'PAID', paymentMethod: 'UPI' }
             })
             order.paymentStatus = 'PAID'
+            order.paymentMethod = 'UPI'
           }
         }
       } catch (e) {
@@ -168,8 +173,12 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id },
+    const updateFilter = order.combinedId
+      ? { combinedId: order.combinedId }
+      : { id }
+
+    await prisma.order.updateMany({
+      where: updateFilter,
       data: {
         paymentMethod: 'UPI',
         paymentStatus: 'PAID',
@@ -178,6 +187,10 @@ export async function POST(
           : `Doorstep UPI Paid (Ref: ${referenceId || 'QR Scan'})`
       }
     })
+
+    const updatedOrder = (await prisma.order.findUnique({
+      where: { id }
+    })) || order
 
     return NextResponse.json({
       success: true,
