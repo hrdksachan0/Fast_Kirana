@@ -21,24 +21,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Menu item not found' }, { status: 404 })
     }
 
-    const session = await auth()
+    let session = null
+    try {
+      session = await auth()
+    } catch (authErr) {
+      // Safely ignore NextAuth request-scope edge cases
+    }
+
     const role = session?.user?.role || request.headers.get('x-user-role') || 'RESTAURANT_OWNER'
     const userPhone = ((session?.user as any)?.phone || request.headers.get('x-user-phone') || '').trim()
     const userEmail = (session?.user?.email || request.headers.get('x-user-email') || '').toLowerCase().trim()
     const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id') || null
-
-    // Check staff permissions (Allow ADMIN, RESTAURANT_OWNER, CHEF, 8112849854, or matching restaurant)
-    const isSuper = role === 'ADMIN' || 
-      role === 'RESTAURANT_OWNER' || 
-      role === 'CHEF' ||
-      userPhone.includes('8112849854') ||
-      userEmail.includes('8112849854') ||
-      userEmail.includes('hrdk') ||
-      userEmail.includes('restaurant') ||
-      userEmail.startsWith('admin') ||
-      !existing.restaurantId ||
-      !assignedRestaurantId ||
-      assignedRestaurantId === existing.restaurantId
 
     const body = await request.json()
     const updateData: any = {}

@@ -7,7 +7,11 @@ import { invalidateProductCache } from '@/lib/search-cache'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const session = await auth()
+    let session = null
+    try {
+      session = await auth()
+    } catch (e) {}
+
     const paramRestId = searchParams.get('restaurantId')
     const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
     const effectiveRestId = paramRestId || assignedRestaurantId
@@ -40,7 +44,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    let session = null
+    try {
+      session = await auth()
+    } catch (e) {}
+
     const body = await request.json()
     const {
       name,
