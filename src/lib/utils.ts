@@ -200,6 +200,8 @@ export function getProductLimit(p: any): number {
   return 10 // GROCERY / BYPASS
 }
 
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+
 export function isProductStoreClosed(
   p: any,
   status: { groceryMartOpen: boolean; cafeOpen?: boolean; restaurantOpen?: boolean },
@@ -212,18 +214,19 @@ export function isProductStoreClosed(
   const isCatOpen = categoryStatus && categorySlug ? categoryStatus[categorySlug] !== false : true
   if (!isCatOpen) return true
 
-  const type = getProductType(p)
-
-  // 2. Check specific restaurant / cafe isOpen status if product is linked to a restaurant object
-  const restObj = p.restaurant
-  if (restObj && typeof restObj === 'object' && restObj.isOpen !== undefined && restObj.isOpen !== null) {
-    if (restObj.isOpen === false || restObj.isOpen === 'false') return true
-  }
-
-  // Check explicit restaurantIsOpen property if attached
+  // 2. Check explicit restaurantIsOpen property if attached
   if (p.restaurantIsOpen === false || p.restaurantIsOpen === 'false') return true
 
-  // 3. For Restaurant and Cafe items: controlled by Manage Restaurant isOpen status & Category status
+  // 3. Check specific restaurant / cafe operating status if product is linked to a restaurant object
+  const restObj = p.restaurant
+  if (restObj && typeof restObj === 'object') {
+    const opStatus = checkStoreOperatingStatus(restObj)
+    if (!opStatus.isOpen) return true
+  }
+
+  const type = getProductType(p)
+
+  // 4. For Restaurant and Cafe items: controlled by Manage Restaurant isOpen status & Category status
   if (type === 'RESTAURANT' || type === 'CAFE') {
     if (status.restaurantOpen === false || status.cafeOpen === false) return true
     return false
@@ -233,7 +236,7 @@ export function isProductStoreClosed(
     return !status.groceryMartOpen
   }
 
-  // 4. Grocery Mart items: controlled by main Mart toggle
+  // 5. Grocery Mart items: controlled by main Mart toggle
   return !status.groceryMartOpen
 }
 export function getDeliveryPin(orderId: string): string {

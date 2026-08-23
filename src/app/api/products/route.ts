@@ -306,10 +306,16 @@ export async function GET(request: NextRequest) {
         }
       })
 
+      const searchWhere: Prisma.ProductWhereInput = {
+        ...(where.category ? { category: where.category } : {}),
+        ...(where.restaurantId !== undefined ? { restaurantId: where.restaurantId } : {}),
+        ...(where.restaurant ? { restaurant: where.restaurant } : {}),
+        ...(!isWorker && !includeUnavailable ? { isAvailable: true } : (where.isAvailable !== undefined ? { isAvailable: where.isAvailable } : {})),
+      }
+
       const queryOptions: any = {
         where: {
-          category: where.category,
-          isAvailable: where.isAvailable,
+          ...searchWhere,
           AND: wordClauses
         }
       }
@@ -324,10 +330,7 @@ export async function GET(request: NextRequest) {
       // If no direct database matches are found, fallback to fetching all products to perform typo-tolerant fuzzy search
       if (matchedProducts.length === 0) {
         const fallbackOptions: any = {
-          where: {
-            category: where.category,
-            isAvailable: where.isAvailable,
-          },
+          where: searchWhere,
           take: 500,
         }
         if (isWorker) {

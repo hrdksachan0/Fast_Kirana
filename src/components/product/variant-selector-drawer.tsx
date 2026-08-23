@@ -9,6 +9,7 @@ import { cn, formatPrice, isCafeProduct, getProductLimit, isProductStoreClosed }
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { Product } from '@/types'
+import { toast } from 'sonner'
 
 interface VariantRowProps {
   variant: any
@@ -59,11 +60,21 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpe
     restaurant: (product as any).restaurant,
   }), [product, variant, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable])
 
+  const isVariantSoldOut = (typeof resolvedStock === 'number' ? resolvedStock : 0) <= 0 || resolvedIsAvailable === false
+
   const handleAdd = () => {
+    if (isVariantSoldOut) {
+      toast.error(`Sorry, ${cartProduct.name} is currently out of stock!`)
+      return
+    }
     addItem(cartProduct)
   }
 
   const handleIncrement = () => {
+    if (isVariantSoldOut) {
+      toast.error(`Sorry, ${cartProduct.name} is currently out of stock!`)
+      return
+    }
     updateQuantity(resolvedId, cartProduct.name, quantity + 1)
   }
 
@@ -76,7 +87,9 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpe
   return (
     <div className={cn(
       "flex items-center justify-between p-3 sm:p-4 rounded-xl transition-all duration-300 border-2",
-      isSelected 
+      isVariantSoldOut
+        ? "border-border/40 bg-zinc-50/50 dark:bg-zinc-900/20 opacity-70"
+        : isSelected 
         ? "border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/10 shadow-xs" 
         : "border-border/60 bg-card/60 dark:bg-zinc-900/40 hover:border-primary/20"
     )}>
@@ -99,7 +112,7 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpe
             </>
           )}
         </div>
-        {resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
+        {!isVariantSoldOut && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10) && (
           <span className="text-[9px] font-bold text-red-500 dark:text-red-400 mt-1 block">
             Only {resolvedStock} left in stock!
           </span>
@@ -107,14 +120,18 @@ function VariantRow({ variant, product, cafeOpen, groceryMartOpen, restaurantOpe
       </div>
 
       {/* Cart Actions */}
-      <div className="relative h-8 w-16 sm:w-20 shrink-0">
-        {quantity === 0 ? (
+      <div className="relative h-8 w-20 sm:w-24 shrink-0">
+        {isVariantSoldOut ? (
+          <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 text-[10px] sm:text-[11px] font-bold rounded-lg border border-zinc-200/80 dark:border-zinc-700/60 flex items-center justify-center select-none cursor-not-allowed">
+            Sold Out
+          </div>
+        ) : quantity === 0 ? (
           <button
             onClick={handleAdd}
-            disabled={resolvedStock <= 0 || isStoreClosed}
+            disabled={isStoreClosed}
             className="w-full h-full border border-green-600 bg-white dark:bg-zinc-900 text-[#2e7d32] dark:text-emerald-400 text-[10px] sm:text-xs font-black rounded-lg hover:bg-[#2e7d32] hover:text-white transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {resolvedStock <= 0 ? 'Out' : isStoreClosed ? 'Closed' : '+ ADD'}
+            {isStoreClosed ? 'Closed' : '+ ADD'}
           </button>
         ) : (
           <div className="flex h-full w-full items-center justify-between rounded-lg bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-bold overflow-hidden shadow-xs">

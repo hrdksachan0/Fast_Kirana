@@ -90,11 +90,21 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
     })
   }, [isNotifySubscribed, product.id, product.name, subscribe])
 
+  const isSoldOut = (typeof resolvedStock === 'number' ? resolvedStock : 0) <= 0 || resolvedIsAvailable === false
+
   const handleAdd = () => {
+    if (isSoldOut) {
+      toast.error(`Sorry, ${product.name} is currently out of stock!`)
+      return
+    }
     addItem(cartProduct)
   }
 
   const handleExpressBuy = () => {
+    if (isSoldOut) {
+      toast.error(`Sorry, ${product.name} is currently out of stock!`)
+      return
+    }
     if (quantity === 0) {
       addItem(cartProduct)
     }
@@ -108,21 +118,21 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
         {quantity === 0 ? (
           <Button
             onClick={() => {
-              if (resolvedStock <= 0) {
+              if (isSoldOut) {
                 handleNotifyMe()
               } else {
                 handleAdd()
               }
             }}
-            disabled={resolvedStock > 0 && isStoreClosed}
+            disabled={!isSoldOut && isStoreClosed}
             className={cn(
               "w-full sm:w-auto h-12 px-8 font-extrabold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base cursor-pointer",
-              resolvedStock <= 0
+              isSoldOut
                 ? "bg-amber-500 hover:bg-amber-600 text-white"
                 : "bg-accent text-white hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
-            {resolvedStock <= 0 ? (
+            {isSoldOut ? (
               isNotifySubscribed ? (
                 <>
                   <Check className="h-5 w-5 stroke-[3]" />

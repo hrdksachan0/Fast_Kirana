@@ -51,6 +51,7 @@ interface RestaurantStorefrontProps {
 
 export function RestaurantStorefront({ restaurant, products }: RestaurantStorefrontProps) {
   const router = useRouter()
+  const operatingStatus = useMemo(() => checkStoreOperatingStatus(restaurant), [restaurant])
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [isVegOnly, setIsVegOnly] = useState(restaurant.isPureVeg || false)
@@ -689,7 +690,13 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                           {cat.products.map((product: any) => (
                             <div key={product.id} className="w-full">
-                              <ProductCard product={product} />
+                              <ProductCard
+                                product={{
+                                  ...product,
+                                  restaurant,
+                                  restaurantIsOpen: operatingStatus.isOpen,
+                                }}
+                              />
                             </div>
                           ))}
                         </div>
@@ -698,7 +705,13 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                         <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-3 pt-1.5 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
                           {cat.products.map((product: any) => (
                             <div key={product.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[200px] shrink-0 snap-start">
-                              <ProductCard product={product} />
+                              <ProductCard
+                                product={{
+                                  ...product,
+                                  restaurant,
+                                  restaurantIsOpen: operatingStatus.isOpen,
+                                }}
+                              />
                             </div>
                           ))}
                         </div>

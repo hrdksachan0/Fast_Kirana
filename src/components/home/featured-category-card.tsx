@@ -7,6 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
 import { isProductStoreClosed } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Category {
   id: string;
@@ -266,6 +267,12 @@ export default function FeaturedCategoryCard({
   };
 
   const handleAddClick = (p: any) => {
+    const resolvedStock = typeof p.stock === 'number' ? p.stock : (typeof p.stockLeft === 'number' ? p.stockLeft : 0);
+    const resolvedIsAvailable = p.isAvailable !== false;
+    if (resolvedStock <= 0 || !resolvedIsAvailable) {
+      toast.error(`Sorry, ${p.name} is currently out of stock!`);
+      return;
+    }
     addItem({
       id: p.id,
       name: p.name,
@@ -275,8 +282,8 @@ export default function FeaturedCategoryCard({
       price: p.price,
       discount: p.discount || 0,
       unit: p.unit || p.packSize || '1 unit',
-      stock: p.stock || p.stockLeft || 10,
-      isAvailable: p.isAvailable ?? true,
+      stock: resolvedStock,
+      isAvailable: resolvedIsAvailable,
       tags: p.tags || [],
       category: p.categoryObj || p.category || null,
       restaurantId: p.restaurantId || p.restaurant?.id,
@@ -352,14 +359,24 @@ export default function FeaturedCategoryCard({
                 categoryStatus
               );
 
+              const itemStock = typeof p.stock === 'number' ? p.stock : (typeof p.stockLeft === 'number' ? p.stockLeft : 0);
+              const isSoldOut = itemStock <= 0 || p.isAvailable === false;
+
               return (
-                <div key={p.id} className="pcard">
+                <div key={p.id} className={`pcard ${isSoldOut ? 'opacity-80' : ''}`}>
                   {/* Image Area */}
-                  <div className="pcard-img" style={{ background: p.bgColor || '#f8fafc' }}>
+                  <div className="pcard-img relative" style={{ background: p.bgColor || '#f8fafc' }}>
                     {p.imageUrl ? (
-                      <Image src={p.imageUrl} alt={p.name} width={300} height={300} className="pcard-image-el" />
+                      <Image src={p.imageUrl} alt={p.name} width={300} height={300} className={`pcard-image-el ${isSoldOut ? 'grayscale opacity-60' : ''}`} />
                     ) : (
                       <span className="pcard-emoji">{p.emoji || '🍽️'}</span>
+                    )}
+                    {isSoldOut && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                        <span className="bg-zinc-950/90 border border-rose-500/40 text-rose-400 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full">
+                          Out of Stock
+                        </span>
+                      </div>
                     )}
                     <button 
                       className={`pcard-heart ${isProductLiked ? 'liked' : ''}`}
@@ -380,22 +397,25 @@ export default function FeaturedCategoryCard({
                     <span className="pcard-size">{p.unit || p.packSize || '1 unit'}</span>
                     <div className="pcard-add-wrap">
                       <button 
-                        className={`pcard-add ${isStoreClosed ? 'closed' : ''}`}
+                        className={`pcard-add ${isSoldOut || isStoreClosed ? 'closed' : ''}`}
                         style={{
                           display: qty > 0 ? 'none' : 'flex',
-                          cursor: isStoreClosed ? 'not-allowed' : 'pointer'
+                          cursor: (isSoldOut || isStoreClosed) ? 'not-allowed' : 'pointer',
+                          backgroundColor: isSoldOut ? '#f4f4f5' : undefined,
+                          color: isSoldOut ? '#71717a' : undefined,
+                          borderColor: isSoldOut ? '#e4e4e7' : undefined,
                         }}
-                        disabled={isStoreClosed}
+                        disabled={isSoldOut || isStoreClosed}
                         onClick={() => {
-                          if (!isStoreClosed) handleAddClick(p);
+                          if (!isSoldOut && !isStoreClosed) handleAddClick(p);
                         }}
                       >
-                        {isStoreClosed ? 'Closed' : 'ADD'}
+                        {isSoldOut ? 'Out' : isStoreClosed ? 'Closed' : 'ADD'}
                       </button>
                       <div className={`pcard-qty ${qty > 0 ? 'on' : ''}`}>
                         <button onClick={() => handleRemoveClick(p)}>−</button>
                         <span>{qty}</span>
-                        <button disabled={isStoreClosed} onClick={() => { if (!isStoreClosed) handleAddClick(p); }}>+</button>
+                        <button disabled={isSoldOut || isStoreClosed} onClick={() => { if (!isSoldOut && !isStoreClosed) handleAddClick(p); }}>+</button>
                       </div>
                     </div>
                   </div>

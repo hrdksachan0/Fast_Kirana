@@ -261,6 +261,11 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     e.preventDefault()
     e.stopPropagation()
     
+    if (product.stock <= 0 || product.isAvailable === false) {
+      toast.error(`${product.name} is currently out of stock`)
+      return
+    }
+    
     const cartProduct = {
       id: product.id,
       name: product.name,
@@ -281,7 +286,6 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     
     addItem(cartProduct)
     saveSearchTerm(product.name)
-
   }
 
   return (
@@ -368,10 +372,17 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                           categoryStatus
                         )
 
+                        const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
+                        const totalVariantStock = hasVariants ? (product.variants as any[]).reduce((sum, v) => sum + (v.stock || 0), 0) : product.stock
+                        const isProductSoldOut = product.isAvailable === false || (hasVariants ? totalVariantStock <= 0 : product.stock <= 0)
+
                         return (
                           <div
                             key={product.id}
-                            className="flex items-center justify-between p-3 transition-colors hover:bg-muted/40"
+                            className={cn(
+                              "flex items-center justify-between p-3 transition-colors hover:bg-muted/40",
+                              isProductSoldOut && "opacity-80"
+                            )}
                           >
                             {/* Left: Thumbnail Image & Info Clickable */}
                             <button
@@ -388,21 +399,28 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   alt={product.name}
                                   categorySlug={product.category?.slug}
                                   width={150}
-                                  className="h-full w-full object-contain"
+                                  className={cn("h-full w-full object-contain", isProductSoldOut && "grayscale opacity-60")}
                                 />
+                                {isProductSoldOut && (
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <span className="text-[7px] font-black text-white bg-rose-600/90 px-1 py-0.5 rounded uppercase tracking-tighter">
+                                      Out
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h4 className="text-xs sm:text-sm font-extrabold text-text-primary truncate leading-snug">
                                   {product.name}
                                 </h4>
-                                 <span className="text-[10px] text-text-muted font-bold block">
-                                   {product.unit}
-                                 </span>
-                                 {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) && (
-                                   <span className="inline-block text-[9px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded mt-0.5 border border-rose-500/20">
-                                     🏬 {getOutletName(product)}
-                                   </span>
-                                 )}
+                                <span className="text-[10px] text-text-muted font-bold block">
+                                  {product.unit}
+                                </span>
+                                {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) && (
+                                  <span className="inline-block text-[9px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded mt-0.5 border border-rose-500/20">
+                                    🏬 {getOutletName(product)}
+                                  </span>
+                                )}
                                 
                                 {/* Pricing */}
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -424,8 +442,16 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                             </button>
 
                             {/* Right: Inline Quick ADD button */}
-                            <div className="relative h-8 w-18 sm:w-22 flex-shrink-0">
-                              {product.variants && Array.isArray(product.variants) && product.variants.length > 0 ? (
+                            <div className="relative h-8 w-20 sm:w-24 flex-shrink-0">
+                              {isProductSoldOut ? (
+                                <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 text-[10px] sm:text-[11px] font-bold rounded-xl border border-zinc-200/80 dark:border-zinc-700/60 flex items-center justify-center select-none cursor-not-allowed">
+                                  Sold Out
+                                </div>
+                              ) : isStoreClosed ? (
+                                <div className="w-full h-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] sm:text-[11px] font-bold rounded-xl border border-amber-500/20 flex items-center justify-center select-none cursor-not-allowed">
+                                  Closed
+                                </div>
+                              ) : hasVariants ? (
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault()
@@ -439,10 +465,9 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                               ) : quantity === 0 ? (
                                 <button
                                   onClick={(e) => handleAddProduct(e, product)}
-                                  disabled={product.stock <= 0 || isStoreClosed}
-                                  className="w-full h-full border border-primary bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[11px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                                  className="w-full h-full border border-primary bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[11px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-xs"
                                 >
-                                  {product.stock <= 0 ? 'Out' : isStoreClosed ? 'Closed' : '+ ADD'}
+                                  + ADD
                                 </button>
                               ) : (
                                 <div className="flex h-full w-full items-center justify-between rounded-xl bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-extrabold overflow-hidden shadow-xs">
@@ -458,7 +483,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   </span>
                                   <button
                                     onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-                                    disabled={quantity >= product.stock || quantity >= getProductLimit(product) || isStoreClosed}
+                                    disabled={quantity >= product.stock || quantity >= getProductLimit(product)}
                                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
                                     aria-label="Increase quantity"
                                   >

@@ -13,6 +13,7 @@ import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG }
 import { getProductLimit } from '@/lib/utils'
 import { getLast10Digits } from '@/lib/phone'
 import { checkIsStoreOpen } from '@/app/api/settings/route'
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
@@ -269,8 +270,14 @@ export async function POST(request: NextRequest) {
     
     for (const rId in restaurantGroups) {
       const r = restaurantGroups[rId].restaurant
-      if (!r || !r.isOpen || !r.isActive) {
-        return NextResponse.json({ error: `${r?.name || 'Restaurant'} is temporarily closed.` }, { status: 400 })
+      if (!r || !r.isActive) {
+        return NextResponse.json({ error: `${r?.name || 'Restaurant'} is temporarily unavailable.` }, { status: 400 })
+      }
+      const opStatus = checkStoreOperatingStatus(r)
+      if (!opStatus.isOpen) {
+        return NextResponse.json({
+          error: `${r.name || 'Restaurant'} is currently closed (${opStatus.formattedScheduleStr || 'Outside operating hours'}).`,
+        }, { status: 400 })
       }
     }
 

@@ -57,8 +57,16 @@ interface AdminBulkUpdateProps {
   onUpdateCompleted?: () => void
 }
 
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_NAMES } from '@/lib/constants'
+
 export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpdateProps) {
   // Bulk update parameters form
+  const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string; slug?: string }>>([
+    { id: OUTLET_BAL_UDYAN_ID, name: OUTLET_NAMES[OUTLET_BAL_UDYAN_ID] || 'Bal Udyan Restaurant' },
+    { id: OUTLET_AS_RESTAURANT_ID, name: OUTLET_NAMES[OUTLET_AS_RESTAURANT_ID] || 'A.S Restaurant' },
+    { id: OUTLET_WEDSON_ID, name: OUTLET_NAMES[OUTLET_WEDSON_ID] || 'Wedson Restaurant' },
+  ])
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('ALL')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL')
   const [updateType, setUpdateType] = useState<'PRICE' | 'STOCK' | 'AVAILABILITY' | 'MIN_STOCK'>('PRICE')
   const [mode, setMode] = useState<'FLAT_INCREASE' | 'FLAT_DECREASE' | 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'SET_VALUE'>('FLAT_INCREASE')
@@ -76,7 +84,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [undoingBatchId, setUndoingBatchId] = useState<string | null>(null)
 
-  // Load history on mount
+  // Load history & restaurants on mount
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true)
@@ -94,6 +102,14 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
 
   useEffect(() => {
     fetchHistory()
+    fetch('/api/restaurants?all=true')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRestaurants(data)
+        }
+      })
+      .catch(console.error)
   }, [])
 
   // Auto adjust mode if availability is selected
@@ -122,6 +138,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
       setPreviews([])
       
       const payload = {
+        restaurantId: selectedRestaurantId === 'ALL' ? undefined : selectedRestaurantId,
         categoryId: selectedCategoryId === 'ALL' ? undefined : selectedCategoryId,
         updateType,
         mode,
@@ -160,6 +177,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
     try {
       setApplying(true)
       const payload = {
+        restaurantId: selectedRestaurantId === 'ALL' ? undefined : selectedRestaurantId,
         categoryId: selectedCategoryId === 'ALL' ? undefined : selectedCategoryId,
         updateType,
         mode,
@@ -221,7 +239,14 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
 
   // Helper description of the update action
   const getActionPhrase = () => {
-    const scope = selectedCategoryId === 'ALL' ? 'all catalog products' : `products in the selected category`
+    let scope = 'all catalog products'
+    if (selectedRestaurantId !== 'ALL') {
+      const rest = restaurants.find(r => r.id === selectedRestaurantId)
+      scope = selectedRestaurantId === 'GROCERY' ? 'Grocery Mart products only' : `${rest?.name || 'Selected Restaurant'} dishes only`
+    } else if (selectedCategoryId !== 'ALL') {
+      const cat = categories.find(c => c.id === selectedCategoryId)
+      scope = `products in "${cat?.name || 'Selected'}" category`
+    }
     
     if (updateType === 'AVAILABILITY') {
       return `This will set availability to ${value === '1' ? 'Enabled' : 'Disabled'} for ${scope}.`
@@ -257,8 +282,26 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
 
           <form onSubmit={handlePreview} className="space-y-4">
             
-            {/* Category selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Scope / Outlet & Category selection */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Outlet / Restaurant scope */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Target Outlet / Section</label>
+                <select
+                  value={selectedRestaurantId}
+                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
+                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                >
+                  <option value="ALL">🌐 All Store & Outlets</option>
+                  <option value="GROCERY">🏪 FastKirana Grocery Mart Only</option>
+                  {restaurants.map((r) => (
+                    <option key={r.id} value={r.id}>🍽️ {r.name} (Dishes Only)</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category selection */}
               <div className="space-y-1">
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Target Category Range</label>
                 <select
@@ -266,7 +309,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
                   onChange={(e) => setSelectedCategoryId(e.target.value)}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="ALL">All Store Products</option>
+                  <option value="ALL">All Categories</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}

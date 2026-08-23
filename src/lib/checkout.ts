@@ -166,6 +166,8 @@ export interface CheckoutValidationContext {
   settings: SettingsMap
 }
 
+import { checkStoreOperatingStatus } from './restaurant-schedule'
+
 export async function validateCheckoutEligibility(
   ctx: CheckoutValidationContext
 ): Promise<CheckoutValidationResult> {
@@ -184,12 +186,19 @@ export async function validateCheckoutEligibility(
     return { valid: false, error: 'Grocery Mart is temporarily closed. Please remove grocery items to checkout.' }
   }
 
-  if (hasCafe && settings.cafe_open === 'false') {
-    return { valid: false, error: 'FastKirana Cafe is temporarily closed. Please remove cafe items to checkout.' }
-  }
-
-  if (hasRestaurant && settings.restaurant_open === 'false') {
-    return { valid: false, error: 'Wedson Restaurant is temporarily closed. Please remove restaurant items to checkout.' }
+  // ── Specific Restaurant / Cafe Outlet Schedule Checks ──────────────────
+  for (const item of items) {
+    const p = item.product as any
+    const rest = p?.restaurant
+    if (rest) {
+      const opStatus = checkStoreOperatingStatus(rest)
+      if (!opStatus.isOpen) {
+        return {
+          valid: false,
+          error: `${rest.name || 'Restaurant'} is currently closed (${opStatus.formattedScheduleStr || 'Outside operating hours'}). Please remove restaurant items to checkout.`
+        }
+      }
+    }
   }
 
   // ── Address validation for delivery ────────────────────────────────────

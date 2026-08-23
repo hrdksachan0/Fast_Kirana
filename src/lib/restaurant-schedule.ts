@@ -1,8 +1,8 @@
-import { getTotalMinutes } from '@/lib/date-helpers'
+import { formatTime12h } from '@/lib/date-helpers'
 
 /**
  * Utility helper to evaluate if a restaurant/cafe is currently open based on
- * manual isOpen toggle and configured openTime / closeTime operating hours.
+ * manual isOpen toggle and configured openTime / closeTime operating hours in IST.
  */
 
 export interface OperatingStatus {
@@ -14,7 +14,7 @@ export interface OperatingStatus {
 
 export function parseTimeStringToMinutes(timeStr: string): number | null {
   if (!timeStr || typeof timeStr !== 'string') return null
-  
+
   const clean = timeStr.trim().toUpperCase()
   const isPM = clean.includes('PM')
   const isAM = clean.includes('AM')
@@ -35,6 +35,24 @@ export function parseTimeStringToMinutes(timeStr: string): number | null {
   return hours * 60 + minutes
 }
 
+export function getISTMinutes(): number {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    })
+    const parts = formatter.formatToParts(new Date())
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10)
+    const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10)
+    return hour * 60 + minute
+  } catch (e) {
+    const now = new Date()
+    return now.getHours() * 60 + now.getMinutes()
+  }
+}
+
 export function checkStoreOperatingStatus(restaurant?: {
   isOpen?: boolean | null
   openTime?: string | null
@@ -45,17 +63,17 @@ export function checkStoreOperatingStatus(restaurant?: {
       isOpen: true,
       isClosedBySchedule: false,
       isClosedByOwner: false,
-      formattedScheduleStr: ''
+      formattedScheduleStr: '',
     }
   }
 
-  // 1. Manual owner toggle check
-  if (restaurant.isOpen === false) {
+  // 1. Manual owner toggle check (Manage Outlet toggle)
+  if (restaurant.isOpen === false || (restaurant.isOpen as any) === 'false') {
     return {
       isOpen: false,
       isClosedBySchedule: false,
       isClosedByOwner: true,
-      formattedScheduleStr: 'Closed by Store Owner'
+      formattedScheduleStr: 'Closed by Store Owner',
     }
   }
 
@@ -68,7 +86,20 @@ export function checkStoreOperatingStatus(restaurant?: {
       isOpen: true,
       isClosedBySchedule: false,
       isClosedByOwner: false,
-      formattedScheduleStr: 'Open 24/7'
+      formattedScheduleStr: 'Open 24/7',
+    }
+  }
+
+  // 24/7 check
+  if (
+    (openTimeStr === '00:00' || openTimeStr === '0:00') &&
+    (closeTimeStr === '23:59' || closeTimeStr === '24:00')
+  ) {
+    return {
+      isOpen: true,
+      isClosedBySchedule: false,
+      isClosedByOwner: false,
+      formattedScheduleStr: 'Open 24/7',
     }
   }
 
@@ -80,12 +111,11 @@ export function checkStoreOperatingStatus(restaurant?: {
       isOpen: true,
       isClosedBySchedule: false,
       isClosedByOwner: false,
-      formattedScheduleStr: `${openTimeStr} - ${closeTimeStr}`
+      formattedScheduleStr: `${formatTime12h(openTimeStr)} - ${formatTime12h(closeTimeStr)}`,
     }
   }
 
-  const now = new Date()
-  const currentMins = getTotalMinutes(now)
+  const currentMins = getISTMinutes()
 
   let isOpenBySchedule = false
 
@@ -97,10 +127,15 @@ export function checkStoreOperatingStatus(restaurant?: {
     isOpenBySchedule = currentMins >= openMins || currentMins < closeMins
   }
 
+  const formattedOpen = formatTime12h(openTimeStr)
+  const formattedClose = formatTime12h(closeTimeStr)
+
   return {
     isOpen: isOpenBySchedule,
     isClosedBySchedule: !isOpenBySchedule,
     isClosedByOwner: false,
-    formattedScheduleStr: `Opens at ${openTimeStr}`
+    formattedScheduleStr: isOpenBySchedule
+      ? `Open until ${formattedClose}`
+      : `Opens at ${formattedOpen}`,
   }
 }

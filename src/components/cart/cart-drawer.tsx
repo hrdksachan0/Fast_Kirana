@@ -549,36 +549,45 @@ export function CartDrawer() {
                             <span className="text-xs font-black text-primary">
                               {formatPrice(prod.price)}
                             </span>
-                            <button
-                              type="button"
-                              disabled={isRecClosed}
-                              onClick={() => {
-                                if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
-                                  setActiveVariantProduct(prod)
-                                } else {
-                                  addItem({
-                                    id: prod.id,
-                                    name: prod.name,
-                                    slug: prod.slug,
-                                    imageUrl: prod.imageUrl,
-                                    mrp: prod.mrp,
-                                    price: prod.price,
-                                    discount: prod.discount,
-                                    unit: prod.unit,
-                                    stock: prod.stock,
-                                    isAvailable: prod.isAvailable ?? true,
-                                    category: prod.category,
-                                    tags: prod.tags,
-                                    restaurantId: (prod as any).restaurantId || (prod as any).restaurant?.id,
-                                    restaurantName: (prod as any).restaurantName || (prod as any).restaurant?.name,
-                                    restaurant: (prod as any).restaurant,
-                                  })
-                                }
-                              }}
-                              className="rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white px-2.5 py-1 text-[10px] font-black transition-colors cursor-pointer disabled:bg-zinc-100 dark:disabled:bg-zinc-800 disabled:text-zinc-400"
-                            >
-                              {isRecClosed ? 'Closed' : (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) ? 'Options' : '+ Add'}
-                            </button>
+                            {(() => {
+                              const isRecSoldOut = (typeof prod.stock === 'number' ? prod.stock : 0) <= 0 || prod.isAvailable === false
+                              return (
+                                <button
+                                  type="button"
+                                  disabled={isRecSoldOut || isRecClosed}
+                                  onClick={() => {
+                                    if (isRecSoldOut) {
+                                      toast.error(`Sorry, ${prod.name} is currently out of stock!`)
+                                      return
+                                    }
+                                    if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
+                                      setActiveVariantProduct(prod)
+                                    } else {
+                                      addItem({
+                                        id: prod.id,
+                                        name: prod.name,
+                                        slug: prod.slug,
+                                        imageUrl: prod.imageUrl,
+                                        mrp: prod.mrp,
+                                        price: prod.price,
+                                        discount: prod.discount,
+                                        unit: prod.unit,
+                                        stock: prod.stock,
+                                        isAvailable: prod.isAvailable ?? true,
+                                        category: prod.category,
+                                        tags: prod.tags,
+                                        restaurantId: (prod as any).restaurantId || (prod as any).restaurant?.id,
+                                        restaurantName: (prod as any).restaurantName || (prod as any).restaurant?.name,
+                                        restaurant: (prod as any).restaurant,
+                                      })
+                                    }
+                                  }}
+                                  className="rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white px-2.5 py-1 text-[10px] font-black transition-colors cursor-pointer disabled:bg-zinc-100 dark:disabled:bg-zinc-800 disabled:text-zinc-400 disabled:cursor-not-allowed"
+                                >
+                                  {isRecSoldOut ? 'Sold Out' : isRecClosed ? 'Closed' : (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) ? 'Options' : '+ Add'}
+                                </button>
+                              )
+                            })()}
                           </div>
                         </div>
                       )

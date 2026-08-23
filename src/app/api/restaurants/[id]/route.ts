@@ -4,6 +4,8 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -41,7 +43,16 @@ export async function GET(
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
 
-    return NextResponse.json(restaurant)
+    const opStatus = checkStoreOperatingStatus(restaurant)
+    const mapped = {
+      ...restaurant,
+      isOpen: opStatus.isOpen,
+      isClosedBySchedule: opStatus.isClosedBySchedule,
+      isClosedByOwner: opStatus.isClosedByOwner,
+      formattedScheduleStr: opStatus.formattedScheduleStr,
+    }
+
+    return NextResponse.json(mapped)
   } catch (error: any) {
     console.error('Restaurant API GET Error:', error)
     return NextResponse.json({ error: 'Failed to fetch restaurant' }, { status: 500 })

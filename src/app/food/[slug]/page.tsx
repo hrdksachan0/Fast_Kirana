@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
-import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID } from '@/lib/constants'
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -27,6 +28,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
               { id: OUTLET_WEDSON_ID },
               { slug: { in: ['wedson', 'restaurant-kitchen'] } },
               { name: { contains: 'Wedson', mode: 'insensitive' as const } },
+            ]
+          : []),
+        ...(decodedSlug.includes('bal') || decodedSlug.includes('udyan')
+          ? [
+              { id: OUTLET_BAL_UDYAN_ID },
+              { slug: { in: ['bal-udyan', 'bal-udyan-restaurant', 'baludyan'] } },
+              { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } },
             ]
           : []),
       ],
@@ -68,6 +76,13 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
               { name: { contains: 'Wedson', mode: 'insensitive' as const } },
             ]
           : []),
+        ...(decodedSlug.includes('bal') || decodedSlug.includes('udyan')
+          ? [
+              { id: OUTLET_BAL_UDYAN_ID },
+              { slug: { in: ['bal-udyan', 'bal-udyan-restaurant', 'baludyan'] } },
+              { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } },
+            ]
+          : []),
       ],
       isActive: true,
     },
@@ -95,8 +110,17 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     ],
   })
 
+  const opStatus = checkStoreOperatingStatus(restaurant)
+  const mappedRestaurant = {
+    ...restaurant,
+    isOpen: opStatus.isOpen,
+    isClosedBySchedule: opStatus.isClosedBySchedule,
+    isClosedByOwner: opStatus.isClosedByOwner,
+    formattedScheduleStr: opStatus.formattedScheduleStr,
+  }
+
   // Serialize dates for client component
-  const serializedRestaurant = JSON.parse(JSON.stringify(restaurant))
+  const serializedRestaurant = JSON.parse(JSON.stringify(mappedRestaurant))
   const serializedProducts = JSON.parse(JSON.stringify(products))
 
   return (

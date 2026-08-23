@@ -132,7 +132,7 @@ export function AdminDashboard({
   const sessionUserRole = session?.user?.role || ''
 
   const [activeTab, setActiveTab] = useState<TabType>('orders')
-  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
+  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'people' | 'marketing'>('orders_hub')
 
   // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
   useEffect(() => {
@@ -666,7 +666,7 @@ export function AdminDashboard({
     }
   }
 
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'grocery' | 'cafe' | 'restaurant'>('all')
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
 
   // States for Categories
   const [categories, setCategories] = useState(initialCategories || [])
@@ -1839,14 +1839,8 @@ export function AdminDashboard({
         : []
 
       let resolvedCategoryId = newProduct.categoryId
-      if (newProduct.restaurantId || isSpecialProduct) {
-        const restCat = categories.find(c => 
-          c.slug === 'restaurant' || c.slug === 'cafe' || 
-          c.name.toLowerCase().includes('restaurant') || c.name.toLowerCase().includes('food')
-        )
-        if (restCat) {
-          resolvedCategoryId = restCat.id
-        }
+      if (newProduct.restaurantId) {
+        resolvedCategoryId = newProduct.categoryId || categories[0]?.id || ''
       }
 
       const res = await fetch('/api/products', {
@@ -2302,12 +2296,24 @@ export function AdminDashboard({
       !selectedCategoryFilter || p.categoryId === selectedCategoryFilter
       
     const isCafeItem = p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
-    const isRestaurantItem = p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
-    const matchesType = 
-      selectedTypeFilter === 'all' ||
-      (selectedTypeFilter === 'cafe' && isCafeItem) ||
-      (selectedTypeFilter === 'restaurant' && isRestaurantItem) ||
-      (selectedTypeFilter === 'grocery' && !isCafeItem && !isRestaurantItem)
+    const isRestaurantItem = !!p.restaurantId || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
+    
+    let matchesType = true
+    if (selectedTypeFilter === 'all') {
+      matchesType = true
+    } else if (selectedTypeFilter === 'grocery') {
+      matchesType = !isCafeItem && !isRestaurantItem
+    } else if (selectedTypeFilter === 'cafe') {
+      matchesType = isCafeItem
+    } else if (selectedTypeFilter === 'restaurant') {
+      matchesType = isRestaurantItem
+    } else {
+      // Direct restaurant ID or slug matching
+      matchesType = p.restaurantId === selectedTypeFilter || 
+                    (p as any).restaurant?.id === selectedTypeFilter || 
+                    (p as any).restaurant?.slug === selectedTypeFilter ||
+                    (selectedTypeFilter.toLowerCase().includes('bal') && ((p.restaurantId && p.restaurantId.toLowerCase().includes('bal')) || p.name?.toLowerCase().includes('bal udyan')))
+    }
 
     return matchesSearch && matchesCategory && matchesType
   })
@@ -2321,9 +2327,8 @@ export function AdminDashboard({
     { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
     { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
     { key: 'csv-import', label: 'CSV Import', icon: Download },
-    { key: 'restaurant-console', label: 'Restaurant Console', icon: Utensils },
-    { key: 'reports', label: 'Finance & Sales', icon: IndianRupee },
-    { key: 'restaurant-report', label: 'Restaurant Payouts', icon: Utensils },
+    { key: 'restaurant-report', label: 'Restaurant Payout', icon: Utensils },
+    { key: 'reports', label: 'Ledger Report', icon: FileText },
     { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
     { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
     { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
@@ -2788,7 +2793,22 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'inward' && (
-        <InwardTab />
+        <InwardTab
+          onInventoryUpdated={async () => {
+            try {
+              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+              if (res.ok) {
+                const data = await res.json()
+                if (data.products) {
+                  setProducts(data.products)
+                  setAllProducts(data.products)
+                }
+              }
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+        />
       )}
 
       {activeTab === 'bulk-update' && (
@@ -2840,7 +2860,23 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'csv-import' && (
-        <CsvImportTab categories={categories} />
+        <CsvImportTab
+          categories={categories}
+          onImportSuccess={async () => {
+            try {
+              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+              if (res.ok) {
+                const data = await res.json()
+                if (data.products) {
+                  setProducts(data.products)
+                  setAllProducts(data.products)
+                }
+              }
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+        />
       )}
 
       {activeTab === 'restaurant-console' && (

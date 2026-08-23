@@ -232,9 +232,10 @@ export default function CheckoutPage() {
           if (data.hasChanges && data.updates.length > 0) {
             data.updates.forEach((update: any) => {
               if (update.type === 'OUT_OF_STOCK') {
-                updateCartProduct(update.productId, { isAvailable: false, stock: 0 })
-                toast.error(`"${update.name}" is out of stock and was removed from your cart.`, {
+                removeItem(update.productId, update.name)
+                toast.error(`"${update.name}" is currently out of stock and was removed from your cart.`, {
                   id: `checkout-out-of-stock-${update.productId}`,
+                  duration: 6000,
                 })
               } else if (update.type === 'QUANTITY_CAP') {
                 updateQuantity(update.productId, update.name, update.newVal)
@@ -1040,6 +1041,64 @@ export default function CheckoutPage() {
     return !isC && !isR
   })
   const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen) || (hasRestaurant && !restaurantOpen)
+
+  const hasInventoryIssues = items.some(
+    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
+  )
+
+  if (hasInventoryIssues && !isSettingsLoading) {
+    const handleRemoveOutOfStock = () => {
+      let count = 0
+      items.forEach(item => {
+        if (item.product.stock <= 0 || item.product.isAvailable === false) {
+          removeItem(item.product.id, item.product.name)
+          count++
+        } else if (item.quantity > item.product.stock) {
+          updateQuantity(item.product.id, item.product.name, item.product.stock)
+          count++
+        }
+      })
+      if (count > 0) {
+        toast.success(`Adjusted out-of-stock items in your cart!`)
+      }
+    }
+
+    return (
+      <div className="container mx-auto px-4 py-16 max-w-md text-center space-y-6 animate-fade-in">
+        <div className="h-20 w-20 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-rose-200/60 dark:border-rose-900/40">
+          ⚠️
+        </div>
+        <h1 className="text-2xl font-black text-text-primary">Item(s) Out of Stock</h1>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          Some items in your cart just went out of stock or have limited quantity. Please adjust them to proceed with your order.
+        </p>
+        <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-muted/20 rounded-xl border border-border/50">
+          {items.filter(item => item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > item.product.stock).map(item => (
+            <div key={item.product.id} className="flex items-center justify-between text-xs py-1.5 px-2 font-bold text-left">
+              <span className="truncate flex-1">{item.product.name}</span>
+              <span className="text-rose-500 font-black text-[10px] uppercase ml-2">
+                {item.product.stock <= 0 || item.product.isAvailable === false ? 'Out of Stock' : `Only ${item.product.stock} available`}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="pt-2 flex flex-col gap-3">
+          <button
+            onClick={handleRemoveOutOfStock}
+            className="w-full px-6 py-3 bg-rose-600 text-white font-black text-xs rounded-full hover:bg-rose-700 transition-all shadow-md active:scale-98 cursor-pointer"
+          >
+            Remove Out-of-Stock Items & Proceed
+          </button>
+          <Link
+            href="/cart"
+            className="w-full px-6 py-3 bg-muted text-text-primary font-black text-xs rounded-full hover:bg-muted/80 transition-all text-center"
+          >
+            Go Back to Cart
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (isBelowMinOrder && !isSettingsLoading) {
     return (

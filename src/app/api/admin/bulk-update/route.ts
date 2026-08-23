@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       categoryId,
+      restaurantId,
       productIds,
       updateType,
       mode,
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       preview = false,
     } = body as {
       categoryId?: string
+      restaurantId?: string
       productIds?: string[]
       updateType: 'PRICE' | 'STOCK' | 'AVAILABILITY' | 'MIN_STOCK'
       mode: 'FLAT_INCREASE' | 'FLAT_DECREASE' | 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'SET_VALUE'
@@ -92,10 +94,29 @@ export async function POST(request: NextRequest) {
     const whereClause: any = {}
     if (productIds && productIds.length > 0) {
       whereClause.id = { in: productIds }
-    } else if (categoryId) {
-      whereClause.categoryId = categoryId
+    } else {
+      if (restaurantId && restaurantId !== 'ALL') {
+        if (restaurantId === 'GROCERY') {
+          whereClause.restaurantId = null
+        } else {
+          whereClause.OR = [
+            { restaurantId: restaurantId },
+            { restaurant: { id: restaurantId } },
+            { restaurant: { slug: restaurantId } },
+            ...(restaurantId === 'cmsbhxb6a000304if8kf1cwji' || restaurantId.includes('bal')
+              ? [
+                  { restaurantId: 'cmsbhxb6a000304if8kf1cwji' },
+                  { restaurantId: 'bal-udyan-restaurant' },
+                  { restaurant: { slug: 'bal-udyan-restaurant' } },
+                ]
+              : []),
+          ]
+        }
+      }
+      if (categoryId && categoryId !== 'ALL') {
+        whereClause.categoryId = categoryId
+      }
     }
-    // If neither is provided, we target ALL products
 
     const products = await prisma.product.findMany({
       where: whereClause,

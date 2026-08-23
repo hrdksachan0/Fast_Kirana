@@ -6,6 +6,8 @@ import { requireAdmin } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront } from '@/lib/revalidate'
 
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
   if (limited) return limited
@@ -64,7 +66,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(restaurants)
+    const mapped = restaurants.map(r => {
+      const opStatus = checkStoreOperatingStatus(r)
+      return {
+        ...r,
+        isOpen: opStatus.isOpen,
+        isClosedBySchedule: opStatus.isClosedBySchedule,
+        isClosedByOwner: opStatus.isClosedByOwner,
+        formattedScheduleStr: opStatus.formattedScheduleStr,
+      }
+    })
+
+    return NextResponse.json(mapped)
   } catch (error: any) {
     console.error('Restaurants API GET Error:', error)
     return NextResponse.json({ error: 'Failed to fetch restaurants' }, { status: 500 })

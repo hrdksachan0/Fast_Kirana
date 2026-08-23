@@ -203,10 +203,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     e.preventDefault()
     
     if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !storeUpiVpa.trim() || !taxRate.trim() || !minOrderValue.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
-        !groceryPickupAddress.trim() || !cafePickupAddress.trim() || !restaurantPickupAddress.trim() ||
-        !restaurantCommission.trim() || !restaurantProfitShare.trim() || !restaurantDefaultMargin.trim() ||
-        !cafeCommission.trim() || !cafeProfitShare.trim() || !cafeDefaultMargin.trim() ||
-        !groceryFreeDeliveryThreshold.trim() || !cafeFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
+        !groceryPickupAddress.trim() ||
+        !groceryFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
         !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
         !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
         !heroGreetingAfternoon.trim() || !heroSubtitleAfternoonMartClosed.trim() || !heroSubtitleAfternoonCafeClosed.trim() || !heroSubtitleAfternoonBothOpen.trim() ||
@@ -232,17 +230,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           happy_families: happyFamilies.trim(),
           trusted_text: trustedText.trim(),
           grocery_mart_open: groceryMartOpen ? 'true' : 'false',
-          cafe_open: cafeOpen ? 'true' : 'false',
-          restaurant_open: restaurantOpen ? 'true' : 'false',
           grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
           grocery_open_time: groceryOpenTime,
           grocery_close_time: groceryCloseTime,
-          cafe_auto_timing: cafeAutoTiming ? 'true' : 'false',
-          cafe_open_time: cafeOpenTime,
-          cafe_close_time: cafeCloseTime,
-          restaurant_auto_timing: restaurantAutoTiming ? 'true' : 'false',
-          restaurant_open_time: restaurantOpenTime,
-          restaurant_close_time: restaurantCloseTime,
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           store_upi_vpa: storeUpiVpa.trim(),
@@ -258,22 +248,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           misc_fee: miscFee.trim(),
           misc_fee_label: miscFeeLabel.trim(),
           grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
-          cafe_free_delivery_threshold: cafeFreeDeliveryThreshold.trim(),
           combined_free_delivery_threshold: combinedFreeDeliveryThreshold.trim(),
           delivery_fee: deliveryFee.trim(),
-          restaurant_commission: restaurantCommission.trim(),
-          restaurant_profit_share: restaurantProfitShare.trim(),
-          restaurant_default_margin: restaurantDefaultMargin.trim(),
-          cafe_commission: cafeCommission.trim(),
-          cafe_profit_share: cafeProfitShare.trim(),
-          cafe_default_margin: cafeDefaultMargin.trim(),
           contact_phone: contactPhone.trim(),
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
           contact_address: contactAddress.trim(),
           grocery_pickup_address: groceryPickupAddress.trim(),
-          cafe_pickup_address: cafePickupAddress.trim(),
-          restaurant_pickup_address: restaurantPickupAddress.trim(),
           whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
           whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
           hero_greeting_closed: heroGreetingClosed.trim(),
@@ -640,7 +621,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
                   {/* Grocery Pickup Address */}
                   <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Self-Pickup Address *</label>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Warehouse / Store Self-Pickup Address *</label>
                     <input
                       type="text"
                       required
@@ -649,32 +630,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       onChange={(e) => setGroceryPickupAddress(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                     />
-                  </div>
-
-                  {/* Cafe Pickup Address */}
-                  <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Self-Pickup Address *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206"
-                      value={cafePickupAddress}
-                      onChange={(e) => setCafePickupAddress(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-
-                  {/* Restaurant Pickup Address */}
-                  <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Self-Pickup Address *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. A.S Restaurant, Ghatampur, Kanpur Nagar, Kanpur, 209206"
-                      value={restaurantPickupAddress}
-                      onChange={(e) => setRestaurantPickupAddress(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                    />
+                    <p className="text-[10px] text-text-muted">Note: Individual restaurant pickup addresses are configured per outlet in the <strong>Manage Outlets</strong> tab.</p>
                   </div>
 
                   {/* WhatsApp Order Notifications Settings */}
@@ -864,123 +820,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       />
                     </div>
 
-                    {/* Cafe Free Delivery Threshold */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Order Free Delivery Threshold (₹) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        placeholder="e.g. 199"
-                        value={cafeFreeDeliveryThreshold}
-                        onChange={(e) => setCafeFreeDeliveryThreshold(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
                   </div>
                 </div>
-
-                 {/* Partner Restaurant Commission Settings */}
-                 <div className="border-t border-border/40 pt-4 mt-2">
-                   <h4 className="text-xs font-black text-text-primary mb-3">🍳 Partner Restaurant Payout & Commission Settings</h4>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     {/* Admin Commission Rate */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 10"
-                         value={restaurantCommission}
-                         onChange={(e) => setRestaurantCommission(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-
-                     {/* Restaurant Profit Share Rate */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Restaurant Net Profit Share (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 15"
-                         value={restaurantProfitShare}
-                         onChange={(e) => setRestaurantProfitShare(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-
-                     {/* Restaurant Default Margin */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Default Profit Margin (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 30"
-                         value={restaurantDefaultMargin}
-                         onChange={(e) => setRestaurantDefaultMargin(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-                   </div>
-                 </div>
-
-                 {/* Partner Cafe Commission Settings */}
-                 <div className="border-t border-border/40 pt-4 mt-2">
-                   <h4 className="text-xs font-black text-text-primary mb-3">☕ Partner Cafe Payout & Commission Settings</h4>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     {/* Admin Commission Rate */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Admin Commission Rate (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 10"
-                         value={cafeCommission}
-                         onChange={(e) => setCafeCommission(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-
-                     {/* Cafe Profit Share Rate */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cafe Net Profit Share (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 15"
-                         value={cafeProfitShare}
-                         onChange={(e) => setCafeProfitShare(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-
-                     {/* Cafe Default Margin */}
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Default Profit Margin (%) *</label>
-                       <input
-                         type="number"
-                         required
-                         min="0"
-                         max="100"
-                         placeholder="e.g. 30"
-                         value={cafeDefaultMargin}
-                         onChange={(e) => setCafeDefaultMargin(e.target.value)}
-                         className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                       />
-                     </div>
-                   </div>
-                 </div>
 
                 {/* Cloudinary Configuration */}
                 <div className="border-t border-border/40 pt-4 mt-2">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +11,23 @@ export async function GET(request: NextRequest) {
     }
 
     const role = session.user.role
-    const isOwner = role === 'RESTAURANT_OWNER' || role === 'ADMIN'
-    if (!isOwner) {
+    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    const userEmail = session.user.email || ''
+
+    const isAllowed =
+      role === 'ADMIN' ||
+      role === 'RESTAURANT_OWNER' ||
+      role === 'CHEF' ||
+      userEmail.toLowerCase().startsWith('restaurant') ||
+      !!assignedRestaurantId
+
+    if (!isAllowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
     const paramRestId = searchParams.get('restaurantId')
-    const effectiveRestId = paramRestId || (session.user as any).assignedRestaurantId
+    const effectiveRestId = paramRestId || assignedRestaurantId
 
     if (!effectiveRestId && role !== 'ADMIN') {
       return NextResponse.json({ error: 'No restaurant assigned' }, { status: 400 })
@@ -34,16 +44,18 @@ export async function GET(request: NextRequest) {
         include: { category: true, images: true },
         orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
       }),
-      effectiveRestId ? prisma.restaurant.findUnique({
-        where: { id: effectiveRestId },
-        select: { id: true, name: true, slug: true, menuSections: true, cuisineTags: true }
-      }) : null
+      effectiveRestId
+        ? prisma.restaurant.findUnique({
+            where: { id: effectiveRestId },
+            select: { id: true, name: true, slug: true, menuSections: true, cuisineTags: true },
+          })
+        : null,
     ])
 
     return NextResponse.json({ products, restaurant })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Restaurant dashboard products GET error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -55,20 +67,37 @@ export async function POST(request: NextRequest) {
     }
 
     const role = session.user.role
-    const isOwner = role === 'RESTAURANT_OWNER' || role === 'ADMIN'
-    if (!isOwner) {
+    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    const userEmail = session.user.email || ''
+
+    const isAllowed =
+      role === 'ADMIN' ||
+      role === 'RESTAURANT_OWNER' ||
+      role === 'CHEF' ||
+      userEmail.toLowerCase().startsWith('restaurant') ||
+      !!assignedRestaurantId
+
+    if (!isAllowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const restaurantId = (session.user as any).assignedRestaurantId
-    if (!restaurantId && role !== 'ADMIN') {
-      return NextResponse.json({ error: 'No restaurant assigned' }, { status: 400 })
-    }
-
     const body = await request.json()
-    const { name, description, imageUrl, price, mrp, unit, stock, tags, categoryId, variants } = body
+    const {
+      name,
+      description,
+      imageUrl,
+      price,
+      mrp,
+      unit,
+      stock,
+      tags,
+      categoryId,
+      variants,
+      availableStartTime,
+      availableEndTime,
+    } = body
 
-    const effectiveRestId = body.restaurantId || (session.user as any).assignedRestaurantId
+    const effectiveRestId = body.restaurantId || assignedRestaurantId
     if (!effectiveRestId && role !== 'ADMIN') {
       return NextResponse.json({ error: 'No restaurant assigned' }, { status: 400 })
     }
@@ -78,41 +107,61 @@ export async function POST(request: NextRequest) {
     }
 
     let targetCategoryId = categoryId
-    if (!targetCategoryId) {
+    if (!targetCategoryId || targetCategoryId === '') {
       const anyCat = await prisma.category.findFirst()
       targetCategoryId = anyCat?.id
     }
 
-    const finalUnit = (unit && typeof unit === 'string' && unit.trim()) ? unit.trim() : '1 Serves'
+    if (!targetCategoryId) {
+      return NextResponse.json({ error: 'No product category found. Please create a category first.' }, { status: 400 })
+    }
 
-    // Generate slug from name
-    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const finalUnit = (unit && typeof unit === 'string' && unit.trim()) ? unit.trim() : '1 Serving'
+    const parsedPrice = parseFloat(price) || 0
+    const parsedMrp = mrp ? (parseFloat(mrp) || parsedPrice) : parsedPrice
+    const parsedStock = stock !== undefined ? (parseInt(stock) || 999) : 999
+
+    const discountVal =
+      parsedMrp > parsedPrice ? Math.max(0, Math.round(((parsedMrp - parsedPrice) / parsedMrp) * 100)) : 0
+
+    // Generate unique slug from name
+    const baseSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || `item-${Date.now()}`
     const existingCount = await prisma.product.count({ where: { slug: { startsWith: baseSlug } } })
-    const slug = existingCount > 0 ? `${baseSlug}-${existingCount + 1}` : baseSlug
+    const slug = existingCount > 0 ? `${baseSlug}-${existingCount + 1}-${Date.now().toString().slice(-4)}` : baseSlug
 
     const product = await prisma.product.create({
       data: {
-        name,
+        name: name.trim(),
         slug,
         description: description || null,
         imageUrl: imageUrl || null,
-        price: parseFloat(price),
-        mrp: parseFloat(mrp || price),
-        discount: mrp && parseFloat(mrp) > parseFloat(price) ? Math.round(((parseFloat(mrp) - parseFloat(price)) / parseFloat(mrp)) * 100) : 0,
+        price: parsedPrice,
+        mrp: parsedMrp,
+        discount: discountVal,
         unit: finalUnit,
-        stock: parseInt(stock || '999'),
-        tags: tags || [],
+        stock: parsedStock,
+        tags: Array.isArray(tags) ? tags : [],
         categoryId: targetCategoryId,
         restaurantId: effectiveRestId || null,
         variants: variants || null,
+        availableStartTime: availableStartTime || null,
+        availableEndTime: availableEndTime || null,
         isAvailable: true,
       },
       include: { category: true },
     })
 
-    return NextResponse.json({ product }, { status: 201 })
-  } catch (error) {
+    try {
+      revalidateStorefront(product.category?.slug)
+    } catch (e) {}
+
+    return NextResponse.json({ product, success: true }, { status: 201 })
+  } catch (error: any) {
     console.error('Restaurant dashboard products POST error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to create menu item' }, { status: 500 })
   }
 }

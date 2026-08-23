@@ -68,7 +68,11 @@ interface StockHistoryLog {
   }
 }
 
-export function AdminInventoryCenter() {
+interface AdminInventoryCenterProps {
+  onInventoryUpdated?: () => void
+}
+
+export function AdminInventoryCenter({ onInventoryUpdated }: AdminInventoryCenterProps = {}) {
   const [activeTab, setActiveTab] = useState<'inward' | 'pos' | 'import' | 'history'>('inward')
   
   // Shared state: products catalog (loaded on mount)
@@ -83,6 +87,7 @@ export function AdminInventoryCenter() {
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
+      onInventoryUpdated?.()
       
       const catRes = await fetch(`/api/categories?t=${Date.now()}`)
       if (catRes.ok) {

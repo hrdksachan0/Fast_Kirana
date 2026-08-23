@@ -12,6 +12,7 @@ export const TAX_RATE = 0.00 // 0% GST
 export const MIN_CART_VALUE = 20  // Minimum cart value for checkout
 export const OUTLET_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
 export const OUTLET_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
+export const OUTLET_BAL_UDYAN_ID = 'cmsbhxb6a000304if8kf1cwji'
 
 export const CATEGORIES = [
   { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', emoji: '🥬' },
@@ -314,18 +315,10 @@ export const HUB_CONFIG = [
   {
     key: 'food',
     label: 'Food & Restaurants',
-    description: 'Restaurant kitchen live console & outlet operations',
+    description: 'Restaurant payouts, settlements & financial ledger reports',
     color: 'from-orange-500/10 to-red-500/10',
     activeBorder: 'border-orange-500/60 ring-2 ring-orange-500/20',
-    tabs: ['restaurant-console'] as const
-  },
-  {
-    key: 'insights',
-    label: 'Business Intelligence',
-    description: 'Finance reports, restaurant payouts, analytics dashboards & AI forecasting',
-    color: 'from-blue-500/10 to-cyan-500/10',
-    activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
-    tabs: ['reports', 'restaurant-report', 'analytics', 'forecast'] as const
+    tabs: ['restaurant-report', 'reports'] as const
   },
   {
     key: 'people',
@@ -348,8 +341,12 @@ export const HUB_CONFIG = [
 export const OUTLET_NAMES: Record<string, string> = {
   [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
   [OUTLET_AS_RESTAURANT_ID]: 'A.S Restaurant',
+  [OUTLET_BAL_UDYAN_ID]: 'Bal Udyan Restaurant',
   wedson: 'Wedson Restaurant',
   'as-restaurant': 'A.S Restaurant',
+  'bal-udyan-restaurant': 'Bal Udyan Restaurant',
+  'bal-udyan': 'Bal Udyan Restaurant',
+  baludyan: 'Bal Udyan Restaurant',
   cafe: 'Cafe',
   'restaurant-kitchen': 'Wedson Restaurant',
 }
@@ -373,6 +370,21 @@ export function getOutletName(product: ProductData): string {
   const lowerRName = (product.restaurantName || product.restaurant?.name || '').toLowerCase()
   const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
   const pName = (product.name || '').toLowerCase()
+
+  // 1. Explicit Bal Udyan Restaurant checks (High Priority)
+  if (
+    rId === OUTLET_BAL_UDYAN_ID ||
+    rId === 'bal-udyan-restaurant' ||
+    rId === 'bal-udyan' ||
+    rId === 'baludyan' ||
+    rSlug.includes('bal') ||
+    lowerRName.includes('bal udyan') ||
+    lowerRName.includes('baludyan') ||
+    tags.some((t: string) => t.includes('bal udyan') || t.includes('baludyan') || t === 'bal-udyan-restaurant') ||
+    pName.includes('bal udyan')
+  ) {
+    return 'Bal Udyan Restaurant'
+  }
 
   // 1. Explicit A.S. Restaurant / Cafe checks (Highest Priority)
   if (

@@ -18,11 +18,13 @@ import {
   Sparkles,
   Layers,
   FileText,
-  Upload
+  Upload,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, cn } from '@/lib/utils'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants'
 
 interface Product {
@@ -294,7 +296,8 @@ export function RestaurantCatalogManager() {
     setDescription(product.description || '')
     setImageUrl(product.imageUrl || '')
     setStock(product.stock.toString())
-    setIsVeg(!product.tags.includes('non-veg'))
+    const isNonVeg = product.tags.some(t => t.toLowerCase() === 'non-veg' || t.toLowerCase() === 'nonveg')
+    setIsVeg(!isNonVeg)
     setAvailableStartTime(product.availableStartTime || '')
     setAvailableEndTime(product.availableEndTime || '')
 
@@ -463,7 +466,7 @@ export function RestaurantCatalogManager() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...payload,
-            restaurantId: assignedRestaurantId
+            restaurantId: effectiveRestId || assignedRestaurantId
           })
         })
       }
@@ -506,7 +509,30 @@ export function RestaurantCatalogManager() {
     }
   }
 
-  // Toggle Availability
+  // Toggle Kitchen Stock (Ready vs Sold Out)
+  const handleToggleStock = async (product: Product) => {
+    const isCurrentlyOutOfStock = product.stock <= 0
+    const newStock = isCurrentlyOutOfStock ? 999 : 0
+    try {
+      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: newStock })
+      })
+
+      if (res.ok) {
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: newStock } : p))
+        toast.success(`"${product.name}" is now ${newStock > 0 ? '🟢 Kitchen Ready (In Stock)' : '🔴 Sold Out (Out of Stock)'}!`)
+      } else {
+        toast.error('Failed to update kitchen stock')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to update kitchen stock')
+    }
+  }
+
+  // Toggle Storefront Visibility (Show vs Hide)
   const handleToggleAvailability = async (product: Product) => {
     const newStatus = !product.isAvailable
     try {
@@ -518,13 +544,13 @@ export function RestaurantCatalogManager() {
 
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: newStatus } : p))
-        toast.success(`"${product.name}" is now ${newStatus ? 'active' : 'hidden'}!`)
+        toast.success(`"${product.name}" is now ${newStatus ? '👁️ Visible on storefront' : '🙈 Hidden from storefront'}!`)
       } else {
-        toast.error('Failed to toggle status')
+        toast.error('Failed to toggle visibility')
       }
     } catch (err) {
       console.error(err)
-      toast.error('Failed to toggle status')
+      toast.error('Failed to toggle visibility')
     }
   }
 
@@ -700,14 +726,20 @@ export function RestaurantCatalogManager() {
                     </span>
                   </div>
 
-                  {/* Status Banner if hidden */}
-                  {!product.isAvailable && (
-                    <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 text-center">
-                      <span className="bg-rose-600 text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-0.5 sm:py-1 rounded-full">
-                        Hidden from Shop
+                  {/* Status Banner if hidden or sold out */}
+                  {!product.isAvailable ? (
+                    <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 text-center">
+                      <span className="bg-zinc-900 text-zinc-200 border border-zinc-700 font-black text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-0.5 sm:py-1 rounded-full shadow-lg">
+                        🙈 Hidden from Shop
                       </span>
                     </div>
-                  )}
+                  ) : product.stock <= 0 ? (
+                    <div className="absolute inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center p-2 text-center">
+                      <span className="bg-rose-600 text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-0.5 sm:py-1 rounded-full shadow-lg">
+                        🔴 Sold Out
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Body details */}
@@ -723,7 +755,7 @@ export function RestaurantCatalogManager() {
                     {product.description || 'No description provided.'}
                   </p>
 
-                  <div className="flex items-center gap-1 text-[9px] sm:text-xs text-text-secondary font-bold pt-0.5">
+                  <div className="flex items-center gap-1 text-[9px] sm:text-xs text-text-secondary font-bold pt-0.5 flex-wrap">
                     {(() => {
                       const matchSec = DEFAULT_RESTAURANT_MENU_SECTIONS.find(s => 
                         product.tags?.includes(s.tag) || (s.matchTags && product.tags?.some(t => s.matchTags.includes(t)))
@@ -742,9 +774,13 @@ export function RestaurantCatalogManager() {
                       </span>
                     )}
                     
-                    {product.stock <= 0 && (
+                    {product.stock <= 0 ? (
                       <span className="text-[8px] sm:text-[10px] font-black uppercase text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 shrink-0">
-                        Out of Stock
+                        Sold Out
+                      </span>
+                    ) : (
+                      <span className="text-[8px] sm:text-[10px] font-black uppercase text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
+                        In Stock
                       </span>
                     )}
                   </div>
@@ -770,21 +806,40 @@ export function RestaurantCatalogManager() {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                  
-                  {/* Toggle Visibility */}
+                  {/* 1. Kitchen Stock Toggle (Ready vs Sold Out) */}
+                  <button
+                    onClick={() => handleToggleStock(product)}
+                    title={product.stock > 0 ? 'Kitchen Ready (Click to mark Sold Out)' : 'Sold Out (Click to mark Kitchen Ready)'}
+                    className={cn(
+                      "px-2 h-7 sm:h-9 rounded-lg sm:rounded-xl border flex items-center gap-1 font-extrabold text-[10px] sm:text-xs cursor-pointer transition-all active:scale-95",
+                      product.stock > 0
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/20"
+                        : "bg-rose-500/10 border-rose-500/30 text-rose-600 hover:bg-rose-500/20"
+                    )}
+                  >
+                    <span className={cn("h-2 w-2 rounded-full", product.stock > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500")} />
+                    <span className="hidden sm:inline">{product.stock > 0 ? 'Ready' : 'Sold Out'}</span>
+                  </button>
+
+                  {/* 2. Storefront Visibility Toggle (Show vs Hide) */}
                   <button
                     onClick={() => handleToggleAvailability(product)}
-                    title={product.isAvailable ? 'Hide from storefront' : 'Show on storefront'}
-                    className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl border border-border/70 bg-card text-text-secondary hover:text-text-primary flex items-center justify-center hover:bg-muted cursor-pointer transition-all active:scale-95"
+                    title={product.isAvailable ? 'Visible on storefront (Click to Hide)' : 'Hidden from storefront (Click to Show)'}
+                    className={cn(
+                      "h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl border flex items-center justify-center cursor-pointer transition-all active:scale-95",
+                      product.isAvailable
+                        ? "bg-card border-border/70 text-emerald-500 hover:bg-muted"
+                        : "bg-muted border-border text-text-muted hover:bg-muted/80"
+                    )}
                   >
                     {product.isAvailable ? (
-                      <ToggleRight className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
+                      <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     ) : (
-                      <ToggleLeft className="h-4 w-4 sm:h-5 sm:w-5 text-text-muted" />
+                      <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-text-muted" />
                     )}
                   </button>
 
-                  {/* Edit */}
+                  {/* 3. Edit */}
                   <button
                     onClick={() => handleOpenEditForm(product)}
                     title="Edit dish details"
@@ -793,7 +848,7 @@ export function RestaurantCatalogManager() {
                     <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
 
-                  {/* Delete */}
+                  {/* 4. Delete */}
                   <button
                     onClick={() => handleDeleteProduct(product)}
                     title="Delete dish"
@@ -801,7 +856,6 @@ export function RestaurantCatalogManager() {
                   >
                     <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
-
                 </div>
               </div>
 

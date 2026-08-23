@@ -92,6 +92,7 @@ export async function GET(request: Request) {
       description: p.description,
       imageUrl: p.imageUrl,
       categoryId: p.categoryId,
+      restaurantId: p.restaurantId,
       mrp: p.mrp,
       price: p.price,
       discount: p.discount,

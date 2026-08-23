@@ -430,9 +430,18 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
+                  if (resolvedStock <= 0 || !resolvedIsAvailable) {
+                    toast.error(`Sorry, ${product.name} is currently out of stock!`)
+                    return
+                  }
                   setActiveVariantProduct(product)
                 }}
-                className="inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap truncate max-w-full leading-tight cursor-pointer active:scale-95 transition-all animate-pulse"
+                className={cn(
+                  "inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold px-1 py-0.5 rounded-full border whitespace-nowrap truncate max-w-full leading-tight transition-all",
+                  resolvedStock <= 0 || !resolvedIsAvailable
+                    ? "text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 cursor-not-allowed opacity-75"
+                    : "text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 cursor-pointer active:scale-95 animate-pulse"
+                )}
               >
                 {variantsList.length} Options ▾
               </span>

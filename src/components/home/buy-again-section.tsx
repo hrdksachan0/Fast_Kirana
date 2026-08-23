@@ -8,6 +8,7 @@ import { formatPrice, isCafeProduct, cn, getProductLimit, isProductStoreClosed }
 import { ProductImage } from '@/components/product/product-image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { triggerHaptic } from '@/lib/haptic'
+import { toast } from 'sonner'
 
 interface BuyAgainItem {
   id: string
@@ -70,6 +71,13 @@ export function BuyAgainSection() {
     e.stopPropagation()
     triggerHaptic('light')
 
+    const resolvedStock = typeof item.stock === 'number' ? item.stock : 0
+    const resolvedIsAvailable = item.isAvailable !== false
+    if (resolvedStock <= 0 || !resolvedIsAvailable) {
+      toast.error(`Sorry, ${item.name} is currently out of stock!`)
+      return
+    }
+
     addItem({
       id: item.id,
       name: item.name,
@@ -79,8 +87,8 @@ export function BuyAgainSection() {
       price: item.price,
       discount: item.mrp > item.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0,
       unit: item.unit,
-      stock: item.stock ?? 50,
-      isAvailable: item.isAvailable ?? true,
+      stock: resolvedStock,
+      isAvailable: resolvedIsAvailable,
       category: item.category,
       tags: (item as any).tags,
       restaurantId: (item as any).restaurantId || (item as any).restaurant?.id,
@@ -228,66 +236,79 @@ export function BuyAgainSection() {
                   {/* Dynamic Action Button: Counter or ADD */}
                   <div className="w-full h-7">
                     <AnimatePresence mode="wait">
-                      {quantity === 0 ? (
-                        <motion.div
-                          key="add"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.12 }}
-                          className="w-full h-full"
-                        >
-                          <button
-                            onClick={(e) => handleAddToCart(e, item)}
-                            disabled={isStoreClosed}
-                            className={cn(
-                              "w-full h-full flex items-center justify-center gap-0.5 rounded-lg border text-[10px] font-black transition-all duration-200 cursor-pointer shadow-sm",
-                              isStoreClosed
-                                ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                                : "border-accent bg-accent/5 text-accent md:hover:bg-accent md:hover:text-white"
-                            )}
+                      {(() => {
+                        const itemStock = typeof item.stock === 'number' ? item.stock : 0
+                        const isSoldOut = itemStock <= 0 || item.isAvailable === false
+
+                        if (quantity === 0) {
+                          return (
+                            <motion.div
+                              key="add"
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.12 }}
+                              className="w-full h-full"
+                            >
+                              <button
+                                onClick={(e) => handleAddToCart(e, item)}
+                                disabled={isSoldOut || isStoreClosed}
+                                className={cn(
+                                  "w-full h-full flex items-center justify-center gap-0.5 rounded-lg border text-[10px] font-black transition-all duration-200 cursor-pointer shadow-sm",
+                                  isSoldOut
+                                    ? "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                    : isStoreClosed
+                                    ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                    : "border-accent bg-accent/5 text-accent md:hover:bg-accent md:hover:text-white"
+                                )}
+                              >
+                                {isSoldOut ? (
+                                  'Out of Stock'
+                                ) : isStoreClosed ? (
+                                  'Closed'
+                                ) : (
+                                  <>
+                                    ADD
+                                    <Plus className="h-2.5 w-2.5 stroke-[3.5]" />
+                                  </>
+                                )}
+                              </button>
+                            </motion.div>
+                          )
+                        }
+
+                        return (
+                          <motion.div
+                            key="counter"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.12 }}
+                            className="flex h-full w-full items-center justify-between rounded-lg bg-gradient-to-r from-accent to-rose-600 text-white font-bold shadow-sm overflow-hidden"
                           >
-                            {isStoreClosed ? (
-                              'Closed'
-                            ) : (
-                              <>
-                                ADD
-                                <Plus className="h-2.5 w-2.5 stroke-[3.5]" />
-                              </>
-                            )}
-                          </button>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="counter"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.12 }}
-                          className="flex h-full w-full items-center justify-between rounded-lg bg-gradient-to-r from-accent to-rose-600 text-white font-bold shadow-sm overflow-hidden"
-                        >
-                          <motion.button
-                            whileTap={{ scale: 0.82 }}
-                            onClick={(e) => handleDecrement(e, item, quantity)}
-                            className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="h-2.5 w-2.5 stroke-[3]" />
-                          </motion.button>
-                          <span className="w-5 shrink-0 flex items-center justify-center text-[10px] font-black select-none h-full bg-accent border-x border-white/20">
-                            {quantity}
-                          </span>
-                          <motion.button
-                            whileTap={{ scale: 0.82 }}
-                            onClick={(e) => handleIncrement(e, item, quantity)}
-                            disabled={quantity >= stock || quantity >= getProductLimit(item) || isStoreClosed}
-                            className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="h-2.5 w-2.5 stroke-[3]" />
-                          </motion.button>
-                        </motion.div>
-                      )}
+                            <motion.button
+                              whileTap={{ scale: 0.82 }}
+                              onClick={(e) => handleDecrement(e, item, quantity)}
+                              className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                            </motion.button>
+                            <span className="w-5 shrink-0 flex items-center justify-center text-[10px] font-black select-none h-full bg-accent border-x border-white/20">
+                              {quantity}
+                            </span>
+                            <motion.button
+                              whileTap={{ scale: 0.82 }}
+                              onClick={(e) => handleIncrement(e, item, quantity)}
+                              disabled={quantity >= stock || quantity >= getProductLimit(item) || isStoreClosed}
+                              className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="h-2.5 w-2.5 stroke-[3]" />
+                            </motion.button>
+                          </motion.div>
+                        )
+                      })()}
                     </AnimatePresence>
                   </div>
                 </div>
