@@ -531,11 +531,12 @@ export function RestaurantCatalogManager() {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: newStock } : p))
         toast.success(`"${product.name}" is now ${newStock > 0 ? '🟢 Kitchen Ready (In Stock)' : '🔴 Sold Out (Out of Stock)'}!`)
       } else {
-        toast.error('Failed to update kitchen stock')
+        const errorData = await res.json().catch(() => ({}))
+        toast.error(errorData.error || errorData.message || 'Failed to update kitchen stock')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Failed to update kitchen stock')
+      toast.error(err?.message || 'Failed to update kitchen stock')
     }
   }
 
@@ -553,11 +554,12 @@ export function RestaurantCatalogManager() {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: newStatus } : p))
         toast.success(`"${product.name}" is now ${newStatus ? '👁️ Visible on storefront' : '🙈 Hidden from storefront'}!`)
       } else {
-        toast.error('Failed to toggle visibility')
+        const errorData = await res.json().catch(() => ({}))
+        toast.error(errorData.error || errorData.message || 'Failed to toggle visibility')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Failed to toggle visibility')
+      toast.error(err?.message || 'Failed to toggle visibility')
     }
   }
 
