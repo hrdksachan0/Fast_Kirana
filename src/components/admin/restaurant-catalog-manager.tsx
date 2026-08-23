@@ -191,9 +191,16 @@ export function RestaurantCatalogManager() {
     }
   }
 
+  const isAdmin = session?.user?.role === 'ADMIN'
   const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
   const [outlets, setOutlets] = useState<any[]>([])
-  const [selectedOutletId, setSelectedOutletId] = useState<string>('')
+  const [selectedOutletId, setSelectedOutletId] = useState<string>(assignedRestaurantId || '')
+
+  useEffect(() => {
+    if (assignedRestaurantId) {
+      setSelectedOutletId(assignedRestaurantId)
+    }
+  }, [assignedRestaurantId])
 
   useEffect(() => {
     fetch('/api/restaurants')
@@ -201,8 +208,8 @@ export function RestaurantCatalogManager() {
       .then(data => {
         if (data?.restaurants && Array.isArray(data.restaurants)) {
           setOutlets(data.restaurants)
-          if (!selectedOutletId) {
-            const defaultId = assignedRestaurantId || data.restaurants[0]?.id || ''
+          if (!selectedOutletId && !assignedRestaurantId) {
+            const defaultId = data.restaurants[0]?.id || ''
             setSelectedOutletId(defaultId)
           }
         }
@@ -210,7 +217,7 @@ export function RestaurantCatalogManager() {
       .catch(console.error)
   }, [assignedRestaurantId])
 
-  const effectiveRestId = selectedOutletId || assignedRestaurantId
+  const effectiveRestId = (!isAdmin && assignedRestaurantId) ? assignedRestaurantId : (selectedOutletId || assignedRestaurantId)
 
   const fetchCatalogAndCategories = async () => {
     try {
@@ -589,7 +596,7 @@ export function RestaurantCatalogManager() {
         </div>
 
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          {outlets.length > 0 && (
+          {outlets.length > 0 && isAdmin && (
             <select
               value={selectedOutletId}
               onChange={(e) => setSelectedOutletId(e.target.value)}

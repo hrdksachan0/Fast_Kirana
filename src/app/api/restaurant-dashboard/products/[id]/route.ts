@@ -11,9 +11,40 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const role = session.user.role
-    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    let role = session.user.role
+    let assignedRestaurantId = (session.user as any).assignedRestaurantId
     const userEmail = session.user.email || ''
+
+    // Fallback: Query fresh user record from DB if assignedRestaurantId or role is missing from JWT
+    if (!assignedRestaurantId || !role) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, assignedRestaurantId: true }
+      })
+      if (dbUser) {
+        if (dbUser.role) role = dbUser.role
+        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+      }
+    }
+
+    // Fallback: If still no assignedRestaurantId, check if this user is a restaurant owner
+    if (!assignedRestaurantId) {
+      const userPhone = (session.user as any).phone
+      const userEmail = session.user.email
+      if (userPhone || userEmail) {
+        const orConditions: any[] = []
+        if (userPhone) orConditions.push({ ownerPhone: userPhone })
+        if (userEmail) orConditions.push({ ownerEmail: userEmail })
+
+        const ownedRest = await prisma.restaurant.findFirst({
+          where: { OR: orConditions },
+          select: { id: true }
+        })
+        if (ownedRest) {
+          assignedRestaurantId = ownedRest.id
+        }
+      }
+    }
 
     const isAllowed =
       role === 'ADMIN' ||
@@ -33,6 +64,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Menu item not found' }, { status: 404 })
     }
 
+    // Check ownership: Admin can edit anything. Restaurant staff can edit their restaurant items or unassigned items.
     if (
       role !== 'ADMIN' &&
       assignedRestaurantId &&
@@ -106,9 +138,40 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const role = session.user.role
-    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    let role = session.user.role
+    let assignedRestaurantId = (session.user as any).assignedRestaurantId
     const userEmail = session.user.email || ''
+
+    // Fallback: Query fresh user record from DB if assignedRestaurantId or role is missing from JWT
+    if (!assignedRestaurantId || !role) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, assignedRestaurantId: true }
+      })
+      if (dbUser) {
+        if (dbUser.role) role = dbUser.role
+        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+      }
+    }
+
+    // Fallback: If still no assignedRestaurantId, check if this user is a restaurant owner
+    if (!assignedRestaurantId) {
+      const userPhone = (session.user as any).phone
+      const userEmail = session.user.email
+      if (userPhone || userEmail) {
+        const orConditions: any[] = []
+        if (userPhone) orConditions.push({ ownerPhone: userPhone })
+        if (userEmail) orConditions.push({ ownerEmail: userEmail })
+
+        const ownedRest = await prisma.restaurant.findFirst({
+          where: { OR: orConditions },
+          select: { id: true }
+        })
+        if (ownedRest) {
+          assignedRestaurantId = ownedRest.id
+        }
+      }
+    }
 
     const isAllowed =
       role === 'ADMIN' ||
@@ -134,7 +197,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       existing.restaurantId &&
       existing.restaurantId !== assignedRestaurantId
     ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden: You can only delete items for your assigned restaurant' }, { status: 403 })
     }
 
     await prisma.product.update({

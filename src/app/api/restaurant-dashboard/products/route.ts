@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { invalidateProductCache } from '@/lib/search-cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +11,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const role = session.user.role
-    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    let role = session.user.role
+    let assignedRestaurantId = (session.user as any).assignedRestaurantId
     const userEmail = session.user.email || ''
+
+    // Fallback: Query fresh user record from DB if assignedRestaurantId or role is missing from JWT
+    if (!assignedRestaurantId || !role) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, assignedRestaurantId: true }
+      })
+      if (dbUser) {
+        if (dbUser.role) role = dbUser.role
+        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+      }
+    }
+
+    // Fallback: If still no assignedRestaurantId, check if this user is a restaurant owner
+    if (!assignedRestaurantId) {
+      const userPhone = (session.user as any).phone
+      const userEmail = session.user.email
+      if (userPhone || userEmail) {
+        const orConditions: any[] = []
+        if (userPhone) orConditions.push({ ownerPhone: userPhone })
+        if (userEmail) orConditions.push({ ownerEmail: userEmail })
+
+        const ownedRest = await prisma.restaurant.findFirst({
+          where: { OR: orConditions },
+          select: { id: true }
+        })
+        if (ownedRest) {
+          assignedRestaurantId = ownedRest.id
+        }
+      }
+    }
 
     const isAllowed =
       role === 'ADMIN' ||
@@ -66,9 +98,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const role = session.user.role
-    const assignedRestaurantId = (session.user as any).assignedRestaurantId
+    let role = session.user.role
+    let assignedRestaurantId = (session.user as any).assignedRestaurantId
     const userEmail = session.user.email || ''
+
+    // Fallback: Query fresh user record from DB if assignedRestaurantId or role is missing from JWT
+    if (!assignedRestaurantId || !role) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, assignedRestaurantId: true }
+      })
+      if (dbUser) {
+        if (dbUser.role) role = dbUser.role
+        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+      }
+    }
+
+    // Fallback: If still no assignedRestaurantId, check if this user is a restaurant owner
+    if (!assignedRestaurantId) {
+      const userPhone = (session.user as any).phone
+      const userEmail = session.user.email
+      if (userPhone || userEmail) {
+        const orConditions: any[] = []
+        if (userPhone) orConditions.push({ ownerPhone: userPhone })
+        if (userEmail) orConditions.push({ ownerEmail: userEmail })
+
+        const ownedRest = await prisma.restaurant.findFirst({
+          where: { OR: orConditions },
+          select: { id: true }
+        })
+        if (ownedRest) {
+          assignedRestaurantId = ownedRest.id
+        }
+      }
+    }
 
     const isAllowed =
       role === 'ADMIN' ||
@@ -157,6 +220,7 @@ export async function POST(request: NextRequest) {
 
     try {
       revalidateStorefront(product.category?.slug)
+      await invalidateProductCache()
     } catch (e) {}
 
     return NextResponse.json({ product, success: true }, { status: 201 })

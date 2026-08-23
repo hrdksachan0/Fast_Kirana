@@ -1,0 +1,106 @@
+S.No,Dish / Product Name,Category,Price (₹),MRP (₹),Discount (%),Unit / Serving,Kitchen Stock,Storefront Status,Menu Section Tags,Product ID
+1,Aaloo Masala Sandwitch,Fast Food & Kitchen,70,70,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvntew000104jx1l1oa4q6
+2,American cup ,Ice cream,29,30,3,,99999,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmrubmwbl000304laafxtiuwq
+3,Badam Pista,Ice cream,49,50,2,110 ml,99999,HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfj4wg000004i9xdzx7pm6
+4,Belgium Cone,Ice cream,49,50,2,110 ml,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmr11i5l2000204jppwayex91
+5,Blue Lagoon Mojito,Fast Food & Kitchen,80,80,0,300 ml,999,VISIBLE (ON),"mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",cmqhz0yci000304jufb2qkdmn
+6,Butter Masala Dosa,Fast Food & Kitchen,75,75,0,1 Plate,999,VISIBLE (ON),"south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",cmqifvqlc000004jshcp8b9s2
+7,Butter Masala Paneer Dosa,Fast Food & Kitchen,90,90,0,1 Plate,999,VISIBLE (ON),"south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",cmqifxp7m000104js435y9tki
+8,Butter Paneer Dosa,Fast Food & Kitchen,110,110,0,1 Plate,999,VISIBLE (ON),"south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",cmqifzr6s000204jsul1rpd2c
+9,Butter Paneer Pav bhaji,Fast Food & Kitchen,90,90,0,1 Plate,999,VISIBLE (ON),"pav-bhaji, pav-bhaji, pav bhaji, pavbhaji, veg, restaurant, restaurant",cmqrr3h59000004jybdt8dzx0
+10,Butter Paper Dosa,Fast Food & Kitchen,50,50,0,1 Plate,999,VISIBLE (ON),"south-indian, south-indian, south indian, dosa, veg, restaurant, restaurant",cmqifu59o000j04l461989y9s
+11,Butter Pavbhaji,Fast Food & Kitchen,75,75,0,1 Plate,998,VISIBLE (ON),"pav-bhaji, pav-bhaji, pav bhaji, pavbhaji, veg, restaurant, restaurant",cmqrr1vvz000004ldl3husnlc
+12,Butterscotch ,Ice cream,124,125,1,700 ml,99998,HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg6i2s000004l5rre98dd1
+13,Butterscotch Cone ,Ice cream,20,20,0,,42,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmsfrg5b5000e04l1yyvl0o33
+14,Butterscotch Shake,Fast Food & Kitchen,85,85,0,300 ml,999,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhzmodz000104icef59dlgf
+15,Capsicum Pizza,Fast Food & Kitchen,109,119,8,Qty 1,998,VISIBLE (ON),"pizza, restaurant",cmqht67tu000104jmsqnu8acz
+16,Casata,Ice cream,49,50,2,Qty 1,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg1ons000104l4fz9uv424
+17,Chappan Bhog,Ice cream,149,160,7,700 ml,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqvux86n000404icvt0duoax
+18,Cheeze Baking Pasta,Fast Food & Kitchen,135,135,0,1 Plate,999,VISIBLE (ON),"italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",cmqigj0ck000204l88l6148ni
+19,Cheeze Burger,Fast Food & Kitchen,65,65,0,Qty 1,999,VISIBLE (ON),"burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",cmqhv443d000204ib5occu1ux
+20,Cheeze Frankie Roll,Fast Food & Kitchen,85,85,0,1 Roll,999,VISIBLE (ON),"frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",cmqj7ilwq000004l520l9p1a0
+21,Cheeze Garlic Bread,Fast Food & Kitchen,95,95,0,Qty 1 ( 4 pcs),999,VISIBLE (ON),"garlic-bread, garlic-bread, garlic bread, garlic-breads, veg, restaurant, restaurant",cmqhxu43w000004l8suhk40k1
+22,Cheeze Sandwitch,Fast Food & Kitchen,85,85,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvqqji000304jx0gvc4fu1
+23,Cheezy Paneer Pizza,Fast Food & Kitchen,129,139,7,Qty 1,998,VISIBLE (ON),"pizza, restaurant",cmqhthroi000004jm7qs4w6yg
+24,Chili Garlic Noodles,Fast Food & Kitchen,95,95,0,1 Plate,997,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi29esq000104jul11c2g04
+25,Chili Garlic Rice,Fast Food & Kitchen,95,95,0,1 Plate,999,VISIBLE (ON),"rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",cmqjdrdpt000004jsmk69y8tb
+26,Chili Paneer,Fast Food & Kitchen,145,145,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi33m21000004jj1jm44pjh
+27,Chili Potato,Fast Food & Kitchen,95,95,0,1 Plate,996,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi2saaw000004l79ak7g2sr
+28,Choclate,Ice cream,149,160,7,700 ml,99999,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqvuusry000204ic8kxg6tb7
+29,Choco Brownie Sundae ,Ice cream,49,50,2,Qty 1,99995,VISIBLE (ON),"ice-cream, as-restaurant",cmqhfy8vg000004jji9091jk7
+30,Choco Delight,Fast Food & Kitchen,85,85,0,300 ml,999,VISIBLE (ON),"cold-coffee, cold-coffee, cold coffee, iced coffee, iced-coffee, coldcoffee, shake, shakes, veg, restaurant, restaurant",cmqhzjf0x000004l13sdhh9ws
+31,Choco Surprise ,Ice cream,40,40,0,,99999,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmr11hgh0000104jpgkcfbgk0
+32,Chocolate Shake,Fast Food & Kitchen,90,90,0,300 ml,999,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhztm5k000004jud47mx8o0
+33,Classic Cold Coffee,Fast Food & Kitchen,60,60,0,300ml,990,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhykgmz000004jucm99q59h
+34,Cookie Chips,Snacks and Munchies,39,40,3,110 ml,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfoca3000004kzzeo89uce
+35,Corn Cheeze Burger,Fast Food & Kitchen,80,80,0,Qty 1,999,VISIBLE (ON),"burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",cmqhv7a50000104jxa8x5anbw
+36,Corn Cheeze Garlic Bread,Fast Food & Kitchen,105,105,0,Qty 1 (4 Pcs),999,VISIBLE (ON),"garlic-bread, garlic-bread, garlic bread, garlic-breads, veg, restaurant, restaurant",cmqhxvnfr000004jxq2npqa3s
+37,Corn Cheeze Sandwitch,Fast Food & Kitchen,90,90,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvw0f8000104i8i4549ujo
+38,Desi Style Pizza,Fast Food & Kitchen,129,139,7,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhtemk7000004i6oc8bc5ee
+39,Extra Pav,Fast Food & Kitchen,25,39,36,1 Pav ( 3Pcs),999,VISIBLE (ON),"pav-bhaji, restaurant",cmqrr4sb4000104jy5bossral
+40,French Fries/ Finger,Fast Food & Kitchen,50,50,0,1 Plate,997,VISIBLE (ON),"hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",cmqi40nph000204l4doqm7pvl
+41,Green Apple Mojito,Fast Food & Kitchen,80,80,0,300 ml,999,VISIBLE (ON),"mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",cmqhz56ri000004juemwv5bqn
+42,Green Mint Mojito,Fast Food & Kitchen,80,80,0,300 ml,999,VISIBLE (ON),"mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",cmqhyzera000204juu848lxrz
+43,Hakka Noodles,Fast Food & Kitchen,85,85,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi1vyf3000004l8lf96p8qt
+44,Italian Pizza,Fast Food & Kitchen,129,139,7,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhtp68g000004i6zpv2x2vs
+45,Kruchy Twist,Ice cream,29,30,3,,99995,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqvta0yb000104ic3hvrzjni
+46,Manchurian,Fast Food & Kitchen,95,95,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi2xyx5000004jj44kl54wt
+47,Margherita Pizza,Fast Food & Kitchen,99,109,9,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhr6jb4000004kyqmmyp7vt
+48,Matka Kulfi,Ice cream,59,60,2,Qty 1,99996,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfxac2000204l4ncrzkkq4
+49,MaxYum Almond ,Ice cream,49,50,2,Qty 1,99999,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfu37r000004l4u8tx2von
+50,Mix Sauce Pasta,Fast Food & Kitchen,125,125,0,1 Plate,999,VISIBLE (ON),"italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",cmqigtmrg000004l11nz6jo3v
+51,Mix Veg Garlic Bread,Fast Food & Kitchen,110,110,0,Qty 1 (4 Pcs),999,VISIBLE (ON),"garlic-bread, garlic-bread, garlic bread, garlic-breads, veg, restaurant, restaurant",cmqhxy8rt000204jxepz12vcs
+52,Namaste India Choclate Cookies,Snacks and Munchies,40,40,0,6,5,VISIBLE (ON),"ice-cream, desserts, as-restaurant",cmseypfxd000804laak2p1cgx
+53,Onion Pizza,Fast Food & Kitchen,109,119,8,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhrugyu000004i98zvpckjq
+54,Oreo Chocolate Shake,Fast Food & Kitchen,100,100,0,300 ml,999,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhzvpd3000104l1zw5ckyhs
+55,Paneer Burger,Fast Food & Kitchen,50,50,0,Qty 1,991,VISIBLE (ON),"burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",cmqhv2kmm000104ib8qg2hypi
+56,Paneer Cheeze Burger,Fast Food & Kitchen,75,75,0,Qty 1,999,VISIBLE (ON),"burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",cmqhv67ku000004jxd0rt6tz2
+57,Paneer Cheeze Frankie Roll,Fast Food & Kitchen,90,90,0,1 Roll,999,VISIBLE (ON),"frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",cmqj7jiiy000204jv9ggxmt64
+58,Paneer Cheeze Garlic Bread,Fast Food & Kitchen,115,115,0,Qty 1 (4 Pcs),999,VISIBLE (ON),"garlic-bread, garlic-bread, garlic bread, garlic-breads, veg, restaurant, restaurant",cmqhxwyd8000104jxwte0tsvg
+59,Paneer Cheeze Sandwitch,Fast Food & Kitchen,90,90,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvscox000004i88wio37ya
+60,Paneer Frankie Roll,Fast Food & Kitchen,80,80,0,1 Roll,999,VISIBLE (ON),"frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",cmqj7h4vv000104jv1m9nmhvo
+61,Paneer Fried Momos,Fast Food & Kitchen,65,65,0,8 Pcs,999,VISIBLE (ON),"hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",cmqi3xox3000104l4gspat3pi
+62,Paneer Fried Rice,Fast Food & Kitchen,105,105,0,1 Plate,999,VISIBLE (ON),"rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",cmqjdbztr000104jswmqy0lxx
+63,Paneer Kathi Roll,Fast Food & Kitchen,90,90,0,1 Roll,999,VISIBLE (ON),"frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",cmqj7kgcm000304jvmx7w0kma
+64,Paneer Makhani Pizza,Fast Food & Kitchen,149,159,6,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhts7vn000004l1tom75kqk
+65,Paneer Noodles,Fast Food & Kitchen,95,95,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi21si4000004jubnu2g1cx
+66,Paneer Sandwitch,Fast Food & Kitchen,80,80,0,Qty 1,997,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvpaww000204jx72plxjya
+67,Pizza Sandwitch,Fast Food & Kitchen,135,135,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvyb4x000204i8q8a2npdz
+68,Red Sauce Pasta,Fast Food & Kitchen,115,115,0,1 Plate,999,VISIBLE (ON),"italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",cmqiggt09000004l86a1apssj
+69,Red Velvet ,Ice cream,29,30,3,Qty 1,99999,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfr6fb000004l5gs8c9bsg
+70,Sezwan Noodles,Fast Food & Kitchen,90,90,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi273r1000004ic6e36qx4z
+71,Sezwan Rice,Fast Food & Kitchen,95,95,0,1 Plate,999,VISIBLE (ON),"rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",cmqjdjt3i000004jseqdvheia
+72,Sezwan Sauce Pasta,Fast Food & Kitchen,95,95,0,1 Plate,999,VISIBLE (ON),"italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",cmqigfcf4000004ldcqc58t9f
+73,Shahi Mewa Kulfi,Ice cream,29,30,3,Qty 1,99996,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfvjgq000104l4jzjyxrur
+74,Shahi Tukda,Ice cream,97,99,2,250 ml,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg9l74000004i9nnt8lhxb
+75,Singapuri Noodles,Fast Food & Kitchen,105,105,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi2l00e000004l1i0tlf3uw
+76,Singapuri Rice,Fast Food & Kitchen,115,115,0,1 Plate,999,VISIBLE (ON),"rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",cmqjdsq0u000104js445kl6jw
+77,Special Sandwich,Fast Food & Kitchen,100,100,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhw38rc000004l4wbswlwzc
+78,Spicy Veggie Pizza,Fast Food & Kitchen,149,159,6,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhtzt1t000004jorbi3qwp4
+79,Spring Roll,Fast Food & Kitchen,50,50,0,1 Plate,996,VISIBLE (ON),"hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",cmqi41wcm000004jpiod6g5ko
+80,Strawberry ,Ice cream,124,125,1,700 ml,99999,HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg55jp000304l47x2ncvoz
+81,Strawberry Shake,Fast Food & Kitchen,85,85,0,300 ml,999,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhzo083000204ic1ujhimgj
+82,Strawberry Sundae ,Ice cream,39,40,2,Qty 1,0 (Sold Out),VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfzomx000004l4urg5mgm7
+83,Super Duper Sundae ,Ice cream,39,40,2,Qty 1,0 (Sold Out),VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfyxnn000104jjkijr9vrp
+84,Sweet Corn Pizza,Fast Food & Kitchen,129,139,7,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhtmaqg000004ld19thbri9
+85,Tandoori Paneer Pizza,Fast Food & Kitchen,149,159,6,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhtugvz000004jmp6yuo0xi
+86,Tomato Pizza,Fast Food & Kitchen,109,119,8,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqht3pis000004jmml4tir0s
+87,Trixy Brownie ,Ice cream,29,30,3,Qty 1,0 (Sold Out),HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg0k8u000004l4kdo9ugla
+88,Tuti Frutti,Ice cream,172,175,2,700 ml,99998,HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg5x4m000404l40ial07dy
+89,Vanilla,Ice cream,99,100,1,700 ml,99999,HIDDEN (OFF),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhg46kk000204l4en3571ef
+90,Vanilla cup,Ice cream,19,20,5,,99997,VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmrubrdye000004jrq5gxgmkp
+91,Vanilla Shake,Fast Food & Kitchen,85,85,0,300 ml,999,VISIBLE (ON),"shakes, shakes, shake, milkshake, milkshakes, veg, restaurant, restaurant",cmqhzlgby000004icf92dj6ua
+92,Veg Burger,Fast Food & Kitchen,40,40,0,Qty 1,997,VISIBLE (ON),"burgers, burgers, burger, veg-burger, cheese-burger, paneer-burger, veg, restaurant, restaurant",cmqhv1hej000004ibh5q6wzgg
+93,Veg Frankie Roll,Fast Food & Kitchen,70,70,0,1 Roll,998,VISIBLE (ON),"frankie-rolls, frankie-rolls, frankie rolls, frankie-roll, frankie roll, rolls, roll, kathi roll, kathi-roll, veg, restaurant, restaurant",cmqj7g0ms000004jvs6xbmk8f
+94,Veg Fried Momos,Fast Food & Kitchen,50,50,0,8 pcs,999,VISIBLE (ON),"hot-bite, hot-bite, snacks, momos, veg, restaurant, restaurant",cmqi3vz1u000004l4spawcpbv
+95,Veg Fried Rice,Fast Food & Kitchen,80,80,0,1 Plate,997,VISIBLE (ON),"rice-dishes, rice-dishes, rice dishes, rice-dish, rice dish, biryani, pulav, veg, restaurant, restaurant",cmqjd9nvb000004jsfg3ewbza
+96,Veg Masala Sandwitch,Fast Food & Kitchen,70,70,0,Qty 1,999,VISIBLE (ON),"sandwiches, sandwiches, sandwich, veg, restaurant, restaurant",cmqhvmm7b000004jxhu7strzq
+97,Veg Noodles,Fast Food & Kitchen,60,60,0,1 Plate,999,VISIBLE (ON),"chinese, chinese, chinese-cuisine, chinese cuisine, veg, restaurant, restaurant",cmqi1tksh000004icq037c12i
+98,Veg Special Pizza,Fast Food & Kitchen,169,179,6,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhuctgp000004joxvh4wa9e
+99,Veggie Delite Pizza,Fast Food & Kitchen,189,199,5,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhuj9qq000004jod1cke6xa
+100,Veggie Overloaded Pizza,Fast Food & Kitchen,165,169,2,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhuaceu000004ju23hbam9a
+101,Veggie Paneer Pizza,Fast Food & Kitchen,189,199,5,Qty 1,999,VISIBLE (ON),"pizza, restaurant",cmqhufwcw000104joyujs402c
+102,Virgin Mojito,Fast Food & Kitchen,80,80,0,300 ml,999,VISIBLE (ON),"mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",cmqhypc4i000104juf55gz7m2
+103,Waaah Aam,Ice cream,29,30,3,Qty 1,0 (Sold Out),VISIBLE (ON),"ice-cream, desserts, as-restaurant, kulfi, cones",cmqhfpzwg000104kzm5mvvtfb
+104,Watermelon Mojito,Fast Food & Kitchen,80,80,0,300 ml,999,VISIBLE (ON),"mocktails, mocktails, mocktail, coolers, cooler, mojito, veg, restaurant, restaurant",cmqhz2aa5000404jufuw5zn2t
+105,White Sauce Pasta,Fast Food & Kitchen,125,125,0,1 Plate,999,VISIBLE (ON),"italian-pasta, italian-pasta, italian-pastas, italian pasta's, pasta, veg, restaurant, restaurant",cmqighzcw000104l85q9krcrq
