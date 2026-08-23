@@ -321,6 +321,14 @@ export const HUB_CONFIG = [
     tabs: ['restaurant-report', 'reports'] as const
   },
   {
+    key: 'insights',
+    label: 'Business Intelligence',
+    description: 'Store analytics, hourly heatmaps & AI demand forecasting',
+    color: 'from-blue-500/10 to-cyan-500/10',
+    activeBorder: 'border-blue-500/60 ring-2 ring-blue-500/20',
+    tabs: ['analytics', 'forecast'] as const
+  },
+  {
     key: 'people',
     label: 'Operations & People',
     description: 'Staff, customers, rider settlements & review moderation',

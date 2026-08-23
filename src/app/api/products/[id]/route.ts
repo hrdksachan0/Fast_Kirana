@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { invalidateProductCache } from '@/lib/search-cache'
 
 export async function GET(
   request: Request,
@@ -175,8 +176,9 @@ export async function PATCH(
       },
     })
 
-    // Invalidate storefront cache
+    // Invalidate storefront and search caches
     revalidateStorefront(updatedProduct.category?.slug)
+    await invalidateProductCache()
 
     return NextResponse.json(updatedProduct)
   } catch (error: any) {
@@ -242,8 +244,9 @@ export async function DELETE(
       where: { id: product.id },
     })
 
-    // Invalidate storefront cache
+    // Invalidate storefront and search caches
     revalidateStorefront(product.category?.slug)
+    await invalidateProductCache()
 
     return NextResponse.json({ message: 'Product permanently deleted' })
   } catch (error: any) {

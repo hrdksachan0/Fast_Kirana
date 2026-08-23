@@ -132,7 +132,7 @@ export function AdminDashboard({
   const sessionUserRole = session?.user?.role || ''
 
   const [activeTab, setActiveTab] = useState<TabType>('orders')
-  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'people' | 'marketing'>('orders_hub')
+  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
 
   // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
   useEffect(() => {
