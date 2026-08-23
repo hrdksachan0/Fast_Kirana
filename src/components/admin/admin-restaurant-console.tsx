@@ -54,6 +54,21 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
   const [globalProducts, setGlobalProducts] = useState<any[]>([])
   const [globalCategories, setGlobalCategories] = useState<any[]>([])
 
+  const [restaurants, setRestaurants] = useState<any[]>([])
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('ALL')
+
+  // Fetch all outlets dynamically
+  useEffect(() => {
+    fetch('/api/restaurants')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.restaurants) {
+          setRestaurants(data.restaurants)
+        }
+      })
+      .catch(console.error)
+  }, [])
+
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {
     Promise.all([
@@ -160,11 +175,16 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
       return
     }
 
+    // Determine which restaurant to assign this dish to
+    const targetRestaurantId = selectedRestaurantId !== 'ALL' 
+      ? selectedRestaurantId 
+      : (restaurants.length > 0 ? restaurants[0].id : '')
+
     setSavingDish(true)
     try {
       if (editingDish) {
-        // Edit existing dish
-        const res = await fetch(`/api/products/${editingDish.id}`, {
+        // Edit existing dish — use restaurant-dashboard API for proper scoping
+        const res = await fetch(`/api/restaurant-dashboard/products/${editingDish.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -175,13 +195,17 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
             tags: [dishForm.sectionTag, 'restaurant'],
           }),
         })
-        if (!res.ok) throw new Error('Failed to update dish')
-        const updated = await res.json()
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || 'Failed to update dish')
+        }
+        const data = await res.json()
+        const updated = data.product || data
         setProducts(prev => prev.map(p => p.id === editingDish.id ? updated : p))
         toast.success(`Dish "${dishForm.name}" updated successfully! 🎉`)
       } else {
-        // Add new dish
-        const res = await fetch('/api/products', {
+        // Add new dish — use restaurant-dashboard API which handles restaurantId properly
+        const res = await fetch('/api/restaurant-dashboard/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -192,10 +216,15 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
             stock: 99999,
             isAvailable: true,
             tags: [dishForm.sectionTag, 'restaurant'],
+            restaurantId: targetRestaurantId,
           }),
         })
-        if (!res.ok) throw new Error('Failed to create dish')
-        const created = await res.json()
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || 'Failed to create dish')
+        }
+        const data = await res.json()
+        const created = data.product || data
         setProducts(prev => [created, ...prev])
         toast.success(`New dish "${dishForm.name}" added to menu! 🎉`)
       }
@@ -232,17 +261,14 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
   const fetchRestaurantProducts = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/products?limit=1000', { cache: 'no-store' })
+      // Use restaurant-dashboard API which properly scopes by restaurantId
+      const restIdParam = selectedRestaurantId && selectedRestaurantId !== 'ALL' 
+        ? `?restaurantId=${selectedRestaurantId}` 
+        : ''
+      const res = await fetch(`/api/restaurant-dashboard/products${restIdParam}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch catalog')
       const data = await res.json()
-      
-      // Filter only Restaurant items
-      const restaurantList = (data.products || []).filter((p: any) => {
-        const slug = p.category?.slug || ''
-        const tags = p.tags || []
-        return slug === 'restaurant' || tags.includes('restaurant')
-      })
-      setProducts(restaurantList)
+      setProducts(data.products || [])
     } catch (err) {
       toast.error('Failed to load Restaurant catalog')
       console.error(err)
@@ -253,13 +279,13 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
 
   useEffect(() => {
     fetchRestaurantProducts()
-  }, [])
+  }, [selectedRestaurantId])
 
   const handleToggleAvailability = async (product: Product) => {
     setUpdatingId(product.id)
     const newStatus = !product.isAvailable
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAvailable: newStatus }),
@@ -282,7 +308,7 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
     const isCurrentlyInStock = product.stock > 0
     const newStock = isCurrentlyInStock ? 0 : 99999
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: newStock }),
@@ -310,7 +336,7 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
 
     setUpdatingId(product.id)
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ price: priceNum, mrp: mrpNum }),
@@ -329,20 +355,7 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
     }
   }
 
-  const [restaurants, setRestaurants] = useState<any[]>([])
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('ALL')
 
-  // Fetch all outlets dynamically
-  useEffect(() => {
-    fetch('/api/restaurants')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.restaurants) {
-          setRestaurants(data.restaurants)
-        }
-      })
-      .catch(console.error)
-  }, [])
 
   const selectedRestaurant = useMemo(() => {
     return restaurants.find(r => r.id === selectedRestaurantId)
