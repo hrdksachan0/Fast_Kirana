@@ -337,13 +337,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               style: const TextStyle(fontSize: 34),
             ),
           ),
-          placeholder: (context, url) => Container(
-            color: Colors.transparent,
-            child: Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.primary),
+          placeholder: (context, url) => Shimmer.fromColors(
+            baseColor: const Color(0xFFF1F5F9),
+            highlightColor: const Color(0xFFFFFFFF),
+            child: Container(
+              margin: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),

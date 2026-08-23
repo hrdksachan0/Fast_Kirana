@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { clearSettingsCache } from '@/lib/settings-cache'
 
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
@@ -162,6 +163,54 @@ export async function PATCH(
       where: { id: restaurant.id },
       data: updateData
     })
+
+    // Also keep global storeSetting in sync for quick header & checkout reflection
+    try {
+      const isWedson = (restaurant.slug && restaurant.slug.includes('wedson')) || (restaurant.name && restaurant.name.toLowerCase().includes('wedson'))
+      const isCafe = (restaurant.slug && (restaurant.slug.includes('as-restaurant') || restaurant.slug.includes('cafe'))) || (restaurant.name && restaurant.name.toLowerCase().includes('a.s.'))
+
+      if (updateData.isOpen !== undefined) {
+        if (isWedson) {
+          await prisma.storeSetting.upsert({
+            where: { key: 'restaurant_open' },
+            update: { value: updateData.isOpen ? 'true' : 'false' },
+            create: { key: 'restaurant_open', value: updateData.isOpen ? 'true' : 'false' },
+          })
+        } else if (isCafe) {
+          await prisma.storeSetting.upsert({
+            where: { key: 'cafe_open' },
+            update: { value: updateData.isOpen ? 'true' : 'false' },
+            create: { key: 'cafe_open', value: updateData.isOpen ? 'true' : 'false' },
+          })
+        }
+      }
+
+      if (updateData.openTime) {
+        const key = isWedson ? 'restaurant_open_time' : isCafe ? 'cafe_open_time' : null
+        if (key) {
+          await prisma.storeSetting.upsert({
+            where: { key },
+            update: { value: updateData.openTime },
+            create: { key, value: updateData.openTime },
+          })
+        }
+      }
+
+      if (updateData.closeTime) {
+        const key = isWedson ? 'restaurant_close_time' : isCafe ? 'cafe_close_time' : null
+        if (key) {
+          await prisma.storeSetting.upsert({
+            where: { key },
+            update: { value: updateData.closeTime },
+            create: { key, value: updateData.closeTime },
+          })
+        }
+      }
+
+      clearSettingsCache()
+    } catch (e) {
+      console.error('Failed to sync restaurant update to storeSetting:', e)
+    }
 
     // Revalidate storefront cache so menu section edits reflect instantly for customers
     revalidateStorefront(null, restaurant.slug)

@@ -44,8 +44,9 @@ export function getISTMinutes(): number {
       hour12: false,
     })
     const parts = formatter.formatToParts(new Date())
-    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10)
+    let hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10)
     const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10)
+    if (hour === 24) hour = 0
     return hour * 60 + minute
   } catch (e) {
     const now = new Date()
@@ -68,7 +69,7 @@ export function checkStoreOperatingStatus(restaurant?: {
   }
 
   // 1. Manual owner toggle check (Manage Outlet toggle)
-  if (restaurant.isOpen === false || (restaurant.isOpen as any) === 'false') {
+  if (restaurant.isOpen === false || (restaurant.isOpen as any) === 'false' || (restaurant.isOpen as any) === 0) {
     return {
       isOpen: false,
       isClosedBySchedule: false,
@@ -78,8 +79,8 @@ export function checkStoreOperatingStatus(restaurant?: {
   }
 
   // 2. Schedule check
-  const openTimeStr = restaurant.openTime
-  const closeTimeStr = restaurant.closeTime
+  const openTimeStr = restaurant.openTime?.trim()
+  const closeTimeStr = restaurant.closeTime?.trim()
 
   if (!openTimeStr || !closeTimeStr) {
     return {
@@ -93,7 +94,7 @@ export function checkStoreOperatingStatus(restaurant?: {
   // 24/7 check
   if (
     (openTimeStr === '00:00' || openTimeStr === '0:00') &&
-    (closeTimeStr === '23:59' || closeTimeStr === '24:00')
+    (closeTimeStr === '23:59' || closeTimeStr === '24:00' || closeTimeStr === '00:00' || closeTimeStr === '0:00')
   ) {
     return {
       isOpen: true,
@@ -123,7 +124,7 @@ export function checkStoreOperatingStatus(restaurant?: {
     // Normal day schedule (e.g. 10:00 AM to 11:00 PM)
     isOpenBySchedule = currentMins >= openMins && currentMins < closeMins
   } else {
-    // Overnight schedule (e.g. 6:00 PM to 3:00 AM)
+    // Overnight schedule (e.g. 6:00 PM to 3:00 AM) or 24h
     isOpenBySchedule = currentMins >= openMins || currentMins < closeMins
   }
 

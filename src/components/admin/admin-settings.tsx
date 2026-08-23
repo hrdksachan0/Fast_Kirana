@@ -18,17 +18,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [happyFamilies, setHappyFamilies] = useState('5,000+')
   const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
-  const [cafeOpen, setCafeOpen] = useState(true)
-  const [restaurantOpen, setRestaurantOpen] = useState(true)
   const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
   const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
-  const [cafeAutoTiming, setCafeAutoTiming] = useState(false)
-  const [cafeOpenTime, setCafeOpenTime] = useState('06:00')
-  const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
-  const [restaurantAutoTiming, setRestaurantAutoTiming] = useState(false)
-  const [restaurantOpenTime, setRestaurantOpenTime] = useState('06:00')
-  const [restaurantCloseTime, setRestaurantCloseTime] = useState('23:59')
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
@@ -114,17 +106,9 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.happy_families) setHappyFamilies(data.happy_families)
         if (data.trusted_text) setTrustedText(data.trusted_text)
         if (data.grocery_mart_open !== undefined) setGroceryMartOpen(data.grocery_mart_open === 'true')
-        if (data.cafe_open !== undefined) setCafeOpen(data.cafe_open === 'true')
-        if (data.restaurant_open !== undefined) setRestaurantOpen(data.restaurant_open === 'true')
         if (data.grocery_auto_timing !== undefined) setGroceryAutoTiming(data.grocery_auto_timing === 'true')
         if (data.grocery_open_time) setGroceryOpenTime(data.grocery_open_time)
         if (data.grocery_close_time) setGroceryCloseTime(data.grocery_close_time)
-        if (data.cafe_auto_timing !== undefined) setCafeAutoTiming(data.cafe_auto_timing === 'true')
-        if (data.cafe_open_time) setCafeOpenTime(data.cafe_open_time)
-        if (data.cafe_close_time) setCafeCloseTime(data.cafe_close_time)
-        if (data.restaurant_auto_timing !== undefined) setRestaurantAutoTiming(data.restaurant_auto_timing === 'true')
-        if (data.restaurant_open_time) setRestaurantOpenTime(data.restaurant_open_time)
-        if (data.restaurant_close_time) setRestaurantCloseTime(data.restaurant_close_time)
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.store_upi_vpa) setStoreUpiVpa(data.store_upi_vpa)
@@ -467,7 +451,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                   {/* Grocery Mart Control */}
                   <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Mart Control Mode</label>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">🏪 Grocery Mart Control Mode</label>
                       <select
                         value={groceryAutoTiming ? 'auto' : 'manual'}
                         onChange={(e) => setGroceryAutoTiming(e.target.value === 'auto')}

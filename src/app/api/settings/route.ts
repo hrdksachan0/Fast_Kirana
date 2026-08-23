@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCachedSettings, setCachedSettings } from '@/lib/settings-cache'
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 export const dynamic = 'force-dynamic'
 
@@ -138,10 +139,36 @@ export async function GET() {
       setCachedSettings(settingsMap)
     }
 
-    // Dynamically override based on live IST scheduler timings
+    // 1. Grocery Mart status is derived from dark store schedule/manual toggle
     settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
-    settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
-    settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
+
+    // 2. Restaurant & Cafe statuses are derived DIRECTLY from the single source of truth: Manage Outlets (Restaurant records)
+    try {
+      const activeRestaurants = await prisma.restaurant.findMany({
+        where: { isActive: true },
+        select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true }
+      })
+
+      const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
+      if (wedson) {
+        const wedsonStatus = checkStoreOperatingStatus(wedson)
+        settingsMap['restaurant_open'] = wedsonStatus.isOpen ? 'true' : 'false'
+        if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
+        if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
+      }
+
+      const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
+      if (cafe) {
+        const cafeStatus = checkStoreOperatingStatus(cafe)
+        settingsMap['cafe_open'] = cafeStatus.isOpen ? 'true' : 'false'
+        if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
+        if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
+      }
+    } catch (restErr) {
+      console.error('Error deriving outlet status in settings route:', restErr)
+      settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+      settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
+    }
 
     return NextResponse.json(settingsMap, {
       headers: {

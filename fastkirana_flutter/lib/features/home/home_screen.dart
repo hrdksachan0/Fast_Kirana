@@ -207,7 +207,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // 1. Header: Logo + Location + Search Bar (Exact www.fastkirana.in Web Mobile Match)
   Widget _buildHeader(int cartCount) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
@@ -215,14 +215,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Branded 100% Exact F Logo + Location Dropdown + Dark Theme Icon
+          // Top Row: Logo + Delivery Pill & Location + Notifications
           Row(
             children: [
-              // Native Vector FastKirana Speed Logo
-              FastKiranaLogoWidget(size: 34),
-              const SizedBox(width: 10),
+              // FastKirana Speed Logo
+              FastKiranaLogoWidget(size: 36),
+              const SizedBox(width: 12),
 
-              // Location Selector
+              // Location & Speed Delivery Info
               Expanded(
                 child: GestureDetector(
                   onTap: () {
@@ -235,76 +235,106 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFFE20A22)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Fast Delivery',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF111827),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF16A34A)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '10-15 MINS',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF15803D),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Ghatampur, UP',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF111827),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF111827)),
                         ],
                       ),
-                      const SizedBox(height: 1),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Select Location',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF6B7280),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          const Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Color(0xFF6B7280)),
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap to change delivery address',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF9CA3AF),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // Theme / Notification Icon
+              // Notification Icon
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
                 },
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: const Color(0xFFF9FAFB),
                     shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
-                  child: const Icon(Icons.nightlight_round, size: 18, color: Color(0xFF4B5563)),
+                  child: const Center(
+                    child: Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF374151)),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // Search Bar (Exact Web Style Rounded Input)
+          // Search Bar (Modern Pill with Animated Rotating Placeholder & Mic)
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
             },
             child: Container(
-              height: 44,
+              height: 46,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFF9CA3AF)),
+                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFFE20A22)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: AnimatedSwitcher(
@@ -325,12 +355,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9CA3AF),
+                          color: const Color(0xFF6B7280),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFFEA580C)),
                   ),
                 ],
               ),
