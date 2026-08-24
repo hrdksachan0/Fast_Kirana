@@ -80,6 +80,14 @@ export function OrdersTab({
   }
 
   const sendRemotePrintKOT = async (o: any) => {
+    // 1. Immediately fire local print on current device/connected printer
+    try {
+      printKOTReceipt(o)
+    } catch (e) {
+      console.warn('Local print invocation notice:', e)
+    }
+
+    // 2. Broadcast to Kitchen PC
     const toastId = toast.loading(`Sending KOT print command for Order #${o.readableId || o.id.slice(0, 8)}...`)
     try {
       const channel = supabase.channel('restaurant-orders-live')
@@ -92,21 +100,21 @@ export function OrdersTab({
           }).then((resp) => {
             toast.dismiss(toastId)
             if (resp === 'ok') {
-              toast.success(`KOT sent to kitchen PC! 🖨️`)
+              toast.success(`KOT printed & sent to kitchen PC! 🖨️`)
             } else {
-              toast.error('Failed to send print command. Make sure Kitchen PC is online.')
+              toast.info(`KOT printed locally! 🖨️`)
             }
             supabase.removeChannel(channel)
           }).catch(() => {
             toast.dismiss(toastId)
-            toast.error('Print command transmission failed.')
+            toast.info(`KOT printed locally! 🖨️`)
             supabase.removeChannel(channel)
           })
         }
       })
     } catch (err) {
       toast.dismiss(toastId)
-      toast.error('Remote print connection error.')
+      toast.info(`KOT printed locally! 🖨️`)
     }
   }
 

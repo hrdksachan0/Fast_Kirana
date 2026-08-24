@@ -18,48 +18,84 @@ function getHiddenIframe(): HTMLIFrameElement {
     iframe = document.createElement('iframe')
     iframe.id = 'fastkirana-silent-printer'
     iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
+    iframe.style.right = '-9999px'
+    iframe.style.bottom = '-9999px'
+    iframe.style.width = '350px'
+    iframe.style.height = '450px'
+    iframe.style.opacity = '0.01'
+    iframe.style.pointerEvents = 'none'
     iframe.style.border = '0'
-    iframe.style.visibility = 'hidden'
+    iframe.style.zIndex = '-9999'
     document.body.appendChild(iframe)
   }
   return iframe
 }
 
 async function processPrintQueue() {
-  if (isPrinting || printQueue.length === 0) return
+  if (printQueue.length === 0) return
+  if (isPrinting) {
+    // Safety auto-unlock if stuck for over 3 seconds
+    setTimeout(() => {
+      isPrinting = false
+      if (printQueue.length > 0) processPrintQueue()
+    }, 3000)
+    return
+  }
   isPrinting = true
 
   const item = printQueue.shift()!
 
   try {
-    const iframe = getHiddenIframe()
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
-    if (!iframeDoc) {
-      // Fallback to popup if iframe document is not accessible
-      const printWindow = window.open('', '_blank', 'width=600,height=800')
+    if (isMobile) {
+      // Mobile browsers block iframe printing; open printable window
+      const printWindow = window.open('', '_blank')
       if (printWindow) {
+        printWindow.document.open()
         printWindow.document.write(item.html)
         printWindow.document.close()
         printWindow.focus()
-        printWindow.print()
-        setTimeout(() => printWindow.close(), 1000)
+        setTimeout(() => {
+          try {
+            printWindow.print()
+          } catch (e) {
+            console.error('Mobile print error:', e)
+          }
+        }, 350)
       }
     } else {
-      iframeDoc.open()
-      iframeDoc.write(item.html)
-      iframeDoc.close()
+      const iframe = getHiddenIframe()
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
 
-      // Give images/styles a brief moment to render before firing native browser print dialog
-      await new Promise((resolve) => setTimeout(resolve, 250))
+      if (iframeDoc && iframe.contentWindow) {
+        iframeDoc.open()
+        iframeDoc.write(item.html)
+        iframeDoc.close()
 
-      if (iframe.contentWindow) {
-        iframe.contentWindow.focus()
-        iframe.contentWindow.print()
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        try {
+          iframe.contentWindow.focus()
+          iframe.contentWindow.print()
+        } catch (printErr) {
+          console.warn('Iframe print blocked, falling back to window.open:', printErr)
+          const printWindow = window.open('', '_blank', 'width=450,height=600')
+          if (printWindow) {
+            printWindow.document.write(item.html)
+            printWindow.document.close()
+            printWindow.focus()
+            printWindow.print()
+          }
+        }
+      } else {
+        const printWindow = window.open('', '_blank', 'width=450,height=600')
+        if (printWindow) {
+          printWindow.document.write(item.html)
+          printWindow.document.close()
+          printWindow.focus()
+          printWindow.print()
+        }
       }
     }
   } catch (err) {

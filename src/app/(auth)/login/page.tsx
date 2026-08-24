@@ -501,20 +501,18 @@ function LoginForm() {
             <ShoppingBag className="h-7 w-7 animate-float" />
           </div>
           <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
-            {step === 'EMAIL' && 'Welcome to FastKirana'}
+            {step === 'EMAIL' && (loginType === 'WHATSAPP' ? 'Login with WhatsApp no.' : 'Staff & Admin Login')}
             {step === 'PASSWORD' && 'Enter Password'}
-            {step === 'OTP' && (loginType === 'WHATSAPP' || isPhoneNumber(email) || email.startsWith('wa-') ? 'Verify Mobile OTP' : 'Verify Email')}
+            {step === 'OTP' && (loginType === 'WHATSAPP' || isPhoneNumber(email) || email.startsWith('wa-') ? 'Verify WhatsApp OTP' : 'Verify Email')}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
-            {step === 'EMAIL' && 'Log in or sign up to shop groceries with fast delivery'}
+            {step === 'EMAIL' && (loginType === 'WHATSAPP' ? 'Enter your 10-digit WhatsApp number for instant OTP' : 'Log in with your official staff credentials')}
             {step === 'PASSWORD' && `Enter password for ${email}`}
-            {step === 'OTP' && `We sent a 6-digit OTP code to ${isPhoneNumber(email) ? email : formatIdentifierDisplay(email)}`}
+            {step === 'OTP' && `We sent a 6-digit OTP code to WhatsApp number ${isPhoneNumber(email) ? email : formatIdentifierDisplay(email)}`}
             {step === 'PROFILE' && 'Enter your full name to finish account setup'}
           </p>
         </div>
-
-
 
          {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
         {step === 'EMAIL' && (
@@ -525,7 +523,7 @@ function LoginForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-bold text-xs text-text-secondary">
-                {loginType === 'WHATSAPP' ? 'Mobile Number' : 'Email Address'}
+                {loginType === 'WHATSAPP' ? 'WhatsApp Mobile Number' : 'Email Address'}
               </Label>
               <div className="relative group">
                 {loginType === 'WHATSAPP' ? (
@@ -536,7 +534,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type={loginType === 'WHATSAPP' ? 'text' : 'email'}
-                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit mobile number' : 'name@example.com'}
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'name@example.com'}
                   value={email}
                   onChange={(e) => {
                     let val = e.target.value
@@ -545,9 +543,10 @@ function LoginForm() {
                     }
                     setEmail(val)
                   }}
-                  className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
+                  className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60 font-medium"
                   disabled={isLoading}
                   required
+                  autoFocus
                 />
               </div>
               {errors.email && (
@@ -563,10 +562,10 @@ function LoginForm() {
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Checking...
+                  Sending OTP...
                 </>
               ) : (
-                'Continue'
+                loginType === 'WHATSAPP' ? 'Get OTP on WhatsApp' : 'Continue'
               )}
             </Button>
 
@@ -618,7 +617,7 @@ function LoginForm() {
                   }}
                   className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
                 >
-                  Go back to Mobile Login
+                  ← Login with WhatsApp no.
                 </button>
               )}
             </div>

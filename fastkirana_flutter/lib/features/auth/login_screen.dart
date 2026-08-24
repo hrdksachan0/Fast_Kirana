@@ -262,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        '📱 Phone OTP',
+                                        '💬 WhatsApp Login',
                                         style: GoogleFonts.inter(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w800,
@@ -291,7 +291,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        '✉️ Email Login',
+                                        '✉️ Staff Login',
                                         style: GoogleFonts.inter(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w800,
@@ -364,7 +364,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF111827), letterSpacing: 1.2),
                                     decoration: InputDecoration(
                                       counterText: '',
-                                      hintText: 'Enter 10-digit phone',
+                                      hintText: 'Enter 10-digit WhatsApp no.',
                                       hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9CA3AF), letterSpacing: 0),
                                       border: InputBorder.none,
                                     ),
@@ -390,7 +390,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: _isLoading
                                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                                     : Text(
-                                        'Continue with OTP ➔',
+                                        'Get OTP on WhatsApp ➔',
                                         style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
                                       ),
                               ),
