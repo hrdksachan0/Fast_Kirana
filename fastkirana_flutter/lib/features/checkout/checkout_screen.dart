@@ -145,6 +145,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'couponCode': widget.couponCode,
         'items': cart.items.map((item) => {
           'productId': item.product.id,
+          'product': {
+            'id': item.product.id,
+            'name': item.product.name,
+            'price': item.product.price,
+            'slug': item.product.slug,
+          },
           'name': item.product.name,
           'price': item.product.price,
           'quantity': item.quantity,

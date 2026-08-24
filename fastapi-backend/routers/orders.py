@@ -247,6 +247,41 @@ async def create_order(
     if not payment_method or not items:
         raise HTTPException(status_code=400, detail="Missing required fields")
 
+    # Normalize items format so both Web {"product": {"id": ...}} and Mobile {"productId": "..."} work 100%
+    normalized_items = []
+    for raw_item in items:
+        if isinstance(raw_item, dict) and "product" in raw_item and isinstance(raw_item["product"], dict):
+            prod_dict = raw_item["product"]
+            prod_id = prod_dict.get("id") or raw_item.get("productId")
+            prod_name = prod_dict.get("name") or raw_item.get("name", "Product")
+            prod_slug = prod_dict.get("slug")
+            prod_price = float(raw_item.get("price") or prod_dict.get("price", 0.0))
+        elif isinstance(raw_item, dict):
+            prod_id = raw_item.get("productId") or raw_item.get("id")
+            prod_name = raw_item.get("name", "Product")
+            prod_slug = raw_item.get("slug")
+            prod_price = float(raw_item.get("price", 0.0))
+        else:
+            continue
+
+        normalized_items.append({
+            "product": {
+                "id": str(prod_id) if prod_id else "",
+                "name": prod_name,
+                "slug": prod_slug,
+                "price": prod_price,
+            },
+            "productId": str(prod_id).split("_")[0] if prod_id else None,
+            "quantity": int(raw_item.get("quantity", 1)),
+            "price": prod_price,
+            "selectedVariant": raw_item.get("selectedVariant"),
+            "notes": raw_item.get("notes"),
+        })
+    items = normalized_items
+
+    if not items:
+        raise HTTPException(status_code=400, detail="No valid items in order")
+
     if delivery_method != "PICKUP" and not address_id:
         raise HTTPException(status_code=400, detail="Delivery address is required")
 
@@ -297,7 +332,7 @@ async def create_order(
         await db.commit()
         final_address_id = pickup_address.id
 
-    address_stmt = select(Address).where(Address.id == final_address_id, Address.userId == user_id)
+    address_stmt = select(Address).where(Address.id == final_address_id)
     address_res = await db.execute(address_stmt)
     address = address_res.scalars().first()
 
