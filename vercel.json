@@ -1,5 +1,9 @@
 {
   "buildCommand": "npx prisma generate && next build",
+  "regions": ["bom1"],
+  "env": {
+    "TZ": "Asia/Kolkata"
+  },
   "functions": {
     "src/app/**/*": {
       "memory": 1024,
