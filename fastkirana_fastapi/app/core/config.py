@@ -16,5 +16,8 @@ class Settings:
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "sb_publishable_txJDOmH1qWQuOLCKrnV69A_RQ1XS4o-")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "supersecretkey1234567890abcdef123456")
     ADMIN_USER_ID: str = os.getenv("ADMIN_USER_ID", "cmqgzqeud0000vkid7hd6mti4")
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_live_TRvyzlqHiRGWbr")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "4C54O0N5q841qdmQ8N1MTTiU")
 
 settings = Settings()
+
