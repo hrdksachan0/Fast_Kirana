@@ -433,29 +433,6 @@ export function CartDrawer() {
                   🪄 Auto-Adjust Out of Stock Items
                 </button>
               )}
-              {/* Premium Distance & Delivery Banner */}
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/10 border border-emerald-200/60 dark:border-emerald-900/40 p-3.5 mb-3 shadow-sm">
-                <div className="flex items-center gap-2 border-b border-emerald-200/50 dark:border-emerald-900/30 pb-2 mb-2">
-                  <span className="text-sm">🚚</span>
-                  <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">
-                    Distance Delivery Zones (FREE Delivery 🎉)
-                  </p>
-                </div>
-                  <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-emerald-900 dark:text-emerald-200">
-                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
-                    <span>📍 0–2 km</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">FREE on ₹199+ (else ₹25)</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
-                    <span>📍 2–3 km</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">FREE on ₹249+ (else ₹35)</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30 opacity-70">
-                    <span>📍 3+ km</span>
-                    <span className="font-extrabold text-rose-500 dark:text-rose-450">Not Serviceable</span>
-                  </div>
-                </div>
-              </div>
 
               {/* Grocery Items Section */}
               {groceryItems.length > 0 && (
