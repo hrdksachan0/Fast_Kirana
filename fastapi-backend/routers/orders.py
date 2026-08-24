@@ -388,33 +388,10 @@ async def create_order(
 
     # Store timings check
     def is_store_open(prefix: str) -> bool:
-        # Check explicit manual open override
-        if settings_map.get(f"{prefix}_mart_open") == "true" or settings_map.get(f"{prefix}_open") == "true":
-            return True
-        if settings_map.get(f"{prefix}_mart_open") == "false" or settings_map.get(f"{prefix}_open") == "false":
+        # Always allow order placement (24x7 Express Delivery)
+        if settings_map.get(f"{prefix}_force_closed") == "true":
             return False
-
-        auto_timing = settings_map.get(f"{prefix}_auto_timing") == "true"
-        if not auto_timing:
-            return True
-
-        open_time = settings_map.get(f"{prefix}_open_time", "06:00")
-        close_time = settings_map.get(f"{prefix}_close_time", "23:59")
-
-        # India timezone offset
-        ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-        curr_mins = ist.hour * 60 + ist.minute
-
-        o_h, o_m = map(int, open_time.split(":"))
-        c_h, c_m = map(int, close_time.split(":"))
-
-        open_mins = o_h * 60 + o_m
-        close_mins = c_h * 60 + c_m
-
-        if close_mins >= open_mins:
-            return open_mins <= curr_mins <= close_mins
-        else:
-            return curr_mins >= open_mins or curr_mins <= close_mins
+        return True
 
     # Load products and validate quantities
     product_ids = [i["product"]["id"].split("_")[0] for i in items]
