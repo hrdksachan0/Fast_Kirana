@@ -47,25 +47,48 @@ export async function POST(req: Request) {
 
       let order: any = null
 
-      if (targetOrderId) {
-        order = await prisma.order.findUnique({
-          where: { id: targetOrderId },
-          include: { user: true, address: true },
-        })
+      if (targetOrderId && typeof targetOrderId === 'string' && targetOrderId.trim().length > 0) {
+        const cleanTargetId = targetOrderId.trim()
+        const orders: any[] = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."combinedId", o."readableId",
+                 o.status::text as status,
+                 o.total, o."paymentStatus"::text as "paymentStatus",
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."shopName", o."restaurantId",
+                 o."createdAt",
+                 u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE o.id = ${cleanTargetId} OR o."readableId" = ${cleanTargetId} LIMIT 1
+        `
+        if (orders && orders.length > 0) {
+          order = orders[0]
+        }
       }
 
       if (!order && razorpayOrderId) {
-        // Fallback: lookup by notes or search recent pending orders matching total amount
-        const amountInRupees = (paymentEntity.amount || orderEntity.amount || 0) / 100
+        // Fallback: search recent pending orders matching total amount
+        const amountInRupees = Number(paymentEntity.amount || orderEntity.amount || 0) / 100
         if (amountInRupees > 0) {
-          order = await prisma.order.findFirst({
-            where: {
-              paymentStatus: 'PENDING',
-              total: amountInRupees,
-            },
-            orderBy: { createdAt: 'desc' },
-            include: { user: true, address: true },
-          })
+          const orders: any[] = await prisma.$queryRaw`
+            SELECT o.id, o."userId", o."combinedId", o."readableId",
+                   o.status::text as status,
+                   o.total, o."paymentStatus"::text as "paymentStatus",
+                   o."paymentMethod"::text as "paymentMethod",
+                   o."shopName", o."restaurantId",
+                   o."createdAt",
+                   u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
+            FROM orders o
+            LEFT JOIN users u ON o."userId" = u.id
+            WHERE o."paymentStatus" = 'PENDING' AND (o.total = ${amountInRupees} OR o."combinedId" IN (
+              SELECT "combinedId" FROM orders GROUP BY "combinedId" HAVING SUM(total) = ${amountInRupees}
+            ))
+            ORDER BY o."createdAt" DESC
+            LIMIT 1
+          `
+          if (orders && orders.length > 0) {
+            order = orders[0]
+          }
         }
       }
 
@@ -74,55 +97,77 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'No matching order found' }, { status: 200 })
       }
 
-      // If order is already marked PAID, return early
+      // If order is already marked PAID, return early (idempotent)
       if (order.paymentStatus === 'PAID') {
         console.log(`Order ${order.id} is already marked as PAID`)
         return NextResponse.json({ success: true, message: 'Order already paid' }, { status: 200 })
       }
 
-      // Update order and any companion sub-orders (combinedId) payment status to PAID and paymentMethod
-      const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
-      const mappedPaymentMethod = paymentMethod === 'CARD' ? 'CARD' : (paymentMethod === 'WALLET' ? 'WALLET' : 'UPI')
+      // Update order and all companion sub-orders (combinedId) atomically via Raw SQL
+      if (order.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "paymentStatus" = 'PAID'::"PaymentStatus",
+              "paymentMethod" = 'UPI'::"PaymentMethod",
+              status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+              "updatedAt" = NOW()
+          WHERE "combinedId" = ${order.combinedId}
+        `
+      } else {
+        const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "paymentStatus" = 'PAID'::"PaymentStatus",
+              "paymentMethod" = 'UPI'::"PaymentMethod",
+              status = ${nextStatus}::"OrderStatus",
+              "updatedAt" = NOW()
+          WHERE id = ${order.id}
+        `
+      }
 
-      const updateFilter = order.combinedId
-        ? { combinedId: order.combinedId }
-        : { id: order.id }
-
-      await prisma.order.updateMany({
-        where: updateFilter,
-        data: {
-          paymentStatus: 'PAID',
-          paymentMethod: mappedPaymentMethod as any,
-          status: nextStatus as any,
-        },
-      })
-
-      const updatedOrder = (await prisma.order.findUnique({
-        where: { id: order.id },
-      })) || order
+      const freshOrders: any[] = await prisma.$queryRaw`
+        SELECT id, status::text as status, total,
+               "paymentStatus"::text as "paymentStatus",
+               "paymentMethod"::text as "paymentMethod",
+               "readableId", "createdAt"
+        FROM orders WHERE id = ${order.id} LIMIT 1
+      `
+      const updatedOrder = freshOrders[0] || order
 
       console.log(`✅ Order ${updatedOrder.id} updated to PAID & CONFIRMED via Razorpay Webhook`)
 
       // Fire notifications now that payment is confirmed!
       try {
-        const displayId = (updatedOrder as any).readableId || updatedOrder.id.slice(-6).toUpperCase()
+        const displayId = updatedOrder.readableId
+          ? String(updatedOrder.readableId).replace(/-[GR\d]+$/i, '')
+          : updatedOrder.id.slice(-6).toUpperCase()
+
+        let notifyTotal = Number(updatedOrder.total || 0)
+        if (order.combinedId) {
+          const combinedTotals: any[] = await prisma.$queryRaw`
+            SELECT SUM(total) as "combinedTotal" FROM orders WHERE "combinedId" = ${order.combinedId}
+          `
+          if (combinedTotals[0]?.combinedTotal) {
+            notifyTotal = Number(combinedTotals[0].combinedTotal)
+          }
+        }
 
         // SSE event for admin dashboard audio & live update
         sseEmitter.emit('order', {
           type: 'new-order',
           orderId: updatedOrder.id,
-          readableId: (updatedOrder as any).readableId,
+          readableId: displayId,
           status: updatedOrder.status,
-          total: updatedOrder.total,
-          paymentStatus: updatedOrder.paymentStatus,
-          paymentMethod: updatedOrder.paymentMethod,
+          total: notifyTotal,
+          paymentStatus: 'PAID',
+          paymentMethod: 'UPI',
           createdAt: updatedOrder.createdAt,
         })
 
         // Push notification to staff roles
         sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
           title: '💳 Online Payment Order Confirmed!',
-          body: `Order #${displayId} of ₹${updatedOrder.total} — PAID via Razorpay ✅`,
+          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Razorpay ✅`,
           tag: `order-${updatedOrder.id}`,
           data: { orderId: updatedOrder.id },
         }).catch((err: any) => console.error('Error sending push notification:', err))
@@ -144,12 +189,11 @@ export async function POST(req: Request) {
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
         const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-        const outletName =
-          (order as any).shopName || ((order as any).restaurantId ? 'Restaurant' : 'FastKirana Grocery')
-        const customerName = order.user?.name || 'Customer'
-        const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
+        const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+        const customerName = order.userName || 'Customer'
+        const customerPhone = order.userPhone || 'N/A'
 
-        const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${updatedOrder.total} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
+        const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
 
         for (const adminPhone of adminPhones) {
           sendWhatsAppOrderAlert(adminPhone, adminText).catch((err: any) =>

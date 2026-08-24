@@ -75,16 +75,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No matching order found to sync with Razorpay payment.' }, { status: 404 })
     }
 
-    // Update order status to PAID & CONFIRMED
-    const nextStatus = targetOrder.status === 'PENDING' ? 'CONFIRMED' : targetOrder.status
-    const updatedOrder = await prisma.order.update({
-      where: { id: targetOrder.id },
-      data: {
-        paymentStatus: 'PAID',
-        paymentMethod: 'UPI',
-        status: nextStatus,
-      },
-    })
+    // Update order status to PAID & CONFIRMED via Raw SQL
+    if (targetOrder.combinedId) {
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'PAID'::"PaymentStatus",
+            "paymentMethod" = 'UPI'::"PaymentMethod",
+            status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+            "updatedAt" = NOW()
+        WHERE "combinedId" = ${targetOrder.combinedId}
+      `
+    } else {
+      const nextStatus = targetOrder.status === 'PENDING' ? 'CONFIRMED' : targetOrder.status
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'PAID'::"PaymentStatus",
+            "paymentMethod" = 'UPI'::"PaymentMethod",
+            status = ${nextStatus}::"OrderStatus",
+            "updatedAt" = NOW()
+        WHERE id = ${targetOrder.id}
+      `
+    }
+
+    const freshSynced: any[] = await prisma.$queryRaw`
+      SELECT id, status::text as status, total,
+             "paymentStatus"::text as "paymentStatus",
+             "paymentMethod"::text as "paymentMethod",
+             "readableId", "createdAt"
+      FROM orders WHERE id = ${targetOrder.id} LIMIT 1
+    `
+    const updatedOrder = freshSynced[0] || targetOrder
 
     // Trigger Notifications
     try {

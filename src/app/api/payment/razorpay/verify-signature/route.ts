@@ -14,19 +14,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required signature parameters' }, { status: 400 })
     }
 
-    // Use raw SQL to avoid PrismaPg enum deserialization bug
-    const orders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o."userId", o."combinedId", o."readableId",
-             o.status::text as status,
-             o.total, o."paymentStatus"::text as "paymentStatus",
-             o."paymentMethod"::text as "paymentMethod",
-             o."shopName", o."restaurantId",
-             o."createdAt",
-             u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
-      FROM orders o
-      LEFT JOIN users u ON o."userId" = u.id
-      WHERE o.id = ${orderId} LIMIT 1
-    `
+      const cleanId = String(orderId).trim()
+      const orders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."combinedId", o."readableId",
+               o.status::text as status,
+               o.total, o."paymentStatus"::text as "paymentStatus",
+               o."paymentMethod"::text as "paymentMethod",
+               o."shopName", o."restaurantId",
+               o."createdAt",
+               u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
+        FROM orders o
+        LEFT JOIN users u ON o."userId" = u.id
+        WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} LIMIT 1
+      `
 
     if (!orders || orders.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
