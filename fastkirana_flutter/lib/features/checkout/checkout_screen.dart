@@ -170,10 +170,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPlacingOrder = false);
+
+      String errorMsg = e.toString();
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data['detail'] != null) {
+          errorMsg = data['detail'].toString();
+        } else if (data is Map && data['error'] != null) {
+          errorMsg = data['error'].toString();
+        }
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('Failed to initialize order: ${e.toString()}'),
+          backgroundColor: Colors.red.shade700,
+          content: Text(errorMsg),
           behavior: SnackBarBehavior.floating,
         ),
       );

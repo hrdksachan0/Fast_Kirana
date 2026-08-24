@@ -1,7 +1,7 @@
 # Graph Report - Fastkirana  (2026-08-24)
 
 ## Corpus Check
-- 661 files · ~2,617,146 words
+- 661 files · ~2,617,296 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `18c3521e`
+- Built from commit: `15354c9c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -110,14 +110,14 @@
 - public/manifest.json
 - FastKirana Refactoring Plan
 - admin-rider-cash.tsx
-- CurrentUser
+- app/routers/addresses.py
 - settings.py
 - cafe_menu_screen.dart
 - requireOrderAccess
 - paytm_callback
 - admin-inventory-center.tsx
 - High-Agency Frontend Skill
-- @tailwindcss/postcss
+- 1. THE THREE DIALS (Core Configuration)
 - routers/restaurant.py
 - admin-analytics.tsx
 - main.py
@@ -128,12 +128,14 @@
 - app/routers/orders.py
 - storefront-client.tsx
 - seed.ts
+- @auth/prisma-adapter
 - app_router.dart
 - 3. Custom Code That Deserves a Library
 - new-work.md
 - admin-dashboard.tsx
 - DateTime
 - next-auth.d.ts
+- libphonenumber-js
 - orders-tab.tsx
 - live.md
 - test_api.py
@@ -315,11 +317,9 @@
 - get_picker_orders
 - hub-nav.tsx
 - fastapi-backend/database.py
-- core/config.py
 - conftest.py
 - send_push_notification
 - framer-motion
-- lru-cache
 - pg
 - resend
 - @supabase/supabase-js
@@ -519,7 +519,7 @@ Nodes (12): email, formatDate, formatPrice, getImageUrl, Helpers, otp, phone, pi
 
 ### Community 39 - "dependencies"
 Cohesion: 0.07
-Nodes (27): @auth/prisma-adapter, @base-ui/react, bcryptjs, class-variance-authority, clsx, libphonenumber-js, next, dependencies (+19 more)
+Nodes (27): @base-ui/react, bcryptjs, class-variance-authority, clsx, lru-cache, next, dependencies, @base-ui/react (+19 more)
 
 ### Community 40 - "ConsumerState"
 Cohesion: 0.04
@@ -741,9 +741,9 @@ Nodes (34): 1.1 Custom Debounce → `use-debounce`, 1.2 CSV Parsing → `papapar
 Cohesion: 0.29
 Nodes (6): AdminRiderCash(), DepositLog, RiderCashInfo, SummaryInfo, RiderCashTab(), RiderCashTabProps
 
-### Community 95 - "CurrentUser"
-Cohesion: 0.16
-Nodes (16): AddressCreate, CurrentUser, get_current_user(), Address, Base, create_address(), delete_address(), get_addresses() (+8 more)
+### Community 95 - "app/routers/addresses.py"
+Cohesion: 0.17
+Nodes (14): AddressCreate, Address, Base, create_address(), delete_address(), get_addresses(), Any, delete (+6 more)
 
 ### Community 96 - "settings.py"
 Cohesion: 0.19
@@ -768,6 +768,10 @@ Nodes (7): AdminInventoryCenter(), AdminInventoryCenterProps, CartItem, Product,
 ### Community 101 - "High-Agency Frontend Skill"
 Cohesion: 0.06
 Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEFAULT ARCHITECTURE & CONVENTIONS, 3. DESIGN ENGINEERING DIRECTIVES (Bias Correction), 4. CREATIVE PROACTIVITY (Anti-Slop Implementation), 5. PERFORMANCE GUARDRAILS, 6. TECHNICAL REFERENCE (Dial Definitions), 7. AI TELLS (Forbidden Patterns) (+22 more)
+
+### Community 102 - "1. THE THREE DIALS (Core Configuration)"
+Cohesion: 0.50
+Nodes (4): 1.A Dial Inference (design read → dial values), 1.B Use-Case Presets, 1.C How the Dials Drive Output, 1. THE THREE DIALS (Core Configuration)
 
 ### Community 103 - "routers/restaurant.py"
 Cohesion: 0.16
@@ -798,8 +802,8 @@ Cohesion: 0.18
 Nodes (18): get_admin_all_orders(), get_admin_dashboard(), get_admin_inventory_forecast(), get_sales_reports(), Any, AsyncSession, get, patch (+10 more)
 
 ### Community 110 - "app/routers/orders.py"
-Cohesion: 0.18
-Nodes (16): Order, OrderItem, Base, get_order_details(), get_user_orders(), place_order(), Any, get (+8 more)
+Cohesion: 0.16
+Nodes (18): CurrentUser, get_current_user(), Order, OrderItem, Base, get_order_details(), get_user_orders(), place_order() (+10 more)
 
 ### Community 111 - "storefront-client.tsx"
 Cohesion: 0.05
@@ -986,8 +990,8 @@ Cohesion: 0.17
 Nodes (11): 📝 API Routes, 🔐 Authentication, 🗄️ Database, 📍 Endpoints, 🔑 Environment Variables, FastKirana FastAPI Backend, 📜 License, Option 1: One-Click Start (Windows) (+3 more)
 
 ### Community 204 - "tasteskill: Anti-Slop Frontend Skill"
-Cohesion: 0.13
-Nodes (15): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 1.A Dial Inference (design read → dial values) (+7 more)
+Cohesion: 0.18
+Nodes (11): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 2.A When to reach for a real design system (use official packages) (+3 more)
 
 ### Community 205 - "clarify.md"
 Cohesion: 0.18
@@ -1090,8 +1094,8 @@ Cohesion: 0.25
 Nodes (8): 1. Impatient Power User: "Alex", 2. Confused First-Timer: "Jordan", 3. Accessibility-Dependent User: "Sam", 4. Deliberate Stress Tester: "Riley", 5. Distracted Mobile User: "Casey", Persona-Based Design Testing, Project-Specific Personas, Selecting Personas
 
 ### Community 231 - "core/database.py"
-Cohesion: 0.22
-Nodes (10): get_db(), Category, Base, Product, Base, get_categories(), get, get_product() (+2 more)
+Cohesion: 0.15
+Nodes (13): Settings, get_db(), get, root(), Category, Base, Product, Base (+5 more)
 
 ### Community 232 - "Phase 3: Security Hardening"
 Cohesion: 0.25
@@ -1321,10 +1325,6 @@ Nodes (5): get_picker_orders(), AsyncSession, get, Get list of active PENDING/CO
 Cohesion: 0.33
 Nodes (5): DashboardHubNav(), DashboardHubNavProps, HUB_ICONS, HubNavItem, HubNavTab
 
-### Community 340 - "core/config.py"
-Cohesion: 0.40
-Nodes (3): Settings, get, root()
-
 ### Community 344 - "send_push_notification"
 Cohesion: 0.50
 Nodes (3): Any, Sends a push notification by bridging to the Next.js API endpoint. Uses…, send_push_notification()
@@ -1337,9 +1337,9 @@ Nodes (3): Any, Sends a push notification by bridging to the Next.js API endpoin
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dotenv` connect `dotenv` to `core/config.py`?**
+- **Why does `dotenv` connect `dotenv` to `core/database.py`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `lucide-react`, `package.json`, `dotenv`, `react-dom`, `@types/node`, `@types/pg`, `next-auth`, `date-fns`, `xlsx`, `shadcn`, `nodemailer`, `papaparse`, `prisma`, `sonner`, `@types/web-push`, `zustand`, `@types/react-dom`, `web-push`, `framer-motion`, `lru-cache`, `pg`, `resend`, `@supabase/supabase-js`, `tailwindcss`, `@types/bcryptjs`, `@types/papaparse`, `@upstash/redis`, `@tailwindcss/postcss`?**
+- **Why does `dependencies` connect `dependencies` to `lucide-react`, `package.json`, `dotenv`, `react-dom`, `@types/node`, `@types/pg`, `next-auth`, `date-fns`, `xlsx`, `shadcn`, `nodemailer`, `papaparse`, `prisma`, `sonner`, `@types/web-push`, `zustand`, `@types/react-dom`, `web-push`, `framer-motion`, `pg`, `resend`, `@supabase/supabase-js`, `tailwindcss`, `@types/bcryptjs`, `@types/papaparse`, `@upstash/redis`, `@auth/prisma-adapter`, `libphonenumber-js`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Why does `dotenv` connect `dotenv` to `dependencies`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._

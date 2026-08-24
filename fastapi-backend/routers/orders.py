@@ -388,14 +388,18 @@ async def create_order(
 
     # Store timings check
     def is_store_open(prefix: str) -> bool:
+        # Check explicit manual open override
+        if settings_map.get(f"{prefix}_mart_open") == "true" or settings_map.get(f"{prefix}_open") == "true":
+            return True
+        if settings_map.get(f"{prefix}_mart_open") == "false" or settings_map.get(f"{prefix}_open") == "false":
+            return False
+
         auto_timing = settings_map.get(f"{prefix}_auto_timing") == "true"
         if not auto_timing:
-            if prefix == "grocery":
-                return settings_map.get("grocery_mart_open") != "false"
-            return settings_map.get("restaurant_open") != "false"
+            return True
 
-        open_time = settings_map.get(f"{prefix}_open_time", "09:00")
-        close_time = settings_map.get(f"{prefix}_close_time", "22:00")
+        open_time = settings_map.get(f"{prefix}_open_time", "06:00")
+        close_time = settings_map.get(f"{prefix}_close_time", "23:59")
 
         # India timezone offset
         ist = datetime.utcnow() + timedelta(hours=5, minutes=30)

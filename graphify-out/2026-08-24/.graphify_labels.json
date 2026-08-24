@@ -101,7 +101,7 @@
   "99": "paytm_callback",
   "100": "admin-inventory-center.tsx",
   "101": "High-Agency Frontend Skill",
-  "102": "@auth/prisma-adapter",
+  "102": "@tailwindcss/postcss",
   "103": "routers/restaurant.py",
   "104": "admin-analytics.tsx",
   "105": "main.py",
