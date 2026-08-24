@@ -4,7 +4,8 @@ import { Category } from '@/types'
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 
-export const revalidate = 86400
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -15,28 +16,33 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 async function CategoriesLoader() {
-  // Fetch all categories from database
-  const categoriesRaw = await prisma.category.findMany({
-    orderBy: { sortOrder: 'asc' },
-    include: {
-      _count: {
-        select: { products: true },
+  try {
+    // Fetch all categories from database
+    const categoriesRaw = await prisma.category.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: {
+          select: { products: true },
+        },
       },
-    },
-  })
+    })
 
-  // Map to standard Category schema
-  const categories: Category[] = categoriesRaw.map((c) => ({
-    id: c.id,
-    name: c.name,
-    slug: c.slug,
-    imageUrl: c.imageUrl,
-    parentId: c.parentId,
-    sortOrder: c.sortOrder,
-    _count: c._count,
-  }))
+    // Map to standard Category schema
+    const categories: Category[] = categoriesRaw.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      imageUrl: c.imageUrl,
+      parentId: c.parentId,
+      sortOrder: c.sortOrder,
+      _count: c._count,
+    }))
 
-  return <CategoriesDirectoryClient categories={categories} />
+    return <CategoriesDirectoryClient categories={categories} />
+  } catch (error) {
+    console.error('Failed to load categories in CategoriesLoader:', error)
+    return <CategoriesDirectoryClient categories={[]} />
+  }
 }
 
 export default function CategoriesPage() {

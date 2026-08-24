@@ -32,7 +32,7 @@ function createPrismaClient() {
     ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 30000 // 30s allowance for cross-region serverless cold starts
   })
   
   const adapter = new PrismaPg(pool)
