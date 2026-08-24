@@ -279,7 +279,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           };
 
           final jsonOpts = jsonEncode(options);
-          js.context.callMethod('openRazorpayWeb', [jsonOpts]);
+          js.context.callMethod('eval', ["""
+            (function() {
+              function openRzp() {
+                try {
+                  var opt = $jsonOpts;
+                  opt.handler = function(response) {
+                    if (window.onRazorpaySuccess) {
+                      window.onRazorpaySuccess(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+                    }
+                  };
+                  opt.modal = {
+                    ondismiss: function() {
+                      if (window.onRazorpayDismiss) {
+                        window.onRazorpayDismiss("Payment cancelled by user");
+                      }
+                    }
+                  };
+                  var rzp = new Razorpay(opt);
+                  rzp.on('payment.failed', function (response){
+                    if (window.onRazorpayDismiss) {
+                      window.onRazorpayDismiss(response.error ? response.error.description : "Payment failed");
+                    }
+                  });
+                  rzp.open();
+                } catch(e) {
+                  if (window.onRazorpayDismiss) {
+                    window.onRazorpayDismiss(e.message || e.toString());
+                  }
+                }
+              }
+
+              if (typeof Razorpay === 'undefined') {
+                var s = document.createElement('script');
+                s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                s.onload = openRzp;
+                s.onerror = function() {
+                  if (window.onRazorpayDismiss) {
+                    window.onRazorpayDismiss("Could not load Razorpay SDK. Please check internet connection.");
+                  }
+                };
+                document.head.appendChild(s);
+              } else {
+                openRzp();
+              }
+            })();
+          """]);
         } catch (e) {
           debugPrint('Web Razorpay launch error: $e');
           if (mounted) {
