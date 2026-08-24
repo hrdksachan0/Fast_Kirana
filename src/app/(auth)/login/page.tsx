@@ -287,8 +287,11 @@ function LoginForm() {
         toast.error(data.error || 'Verification failed')
       } else {
         if (data.needsProfileSetup) {
-          toast.info('New account detected! Please enter your name and phone to continue.')
+          toast.info('Please enter your full name to finish account setup.')
           setNeedsProfileSetup(true)
+          if (isPhoneNumber(email)) {
+            setPhone(getLast10Digits(email))
+          }
           setStep('PROFILE')
         } else {
           // Existing customer — sign in directly
@@ -500,14 +503,14 @@ function LoginForm() {
           <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && 'Welcome to FastKirana'}
             {step === 'PASSWORD' && 'Enter Password'}
-            {step === 'OTP' && (email.startsWith('wa-') ? 'Verify Mobile' : 'Verify Email')}
+            {step === 'OTP' && (loginType === 'WHATSAPP' || isPhoneNumber(email) || email.startsWith('wa-') ? 'Verify Mobile OTP' : 'Verify Email')}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
             {step === 'EMAIL' && 'Log in or sign up to shop groceries with fast delivery'}
             {step === 'PASSWORD' && `Enter password for ${email}`}
-            {step === 'OTP' && `We sent a 6-digit OTP code to ${formatIdentifierDisplay(email)}`}
-            {step === 'PROFILE' && 'Enter your name and phone number to finish setup'}
+            {step === 'OTP' && `We sent a 6-digit OTP code to ${isPhoneNumber(email) ? email : formatIdentifierDisplay(email)}`}
+            {step === 'PROFILE' && 'Enter your full name to finish account setup'}
           </p>
         </div>
 

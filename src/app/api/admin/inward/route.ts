@@ -11,92 +11,100 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { productId, barcode, batchCode, quantity, costPrice, expiryDate } = body as {
+    const { productId, barcode, batchCode, quantity, costPrice, expiryDate, name } = body as {
       productId?: string
       barcode?: string
-      batchCode: string
+      batchCode?: string
       quantity: string | number
-      costPrice: string | number
-      expiryDate: string
+      costPrice?: string | number
+      expiryDate?: string
+      name?: string
     }
 
-    if ((!productId && !barcode) || !batchCode || !quantity || costPrice === undefined || !expiryDate) {
+    if (!productId && !barcode && !name) {
       return NextResponse.json(
-        { error: 'Missing required fields: productId or barcode, batchCode, quantity, costPrice, expiryDate' },
+        { error: 'Missing required field: please provide productId, barcode, or product name' },
         { status: 400 }
       )
     }
 
     const parsedQty = parseInt(String(quantity), 10)
-    const parsedCost = parseFloat(String(costPrice))
-    const parsedExpiry = new Date(expiryDate)
-
     if (isNaN(parsedQty) || parsedQty <= 0) {
-      return NextResponse.json({ error: 'Quantity must be a positive integer' }, { status: 400 })
+      return NextResponse.json({ error: 'Quantity must be a positive number' }, { status: 400 })
     }
 
-    if (isNaN(parsedCost) || parsedCost < 0) {
-      return NextResponse.json({ error: 'Cost price must be a non-negative number' }, { status: 400 })
-    }
+    // Auto-generate batch code if blank
+    const finalBatchCode = (batchCode && typeof batchCode === 'string' && batchCode.trim().length > 0)
+      ? batchCode.trim()
+      : `GRN_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-    if (isNaN(parsedExpiry.getTime())) {
-      return NextResponse.json({ error: 'Invalid expiry date format' }, { status: 400 })
+    // Expiry date: default to 180 days from now if not provided or invalid
+    let parsedExpiry = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+    if (expiryDate) {
+      const candidate = new Date(expiryDate)
+      if (!isNaN(candidate.getTime())) {
+        parsedExpiry = candidate
+      }
     }
 
     // Process inward and aggregate updates inside a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Verify product exists (either by id or barcode)
+      // 1. Verify product exists (by id, barcode, or name)
       let product = null
       if (productId) {
         product = await tx.product.findUnique({
           where: { id: productId }
         })
-      } else if (barcode) {
+      }
+      if (!product && barcode) {
         product = await tx.product.findUnique({
-          where: { barcode }
+          where: { barcode: String(barcode).trim() }
+        })
+      }
+      if (!product && name) {
+        product = await tx.product.findFirst({
+          where: { name: { equals: String(name).trim(), mode: 'insensitive' } }
         })
       }
 
       if (!product) {
-        throw new Error('Product not found')
+        throw new Error('Product not found in catalog. Please check the barcode or product name.')
       }
 
       const activeProductId = product.id
+      const parsedCost = (costPrice !== undefined && !isNaN(parseFloat(String(costPrice))))
+        ? parseFloat(String(costPrice))
+        : (product.costPrice && product.costPrice > 0 ? product.costPrice : Math.round(product.price * 0.75))
 
       // 2. Create the new batch record
-      const newBatch = await tx.productBatch.create({
-        data: {
-          productId: activeProductId,
-          batchCode,
-          quantity: parsedQty,
-          initialQty: parsedQty,
-          costPrice: parsedCost,
-          expiryDate: parsedExpiry,
-        }
-      })
+      let newBatch = null
+      try {
+        newBatch = await tx.productBatch.create({
+          data: {
+            productId: activeProductId,
+            batchCode: finalBatchCode,
+            quantity: parsedQty,
+            initialQty: parsedQty,
+            costPrice: parsedCost,
+            expiryDate: parsedExpiry,
+          }
+        })
+      } catch (batchErr) {
+        console.warn('Non-fatal warning creating productBatch:', batchErr)
+      }
 
-      // 3. Query all active batches to compute new stock level and earliest expiry
-      const activeBatches = await tx.productBatch.findMany({
-        where: {
-          productId: activeProductId,
-          quantity: { gt: 0 }
-        },
-        orderBy: {
-          expiryDate: 'asc'
-        }
-      })
-
-      const prevStock = product.stock
-      const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
-      const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
+      // 3. Compute new total stock
+      const prevStock = product.stock ?? 0
+      const newTotalStock = prevStock + parsedQty
 
       // 4. Update the aggregate fields on the parent Product
       const updatedProduct = await tx.product.update({
         where: { id: activeProductId },
         data: {
           stock: newTotalStock,
-          expiryDate: newEarliestExpiry,
-          costPrice: parsedCost, // Latest batch cost price becomes current cost price
+          costPrice: parsedCost,
+          isAvailable: true, // Automatically ensure item is available upon inward
+          ...(product.expiryDate ? {} : { expiryDate: parsedExpiry }),
         },
         include: {
           category: true
@@ -104,15 +112,19 @@ export async function POST(request: NextRequest) {
       })
 
       // 5. Create StockLog entry for audit trail
-      await tx.stockLog.create({
-        data: {
-          productId: activeProductId,
-          quantity: parsedQty,
-          type: 'INWARD_GRN',
-          prevStock,
-          newStock: newTotalStock
-        }
-      })
+      try {
+        await tx.stockLog.create({
+          data: {
+            productId: activeProductId,
+            quantity: parsedQty,
+            type: 'INWARD_GRN',
+            prevStock,
+            newStock: newTotalStock
+          }
+        })
+      } catch (logErr) {
+        console.warn('Non-fatal warning creating stockLog:', logErr)
+      }
 
       return { updatedProduct, newBatch }
     })
@@ -126,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully registered batch ${batchCode} with ${parsedQty} units.`,
+      message: `Successfully inwarded ${parsedQty} units for "${result.updatedProduct.name}" (Batch: ${finalBatchCode}).`,
       batch: result.newBatch,
       product: result.updatedProduct
     })

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
     }
 
-    // 2. Check if user exists and has name and phone
+    // 2. Check if user exists and check if real name is needed
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -65,36 +65,20 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    if (!user) {
-      const phoneDigits = isValidIndianPhone(trimmed) ? getLast10Digits(trimmed) : null
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          phone: isValidIndianPhone(trimmed) ? normalizePhone(trimmed) : null,
-          name: phoneDigits ? `User ${phoneDigits.slice(-4)}` : 'Customer',
-          role: 'USER',
-        }
-      })
-    }
-
-    const needsProfileSetup = !user || !user.name || !user.phone
-
-    // Delete used OTP token
-    await prisma.otpToken.deleteMany({
-      where: { email: normalizedEmail }
-    })
+    const isNewOrUnnamedUser = !user || !user.name || user.name.startsWith('User ') || user.name === 'Customer' || user.name.trim() === ''
+    const needsProfileSetup = isNewOrUnnamedUser
 
     return NextResponse.json({
       success: true,
       needsProfileSetup,
-      token: `token_${user.id}_${Date.now()}`,
+      token: `token_${user?.id || 'new'}_${Date.now()}`,
       user: {
-        id: user.id,
-        name: user.name || 'Customer',
-        email: user.email,
-        phone: user.phone || trimmed,
-        role: user.role,
-        isBlocked: user.isBlocked,
+        id: user?.id,
+        name: user?.name || '',
+        email: user?.email || normalizedEmail,
+        phone: user?.phone || trimmed,
+        role: user?.role || 'USER',
+        isBlocked: user?.isBlocked || false,
       }
     })
   } catch (error: any) {

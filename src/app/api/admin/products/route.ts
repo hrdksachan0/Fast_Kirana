@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
+import { revalidateStorefront } from '@/lib/revalidate'
 
 export async function GET(request: Request) {
   const adminResult = await requireAdmin()
@@ -120,5 +121,73 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('Failed to fetch admin products:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  const adminResult = await requireAdmin()
+  if (adminResult.error) return adminResult.error
+
+  try {
+    const body = await request.json()
+    const { name, categoryId, barcode, mrp, price, stock, unit, imageUrl, brand, isAvailable } = body
+
+    if (!name || mrp === undefined || price === undefined) {
+      return NextResponse.json({ error: 'Name, MRP, and Price are required' }, { status: 400 })
+    }
+
+    let finalCategoryId = categoryId
+    if (!finalCategoryId) {
+      const firstCat = await prisma.category.findFirst({
+        where: { slug: { notIn: ['restaurant-food', 'restaurant', 'cafe'] } },
+        orderBy: { sortOrder: 'asc' }
+      })
+      if (firstCat) finalCategoryId = firstCat.id
+    }
+
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '')
+
+    const existingSlug = await prisma.product.findUnique({ where: { slug } })
+    const finalSlug = existingSlug ? `${slug}-${Date.now().toString().slice(-4)}` : slug
+
+    const parsedMrp = parseFloat(String(mrp)) || 0
+    const parsedPrice = parseFloat(String(price)) || parsedMrp
+    const discount = parsedMrp > parsedPrice ? Math.max(0, Math.round(((parsedMrp - parsedPrice) / parsedMrp) * 100)) : 0
+
+    const lastProduct = await prisma.product.findFirst({
+      orderBy: { readableId: 'desc' },
+      select: { readableId: true }
+    })
+    const nextReadableId = lastProduct?.readableId ? lastProduct.readableId + 1 : 200001
+
+    const product = await prisma.product.create({
+      data: {
+        name: name.trim(),
+        slug: finalSlug,
+        readableId: nextReadableId,
+        categoryId: finalCategoryId,
+        barcode: barcode && typeof barcode === 'string' ? barcode.trim() : null,
+        mrp: parsedMrp,
+        price: parsedPrice,
+        discount,
+        stock: parseInt(String(stock), 10) || 0,
+        unit: (unit && typeof unit === 'string') ? unit.trim() : '1 pc',
+        imageUrl: imageUrl || null,
+        isAvailable: isAvailable !== undefined ? !!isAvailable : true,
+      },
+      include: {
+        category: true,
+      }
+    })
+
+    revalidateStorefront(product.category?.slug)
+
+    return NextResponse.json(product, { status: 201 })
+  } catch (err: any) {
+    console.error('Failed to create product in admin API:', err)
+    return NextResponse.json({ error: err.message || 'Failed to create product' }, { status: 500 })
   }
 }

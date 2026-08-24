@@ -248,10 +248,17 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           }
         }
 
-        // 1. Verify OTP in database
+        // 1. Verify OTP in database across all candidate identifier formats
+        const candidateEmails = [email, email.toLowerCase()]
+        if (isValidIndianPhone(credentials.email as string)) {
+          const raw = credentials.email as string
+          const digits = getLast10Digits(raw)
+          candidateEmails.push(`wa-${digits}@fastkirana.com`, raw, normalizePhone(raw))
+        }
+
         const otpRecord = await prisma.otpToken.findFirst({
           where: {
-            email,
+            email: { in: candidateEmails },
             token: otp,
             expiresAt: { gt: new Date() }
           }
