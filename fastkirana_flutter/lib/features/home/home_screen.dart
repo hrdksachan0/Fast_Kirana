@@ -252,7 +252,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ? selectedAddress.area.isNotEmpty
                             ? selectedAddress.area
                             : selectedAddress.fullAddress
-                        : '10-Min Express Zone';
+                        : 'Express Delivery Zone';
 
                     return GestureDetector(
                       onTap: () {
