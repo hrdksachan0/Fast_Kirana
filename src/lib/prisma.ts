@@ -15,10 +15,7 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  // Use DIRECT_URL in local development to avoid pooler timeouts, and DATABASE_URL in production
-  let connectionString = (process.env.NODE_ENV !== 'production' && process.env.DIRECT_URL)
-    ? process.env.DIRECT_URL
-    : (process.env.DATABASE_URL || '')
+  let connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL || ''
   
   if (connectionString) {
     connectionString = connectionString.replace(/\r/g, '').trim()
@@ -28,18 +25,14 @@ function createPrismaClient() {
       connectionString = connectionString.substring(1, connectionString.length - 1)
     }
     connectionString = connectionString.trim()
-    
-    if (!connectionString.includes('uselibpqcompat=')) {
-      const separator = connectionString.includes('?') ? '&' : '?'
-      connectionString = `${connectionString}${separator}uselibpqcompat=true`
-    }
   }
 
   const pool = new Pool({
     connectionString,
-    max: process.env.NODE_ENV !== 'production' ? 20 : 10, // Optimized connection pool for Supabase
-    idleTimeoutMillis: 10000, // close idle connections quickly
-    connectionTimeoutMillis: 15000 // wait up to 15 seconds to establish connection
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
   })
   
   const adapter = new PrismaPg(pool)
@@ -49,5 +42,3 @@ function createPrismaClient() {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-
