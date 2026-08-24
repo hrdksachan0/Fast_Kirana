@@ -457,16 +457,6 @@ class PromoBanner(Base):
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class StoreSetting(Base):
-    __tablename__ = "store_settings"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    key: Mapped[str] = mapped_column(String, unique=True, index=True)
-    value: Mapped[str] = mapped_column(Text)
-    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
 class DarkStore(Base):
     __tablename__ = "dark_stores"
 
