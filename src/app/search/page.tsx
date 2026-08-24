@@ -53,24 +53,63 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
     restaurants = restaurantsRaw || []
 
-    const productsRaw = await prisma.product.findMany({
+    let productsRaw = await prisma.product.findMany({
       where: {
         isAvailable: true,
-        AND: words.map((word) => ({
-          OR: [
-            { name: { contains: word, mode: 'insensitive' } },
-            { description: { contains: word, mode: 'insensitive' } },
-            { tags: { hasSome: [word.toLowerCase()] } },
-            { category: { name: { contains: word, mode: 'insensitive' } } },
-            { restaurant: { name: { contains: word, mode: 'insensitive' } } },
-          ],
-        })),
+        AND: words.map((word) => {
+          const lowerWord = word.toLowerCase()
+          return {
+            OR: [
+              { name: { contains: word, mode: 'insensitive' } },
+              { description: { contains: word, mode: 'insensitive' } },
+              { tags: { hasSome: [lowerWord] } },
+              { category: { name: { contains: word, mode: 'insensitive' } } },
+              { restaurant: { name: { contains: word, mode: 'insensitive' } } },
+              ...(lowerWord === 'veg' ? [
+                { restaurant: { isVeg: true } },
+                { tags: { has: 'veg' } },
+                { tags: { has: 'pure-veg' } }
+              ] : [])
+            ],
+          }
+        }),
       },
       include: {
         category: true,
         restaurant: true,
       },
     }).catch(() => [])
+
+    // If AND query returned few/no results, fallback to OR query across words for broader discovery
+    if (productsRaw.length < 3 && words.length > 1) {
+      const existingIds = new Set(productsRaw.map((p: any) => p.id))
+      const orMatches = await prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          id: { notIn: Array.from(existingIds) },
+          OR: words.map((word) => {
+            const lowerWord = word.toLowerCase()
+            return {
+              OR: [
+                { name: { contains: word, mode: 'insensitive' } },
+                { description: { contains: word, mode: 'insensitive' } },
+                { tags: { hasSome: [lowerWord] } },
+                { category: { name: { contains: word, mode: 'insensitive' } } },
+                { restaurant: { name: { contains: word, mode: 'insensitive' } } },
+                ...(lowerWord === 'veg' ? [{ restaurant: { isVeg: true } }] : [])
+              ],
+            }
+          }),
+        },
+        include: {
+          category: true,
+          restaurant: true,
+        },
+        take: 30,
+      }).catch(() => [])
+
+      productsRaw = [...productsRaw, ...orMatches]
+    }
 
     products = sortProductsByStock(productsRaw.map((p) => ({
       id: p.id,

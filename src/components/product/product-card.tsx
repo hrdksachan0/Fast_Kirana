@@ -579,8 +579,15 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
 
           {/* Restaurant Outlet Sub-label Identifier */}
           {(isRestaurant || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) && (
-            <div className="flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold text-red-600 dark:text-red-400 mt-auto min-w-0 leading-tight">
-              <Store className="h-2.5 w-2.5 shrink-0 text-red-500" />
+            <div className={cn(
+              "inline-flex items-center gap-1 text-[8px] min-[375px]:text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-md mt-auto min-w-0 leading-tight border w-fit max-w-full",
+              getOutletName(product).includes('Wedson')
+                ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
+                : getOutletName(product).includes('Bal Udyan')
+                ? "text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/30"
+                : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
+            )}>
+              <Store className="h-2.5 w-2.5 shrink-0 opacity-80" />
               <span className="truncate tracking-tight">{getOutletName(product)}</span>
             </div>
           )}

@@ -205,7 +205,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     const handler = setTimeout(async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=5`)
+        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=20`)
         if (res.ok) {
           const data = await res.json()
           setSuggestions(data.products || [])
@@ -416,9 +416,20 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                 <span className="text-[10px] text-text-muted font-bold block">
                                   {product.unit}
                                 </span>
-                                {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) && (
-                                  <span className="inline-block text-[9px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded mt-0.5 border border-rose-500/20">
-                                    🏬 {getOutletName(product)}
+                                {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) ? (
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md mt-1 border",
+                                    getOutletName(product).includes('Wedson')
+                                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
+                                      : getOutletName(product).includes('Bal Udyan')
+                                      ? "text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/30"
+                                      : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
+                                  )}>
+                                    🍳 {getOutletName(product)}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[8.5px] font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded mt-1 border border-zinc-200 dark:border-zinc-700">
+                                    🛒 FastKirana Grocery
                                   </span>
                                 )}
                                 

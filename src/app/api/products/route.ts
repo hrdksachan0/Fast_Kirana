@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
       where.restaurantId = restaurantId
     } else if (restaurantSlug) {
       where.restaurant = { slug: restaurantSlug }
-    } else if (excludeRestaurant || (!isWorker && !includeUnavailable && !category)) {
-      // In grocery context (no restaurant specified, no category override), exclude restaurant products
+    } else if (excludeRestaurant || (!isWorker && !includeUnavailable && !category && !normalizedSearch)) {
+      // In grocery context (no restaurant, no category, NO search query), exclude restaurant products
       where.restaurantId = null
     }
 
@@ -298,11 +298,20 @@ export async function GET(request: NextRequest) {
         const wordOptions = [w, ...syns]
         
         return {
-          OR: wordOptions.flatMap(opt => [
-            { name: { contains: opt, mode: 'insensitive' } },
-            { description: { contains: opt, mode: 'insensitive' } },
-            { tags: { has: opt } }
-          ])
+          OR: [
+            ...wordOptions.flatMap(opt => [
+              { name: { contains: opt, mode: 'insensitive' as const } },
+              { description: { contains: opt, mode: 'insensitive' as const } },
+              { tags: { has: opt } },
+              { category: { name: { contains: opt, mode: 'insensitive' as const } } },
+              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } }
+            ]),
+            ...(w.toLowerCase() === 'veg' ? [
+              { restaurant: { isVeg: true } },
+              { tags: { has: 'veg' } },
+              { tags: { has: 'pure-veg' } }
+            ] : [])
+          ]
         }
       })
 
