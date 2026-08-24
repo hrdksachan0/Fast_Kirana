@@ -717,7 +717,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         <PayOnlineButton
           orderId={order.id}
           amount={combinedTotal || order.total}
-          readableId={order.readableId}
+          readableId={String(order.baseReadableId || order.readableId || '').replace(/-[GR\d]+$/i, '') || order.id?.slice(0, 8)}
           onPaymentSuccess={async () => {
             try {
               const refetchRes = await fetch(`/api/orders/${order.id}`)
@@ -751,7 +751,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-muted border border-border/60 text-text-primary tracking-tight">
-                #{order.readableId || order.id?.slice(0, 8)}
+                #{String(order.baseReadableId || order.readableId || '').replace(/-[GR\d]+$/i, '') || order.id?.slice(0, 8)}
               </span>
               <span className={cn(
                 "text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider shadow-2xs flex items-center gap-1.5",
@@ -774,12 +774,12 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                  combinedStatus === 'DELIVERED' ? 'Delivered' : 
                  order.status === 'SHIPPED' ? 'Out for Delivery' : 
                  order.status === 'PACKED' ? 'Packed & Ready' : 
-                 order.status === 'CONFIRMED' ? 'Confirmed & Cooking' : 'Order Placed'}
+                 order.status === 'CONFIRMED' ? 'Confirmed & Preparing' : 'Order Placed'}
               </span>
 
               {order.isCombined ? (
-                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 flex items-center gap-1">
-                  🔗 Multi-Store Order
+                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  🛍️ Grocery + 🍽️ Restaurant Combined
                 </span>
               ) : ((order as any).restaurantName || order.shopName) ? (
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">

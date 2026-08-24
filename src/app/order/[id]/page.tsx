@@ -35,16 +35,36 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
-               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone"
-        FROM orders o WHERE o.id = ${id} LIMIT 1
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."combinedId", o."restaurantId", o."orderType"::text as "orderType"
+        FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
       `
 
       if (orders.length > 0) {
         const orderRaw = orders[0]
 
-        // Fetch items
+        // If order belongs to a combined group, fetch all sub-orders
+        let allCombinedOrders: any[] = [orderRaw]
+        if (orderRaw.combinedId && typeof orderRaw.combinedId === 'string' && orderRaw.combinedId.trim().length > 0) {
+          allCombinedOrders = await prisma.$queryRaw`
+            SELECT o.id, o."userId", o."addressId", o."readableId",
+                   o.status::text as status,
+                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                   o."paymentMethod"::text as "paymentMethod",
+                   o."paymentStatus"::text as "paymentStatus",
+                   o."estimatedDelivery", o."createdAt", o."updatedAt",
+                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+                   o."combinedId", o."restaurantId", o."orderType"::text as "orderType"
+            FROM orders o WHERE o."combinedId" = ${orderRaw.combinedId}
+            ORDER BY o."createdAt" ASC
+          `
+        }
+
+        const combinedOrderIds = allCombinedOrders.map(o => o.id)
+
+        // Fetch items for all combined sub-orders
         const items = await prisma.orderItem.findMany({
-          where: { orderId: id },
+          where: { orderId: { in: combinedOrderIds } },
         })
 
         // Fetch address
@@ -52,9 +72,29 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           where: { id: orderRaw.addressId },
         })
 
+        const isCombined = allCombinedOrders.length > 1
+        const baseReadableId = (orderRaw.readableId || '').replace(/-[GR\d]+$/i, '') || orderRaw.readableId
+
+        const mergedSubtotal = allCombinedOrders.reduce((sum, o) => sum + Number(o.subtotal || 0), 0)
+        const mergedDiscount = allCombinedOrders.reduce((sum, o) => sum + Number(o.discount || 0), 0)
+        const mergedDeliveryFee = allCombinedOrders.reduce((sum, o) => sum + Number(o.deliveryFee || 0), 0)
+        const mergedTaxes = allCombinedOrders.reduce((sum, o) => sum + Number(o.taxes || 0), 0)
+        const mergedMiscFee = allCombinedOrders.reduce((sum, o) => sum + Number(o.miscFee || 0), 0)
+        const mergedTotal = allCombinedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+
         order = {
           ...orderRaw,
+          readableId: isCombined ? baseReadableId : orderRaw.readableId,
+          baseReadableId,
+          subtotal: mergedSubtotal,
+          discount: mergedDiscount,
+          deliveryFee: mergedDeliveryFee,
+          taxes: mergedTaxes,
+          miscFee: mergedMiscFee,
+          total: mergedTotal,
           items,
+          isCombined,
+          shopName: isCombined ? 'Multi-Store (FastKirana Darkstore + Restaurant)' : orderRaw.shopName,
           address: address || {
             label: 'Pickup Location',
             houseNo: '',
@@ -80,41 +120,6 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   // Verify ownership
   if (order.userId !== session.user.id && session.user.role !== 'ADMIN') {
     redirect('/')
-  }
-
-  try {
-    // If order belongs to a combined order group, merge companion order items and totals for customer view
-    let combinedOrdersToMerge: any[] = []
-    if (order.combinedId && typeof order.combinedId === 'string' && order.combinedId.trim().length > 0) {
-      combinedOrdersToMerge = await prisma.order.findMany({
-        where: { combinedId: order.combinedId },
-        include: { items: true }
-      })
-    }
-
-    if (combinedOrdersToMerge.length > 1) {
-      const mergedItems = combinedOrdersToMerge.flatMap(o => o.items)
-      const mergedSubtotal = combinedOrdersToMerge.reduce((sum, o) => sum + (o.subtotal || 0), 0)
-      const mergedDiscount = combinedOrdersToMerge.reduce((sum, o) => sum + (o.discount || 0), 0)
-      const mergedDeliveryFee = combinedOrdersToMerge.reduce((sum, o) => sum + (o.deliveryFee || 0), 0)
-      const mergedTaxes = combinedOrdersToMerge.reduce((sum, o) => sum + (o.taxes || 0), 0)
-      const mergedMiscFee = combinedOrdersToMerge.reduce((sum, o) => sum + (o.miscFee || 0), 0)
-      const mergedTotal = combinedOrdersToMerge.reduce((sum, o) => sum + (o.total || 0), 0)
-
-      order = {
-        ...order,
-        items: mergedItems,
-        subtotal: mergedSubtotal,
-        discount: mergedDiscount,
-        deliveryFee: mergedDeliveryFee,
-        taxes: mergedTaxes,
-        miscFee: mergedMiscFee,
-        total: mergedTotal,
-        isCombined: true
-      }
-    }
-  } catch (error) {
-    console.warn('Database connection error: failed to merge combined order details', error)
   }
 
   // Fetch store settings for dynamic miscFeeLabel

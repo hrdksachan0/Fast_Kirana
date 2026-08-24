@@ -63,7 +63,121 @@ async function getOrderDetails(id: string) {
       }
     }
 
-    // Fetch items
+    // If order has combinedId, merge all sub-orders into unified response
+    if (order.combinedId && typeof order.combinedId === 'string' && order.combinedId.trim().length > 0) {
+      const combinedOrders: any[] = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId", o."readableId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."updatedAt",
+               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+               o."deliveryUserId",
+               o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
+               o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+               o.notes, o."couponCode"
+        FROM orders o WHERE o."combinedId" = ${order.combinedId}
+        ORDER BY o."createdAt" ASC
+      `
+
+      if (combinedOrders.length > 0) {
+        const combinedOrderIds = combinedOrders.map(o => o.id)
+        const allItems = await prisma.orderItem.findMany({
+          where: { orderId: { in: combinedOrderIds } }
+        })
+
+        function getCombinedStatus(statuses: string[]): string {
+          const active = statuses.filter(s => s !== 'CANCELLED')
+          if (active.length === 0) return 'CANCELLED'
+          if (active.includes('PENDING')) return 'PENDING'
+          if (active.includes('CONFIRMED')) return 'CONFIRMED'
+          if (active.includes('PACKED')) return 'PACKED'
+          if (active.includes('SHIPPED')) return 'SHIPPED'
+          return 'DELIVERED'
+        }
+
+        const statuses = combinedOrders.map(o => o.status)
+        const combinedStatus = getCombinedStatus(statuses)
+        const baseReadableId = (order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId
+
+        const subOrders = combinedOrders.map(o => {
+          const subItems = allItems.filter(item => item.orderId === o.id)
+          const isRest = (o.orderType === 'RESTAURANT' || !!o.restaurantId || (o.readableId && o.readableId.endsWith('-R')) || (o.shopName && o.shopName.toLowerCase().includes('restaurant')))
+          return {
+            id: o.id,
+            readableId: o.readableId,
+            type: isRest ? 'RESTAURANT' : 'GROCERY',
+            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
+            status: o.status,
+            subtotal: Number(o.subtotal || 0),
+            total: Number(o.total || 0),
+            itemsCount: subItems.length,
+            items: subItems.map((i: any) => ({
+              id: i.id,
+              productId: i.productId,
+              name: i.name,
+              price: Number(i.price || 0),
+              quantity: i.quantity,
+              selectedVariant: i.selectedVariant || null,
+              imageUrl: i.imageUrl || null,
+              notes: i.notes || null,
+              shopName: i.shopName || null,
+            })),
+          }
+        })
+
+        const grocerySub = subOrders.find(s => s.type === 'GROCERY')
+        const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
+
+        return {
+          ...order,
+          readableId: baseReadableId,
+          baseReadableId,
+          status: combinedStatus,
+          subtotal: combinedOrders.reduce((sum, o) => sum + Number(o.subtotal || 0), 0),
+          discount: combinedOrders.reduce((sum, o) => sum + Number(o.discount || 0), 0),
+          deliveryFee: combinedOrders.reduce((sum, o) => sum + Number(o.deliveryFee || 0), 0),
+          taxes: combinedOrders.reduce((sum, o) => sum + Number(o.taxes || 0), 0),
+          miscFee: combinedOrders.reduce((sum, o) => sum + Number(o.miscFee || 0), 0),
+          total: combinedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
+          estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery).toISOString() : null,
+          createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : new Date().toISOString(),
+          items: allItems.map((i: any) => ({
+            id: i.id,
+            productId: i.productId,
+            name: i.name,
+            price: Number(i.price || 0),
+            quantity: i.quantity,
+            selectedVariant: i.selectedVariant || null,
+            imageUrl: i.imageUrl || null,
+            notes: i.notes || null,
+            shopName: i.shopName || null,
+          })),
+          address: address || {
+            label: 'Delivery Location',
+            houseNo: '',
+            street: '',
+            area: 'Ghatampur',
+            city: 'Kanpur',
+            pincode: '209206',
+            lat: 26.1534185,
+            lng: 80.1714024,
+          },
+          deliveryUser,
+          isCombined: true,
+          groceryStatus: grocerySub?.status || null,
+          groceryItems: grocerySub?.items || [],
+          restaurantStatus: restaurantSub?.status || null,
+          restaurantName: restaurantSub?.shopName || null,
+          restaurantItems: restaurantSub?.items || [],
+          subOrders,
+        }
+      }
+    }
+
+    // Default individual order details for non-combined orders
     const items = await prisma.orderItem.findMany({
       where: { orderId: order.id },
     })
