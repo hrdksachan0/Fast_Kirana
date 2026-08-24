@@ -123,8 +123,65 @@ class Order {
     this.items,
   });
 
-  factory Order.fromJson(Map<String, dynamic> json) =>
-      _$OrderFromJson(json);
+  static OrderStatus _parseStatus(dynamic val) {
+    if (val == null) return OrderStatus.pending;
+    final str = val.toString().toLowerCase().trim();
+    if (str.contains('confirm')) return OrderStatus.confirmed;
+    if (str.contains('pack')) return OrderStatus.packed;
+    if (str.contains('ship') || str.contains('way') || str.contains('out')) return OrderStatus.shipped;
+    if (str.contains('deliver')) return OrderStatus.delivered;
+    if (str.contains('cancel')) return OrderStatus.cancelled;
+    return OrderStatus.pending;
+  }
+
+  static PaymentMethod _parsePaymentMethod(dynamic val) {
+    if (val == null) return PaymentMethod.cod;
+    final str = val.toString().toLowerCase().trim();
+    if (str.contains('upi')) return PaymentMethod.upi;
+    if (str.contains('card') || str.contains('wallet') || str.contains('online')) return PaymentMethod.card;
+    return PaymentMethod.cod;
+  }
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    List<OrderItem> itemsList = [];
+    if (json['items'] is List) {
+      itemsList = (json['items'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((itemJson) => OrderItem.fromJson(itemJson))
+          .toList();
+    }
+
+    return Order(
+      id: json['id']?.toString() ?? '',
+      readableId: json['readableId']?.toString(),
+      userId: json['userId']?.toString() ?? '',
+      addressId: json['addressId']?.toString() ?? '',
+      restaurantId: json['restaurantId']?.toString(),
+      status: _parseStatus(json['status']),
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+      taxes: (json['taxes'] as num?)?.toDouble() ?? 0.0,
+      miscFee: (json['miscFee'] as num?)?.toDouble() ?? 0.0,
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      paymentMethod: _parsePaymentMethod(json['paymentMethod']),
+      paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
+      estimatedDelivery: json['estimatedDelivery'] != null ? DateTime.tryParse(json['estimatedDelivery'].toString()) : null,
+      deliveryPhoto: json['deliveryPhoto']?.toString(),
+      deliveryMethod: json['deliveryMethod']?.toString(),
+      shopName: json['shopName']?.toString(),
+      shopPhone: json['shopPhone']?.toString(),
+      notes: json['notes']?.toString(),
+      couponCode: json['couponCode']?.toString(),
+      createdAt: json['createdAt'] != null ? (DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()) : DateTime.now(),
+      confirmedAt: json['confirmedAt'] != null ? DateTime.tryParse(json['confirmedAt'].toString()) : null,
+      packedAt: json['packedAt'] != null ? DateTime.tryParse(json['packedAt'].toString()) : null,
+      shippedAt: json['shippedAt'] != null ? DateTime.tryParse(json['shippedAt'].toString()) : null,
+      deliveredAt: json['deliveredAt'] != null ? DateTime.tryParse(json['deliveredAt'].toString()) : null,
+      items: itemsList,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$OrderToJson(this);
 }
 
@@ -148,8 +205,18 @@ class OrderItem {
     this.selectedVariant,
   });
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) =>
-      _$OrderItemFromJson(json);
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      id: json['id']?.toString() ?? '',
+      productId: json['productId']?.toString(),
+      name: json['name']?.toString() ?? 'Product',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      imageUrl: json['imageUrl']?.toString(),
+      selectedVariant: json['selectedVariant']?.toString(),
+    );
+  }
+
   Map<String, dynamic> toJson() => _$OrderItemToJson(this);
 
   double get lineTotal => price * quantity;

@@ -8,9 +8,17 @@ class OrderRepository {
 
   Future<List<Order>> getOrders(String userId) async {
     try {
-      final response = await dio.get('/api/orders', queryParameters: {'userId': userId});
-      final orders = response.data['orders'] ?? response.data ?? [];
-      return (orders as List).map((json) => Order.fromJson(json)).toList();
+      final response = await dio.get('/api/orders', queryParameters: {
+        if (userId.isNotEmpty) 'userId': userId,
+      });
+      final data = response.data;
+      List ordersList = [];
+      if (data is List) {
+        ordersList = data;
+      } else if (data is Map && data['orders'] is List) {
+        ordersList = data['orders'];
+      }
+      return ordersList.whereType<Map<String, dynamic>>().map((json) => Order.fromJson(json)).toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }
