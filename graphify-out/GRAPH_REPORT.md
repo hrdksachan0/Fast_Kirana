@@ -1,7 +1,7 @@
 # Graph Report - Fastkirana  (2026-08-24)
 
 ## Corpus Check
-- 661 files · ~2,617,180 words
+- 661 files · ~2,617,146 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1f3f306e`
+- Built from commit: `18c3521e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -117,7 +117,7 @@
 - paytm_callback
 - admin-inventory-center.tsx
 - High-Agency Frontend Skill
-- @auth/prisma-adapter
+- @tailwindcss/postcss
 - routers/restaurant.py
 - admin-analytics.tsx
 - main.py
@@ -519,7 +519,7 @@ Nodes (12): email, formatDate, formatPrice, getImageUrl, Helpers, otp, phone, pi
 
 ### Community 39 - "dependencies"
 Cohesion: 0.07
-Nodes (27): @base-ui/react, bcryptjs, class-variance-authority, clsx, libphonenumber-js, next, dependencies, @base-ui/react (+19 more)
+Nodes (27): @auth/prisma-adapter, @base-ui/react, bcryptjs, class-variance-authority, clsx, libphonenumber-js, next, dependencies (+19 more)
 
 ### Community 40 - "ConsumerState"
 Cohesion: 0.04
@@ -1339,7 +1339,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dotenv` connect `dotenv` to `core/config.py`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `lucide-react`, `package.json`, `dotenv`, `react-dom`, `@types/node`, `@types/pg`, `next-auth`, `date-fns`, `xlsx`, `shadcn`, `nodemailer`, `papaparse`, `prisma`, `sonner`, `@types/web-push`, `zustand`, `@types/react-dom`, `web-push`, `framer-motion`, `lru-cache`, `pg`, `resend`, `@supabase/supabase-js`, `tailwindcss`, `@types/bcryptjs`, `@types/papaparse`, `@upstash/redis`, `@auth/prisma-adapter`?**
+- **Why does `dependencies` connect `dependencies` to `lucide-react`, `package.json`, `dotenv`, `react-dom`, `@types/node`, `@types/pg`, `next-auth`, `date-fns`, `xlsx`, `shadcn`, `nodemailer`, `papaparse`, `prisma`, `sonner`, `@types/web-push`, `zustand`, `@types/react-dom`, `web-push`, `framer-motion`, `lru-cache`, `pg`, `resend`, `@supabase/supabase-js`, `tailwindcss`, `@types/bcryptjs`, `@types/papaparse`, `@upstash/redis`, `@tailwindcss/postcss`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Why does `dotenv` connect `dotenv` to `dependencies`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._

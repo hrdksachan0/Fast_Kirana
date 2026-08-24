@@ -83,6 +83,17 @@ class ProductRepository {
   }) {
     var result = products;
 
+    // 1. Restaurant vs Grocery Isolation
+    if (restaurantId != null && restaurantId.isNotEmpty) {
+      result = result.where((p) => p.restaurantId == restaurantId).toList();
+    } else if (category != null && (category.contains('restaurant') || category.contains('cafe'))) {
+      result = result.where((p) => p.restaurantId != null && p.restaurantId!.isNotEmpty).toList();
+    } else {
+      // Default: Grocery only (No restaurant meals like Roti/Naan in grocery sections)
+      result = result.where((p) => p.restaurantId == null || p.restaurantId!.isEmpty).toList();
+    }
+
+    // 2. Category matching
     if (category != null && category.isNotEmpty && category != 'all') {
       final catLower = category.toLowerCase().trim();
       final catSlugNormalized = catLower.replaceAll(' ', '-').replaceAll('&', 'and').replaceAll('---', '-');
@@ -91,37 +102,33 @@ class ProductRepository {
         final prodCatId = (p.category?.id ?? p.categoryId).toLowerCase();
         final prodCatName = (p.category?.name ?? '').toLowerCase();
 
-        // 1. Direct ID match
+        // Direct ID match
         if (prodCatId == catLower || p.categoryId.toLowerCase() == catLower) return true;
 
-        // 2. Direct Slug match
+        // Direct Slug match
         if (prodCatSlug.isNotEmpty && (prodCatSlug == catLower || prodCatSlug == catSlugNormalized)) return true;
 
-        // 3. Check aliases for this product's categoryId
-        final aliasesForProd = _categoryAliases[p.categoryId] ?? _categoryAliases[prodCatId] ?? [];
-        if (aliasesForProd.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a))) return true;
+        // Direct Category Name match
+        if (prodCatName.isNotEmpty && (prodCatName == catLower || prodCatName == catSlugNormalized)) return true;
 
-        // 4. Check if the query category itself matches any alias in our lookup table
+        // Alias lookup by ID
+        final aliasesForProd = _categoryAliases[p.categoryId] ?? _categoryAliases[prodCatId] ?? [];
+        if (aliasesForProd.contains(catLower) || aliasesForProd.contains(catSlugNormalized)) return true;
+
+        // Alias lookup by query key
         for (final entry in _categoryAliases.entries) {
-          if (entry.value.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a))) {
-            if (entry.key.toLowerCase() == p.categoryId.toLowerCase() || entry.key.toLowerCase() == prodCatId) return true;
+          if (entry.value.contains(catLower) || entry.value.contains(catSlugNormalized)) {
+            if (entry.key.toLowerCase() == p.categoryId.toLowerCase() || entry.key.toLowerCase() == prodCatId) {
+              return true;
+            }
           }
         }
-
-        // 5. Name match
-        if (prodCatName.isNotEmpty && (prodCatName.contains(catLower) || catLower.contains(prodCatName))) return true;
-
-        // 6. Tags match
-        if (p.tags.any((t) => t.toLowerCase().contains(catLower) || catLower.contains(t.toLowerCase()))) return true;
 
         return false;
       }).toList();
     }
 
-    if (restaurantId != null && restaurantId.isNotEmpty) {
-      result = result.where((p) => p.restaurantId == restaurantId).toList();
-    }
-
+    // 3. Search query filter
     if (search != null && search.isNotEmpty) {
       final query = search.toLowerCase().trim();
       result = result.where((p) {
