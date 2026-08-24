@@ -103,10 +103,15 @@ export function RestaurantCatalogManager() {
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {
     Promise.all([
-      fetch('/api/products?limit=2000').then(r => r.ok ? r.json() : null),
+      fetch('/api/products?limit=2000&includeUnavailable=true&admin=true').then(r => r.ok ? r.json() : null),
+      fetch('/api/restaurant-dashboard/products?restaurantId=ALL').then(r => r.ok ? r.json() : null),
       fetch('/api/categories').then(r => r.ok ? r.json() : null)
-    ]).then(([prodData, catData]) => {
-      if (prodData?.products) setGlobalProducts(prodData.products)
+    ]).then(([prodData, restData, catData]) => {
+      const allFetched = [
+        ...(prodData?.products || []),
+        ...(restData?.products || [])
+      ]
+      if (allFetched.length > 0) setGlobalProducts(allFetched)
       if (catData) {
         const catList = catData.categories || (Array.isArray(catData) ? catData : [])
         setGlobalCategories(catList)

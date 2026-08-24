@@ -261,11 +261,11 @@ export default async function AdminPage() {
     isAvailable: p.isAvailable,
     tags: p.tags,
     variants: p.variants,
-    category: {
+    category: p.category ? {
       id: p.category.id,
       name: p.category.name,
       slug: p.category.slug,
-    },
+    } : { id: '', name: 'General', slug: 'general' },
   }))
 
   const categories = categoriesRaw.map((c) => ({
@@ -276,7 +276,7 @@ export default async function AdminPage() {
     sortOrder: c.sortOrder,
     parentId: c.parentId || null,
     _count: {
-      products: c._count.products,
+      products: c._count?.products ?? 0,
     },
   }))
 
@@ -296,9 +296,9 @@ export default async function AdminPage() {
     id: r.id,
     rating: r.rating,
     comment: r.comment,
-    createdAt: r.createdAt.toISOString(),
-    user: { id: r.user.id, name: r.user.name, email: r.user.email },
-    product: { id: r.product.id, name: r.product.name, slug: r.product.slug, imageUrl: r.product.imageUrl },
+    createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+    user: r.user ? { id: r.user.id, name: r.user.name, email: r.user.email } : { id: '', name: 'Customer', email: '' },
+    product: r.product ? { id: r.product.id, name: r.product.name, slug: r.product.slug, imageUrl: r.product.imageUrl } : null,
   }))
 
   const coupons = couponsRaw.map((c) => ({
