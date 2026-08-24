@@ -321,7 +321,10 @@ function setupSubscription() {
       console.log('Listening for orders... Do not close this window.');
       console.log('==================================================');
     } else if (status === 'CLOSED') {
-      console.log('[Realtime] Supabase connection closed.');
+      console.log('[Realtime] Supabase connection closed. Reconnecting in 5 seconds...');
+      setTimeout(() => {
+        setupSubscription();
+      }, 5000);
     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
       const errMsg = err ? `: ${err.message}` : '';
       console.error(`[Realtime] Subscription failed (${status})${errMsg}. Reconnecting in 5 seconds...`);
@@ -333,6 +336,26 @@ function setupSubscription() {
     }
   });
 }
+
+// 6. Global Heartbeat Watchdog (checks every 30s if internet was disconnected and auto-reconnects)
+setInterval(() => {
+  if (!channel || channel.state !== 'joined') {
+    console.log('[Heartbeat Watchdog] Connection dropped or pending. Auto-reconnecting to Supabase...');
+    setupSubscription();
+  }
+}, 30000);
+
+// 7. Process Crash Protections
+process.on('uncaughtException', (err) => {
+  console.error('[Safety] Uncaught error caught, keeping bridge alive:', err.message);
+  setTimeout(() => {
+    setupSubscription();
+  }, 5000);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.warn('[Safety] Unhandled promise rejection caught:', reason);
+});
 
 // Start first connection
 setupSubscription();
