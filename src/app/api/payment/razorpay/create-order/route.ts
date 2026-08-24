@@ -8,21 +8,44 @@ export async function POST(req: Request) {
     let totalAmount = 0
     let receiptId = `rcpt_${Date.now()}`
     let readableId = ''
+    let resolvedOrderId = orderId || ''
 
     if (orderId) {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-      })
-      if (!order) {
+      // Use raw SQL to avoid PrismaPg enum deserialization issues
+      const orders: any[] = await prisma.$queryRaw`
+        SELECT id, total, "readableId", "combinedId"
+        FROM orders WHERE id = ${orderId} LIMIT 1
+      `
+
+      if (!orders || orders.length === 0) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 })
       }
-      totalAmount = Number(order.total)
+
+      const order = orders[0]
+
+      // If this is part of a combined order, calculate the FULL combined total
+      if (order.combinedId) {
+        const combinedOrders: any[] = await prisma.$queryRaw`
+          SELECT id, total, "readableId"
+          FROM orders WHERE "combinedId" = ${order.combinedId}
+        `
+        totalAmount = combinedOrders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0)
+        readableId = String((order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId || '')
+      } else {
+        totalAmount = Number(order.total)
+        readableId = String(order.readableId || '')
+      }
+
       receiptId = order.id
-      readableId = String(order.readableId || '')
     } else if (amount) {
       totalAmount = Number(amount)
     } else {
       return NextResponse.json({ error: 'orderId or amount is required' }, { status: 400 })
+    }
+
+    // If client explicitly passed a higher amount (combined total from UI), use that
+    if (amount && Number(amount) > totalAmount) {
+      totalAmount = Number(amount)
     }
 
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
@@ -47,7 +70,7 @@ export async function POST(req: Request) {
         currency: 'INR',
         receipt: (receiptId || `rcpt_${Date.now()}`).slice(0, 40),
         notes: {
-          orderId: orderId || '',
+          orderId: resolvedOrderId,
           readableId: String(readableId || ''),
         },
       }),
@@ -69,7 +92,7 @@ export async function POST(req: Request) {
       keyId,
       amount: rzpData.amount,
       currency: rzpData.currency,
-      orderId: orderId || null,
+      orderId: resolvedOrderId || null,
     })
   } catch (error: any) {
     console.error('Error creating Razorpay order:', error)

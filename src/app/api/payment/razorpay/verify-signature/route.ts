@@ -14,17 +14,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required signature parameters' }, { status: 400 })
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        user: true,
-        address: true,
-      }
-    })
+    // Use raw SQL to avoid PrismaPg enum deserialization bug
+    const orders: any[] = await prisma.$queryRaw`
+      SELECT o.id, o."userId", o."combinedId", o."readableId",
+             o.status::text as status,
+             o.total, o."paymentStatus"::text as "paymentStatus",
+             o."paymentMethod"::text as "paymentMethod",
+             o."shopName", o."restaurantId",
+             o."createdAt",
+             u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
+      FROM orders o
+      LEFT JOIN users u ON o."userId" = u.id
+      WHERE o.id = ${orderId} LIMIT 1
+    `
 
-    if (!order) {
+    if (!orders || orders.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
+
+    const order = orders[0]
 
     const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
 
@@ -37,51 +45,78 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid Razorpay payment signature' }, { status: 400 })
     }
 
-    // Update order and any companion sub-orders (combinedId) payment status to PAID and paymentMethod to UPI/ONLINE
-    const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
+    // Update ALL sub-orders in the combined group (or just this one if standalone)
+    // Each sub-order keeps its own status progression, but paymentStatus + paymentMethod are set to PAID/UPI
+    // Only PENDING orders get auto-advanced to CONFIRMED
+    if (order.combinedId) {
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'PAID'::"PaymentStatus",
+            "paymentMethod" = 'UPI'::"PaymentMethod",
+            status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+            "updatedAt" = NOW()
+        WHERE "combinedId" = ${order.combinedId}
+      `
+    } else {
+      const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
+      await prisma.$executeRaw`
+        UPDATE orders 
+        SET "paymentStatus" = 'PAID'::"PaymentStatus",
+            "paymentMethod" = 'UPI'::"PaymentMethod",
+            status = ${nextStatus}::"OrderStatus",
+            "updatedAt" = NOW()
+        WHERE id = ${orderId}
+      `
+    }
 
-    const updateFilter = order.combinedId
-      ? { combinedId: order.combinedId }
-      : { id: orderId }
+    // Re-fetch to get fresh state
+    const freshOrders: any[] = await prisma.$queryRaw`
+      SELECT id, status::text as status, total,
+             "paymentStatus"::text as "paymentStatus",
+             "paymentMethod"::text as "paymentMethod",
+             "readableId", "createdAt"
+      FROM orders WHERE id = ${orderId} LIMIT 1
+    `
+    const updatedOrder = freshOrders[0] || order
 
-    await prisma.order.updateMany({
-      where: updateFilter,
-      data: {
-        paymentStatus: 'PAID',
-        paymentMethod: 'UPI',
-        status: nextStatus,
-      },
-    })
-
-    const updatedOrder = (await prisma.order.findUnique({
-      where: { id: orderId },
-    })) || order
-
-    // NOW fire notifications — payment is confirmed!
+    // Fire notifications — payment is confirmed!
     try {
-      const displayId = (updatedOrder as any).readableId || updatedOrder.id.slice(-6).toUpperCase()
+      const displayId = updatedOrder.readableId
+        ? String(updatedOrder.readableId).replace(/-[GR\d]+$/i, '')
+        : updatedOrder.id.slice(-6).toUpperCase()
+
+      // Calculate combined total for notification
+      let notifyTotal = Number(updatedOrder.total || 0)
+      if (order.combinedId) {
+        const combinedTotals: any[] = await prisma.$queryRaw`
+          SELECT SUM(total) as "combinedTotal" FROM orders WHERE "combinedId" = ${order.combinedId}
+        `
+        if (combinedTotals[0]?.combinedTotal) {
+          notifyTotal = Number(combinedTotals[0].combinedTotal)
+        }
+      }
 
       // SSE event for admin dashboard
       sseEmitter.emit('order', {
         type: 'new-order',
         orderId: updatedOrder.id,
-        readableId: (updatedOrder as any).readableId,
+        readableId: displayId,
         status: updatedOrder.status,
-        total: updatedOrder.total,
-        paymentStatus: updatedOrder.paymentStatus,
-        paymentMethod: updatedOrder.paymentMethod,
+        total: notifyTotal,
+        paymentStatus: 'PAID',
+        paymentMethod: 'UPI',
         createdAt: updatedOrder.createdAt,
       })
 
       // Push notification to all staff
       sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
         title: '💳 Online Payment Order Confirmed!',
-        body: `Order #${displayId} of ₹${updatedOrder.total} — PAID via Razorpay ✅`,
+        body: `Order #${displayId} of ₹${notifyTotal} — PAID via Razorpay ✅`,
         tag: `order-${updatedOrder.id}`,
         data: { orderId: updatedOrder.id }
       }).catch((err: any) => console.error('Error sending push notification:', err))
 
-      // WhatsApp Order Alert to Admin Phones (Strictly based on Admin Settings selection)
+      // WhatsApp Order Alert to Admin Phones
       const settings = await prisma.storeSetting.findMany({
         where: {
           key: { in: ['whatsapp_notify_7054470303', 'whatsapp_notify_8112849854'] }
@@ -98,11 +133,11 @@ export async function POST(req: Request) {
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-      const outletName = (order as any).shopName || ((order as any).restaurantId ? 'Restaurant' : 'FastKirana Grocery')
-      const customerName = order.user?.name || 'Customer'
-      const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
+      const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+      const customerName = order.userName || 'Customer'
+      const customerPhone = order.userPhone || 'N/A'
       
-      const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${updatedOrder.total} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
+      const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
 
       for (const adminPhone of adminPhones) {
         sendWhatsAppOrderAlert(adminPhone, adminText)
@@ -145,7 +180,7 @@ export async function POST(req: Request) {
       message: 'Payment verified successfully!',
       orderId: updatedOrder.id,
       status: updatedOrder.status,
-      paymentStatus: updatedOrder.paymentStatus,
+      paymentStatus: 'PAID',
     })
   } catch (error: any) {
     console.error('Error verifying Razorpay signature:', error)

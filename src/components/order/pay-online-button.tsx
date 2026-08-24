@@ -52,11 +52,11 @@ export function PayOnlineButton({
     setIsProcessing(true)
 
     try {
-      // 1. Create Razorpay Payment Order
+      // 1. Create Razorpay Payment Order (pass amount for combined order total)
       const res = await fetch('/api/payment/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, amount }),
       })
 
       const data = await res.json()
