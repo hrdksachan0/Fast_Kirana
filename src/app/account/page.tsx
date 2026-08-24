@@ -130,8 +130,8 @@ export default async function AccountPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in">
       <AccountDashboard
         user={serializedUser}
-        initialAddresses={serializedAddresses}
-        initialOrders={serializedOrders}
+        addresses={serializedAddresses}
+        orders={serializedOrders}
       />
     </div>
   )
