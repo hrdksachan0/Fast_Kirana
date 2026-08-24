@@ -282,13 +282,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           js.context.callMethod('openRazorpayWeb', [jsonOpts]);
         } catch (e) {
           debugPrint('Web Razorpay launch error: $e');
-          await _completeOrderPlacement(cart, paymentId: 'web_pay_${DateTime.now().millisecondsSinceEpoch}');
+          if (mounted) {
+            setState(() => _isPlacingOrder = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red.shade700,
+                content: Text('Razorpay Gateway Error: $e. Please retry or choose Cash on Delivery.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       } else {
         try {
           _razorpay?.open(options);
         } catch (e) {
-          await _completeOrderPlacement(cart);
+          if (mounted) {
+            setState(() => _isPlacingOrder = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red.shade700,
+                content: Text('Could not open payment gateway: $e'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
     } else {
