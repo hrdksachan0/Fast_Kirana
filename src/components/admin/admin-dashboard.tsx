@@ -407,6 +407,10 @@ export function AdminDashboard({
           }
         }
       )
+      .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
+        toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
+        debouncedRefresh()
+      })
       .subscribe()
 
     // Dual-channel real-time fallback: SSE EventSource listener

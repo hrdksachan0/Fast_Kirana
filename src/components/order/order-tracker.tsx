@@ -718,8 +718,24 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           orderId={order.id}
           amount={combinedTotal || order.total}
           readableId={order.readableId}
-          onPaymentSuccess={() => {
-            setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'UPI' }))
+          onPaymentSuccess={async () => {
+            try {
+              const refetchRes = await fetch(`/api/orders/${order.id}`)
+              if (refetchRes.ok) {
+                const freshData = await refetchRes.json()
+                setOrder((prev: any) => ({
+                  ...prev,
+                  ...freshData,
+                  paymentStatus: 'PAID',
+                  paymentMethod: 'UPI',
+                  status: freshData.status || (prev.status === 'PENDING' ? 'CONFIRMED' : prev.status),
+                }))
+              } else {
+                setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'UPI', status: prev.status === 'PENDING' ? 'CONFIRMED' : prev.status }))
+              }
+            } catch (e) {
+              setOrder((prev: any) => ({ ...prev, paymentStatus: 'PAID', paymentMethod: 'UPI', status: prev.status === 'PENDING' ? 'CONFIRMED' : prev.status }))
+            }
             router.refresh()
           }}
           variant="card"

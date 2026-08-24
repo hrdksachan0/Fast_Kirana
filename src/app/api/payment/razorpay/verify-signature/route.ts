@@ -109,6 +109,33 @@ export async function POST(req: Request) {
           .catch((err: any) => console.error(`Failed to send WhatsApp alert to ${adminPhone}:`, err))
       }
 
+      // Broadcast live event to Supabase channel for admin & kitchen consoles
+      try {
+        const { supabase } = await import('@/lib/supabase-client')
+        const channel = supabase.channel('admin-orders-live')
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'order-payment-updated',
+              payload: { orderId: updatedOrder.id, paymentStatus: 'PAID', status: updatedOrder.status }
+            }).finally(() => {
+              supabase.removeChannel(channel)
+            })
+          }
+        })
+      } catch (sbErr) {
+        console.warn('Supabase broadcast notice:', sbErr)
+      }
+
+      // Revalidate storefront and admin orders cache
+      try {
+        const { revalidateStorefront } = await import('@/lib/revalidate')
+        revalidateStorefront()
+      } catch (e) {
+        console.warn('Revalidation notice:', e)
+      }
+
     } catch (notifErr) {
       console.error('Notification error after payment verification:', notifErr)
     }

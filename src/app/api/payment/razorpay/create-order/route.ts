@@ -45,9 +45,10 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         amount: amountInPaise,
         currency: 'INR',
-        receipt: receiptId,
+        receipt: (receiptId || `rcpt_${Date.now()}`).slice(0, 40),
         notes: {
-          readableId,
+          orderId: orderId || '',
+          readableId: String(readableId || ''),
         },
       }),
     })
