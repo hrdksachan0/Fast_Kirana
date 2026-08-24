@@ -32,6 +32,40 @@
 
   <title>FastKirana - Fast Delivery</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Razorpay Web Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    window.openRazorpayWeb = function(options, successCallback, failureCallback) {
+      try {
+        var opt = JSON.parse(options);
+        opt.handler = function(response) {
+          if (window.onRazorpaySuccess) {
+            window.onRazorpaySuccess(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+          }
+        };
+        opt.modal = {
+          ondismiss: function() {
+            if (window.onRazorpayDismiss) {
+              window.onRazorpayDismiss("Payment cancelled by user");
+            }
+          }
+        };
+        var rzp = new Razorpay(opt);
+        rzp.on('payment.failed', function (response){
+          if (window.onRazorpayDismiss) {
+            window.onRazorpayDismiss(response.error ? response.error.description : "Payment failed");
+          }
+        });
+        rzp.open();
+      } catch (err) {
+        console.error("Razorpay open error:", err);
+        if (window.onRazorpayDismiss) {
+          window.onRazorpayDismiss(err.toString());
+        }
+      }
+    };
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

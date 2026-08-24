@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:js' as js;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
@@ -37,20 +40,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int _selectedAddressIndex = 0;
   bool _isPlacingOrder = false;
   String? _pendingOrderId;
-  late Razorpay _razorpay;
+  Razorpay? _razorpay;
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    if (!kIsWeb) {
+      _razorpay = Razorpay();
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
+    if (!kIsWeb) {
+      _razorpay?.clear();
+    }
     super.dispose();
   }
 
@@ -236,13 +243,56 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         }
       };
 
-      try {
-        _razorpay.open(options);
-      } catch (e) {
-        await _completeOrderPlacement(cart);
+      if (kIsWeb) {
+        try {
+          js.context['onRazorpaySuccess'] = (dynamic paymentId, dynamic rzpOId, dynamic signature) async {
+            HapticFeedback.heavyImpact();
+            final pId = paymentId?.toString();
+            final sig = signature?.toString();
+            final rId = rzpOId?.toString();
+
+            if (_pendingOrderId != null && sig != null) {
+              try {
+                await dio.post('/api/payment/razorpay/verify-signature', data: {
+                  'orderId': _pendingOrderId,
+                  'razorpay_order_id': rId,
+                  'razorpay_payment_id': pId,
+                  'razorpay_signature': sig,
+                });
+              } catch (e) {
+                debugPrint('Signature verify error: $e');
+              }
+            }
+            await _completeOrderPlacement(cart, paymentId: pId);
+          };
+
+          js.context['onRazorpayDismiss'] = (dynamic reason) {
+            if (!mounted) return;
+            setState(() => _isPlacingOrder = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFB45309),
+                content: Text('Payment Incomplete: ${reason?.toString() ?? "Dismissed"}. Order saved as Pending.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          };
+
+          final jsonOpts = jsonEncode(options);
+          js.context.callMethod('openRazorpayWeb', [jsonOpts]);
+        } catch (e) {
+          debugPrint('Web Razorpay launch error: $e');
+          await _completeOrderPlacement(cart, paymentId: 'web_pay_${DateTime.now().millisecondsSinceEpoch}');
+        }
+      } else {
+        try {
+          _razorpay?.open(options);
+        } catch (e) {
+          await _completeOrderPlacement(cart);
+        }
       }
     } else {
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 600));
       await _completeOrderPlacement(cart);
     }
   }
