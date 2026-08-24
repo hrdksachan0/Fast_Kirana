@@ -197,6 +197,7 @@ export function useCart() {
     removeItem,
     updateQuantity,
     clearCart: useCartStore((s) => s.clearCart),
+    clearRestaurantItems: useCartStore((s) => s.clearRestaurantItems),
     getItemQuantity: useCartStore((s) => s.getItemQuantity),
     getTotalItems: useCartStore((s) => s.getTotalItems),
     getSubtotal: useCartStore((s) => s.getSubtotal),

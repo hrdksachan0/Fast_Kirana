@@ -43,6 +43,7 @@ interface CartState {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
+  clearRestaurantItems: () => void
   getItemQuantity: (productId: string) => number
   getTotalItems: () => number
   getSubtotal: () => number
@@ -103,6 +104,12 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => set({ items: [], appliedCouponCode: null }),
+
+      clearRestaurantItems: () => {
+        set((state) => ({
+          items: state.items.filter((item) => !isCafeProduct(item.product)),
+        }))
+      },
 
       getItemQuantity: (productId: string) => {
         const item = get().items.find((i) => i.product.id === productId)
