@@ -8,13 +8,13 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 export function revalidateStorefront(categorySlug?: string | null, restaurantSlug?: string | null) {
   try {
     // 1. Purge Next.js data tags
-    revalidateTag('products')
-    revalidateTag('categories')
-    revalidateTag('restaurants')
-    revalidateTag('trending')
-    revalidateTag('flash-deals')
-    revalidateTag('best-sellers')
-    revalidateTag('settings')
+    revalidateTag('products', 'max')
+    revalidateTag('categories', 'max')
+    revalidateTag('restaurants', 'max')
+    revalidateTag('trending', 'max')
+    revalidateTag('flash-deals', 'max')
+    revalidateTag('best-sellers', 'max')
+    revalidateTag('settings', 'max')
 
     // 2. Purge paths and layouts
     revalidatePath('/', 'layout')

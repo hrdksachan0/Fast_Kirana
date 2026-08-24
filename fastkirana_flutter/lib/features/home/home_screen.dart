@@ -204,22 +204,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 1. Header: Logo + Location + Search Bar (Exact www.fastkirana.in Web Mobile Match)
-  Widget _buildHeader(int cartCount) {
+  // 1. Top Bar (Logo, 10-15 Min Delivery Timing, Location Selector, Notifications)
+  Widget _buildTopHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
-      ),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Logo + Delivery Pill & Location + Notifications
+          // Top Row: Logo + Delivery Speed & Address + Notifications
           Row(
             children: [
               // FastKirana Speed Logo
-              FastKiranaLogoWidget(size: 36),
+              FastKiranaLogoWidget(size: 38),
               const SizedBox(width: 12),
 
               // Location & Speed Delivery Info
@@ -231,64 +228,78 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Timing & Lightning Badge Row
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(4),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF16A34A)),
-                                const SizedBox(width: 2),
+                                const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF15803D)),
+                                const SizedBox(width: 2.5),
                                 Text(
                                   '10-15 MINS',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 9.5,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF15803D),
-                                    letterSpacing: 0.2,
+                                    color: const Color(0xFF14532D),
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 6),
+                          Text(
+                            'EXPRESS',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFE20A22),
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+
+                      // Location Name with Chevron
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Flexible(
                             child: Text(
                               'Ghatampur, UP',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF111827),
+                                height: 1.15,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 2),
-                          const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF111827)),
+                          const SizedBox(width: 3),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF111827)),
                         ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Tap to change delivery address',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9CA3AF),
-                        ),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // Notification Icon
+              // Notification Icon with sleek border
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -301,9 +312,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: const Color(0xFFF9FAFB),
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFE5E7EB)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
-                  child: const Center(
-                    child: Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF374151)),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF374151)),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE20A22),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -352,7 +385,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Text(
                         _searchPlaceholders[_searchPlaceholderIndex],
                         key: ValueKey<int>(_searchPlaceholderIndex),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF6B7280),
@@ -363,7 +396,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF7ED),
                       borderRadius: BorderRadius.circular(8),
@@ -382,9 +415,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // 2. Grocery / Food Mode Switcher
   Widget _buildCategoryToggle() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
       child: Container(
-        height: 52,
+        height: 50,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F4F6),
@@ -437,8 +470,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           Text(
                             'Grocery',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w900,
                               color: _isGrocerySelected ? Colors.white : AppDesignSystem.textPrimary,
                               height: 1.1,
@@ -446,8 +479,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           Text(
                             'FAST DELIVERY',
-                            style: GoogleFonts.inter(
-                              fontSize: 7.5,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 8,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5,
                               color: _isGrocerySelected ? Colors.white.withOpacity(0.9) : AppDesignSystem.textMuted,
@@ -516,17 +549,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           Text(
                             'Food & Cafe',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w900,
                               color: !_isGrocerySelected ? Colors.white : AppDesignSystem.textPrimary,
                               height: 1.1,
                             ),
                           ),
                           Text(
-                            'CAFE & RESTRO',
-                            style: GoogleFonts.inter(
-                              fontSize: 7.5,
+                            'CAFE & BISTRO',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 8,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5,
                               color: !_isGrocerySelected ? Colors.white.withOpacity(0.9) : AppDesignSystem.textMuted,
