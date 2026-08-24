@@ -9,7 +9,7 @@ import re
 import math
 
 from database import get_db
-from models import Product, Category, Review, Order, OrderItem, StoreInventory, Restaurant, User
+from models import Product, Category, Review, Order, OrderItem, StoreInventory, Restaurant, User, StoreSetting
 from routers.auth import get_current_user, require_admin, require_auth
 
 router = APIRouter(prefix="/products", tags=["Products"])

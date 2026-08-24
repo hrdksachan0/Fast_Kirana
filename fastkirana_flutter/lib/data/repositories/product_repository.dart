@@ -60,6 +60,21 @@ class ProductRepository {
     }
   }
 
+  static const Map<String, List<String>> _categoryAliases = {
+    'cmqh1haw30000zcid4vj7i1yj': ['fruits-vegetables', 'fruits & vegetables', 'fruits', 'vegetables', 'fresh', 'farm'],
+    'cmt76olwr000104l18kcelx0i': ['healthy-foods', 'healthy foods', 'healthy', 'diet', 'dry-fruits', 'oats'],
+    'cmsfuzs73000404l7q139nk61': ['kitchen-needs', 'kitchen needs', 'atta-rice-dal', 'atta', 'rice', 'dal', 'oil', 'grocery', 'spices'],
+    'cmqh1hb920002zcidoywpi240': ['snacks-munchies', 'snacks & munchies', 'snacks', 'munchies', 'chips', 'namkeen', 'biscuits'],
+    'cmqgzqfz20008vkidoycqg5u2': ['beverages', 'beverages & drinks', 'drinks', 'cold drinks', 'juices', 'soda', 'tea', 'coffee'],
+    'cmqgzqfv70007vkider7h6e4j': ['ice-cream', 'ice cream & desserts', 'ice cream', 'desserts', 'kulfi', 'cones'],
+    'cmseowmy7000004i562szts34': ['chocolates', 'chocolates & sweets', 'sweets', 'chocolate', 'silk', 'cadbury'],
+    'cmqh1hbyc0005zcidr45bj1ac': ['bakery', 'bakery & biscuits', 'biscuits', 'cookies', 'bread', 'rusk'],
+    'cmt74ypjp000004laoi3athcy': ['packaged-foods', 'packaged foods', 'instant', 'noodles', 'maggie', 'pasta'],
+    'cmqh1hblj0003zcidm9gq5net': ['personal-care', 'personal care & hygiene', 'personal care', 'soap', 'shampoo', 'creams'],
+    'cmrv2psby000004ldl25xjrlt': ['home-needs-and-cleaning', 'home needs & cleaning', 'cleaning', 'household', 'detergent', 'cleaner'],
+    'cmt59fuss0000tgidoc35458x': ['restaurant-food', 'fast food & restaurant kitchen', 'cafe', 'food', 'restaurant'],
+  };
+
   List<Product> _filterProducts(
     List<Product> products, {
     String? category,
@@ -76,6 +91,9 @@ class ProductRepository {
         final prodCatId = (p.category?.id ?? p.categoryId).toLowerCase();
         final prodCatName = (p.category?.name ?? '').toLowerCase();
 
+        final aliases = _categoryAliases[p.categoryId] ?? _categoryAliases[prodCatId] ?? [];
+        final matchesAlias = aliases.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a));
+
         final matchesSlug = prodCatSlug.isNotEmpty &&
             (prodCatSlug.contains(catLower) ||
                 catLower.contains(prodCatSlug) ||
@@ -89,7 +107,7 @@ class ProductRepository {
           return tLower.contains(catLower) || catLower.contains(tLower);
         });
 
-        return matchesSlug || matchesId || matchesName || matchesTag;
+        return matchesAlias || matchesSlug || matchesId || matchesName || matchesTag;
       }).toList();
     }
 
