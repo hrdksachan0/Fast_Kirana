@@ -123,11 +123,11 @@ const getCachedFlashDeals = unstable_cache(
         { discount: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 500,
+      take: 50,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v15'],
+  ['storefront-flash-deals-v16'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -149,11 +149,11 @@ const getCachedBestSellers = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 500,
+      take: 50,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v15'],
+  ['storefront-best-sellers-v16'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -171,11 +171,11 @@ const getCachedBreakfastDeals = unstable_cache(
           { restaurantId: { not: null } },
         ],
       },
-      take: 100,
+      take: 30,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v15'],
+  ['storefront-breakfast-deals-v16'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -193,11 +193,11 @@ const getCachedLunchDeals = unstable_cache(
           { restaurantId: { not: null } },
         ],
       },
-      take: 100,
+      take: 30,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v15'],
+  ['storefront-lunch-deals-v16'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -215,11 +215,11 @@ const getCachedTeaDeals = unstable_cache(
           { restaurantId: { not: null } },
         ],
       },
-      take: 100,
+      take: 30,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v15'],
+  ['storefront-tea-deals-v16'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 

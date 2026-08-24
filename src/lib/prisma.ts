@@ -30,9 +30,14 @@ function createPrismaClient() {
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 30000 // 30s allowance for cross-region serverless cold starts
+    max: 15,                     // Supabase Pro supports 100+ connections — 15 is safe for serverless
+    idleTimeoutMillis: 30000,    // Release idle connections after 30s
+    connectionTimeoutMillis: 10000, // 10s timeout — fail fast on cold starts instead of hanging
+  })
+
+  // Silently handle pool errors to prevent unhandled rejections crashing the process
+  pool.on('error', (err) => {
+    console.warn('[PrismaPool] Background pool connection error (non-fatal):', err.message)
   })
   
   const adapter = new PrismaPg(pool)
