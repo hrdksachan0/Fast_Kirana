@@ -60,9 +60,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-    final cartState = ref.watch(cartProvider);
-    final items = cartState.value?.items.where((i) => i.productId == product.id).toList() ?? [];
-    final cartItem = items.isNotEmpty ? items.first : null;
+    final cart = ref.watch(cartProvider).value;
+    final items = cart?.items.where((i) => i.productId == product.id).toList() ?? [];
     final inCartQty = items.fold<int>(0, (s, i) => s + i.quantity);
     final themeColor = _getThemeColor(product);
     final isFood = _isFoodProduct(product);
@@ -307,7 +306,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ),
 
                   // Contextual ADD Button
-                  _buildAddButton(product, inCartQty, cartItem?.id, themeColor),
+                  _buildAddButton(product, inCartQty, items.isNotEmpty ? items.first.id : null, themeColor),
                 ],
               ),
             ],

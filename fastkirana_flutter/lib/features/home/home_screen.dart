@@ -13,6 +13,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/restaurant_card.dart';
+import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/brand_logo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/address_provider.dart';
@@ -172,53 +173,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       backgroundColor: AppDesignSystem.background,
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
-          color: AppDesignSystem.primary,
-          onRefresh: () async {
-            HapticFeedback.mediumImpact();
-            ref.invalidate(cartProvider);
-            ref.invalidate(categoriesProvider);
-            ref.invalidate(trendingProductsProvider);
-            for (final slug in _sectionCategorySlugs.values) {
-              ref.invalidate(productsProvider(slug));
-            }
-          },
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // 1. Pinned Header & Search
-              SliverToBoxAdapter(child: _buildTopHeader()),
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              color: AppDesignSystem.primary,
+              onRefresh: () async {
+                HapticFeedback.mediumImpact();
+                ref.invalidate(cartProvider);
+                ref.invalidate(categoriesProvider);
+                ref.invalidate(trendingProductsProvider);
+                for (final slug in _sectionCategorySlugs.values) {
+                  ref.invalidate(productsProvider(slug));
+                }
+              },
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // 1. Pinned Header & Search
+                  SliverToBoxAdapter(child: _buildTopHeader()),
 
-              // 2. Mode Switcher (Grocery vs Food)
-              SliverToBoxAdapter(child: _buildCategoryToggle()),
+                  // 2. Mode Switcher (Grocery vs Food)
+                  SliverToBoxAdapter(child: _buildCategoryToggle()),
 
-              if (_isGrocerySelected) ...[
-                // 3. Hero Promo Banner Carousel
-                SliverToBoxAdapter(child: _buildHeroPromoCarousel()),
+                  if (_isGrocerySelected) ...[
+                    // 3. Hero Promo Banner Carousel
+                    SliverToBoxAdapter(child: _buildHeroPromoCarousel()),
 
-                // 4. Value Proposition Strip
-                SliverToBoxAdapter(child: _buildValuePropositionStrip()),
+                    // 4. Value Proposition Strip
+                    SliverToBoxAdapter(child: _buildValuePropositionStrip()),
 
-                // 5. Circular Category Carousel (Web 1:1)
-                SliverToBoxAdapter(child: _buildCircularCategoryCarousel()),
+                    // 5. Circular Category Carousel (Web 1:1)
+                    SliverToBoxAdapter(child: _buildCircularCategoryCarousel()),
 
-                // 6. Curated For You Filter Tabs
-                SliverToBoxAdapter(child: _buildCuratedForYouFilter()),
+                    // 6. Curated For You Filter Tabs
+                    SliverToBoxAdapter(child: _buildCuratedForYouFilter()),
 
-                // 7. Dynamic Product Sections
-                ..._buildApiProductSections(),
+                    // 7. Dynamic Product Sections
+                    ..._buildApiProductSections(),
 
-                // 8. Footer
-                SliverToBoxAdapter(child: _buildFooter()),
-              ] else ...[
-                // Food & Cafe Mode — directly show restaurants
-                ..._buildFoodRestaurantListing(),
-                SliverToBoxAdapter(child: _buildFooter()),
-              ],
+                    // 8. Footer
+                    SliverToBoxAdapter(child: _buildFooter()),
+                  ] else ...[
+                    // Food & Cafe Mode — directly show restaurants
+                    ..._buildFoodRestaurantListing(),
+                    SliverToBoxAdapter(child: _buildFooter()),
+                  ],
 
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
-          ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ),
+
+            // Persistent Zepto/Blinkit style Floating Cart Bar
+            const FloatingCartBar(bottomOffset: 16),
+          ],
         ),
       ),
     );
@@ -1762,16 +1770,224 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<Widget> _buildFoodRestaurantListing() {
     final restaurantsAsync = ref.watch(restaurantsProvider);
+
+    final foodQuickCategories = [
+      {'title': 'Burgers', 'emoji': '🍔', 'tag': 'burgers'},
+      {'title': 'Pizzas', 'emoji': '🍕', 'tag': 'pizza'},
+      {'title': 'Rolls', 'emoji': '🌯', 'tag': 'frankie-rolls'},
+      {'title': 'Biryani', 'emoji': '🍚', 'tag': 'biryani-rice'},
+      {'title': 'Curries', 'emoji': '🥘', 'tag': 'main-course'},
+      {'title': 'Rotis', 'emoji': '🫓', 'tag': 'roti-naan-breads'},
+      {'title': 'Chinese', 'emoji': '🥡', 'tag': 'chinese'},
+      {'title': 'Brews & Tea', 'emoji': '☕', 'tag': 'hot-beverage'},
+    ];
+
     return [
+      // 1. Food Hero Promo Card
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Text(
-            'Popular Restaurants Nearby',
-            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: AppDesignSystem.textPrimary),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFEA580C).withOpacity(0.32),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'HOT & FRESH • 25-30 MINS ⚡',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hungry? Order From Top Outlets! 🍕🔥',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Wedson, Bal Udyan & A.S. Cafe delivered hot',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.92),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text('🍲', style: TextStyle(fontSize: 30)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+
+      // 2. Food Quick Category Pills
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "What's on your mind? 😋",
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: AppDesignSystem.textPrimary,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 82,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: foodQuickCategories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final cat = foodQuickCategories[index];
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        final restaurants = restaurantsAsync.valueOrNull ?? [];
+                        if (restaurants.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CafeMenuScreen(
+                                restaurantId: restaurants.first.id,
+                                restaurantName: restaurants.first.name,
+                                restaurant: restaurants.first,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(cat['emoji']!, style: const TextStyle(fontSize: 22)),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            cat['title']!,
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // 3. Featured Outlets Header
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Text(
+                'Top Restaurants & Cafes',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: AppDesignSystem.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'EXPRESS DELIVERY',
+                  style: GoogleFonts.inter(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFFB45309),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // 4. Restaurant Cards List
       restaurantsAsync.when(
         data: (restaurants) => SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
