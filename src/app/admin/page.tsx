@@ -74,7 +74,7 @@ export default async function AdminPage() {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
-    const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await withRetry(() => Promise.all([
+    const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await Promise.all([
       prisma.order.count({
         where: {
           createdAt: { gte: startOfToday },
@@ -139,7 +139,7 @@ export default async function AdminPage() {
           sortOrder: 'asc',
         },
       }),
-    ]))
+    ])
 
     todayOrdersCount = (todayOrders as number) || 0
     todayRevenue = (todayRevAgg as any)?._sum?.total || 0
