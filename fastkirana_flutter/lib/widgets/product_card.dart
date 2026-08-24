@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:shimmer/shimmer.dart';
 import '../core/theme/design_system.dart';
 import '../data/models/product.dart';
 import '../providers/cart_provider.dart';

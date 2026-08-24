@@ -67,7 +67,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       'badgeIcon': '🔥',
       'badgeBg': Color(0xFFFEF2F2),
       'badgeText': Color(0xFFB91C1C),
-      'asset': 'assets/categories/instant_foods_category.png',
+      'asset': 'assets/categories/snacks_munchies_category.png',
       'subcats': ['Maggi & Noodles', 'Pasta', 'Ready to Eat'],
     },
     'bakery-biscuits': {

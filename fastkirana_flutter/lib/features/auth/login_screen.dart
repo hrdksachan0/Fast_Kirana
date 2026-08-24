@@ -208,20 +208,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Brand Logo
-                        Center(
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: primaryRed.withOpacity(0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.bolt_rounded, size: 36, color: primaryRed),
-                            ),
-                          ),
+                        const Center(
+                          child: FastKiranaLogoWidget(size: 64),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
 
                         Text(
                           'Welcome to FastKirana',
@@ -235,7 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '10-15 Min Grocery & Food Delivery in Ghatampur',
+                          'Grocery & Food Delivery in Ghatampur',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 12,
@@ -511,155 +501,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryRed.withOpacity(0.35),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (_isLoading)
-                                    const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  else ...[
-                                    Text(
-                                      'Get OTP & Continue',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // 6. Divider
-                          Row(
-                            children: [
-                              const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  'OR CONTINUE WITH',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF9CA3AF),
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // 7. Google Sign In Button
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Google Sign-In is active.')),
-                              );
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.g_mobiledata_rounded, size: 28, color: Color(0xFF4285F4)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Google Sign In',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF374151),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // 8. Trust Badges Footer
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildTrustBadge('⚡ Express Fast'),
-                              _buildTrustBadge('🛡️ 100% Safe'),
-                              _buildTrustBadge('🥬 Fresh Quality'),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // 9. Admin Login Link
-                          Center(
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                                );
-                              },
-                              child: Text.rich(
-                                TextSpan(
-                                  text: 'Are you Admin or Staff? ',
-                                  style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF9CA3AF)),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Login with Email',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: primaryRed,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTrustBadge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

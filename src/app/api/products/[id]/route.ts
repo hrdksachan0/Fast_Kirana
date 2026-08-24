@@ -219,11 +219,12 @@ export async function PATCH(
       data: updateData,
       include: {
         category: true,
+        restaurant: true,
       },
     })
 
-    // Invalidate storefront and search caches
-    revalidateStorefront(updatedProduct.category?.slug)
+    // Invalidate storefront, restaurant, and search caches
+    revalidateStorefront(updatedProduct.category?.slug, updatedProduct.restaurant?.slug)
     await invalidateProductCache()
 
     return NextResponse.json(updatedProduct)

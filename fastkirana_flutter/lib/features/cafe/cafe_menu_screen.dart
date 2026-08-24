@@ -7,6 +7,7 @@ import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';
+import '../../widgets/product_card.dart';
 import 'table_booking_screen.dart';
 
 class CafeCategorySection {
@@ -507,42 +508,38 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
               );
             }
 
-            return ListView.builder(
+            return GridView.builder(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+              physics: const BouncingScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.60,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
               itemCount: filtered.length,
               itemBuilder: (context, index) {
-                return _buildFoodItemCard(filtered[index]);
+                return ProductCard(product: filtered[index]);
               },
             );
           },
           loading: () => Shimmer.fromColors(
             baseColor: Colors.grey[300]!,
             highlightColor: Colors.grey[100]!,
-            child: ListView.builder(
+            child: GridView.builder(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-              itemCount: 4,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.60,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: 6,
               itemBuilder: (context, index) {
-                return _buildFoodItemCard(
-                  Product(
-                    id: 'skeleton_$index',
-                    name: 'Dummy Food Item Name Here',
-                    slug: 'dummy-slug',
-                    categoryId: 'cat',
-                    mrp: 150.0,
-                    price: 120.0,
-                    discount: 20.0,
-                    unit: '1 serving',
-                    stock: 99,
-                    isAvailable: true,
-                    tags: const [],
-                    minStock: 0,
-                    costPrice: 0,
-                    isFlashDeal: false,
-                    isTopPick: false,
-                    isBestSeller: false,
-                    sortOrder: 0,
-                    createdAt: DateTime.now(),
-                    description: 'This is a description placeholder for the skeleton loading animation card.',
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 );
               },

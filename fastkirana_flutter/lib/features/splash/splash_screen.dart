@@ -14,46 +14,43 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _logoController;
-  late AnimationController _textController;
+  late AnimationController _mainController;
   late Animation<double> _logoScale;
-  late Animation<double> _textFade;
+  late Animation<double> _contentFade;
+  late Animation<double> _slideUp;
 
   @override
   void initState() {
     super.initState();
 
-    _logoController = AnimationController(
+    _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _textController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1400),
     );
 
     _logoScale = CurvedAnimation(
-      parent: _logoController,
-      curve: Curves.elasticOut,
-    );
-    _textFade = CurvedAnimation(
-      parent: _textController,
-      curve: Curves.easeInOut,
+      parent: _mainController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
     );
 
-    _logoController.forward();
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _textController.forward();
-    });
+    _contentFade = CurvedAnimation(
+      parent: _mainController,
+      curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
+    );
 
-    Future.delayed(const Duration(seconds: 2), _navigateToNextScreen);
+    _slideUp = Tween<double>(begin: 20.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _mainController,
+        curve: const Interval(0.3, 0.85, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _mainController.forward();
+    Future.delayed(const Duration(milliseconds: 2200), _navigateToNextScreen);
   }
 
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
     Navigator.pushReplacementNamed(
       context,
       '/home',
@@ -62,8 +59,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _textController.dispose();
+    _mainController.dispose();
     super.dispose();
   }
 
@@ -71,78 +67,146 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppDesignSystem.primary,
-              AppDesignSystem.primaryDark,
+              Color(0xFFE20A22), // Vibrant Brand Red
+              Color(0xFFB80517), // Deep Crimson
+              Color(0xFF88000F), // Dark Luxury Red
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
+        child: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Spacer(flex: 3),
+
+              // 1. High-Contrast Premium White Logo Card
               ScaleTransition(
                 scale: _logoScale,
-                child: FastKiranaLogoWidget(size: 96),
+                child: Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.22),
+                        blurRadius: 28,
+                        offset: const Offset(0, 12),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFFE20A22).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: FastKiranaLogoWidget(size: 68),
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
-              FadeTransition(
-                opacity: _textFade,
+
+              const SizedBox(height: 28),
+
+              // 2. Brand Name & Premium Tagline
+              AnimatedBuilder(
+                animation: _mainController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _contentFade,
+                    child: Transform.translate(
+                      offset: Offset(0, _slideUp.value),
+                      child: child,
+                    ),
+                  );
+                },
                 child: Column(
                   children: [
                     Text(
                       'FastKirana',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
-                        letterSpacing: -1,
+                        letterSpacing: -0.8,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
+
+                    // Sleek Frosted Glass Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.25),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
-                        'GROCERY & FOOD DELIVERY',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                        'GROCERY • FOOD • ESSENTIALS',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          letterSpacing: 1.5,
+                          letterSpacing: 1.4,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+
+                    const SizedBox(height: 12),
+
                     Text(
-                      '10 min delivery to your doorstep',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                      'Delivering Freshness to Your Doorstep',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.92),
+                        letterSpacing: 0.1,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+
+              const Spacer(flex: 3),
+
+              // 3. Subtle Loading Ring & City Footer
               FadeTransition(
-                opacity: _textFade,
-                child: const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
+                opacity: _contentFade,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.9)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'GHATAMPUR EXPRESS STORE',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withOpacity(0.65),
+                        letterSpacing: 1.8,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),

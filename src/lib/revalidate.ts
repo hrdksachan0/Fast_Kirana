@@ -7,31 +7,29 @@ import { revalidatePath, revalidateTag } from 'next/cache'
  */
 export function revalidateStorefront(categorySlug?: string | null, restaurantSlug?: string | null) {
   try {
-    // 1. Purge all product-level ISR caches
-    revalidateTag('products', 'max')
-    
-    // Purge cached restaurant list
-    revalidateTag('restaurants', 'max')
+    // 1. Purge Next.js data tags
+    revalidateTag('products')
+    revalidateTag('categories')
+    revalidateTag('restaurants')
+    revalidateTag('trending')
+    revalidateTag('flash-deals')
+    revalidateTag('best-sellers')
+    revalidateTag('settings')
 
-    // Purge cached store settings
-    revalidateTag('settings', 'max')
-
-    // 2. Revalidate landing page (home)
-    revalidatePath('/')
-
-    // 3. Revalidate Cafe page
+    // 2. Purge paths and layouts
+    revalidatePath('/', 'layout')
     revalidatePath('/cafe')
     revalidatePath('/food')
+    revalidatePath('/food/[slug]', 'page')
+    revalidatePath('/restaurant/[slug]', 'page')
+    revalidatePath('/category/[slug]', 'page')
 
-    // 4. Revalidate dynamic category page if slug provided
     if (categorySlug) {
       revalidatePath(`/category/${categorySlug}`)
     }
-
-    // 5. Revalidate restaurant detail page if slug provided
     if (restaurantSlug) {
-      revalidatePath(`/restaurant/${restaurantSlug}`)
       revalidatePath(`/food/${restaurantSlug}`)
+      revalidatePath(`/restaurant/${restaurantSlug}`)
     }
   } catch (err) {
     console.error('Failed to trigger on-demand revalidation:', err)
