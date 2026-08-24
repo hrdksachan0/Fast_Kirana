@@ -18,7 +18,7 @@ from database import get_db, AsyncSessionLocal
 from models import (
     Order, OrderItem, Product, User, Address, RiderWallet, 
     OrderStatus, PaymentStatus, PaymentMethod, OrderType, Role,
-    StoreSetting, Coupon, FcmToken, ProductBatch, StockLog, Restaurant
+    StoreSetting, Coupon, FcmToken, ProductBatch, StockLog, Restaurant, Cart, CartItem
 )
 from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
