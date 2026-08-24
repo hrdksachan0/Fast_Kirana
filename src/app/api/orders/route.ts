@@ -533,8 +533,15 @@ export async function POST(request: NextRequest) {
       const combinedId = isCombined ? `combined_${Math.random().toString(36).substring(2, 11)}_${Date.now().toString(36)}` : null
 
       // Get single atomic base readableId for this entire checkout
-      const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
-      const baseReadableId = String(seqResult[0].nextval)
+      let baseReadableId = String(Math.floor(100000 + Math.random() * 900000))
+      try {
+        const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
+        if (seqResult && seqResult[0]?.nextval) {
+          baseReadableId = String(seqResult[0].nextval)
+        }
+      } catch (seqErr) {
+        console.warn('Warning: order_readable_id_seq query fallback:', seqErr)
+      }
 
       let restIndex = 0
 

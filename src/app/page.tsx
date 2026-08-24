@@ -84,7 +84,7 @@ const getCachedCategories = unstable_cache(
       },
     })
   },
-  ['storefront-categories-v10'],
+  ['storefront-categories-v18'],
   { revalidate: 3600, tags: ['categories'] }
 )
 
@@ -100,10 +100,10 @@ const getCachedTrendingOrderItems = unstable_cache(
           quantity: 'desc',
         },
       },
-      take: 12,
+      take: 24,
     })
   },
-  ['storefront-trending-order-items-v9'],
+  ['storefront-trending-order-items-v18'],
   { revalidate: 3600, tags: ['trending'] }
 )
 
@@ -112,25 +112,19 @@ const getCachedFlashDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        OR: [
-          { restaurantId: null },
-          { category: { slug: { in: ['beverages', 'ice-cream', 'chocolates'] } } },
-          { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
-        ],
-        NOT: [
-          { restaurantId: { not: null } }
-        ],
+        restaurantId: null,
       },
       orderBy: [
         { isFlashDeal: 'desc' },
         { discount: 'desc' },
+        { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 50,
+      take: 300,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v16'],
+  ['storefront-flash-deals-v18'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -139,24 +133,18 @@ const getCachedBestSellers = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
-        OR: [
-          { restaurantId: null },
-          { category: { slug: { in: ['beverages', 'ice-cream', 'chocolates'] } } },
-          { tags: { hasSome: ['beverages', 'ice-cream', 'chocolates'] } }
-        ],
-        NOT: [
-          { restaurantId: { not: null } }
-        ],
+        restaurantId: null,
       },
       orderBy: [
         { isBestSeller: 'desc' },
+        { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 50,
+      take: 300,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v16'],
+  ['storefront-best-sellers-v18'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -165,20 +153,17 @@ const getCachedBreakfastDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
         OR: [
           { tags: { hasSome: ['breakfast', 'dairy', 'beverages', 'juices'] } },
-          { category: { slug: { in: ['dairy-breakfast', 'beverages'] } } },
-        ],
-        NOT: [
-          { tags: { has: 'restaurant' } },
-          { restaurantId: { not: null } },
+          { category: { slug: { in: ['dairy-breakfast', 'beverages', 'fruits-vegetables'] } } },
         ],
       },
-      take: 30,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v16'],
+  ['storefront-breakfast-deals-v18'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -187,20 +172,17 @@ const getCachedLunchDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
         OR: [
           { tags: { hasSome: ['staples', 'beverages', 'drinks'] } },
-          { category: { slug: { in: ['atta-rice-dal', 'beverages'] } } },
-        ],
-        NOT: [
-          { tags: { has: 'restaurant' } },
-          { restaurantId: { not: null } },
+          { category: { slug: { in: ['kitchen-needs', 'grocery-essential', 'beverages'] } } },
         ],
       },
-      take: 30,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v16'],
+  ['storefront-lunch-deals-v18'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -209,20 +191,17 @@ const getCachedTeaDeals = unstable_cache(
     return prisma.product.findMany({
       where: {
         isAvailable: true,
+        restaurantId: null,
         OR: [
           { tags: { hasSome: ['snacks', 'beverages', 'drinks', 'ice-cream', 'chilled', 'chocolates'] } },
-          { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates'] } } },
-        ],
-        NOT: [
-          { tags: { has: 'restaurant' } },
-          { restaurantId: { not: null } },
+          { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates', 'bakery'] } } },
         ],
       },
-      take: 30,
+      take: 100,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v16'],
+  ['storefront-tea-deals-v18'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -233,19 +212,19 @@ const getCachedNightCravings = unstable_cache(
         isAvailable: true,
         restaurantId: null,
         OR: [
-          { category: { slug: { in: ['beverages', 'ice-cream', 'snacks-munchies', 'chocolates'] } } },
-          { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'fastfood', 'late-night', 'chocolates'] } }
+          { category: { slug: { in: ['beverages', 'ice-cream', 'snacks-munchies', 'chocolates', 'instant-foods'] } } },
+          { tags: { hasSome: ['snacks', 'drinks', 'beverages', 'dessert', 'ice-cream', 'midnight', 'munchies', 'chocolates'] } }
         ]
       },
       orderBy: [
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 100,
+      take: 200,
       select: productSelect,
     })
   },
-  ['storefront-night-cravings-v15'],
+  ['storefront-night-cravings-v18'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 
