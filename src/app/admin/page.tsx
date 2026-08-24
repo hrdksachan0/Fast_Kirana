@@ -311,8 +311,8 @@ export default async function AdminPage() {
     maxUses: c.maxUses,
     usedCount: c.usedCount,
     isActive: c.isActive,
-    expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
-    createdAt: c.createdAt.toISOString(),
+    expiresAt: c.expiresAt ? (c.expiresAt instanceof Date ? c.expiresAt.toISOString() : String(c.expiresAt)) : null,
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt || new Date().toISOString()),
   }))
 
   const allProducts = allProductsRaw.map((p) => ({
@@ -324,13 +324,13 @@ export default async function AdminPage() {
     stock: p.stock,
     minStock: p.minStock,
     isAvailable: p.isAvailable,
-    tags: p.tags,
-    variants: p.variants,
-    category: {
+    tags: p.tags || [],
+    variants: p.variants || null,
+    category: p.category ? {
       id: p.category.id,
       name: p.category.name,
       slug: p.category.slug,
-    },
+    } : { id: '', name: 'General', slug: 'general' },
   }))
 
   const statsList = [
