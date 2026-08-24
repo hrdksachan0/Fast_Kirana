@@ -177,17 +177,13 @@ async def get_products(
             filters.append(or_(
                 Product.restaurantId == restaurantId,
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
-                Product.restaurantId == LEGACY_AS_RESTAURANT_ID,
-                Product.tags.op('?')('as-restaurant'),
-                Product.tags.op('?')('as-cafe')
+                Product.restaurantId == LEGACY_AS_RESTAURANT_ID
             ))
         elif restaurantId in [OUTLET_WEDSON_ID, LEGACY_WEDSON_ID, "wedson"]:
             filters.append(or_(
                 Product.restaurantId == restaurantId,
                 Product.restaurantId == OUTLET_WEDSON_ID,
-                Product.restaurantId == LEGACY_WEDSON_ID,
-                Product.tags.op('?')('wedson'),
-                Product.tags.op('?')('wedson-restaurant')
+                Product.restaurantId == LEGACY_WEDSON_ID
             ))
         else:
             filters.append(Product.restaurantId == restaurantId)
@@ -195,16 +191,12 @@ async def get_products(
         if restaurantSlug in ["as-restaurant", "as-cafe"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
-                Product.restaurantId == LEGACY_AS_RESTAURANT_ID,
-                Product.tags.op('?')('as-restaurant'),
-                Product.tags.op('?')('as-cafe')
+                Product.restaurantId == LEGACY_AS_RESTAURANT_ID
             ))
         elif restaurantSlug in ["wedson", "restaurant-kitchen"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_WEDSON_ID,
-                Product.restaurantId == LEGACY_WEDSON_ID,
-                Product.tags.op('?')('wedson'),
-                Product.tags.op('?')('wedson-restaurant')
+                Product.restaurantId == LEGACY_WEDSON_ID
             ))
         else:
             # Query restaurant id matching slug
@@ -214,7 +206,7 @@ async def get_products(
             if res_id:
                 filters.append(Product.restaurantId == res_id)
             else:
-                filters.append(Product.restaurantId == "non-existent")
+                filters.append(Product.restaurantId == restaurantSlug)
     elif excludeRestaurant or (not is_worker and not includeUnavailable and not category):
         filters.append(Product.restaurantId == None)
 
@@ -226,23 +218,17 @@ async def get_products(
 
         if is_cafe_query:
             cafe_slugs = ['cafe', 'fastkirana-cafe', 'hot-beverages', 'cold-beverages', 'drinks', 'shakes', 'mocktails', 'sandwiches', 'burgers', 'pizza', 'rolls', 'chinese', 'pasta', 'snacks', 'desserts', 'bakery', 'south-indian', 'fast-food', 'quick-bites', 'coffee', 'tea']
-            filters.append(or_(
-                Product.tags.op('?|')(cafe_slugs),
-                Product.category.has(Category.slug.in_(cafe_slugs))
-            ))
+            filters.append(Product.category.has(Category.slug.in_(cafe_slugs)))
         elif is_restaurant_query:
             rest_slugs = ['restaurant', 'wedson-restaurant', 'thali', 'biryani', 'north-indian', 'main-course', 'roti-naan', 'chinese', 'combos', 'curry']
             filters.append(or_(
                 Product.restaurantId != None,
-                Product.category.has(Category.slug.in_(rest_slugs)),
-                Product.tags.op('?|')(rest_slugs)
+                Product.category.has(Category.slug.in_(rest_slugs))
             ))
         else:
             filters.append(Product.category.has(Category.slug.in_(slugs)))
             if not restaurantId and not restaurantSlug:
                 filters.append(Product.restaurantId == None)
-                # Exclude restaurant tags
-                filters.append(not_(Product.tags.op('?|')(['restaurant', 'as-restaurant', 'as_restaurant', 'wedson'])))
 
     # Order by settings
     order_by_clauses = [Product.sortOrder.desc(), Product.createdAt.desc()]
@@ -274,7 +260,7 @@ async def get_products(
         # Load best selling items
         stmt_trending = select(Product).where(
             Product.isAvailable == True,
-            not_(Product.tags.op('?')('cafe')),
+            Product.restaurantId == None,
             Product.category.has(Category.slug != "cafe")
         ).where(or_(Product.isTopPick == True, Product.isBestSeller == True)).limit(8)
         res_trending = await db.execute(stmt_trending)
@@ -308,7 +294,6 @@ async def get_products(
             for opt in word_options:
                 or_conditions.append(Product.name.ilike(f"%{opt}%"))
                 or_conditions.append(Product.description.ilike(f"%{opt}%"))
-                or_conditions.append(Product.tags.op('?')(opt))
                 or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
             word_clauses.append(or_(*or_conditions))
 
