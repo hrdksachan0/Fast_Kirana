@@ -798,39 +798,219 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  // 5. Swipe to Order Action Slider
+  // 5. Modern Zepto/Blinkit Ultra-Premium Bottom Checkout Bar
   Widget _buildBottomSliderBar(double grandTotal, Cart cart) {
+    final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
+    final selectedAddress = ref.watch(selectedAddressProvider) ??
+        (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
+
+    final deliveryLabel = _deliveryMethod == 'PICKUP'
+        ? 'Store Pickup (Ghatampur)'
+        : (selectedAddress?.label.toUpperCase() ?? 'HOME');
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, -4)),
-        ],
-      ),
-      child: ActionSlider.standard(
-        sliderBehavior: SliderBehavior.stretch,
-        width: double.infinity,
-        height: 54,
-        backgroundColor: const Color(0xFFF3F4F6),
-        toggleColor: primaryRed,
-        icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-        child: Text(
-          _isPlacingOrder
-              ? 'Placing Order...'
-              : 'Slide to Place ${_deliveryMethod == 'PICKUP' ? 'Pickup ' : ''}Order (₹${grandTotal.toInt()})',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: textDark,
-            letterSpacing: -0.2,
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
           ),
+          BoxShadow(
+            color: primaryRed.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+        border: const Border(
+          top: BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
         ),
-        action: (controller) async {
-          controller.loading();
-          await _handlePlaceOrder(cart);
-          controller.success();
-        },
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top Context Strip: Delivery info & payment mode
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _deliveryMethod == 'PICKUP' ? '🏬' : '🛵',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _deliveryMethod == 'PICKUP' ? 'SELF PICKUP' : 'DELIVER TO $deliveryLabel',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: primaryRed,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _selectedPayment.toLowerCase() == 'cod' ? '💵 COD' : '⚡ ONLINE',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF374151),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Main Checkout Action Row
+            Row(
+              children: [
+                // Total Price Column
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '₹${grandTotal.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: textDark,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'TOTAL PAYABLE',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF16A34A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(width: 16),
+
+                // Full-width Gradient Place Order Button
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _isPlacingOrder
+                        ? null
+                        : () async {
+                            HapticFeedback.heavyImpact();
+                            await _handlePlaceOrder(cart);
+                          },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _isPlacingOrder
+                              ? [const Color(0xFF9CA3AF), const Color(0xFF6B7280)]
+                              : [const Color(0xFFE20A22), const Color(0xFFFF2D4B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: _isPlacingOrder
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: const Color(0xFFE20A22).withOpacity(0.38),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: Center(
+                        child: _isPlacingOrder
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Placing Order...',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _deliveryMethod == 'PICKUP' ? 'Place Pickup Order' : 'Place Order',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
