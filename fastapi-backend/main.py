@@ -32,18 +32,10 @@ app = FastAPI(
 
 import uuid
 
-# Configure CORS Middleware for Next.js Frontend
-app_origin = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
+# Configure CORS Middleware for Web & Mobile
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        app_origin,
-        "http://localhost:3000",
-        "https://fast-kirana-gtm.vercel.app",
-        "https://www.fastkirana.in",
-        "https://fastkirana.in"
-    ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

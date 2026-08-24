@@ -91,23 +91,30 @@ class ProductRepository {
         final prodCatId = (p.category?.id ?? p.categoryId).toLowerCase();
         final prodCatName = (p.category?.name ?? '').toLowerCase();
 
-        final aliases = _categoryAliases[p.categoryId] ?? _categoryAliases[prodCatId] ?? [];
-        final matchesAlias = aliases.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a));
+        // 1. Direct ID match
+        if (prodCatId == catLower || p.categoryId.toLowerCase() == catLower) return true;
 
-        final matchesSlug = prodCatSlug.isNotEmpty &&
-            (prodCatSlug.contains(catLower) ||
-                catLower.contains(prodCatSlug) ||
-                prodCatSlug.contains(catSlugNormalized) ||
-                catSlugNormalized.contains(prodCatSlug));
-        final matchesId = prodCatId == catLower || p.categoryId.toLowerCase() == catLower;
-        final matchesName = prodCatName.isNotEmpty &&
-            (prodCatName.contains(catLower) || catLower.contains(prodCatName));
-        final matchesTag = p.tags.any((t) {
-          final tLower = t.toLowerCase();
-          return tLower.contains(catLower) || catLower.contains(tLower);
-        });
+        // 2. Direct Slug match
+        if (prodCatSlug.isNotEmpty && (prodCatSlug == catLower || prodCatSlug == catSlugNormalized)) return true;
 
-        return matchesAlias || matchesSlug || matchesId || matchesName || matchesTag;
+        // 3. Check aliases for this product's categoryId
+        final aliasesForProd = _categoryAliases[p.categoryId] ?? _categoryAliases[prodCatId] ?? [];
+        if (aliasesForProd.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a))) return true;
+
+        // 4. Check if the query category itself matches any alias in our lookup table
+        for (final entry in _categoryAliases.entries) {
+          if (entry.value.any((a) => a == catLower || a == catSlugNormalized || a.contains(catLower) || catLower.contains(a))) {
+            if (entry.key.toLowerCase() == p.categoryId.toLowerCase() || entry.key.toLowerCase() == prodCatId) return true;
+          }
+        }
+
+        // 5. Name match
+        if (prodCatName.isNotEmpty && (prodCatName.contains(catLower) || catLower.contains(prodCatName))) return true;
+
+        // 6. Tags match
+        if (p.tags.any((t) => t.toLowerCase().contains(catLower) || catLower.contains(t.toLowerCase()))) return true;
+
+        return false;
       }).toList();
     }
 
