@@ -959,10 +959,17 @@ export default function CheckoutPage() {
           }
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
             if (!paymentSuccess) {
               setIsPlacingOrder(false)
-              toast.info('Payment incomplete. Your order is saved as Pending in My Orders.')
+              try {
+                // Instantly delete / cancel unpaid order so it does not get placed as a ghost order
+                await fetch(`/api/orders/${orderData.id}`, { method: 'DELETE' })
+              } catch (e) {
+                console.error('Failed to cleanup unpaid order:', e)
+              }
+              triggerHaptic('warning')
+              toast.error('Payment was cancelled. Order was not placed.')
             }
           },
         },

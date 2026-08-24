@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { AccountDashboard } from '@/components/account/account-dashboard'
 import { getLast10Digits } from '@/lib/phone'
 
-export const revalidate = 0 // Account details are fully dynamic
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -24,60 +25,62 @@ export default async function AccountPage() {
   const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
   const sessionPhone = (session.user as any).phone ? getLast10Digits((session.user as any).phone) : ''
 
-  let user = null
+  let user: any = null
   let addresses: any[] = []
   let orders: any[] = []
   let allItems: any[] = []
 
   try {
-    // Find user by ID, Email, or Phone
-    const usersResult: any[] = await prisma.$queryRaw`
-      SELECT id, name, email, phone, role::text as role
-      FROM users 
-      WHERE id = ${sessionId}
-         OR (email IS NOT NULL AND LOWER(email) = ${sessionEmail} AND ${sessionEmail} != '')
-         OR (phone IS NOT NULL AND ${sessionPhone} != '' AND REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone})
-      LIMIT 1
-    `
-    user = usersResult[0]
-
-    const targetUserId = user?.id || sessionId
-
-    if (targetUserId) {
-      // Fetch addresses
-      addresses = await prisma.address.findMany({
+    // Fast parallel execution with primary key indexes
+    const [dbUser, dbAddresses, dbOrders] = await Promise.all([
+      // 1. Fetch user by ID or Email
+      prisma.user.findFirst({
         where: {
           OR: [
-            { userId: targetUserId },
-            ...(sessionId ? [{ userId: sessionId }] : [])
+            ...(sessionId ? [{ id: sessionId }] : []),
+            ...(sessionEmail ? [{ email: { equals: sessionEmail, mode: 'insensitive' as const } }] : []),
+            ...(sessionPhone ? [{ phone: { contains: sessionPhone } }] : [])
           ]
         },
+        select: { id: true, name: true, email: true, phone: true, role: true }
+      }),
+
+      // 2. Fetch addresses
+      prisma.address.findMany({
+        where: { userId: sessionId },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      // 3. Fetch orders with items in a single query
+      prisma.order.findMany({
+        where: { userId: sessionId },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          readableId: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          items: {
+            select: {
+              id: true,
+              orderId: true,
+              name: true,
+              quantity: true,
+              price: true,
+            }
+          }
+        }
       })
+    ])
 
-      // Fetch orders matching targetUserId OR sessionId OR matching phone
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt"
-        FROM orders o 
-        WHERE o."userId" = ${targetUserId}
-           OR o."userId" = ${sessionId}
-           OR (${sessionPhone} != '' AND o."userId" IN (
-                SELECT id FROM users WHERE REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone}
-              ))
-        ORDER BY o."createdAt" DESC
-        LIMIT 50
-      `
-
-      // Fetch order items for each order
-      const orderIds = orders.map((o) => o.id)
-      allItems = orderIds.length > 0
-        ? await prisma.$queryRaw`
-            SELECT id, "orderId", name, quantity, price
-            FROM order_items WHERE "orderId" = ANY(${orderIds})
-          `
-        : []
-    }
+    user = dbUser
+    addresses = dbAddresses || []
+    orders = dbOrders || []
+    allItems = orders.flatMap(o => o.items || [])
   } catch (error) {
-    console.warn('Database connection error in account page: using session fallback')
+    console.warn('Database connection error in account page: using session fallback', error)
   }
 
   // Fallback if database is offline/unreachable
@@ -85,13 +88,13 @@ export default async function AccountPage() {
     name: session.user.name || 'User',
     email: sessionEmail,
     phone: sessionPhone,
-    role: 'USER',
+    role: (session.user.role as any) || 'USER',
   }
 
   const serializedUser = {
-    name: activeUser.name,
-    email: activeUser.email,
-    phone: activeUser.phone,
+    name: activeUser.name || 'User',
+    email: activeUser.email || sessionEmail,
+    phone: activeUser.phone || sessionPhone,
     role: activeUser.role as 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN',
   }
 
@@ -102,35 +105,34 @@ export default async function AccountPage() {
     street: addr.street,
     area: addr.area,
     city: addr.city,
-    pincode: addr.pincode,
-    isDefault: addr.isDefault,
+    phone: addr.phone,
+    lat: addr.lat,
+    lng: addr.lng,
   }))
 
-  const serializedOrders = orders.map((ord) => ({
-    id: ord.id,
-    readableId: ord.readableId ? String(ord.readableId) : null,
-    status: ord.status,
-    total: ord.total,
-    createdAt: ord.createdAt instanceof Date ? ord.createdAt.toISOString() : String(ord.createdAt),
+  const serializedOrders = orders.map((o) => ({
+    id: o.id,
+    readableId: o.readableId,
+    status: o.status,
+    total: o.total,
+    createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : String(o.createdAt),
     items: allItems
-      .filter((item) => item.orderId === ord.id)
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
+      .filter((i) => i.orderId === o.id)
+      .map((i) => ({
+        id: i.id,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
       })),
   }))
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-4xl space-y-6">
-      <h1 className="text-lg md:text-2xl font-black text-text-primary tracking-tight">Your Account</h1>
+    <div className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in">
       <AccountDashboard
         user={serializedUser}
-        addresses={serializedAddresses}
-        orders={serializedOrders}
+        initialAddresses={serializedAddresses}
+        initialOrders={serializedOrders}
       />
     </div>
   )
 }
-

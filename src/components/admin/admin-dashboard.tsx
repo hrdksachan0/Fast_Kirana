@@ -183,9 +183,9 @@ export function AdminDashboard({
   const [activeCartsCount, setActiveCartsCount] = useState<number>(0)
   const [isLoadingCarts, setIsLoadingCarts] = useState(false)
   const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
-  const [apiTodaySales, setApiTodaySales] = useState<number | null>(null)
-  const [apiTodayNetSales, setApiTodayNetSales] = useState<number | null>(null)
-  const [apiTodayOrdersCount, setApiTodayOrdersCount] = useState<number | null>(null)
+  const [apiTodaySales, setApiTodaySales] = useState<number | null>(() => (typeof stats?.todaySales === 'number' ? stats.todaySales : null))
+  const [apiTodayNetSales, setApiTodayNetSales] = useState<number | null>(() => (typeof stats?.netSales === 'number' ? stats.netSales : null))
+  const [apiTodayOrdersCount, setApiTodayOrdersCount] = useState<number | null>(() => (typeof stats?.todayOrdersCount === 'number' ? stats.todayOrdersCount : null))
 
   // WhatsApp Custom Alert States
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
@@ -2491,12 +2491,12 @@ export function AdminDashboard({
 
       <DashboardStatsCards
         stats={{
-          todaySales: apiTodaySales ?? stats.todaySales ?? todaySales,
-          todayOrdersCount: apiTodayOrdersCount ?? stats.todayOrdersCount ?? todayOrdersCount,
-          netSales: apiTodayNetSales ?? stats.netSales ?? netSales,
-          groceryRevenue: stats.groceryRevenue,
-          restaurantRevenue: stats.restaurantRevenue,
-          orderCount: stats.orderCount || orderTotal,
+          todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
+          todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
+          netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
+          groceryRevenue: stats?.groceryRevenue ?? 0,
+          restaurantRevenue: stats?.restaurantRevenue ?? 0,
+          orderCount: stats?.orderCount || orderTotal || 0,
           activeOrderCount: currentActiveOrdersCount,
         }}
       />
