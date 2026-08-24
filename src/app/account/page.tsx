@@ -48,7 +48,7 @@ export default async function AccountPage() {
       // 2. Fetch addresses
       prisma.address.findMany({
         where: { userId: sessionId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { id: 'desc' },
       }),
 
       // 3. Fetch orders with items in a single query
