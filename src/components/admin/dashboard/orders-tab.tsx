@@ -65,6 +65,9 @@ export function OrdersTab({
   const rawActiveList = orders.filter((o) => activeStatuses.includes(o.status))
   const rawHistoryList = orders.filter((o) => historyStatuses.includes(o.status))
 
+  const totalActiveQueueCount = (orderCounts?.PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
+  const totalHistoryCount = (orderCounts?.DELIVERED || 0) + (orderCounts?.CANCELLED || 0)
+
   const getOrderMethod = (o: any) => {
     const method = (o.deliveryMethod || '').toUpperCase()
     if (method === 'RETAIL') return 'RETAIL'
@@ -246,7 +249,7 @@ export function OrdersTab({
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-            <span>🔥 Live Action Queue ({rawActiveList.length})</span>
+            <span>🔥 Live Action Queue ({totalActiveQueueCount || rawActiveList.length})</span>
           </button>
 
           <button
@@ -258,7 +261,7 @@ export function OrdersTab({
                 : 'bg-muted/20 border-border hover:bg-muted text-text-secondary'
             }`}
           >
-            <span>📜 Completed &amp; Past Orders ({rawHistoryList.length})</span>
+            <span>📜 Completed & Past Orders ({totalHistoryCount || rawHistoryList.length})</span>
           </button>
         </div>
 
@@ -280,7 +283,7 @@ export function OrdersTab({
               <h3 className="font-black text-text-primary text-base sm:text-lg flex items-center gap-2">
                 🔥 Live Action Queue
                 <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-black border border-amber-500/20">
-                  {rawActiveList.length} Active
+                  {totalActiveQueueCount || rawActiveList.length} Active
                 </span>
               </h3>
             </div>
@@ -294,7 +297,7 @@ export function OrdersTab({
                 <div>
                   <h4 className="font-black text-rose-600 dark:text-rose-400">High Action Load: {activeOrdersCount} Live Processing Orders</h4>
                   <p className="text-[10px] text-text-secondary mt-0.5 font-bold">
-                    Ensure fast picking &amp; cooking to meet the SLA! 
+                    Ensure fast picking & cooking to meet the SLA! 
                     {onNavigateToUsersTab && (
                       <> Go to <button onClick={onNavigateToUsersTab} className="text-primary hover:underline font-black cursor-pointer">Customers tab</button> to assign staff to **Picker** or **Chef** roles.</>
                     )}
@@ -315,7 +318,7 @@ export function OrdersTab({
                 { key: 'SHIPPED', label: '🛵 On the Way', color: 'bg-purple-500/10 text-purple-600 border border-purple-500/20' },
               ].map((pill) => {
                 const count = pill.key === 'ALL' 
-                  ? rawActiveList.length 
+                  ? (totalActiveQueueCount || rawActiveList.length)
                   : (orderCounts[pill.key] ?? 0)
                 const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
                 return (

@@ -71,8 +71,12 @@ export default async function AdminPage() {
   let todayNetRevenue = 0
 
   try {
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
+    // Exact Indian Standard Time (IST) start of day
+    const now = new Date()
+    const istOffset = 5.5 * 60 * 60 * 1000
+    const istDate = new Date(now.getTime() + istOffset)
+    istDate.setUTCHours(0, 0, 0, 0)
+    const startOfToday = new Date(istDate.getTime() - istOffset)
 
     const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await Promise.all([
       prisma.order.count({
@@ -122,11 +126,21 @@ export default async function AdminPage() {
         GROUP BY "shopName", "restaurantId", "orderType", status
       `,
       prisma.order.findMany({
-        take: 10,
+        take: 40,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, email: true, phone: true } },
           address: true,
+          items: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              quantity: true,
+              imageUrl: true,
+              selectedVariant: true,
+            }
+          }
         },
       }),
       prisma.category.findMany({
@@ -225,17 +239,29 @@ export default async function AdminPage() {
     const address = o.address || null
     return {
       id: o.id,
+      readableId: o.readableId || o.id.slice(-6).toUpperCase(),
       status: o.status,
+      paymentStatus: o.paymentStatus || 'PENDING',
+      paymentMethod: o.paymentMethod || 'COD',
       total: o.total,
       createdAt: new Date(o.createdAt).toISOString(),
       updatedAt: new Date(o.updatedAt).toISOString(),
       userName: user.name,
       userEmail: user.email,
-      userPhone: user.phone,
+      userPhone: address?.phone || user.phone || o.shopPhone || null,
       isB2B: o.isB2B,
       deliveryMethod: o.deliveryMethod,
       shopName: o.shopName,
       shopPhone: o.shopPhone,
+      restaurantId: o.restaurantId || null,
+      items: (o.items || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl,
+        selectedVariant: item.selectedVariant,
+      })),
       address: address ? {
         houseNo: address.houseNo,
         street: address.street,
