@@ -222,8 +222,8 @@ export default function CartPage() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = subtotal < MIN_CART_VALUE
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
+  const isBelowMinOrder = false
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -557,25 +557,6 @@ export default function CartPage() {
                   </h5>
                   <p className="text-[10px] font-bold text-red-700/90 dark:text-red-450/90 leading-normal">
                     Some items in your cart exceed available stock. Please adjust quantities or use the auto-adjust helper to proceed.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {isBelowMinOrder && (
-              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/30 dark:bg-rose-950/20 dark:border-rose-800/20 p-4 text-left mb-2 shadow-sm backdrop-blur-md flex gap-3 items-start relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-1 pointer-events-none opacity-20 text-4xl animate-float">
-                  🛍️
-                </div>
-                <span className="text-2xl mt-0.5 select-none shrink-0" role="img" aria-label="Below Minimum Order">
-                  🛍️
-                </span>
-                <div className="space-y-1 min-w-0">
-                  <h5 className="text-xs font-black text-rose-800 dark:text-rose-300">
-                    Minimum Order Required
-                  </h5>
-                  <p className="text-[10px] font-bold text-rose-700/90 dark:text-rose-450/90 leading-normal">
-                    Minimum order value is ₹20 to place an order. Add items worth ₹{20 - subtotal} more to proceed.
                   </p>
                 </div>
               </div>

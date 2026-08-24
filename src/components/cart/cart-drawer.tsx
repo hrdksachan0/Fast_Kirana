@@ -208,8 +208,8 @@ export function CartDrawer() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = subtotal < 20
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
+  const isBelowMinOrder = false
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -697,14 +697,6 @@ export function CartDrawer() {
                         • Cafe Timings: {formatTime12h(settings.cafe_open_time)} - {formatTime12h(settings.cafe_close_time)}
                       </strong>
                     )}
-                  </span>
-                </div>
-              )}
-
-              {isBelowMinOrder && (
-                <div className="flex items-center justify-between rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100/50 dark:border-rose-900/30 px-3.5 py-2 mb-3.5">
-                  <span className="text-[10px] font-black text-rose-600 flex items-center gap-1.5 leading-none">
-                    🛍️ Add ₹{20 - subtotal} more to place order (Min. ₹20)
                   </span>
                 </div>
               )}

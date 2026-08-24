@@ -69,56 +69,56 @@ export function getDeliveryRules(
     }
   }
 
-  // Zone 1: 0 - 2.0 km
+  // Zone 1: 0 - 2.0 km (Local Ghatampur)
   if (distanceKm <= 2.0) {
     return {
       distanceKm,
-      minOrder: 20,
+      minOrder: 0,
       deliveryFee: 25 + surgeFee,
-      freeDeliveryThreshold: 200,
+      freeDeliveryThreshold: 199,
       isServiceable: true,
-      zoneName: '0-2 km (Express Zone)',
+      zoneName: '0 - 2 km (Local Ghatampur Zone)',
       surgeFee,
       maxRadiusKm,
     }
   }
 
-  // Zone 2: 2.0 - 4.0 km
-  if (distanceKm <= 4.0) {
+  // Zone 2: 2.0 - 3.0 km (Suburban Zone)
+  if (distanceKm <= 3.0) {
     return {
       distanceKm,
-      minOrder: 20,
+      minOrder: 0,
       deliveryFee: 35 + surgeFee,
-      freeDeliveryThreshold: 249,
+      freeDeliveryThreshold: 299,
       isServiceable: true,
-      zoneName: '2-4 km (Standard Zone)',
+      zoneName: '2 - 3 km (Suburban Zone)',
       surgeFee,
       maxRadiusKm,
     }
   }
 
-  // Zone 3: 4.0 - 6.0 km
-  if (distanceKm <= 6.0) {
+  // Zone 3: 3.0 - 5.0 km (Extended Zone)
+  if (distanceKm <= 5.0) {
     return {
       distanceKm,
-      minOrder: 50,
+      minOrder: 0,
       deliveryFee: 50 + surgeFee,
-      freeDeliveryThreshold: 349,
+      freeDeliveryThreshold: 399,
       isServiceable: true,
-      zoneName: '4-6 km (Extended Zone)',
+      zoneName: '3 - 5 km (Extended Zone)',
       surgeFee,
       maxRadiusKm,
     }
   }
 
-  // Zone 4: 6.0+ km (if maxRadiusKm allows)
+  // Zone 4: > 5.0 km (Outside Service Area)
   return {
     distanceKm,
-    minOrder: 100,
+    minOrder: 0,
     deliveryFee: 70 + surgeFee,
     freeDeliveryThreshold: 499,
-    isServiceable: true,
-    zoneName: '6+ km (Outer Zone)',
+    isServiceable: false,
+    zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
     surgeFee,
     maxRadiusKm,
   }

@@ -2,14 +2,14 @@ export const APP_NAME = 'FastKirana'
 export const APP_DESCRIPTION = 'Fast grocery delivery at your doorstep'
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-export const GROCERY_FREE_DELIVERY_THRESHOLD = 200
-export const CAFE_FREE_DELIVERY_THRESHOLD = 200
-export const COMBINED_FREE_DELIVERY_THRESHOLD = 200
-export const FREE_DELIVERY_THRESHOLD = 200
+export const GROCERY_FREE_DELIVERY_THRESHOLD = 199
+export const CAFE_FREE_DELIVERY_THRESHOLD = 199
+export const COMBINED_FREE_DELIVERY_THRESHOLD = 199
+export const FREE_DELIVERY_THRESHOLD = 199
 export const DELIVERY_FEE = 25
 export const TAX_RATE = 0.00 // 0% GST
 
-export const MIN_CART_VALUE = 20  // Minimum cart value for checkout
+export const MIN_CART_VALUE = 0  // No minimum cart value constraint
 export const OUTLET_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
 export const OUTLET_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
 export const OUTLET_BAL_UDYAN_ID = 'cmsbhxb6a000304if8kf1cwji'

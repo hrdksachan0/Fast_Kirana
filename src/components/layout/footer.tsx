@@ -150,6 +150,7 @@ export function Footer() {
             We accept: UPI • Cards • COD • Wallets
           </p>
           <div className="flex items-center gap-4.5">
+            <Link href="/faq" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Delivery FAQs</Link>
             <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
             <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
             <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>

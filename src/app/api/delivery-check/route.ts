@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     // Fetch store coordinates & radius settings
     let storeLat = DEFAULT_STORE_LAT
     let storeLng = DEFAULT_STORE_LNG
-    let maxRadiusKm = 2.0
+    let maxRadiusKm = 5.0
     let surgeFee = 0
 
     try {

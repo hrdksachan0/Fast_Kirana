@@ -383,6 +383,15 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-6 shrink-0">
+              <Link
+                href="/faq"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-black tracking-tight transition-all duration-300 shadow-2xs hover:scale-105"
+                title="Delivery Fee Tiers: 0-2km ₹199+ | 2-3km ₹299+ | 3-5km ₹399+"
+              >
+                <span>⚡</span>
+                <span>Free Delivery ₹199+</span>
+              </Link>
+
               <button
                 onClick={() => {
                   toggleTheme()

@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
       const storeLat = geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT
       const storeLng = geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG
-      const maxRadiusKm = geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 2.0)
+      const maxRadiusKm = geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0)
       const surgeFee = geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0
 
       let resolvedLat = targetLat
@@ -445,7 +445,7 @@ export async function POST(request: NextRequest) {
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       if (deliveryRules && !deliveryRules.isServiceable) {
         return NextResponse.json({
-          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver only up to 3 km.`
+          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver up to 5 km.`
         }, { status: 400 })
       }
 

@@ -504,12 +504,12 @@ export default function CheckoutPage() {
   // 1. Calculate distance-based delivery rules if address has coords
   let distanceKm: number | null = null
   let deliveryRules: any = null
-  let isBelowMinOrder = subtotal < 20
-  let minOrderRequired = 20
+  let isBelowMinOrder = false
+  let minOrderRequired = 0
 
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
-      const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '2.0')
+      const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0')
       const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || '0')
       distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
       deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
@@ -1107,27 +1107,6 @@ export default function CheckoutPage() {
     )
   }
 
-  if (isBelowMinOrder && !isSettingsLoading) {
-    return (
-      <div className="container mx-auto px-4 py-16 max-w-md text-center space-y-6 animate-fade-in">
-        <div className="h-20 w-20 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-rose-200/60 dark:border-rose-900/40">
-          🛍️
-        </div>
-        <h1 className="text-2xl font-black text-text-primary">Minimum Order Required</h1>
-        <p className="text-sm text-text-secondary leading-relaxed">
-          Minimum order value is ₹20 to place an order. Your current cart subtotal is only {formatPrice(subtotal)}. Please add more items to checkout!
-        </p>
-        <div className="pt-4 flex flex-col gap-3">
-          <Link
-            href="/cart"
-            className="px-6 py-3 bg-primary text-white font-black text-xs rounded-full hover:bg-primary/95 transition-all shadow-md text-center"
-          >
-            Go Back to Cart
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   if (isStoreClosed && !isSettingsLoading) {
     return (
@@ -1364,6 +1343,44 @@ export default function CheckoutPage() {
                             <p className="text-text-secondary leading-relaxed font-semibold">
                               {formatAddress(addr)}
                             </p>
+                            
+                            {/* Distance & Delivery Fee Zone Badge */}
+                            {(() => {
+                              const addrDist = (addr.lat && addr.lng) ? getDistanceKm(storeLat, storeLng, addr.lat, addr.lng) : null
+                              const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0')
+                              const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || '0')
+                              const addrRules = addrDist !== null ? getDeliveryRules(addrDist, { maxRadiusKm, surgeFee }) : null
+
+                              if (addrDist === null || !addrRules) return null
+
+                              if (!addrRules.isServiceable || addrDist > maxRadiusKm) {
+                                return (
+                                  <div className="mt-2 flex items-center gap-1.5 text-[9.5px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-500/20">
+                                    <span>⚠️</span>
+                                    <span>{addrDist.toFixed(1)} km away • Outside 5 km delivery zone</span>
+                                  </div>
+                                )
+                              }
+
+                              return (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9.5px] font-black">
+                                  <span className="inline-flex items-center gap-1 text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                                    📍 {addrDist.toFixed(1)} km away
+                                  </span>
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-md border",
+                                    addrDist <= 2.0
+                                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
+                                      : addrDist <= 3.0
+                                      ? "text-blue-700 dark:text-blue-300 bg-blue-500/10 border-blue-500/30"
+                                      : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
+                                  )}>
+                                    🛵 Fee: ₹{addrRules.deliveryFee} · FREE above ₹{addrRules.freeDeliveryThreshold}
+                                  </span>
+                                </div>
+                              )
+                            })()}
+
                             {addr.phone && (
                               <p className="text-[10px] text-text-secondary mt-1.5 font-bold flex items-center gap-1">
                                 <span className="opacity-80">📞</span> Phone: <span className="text-text-primary">{formatPhone(addr.phone)}</span>
@@ -1731,15 +1748,23 @@ export default function CheckoutPage() {
                 {deliveryRules && !deliveryRules.isServiceable && (
                   <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-2.5 rounded-xl text-center mt-2">
                     <p className="text-[10px] font-black text-rose-600 dark:text-rose-400">
-                      ❌ Address is {distanceKm?.toFixed(1)} km away. Delivery only available up to 3 km.
+                      ❌ Address is {distanceKm?.toFixed(1)} km away. Delivery only available up to 5 km.
                     </p>
                   </div>
                 )}
-                {adjustedSubtotal < ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)) && (
-                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl text-center mt-2">
-                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                      💡 Add ₹{(((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)) - adjustedSubtotal).toFixed(0)} more items for FREE Delivery!
-                    </p>
+                {deliveryRules && deliveryRules.isServiceable && (
+                  <div className={cn(
+                    "p-2.5 rounded-xl border text-center mt-2 flex items-center justify-center gap-1.5",
+                    adjustedSubtotal >= deliveryRules.freeDeliveryThreshold
+                      ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10.5px]"
+                      : "bg-blue-50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-900/30 text-blue-700 dark:text-blue-300 font-extrabold text-[10.5px]"
+                  )}>
+                    <span>{adjustedSubtotal >= deliveryRules.freeDeliveryThreshold ? '🎉' : '🚚'}</span>
+                    <span>
+                      {adjustedSubtotal >= deliveryRules.freeDeliveryThreshold
+                        ? "Congratulations! FREE Delivery Unlocked for your location!"
+                        : `Add ₹${(deliveryRules.freeDeliveryThreshold - adjustedSubtotal).toFixed(0)} more for FREE Delivery (Free on ₹${deliveryRules.freeDeliveryThreshold}+)`}
+                    </span>
                   </div>
                 )}
               </>
