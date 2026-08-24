@@ -103,6 +103,7 @@ function printKOT(order, items, user) {
     lines.push(`KOT ID: ${orderIdText}`);
 
     const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
