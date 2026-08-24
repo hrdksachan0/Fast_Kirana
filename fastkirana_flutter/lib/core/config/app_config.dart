@@ -35,6 +35,6 @@ class AppConfig {
   // Razorpay Payment Gateway Key
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
-    defaultValue: 'rzp_live_fastkirana2026',
+    defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
   );
 }

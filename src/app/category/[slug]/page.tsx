@@ -35,7 +35,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const [categoriesRaw, allGroceryProducts, sortSetting] = await Promise.all([
     prisma.category.findMany({
       where: {
-        slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant'] },
+        slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
       },
       orderBy: { sortOrder: 'asc' },
     }).catch(() => []),

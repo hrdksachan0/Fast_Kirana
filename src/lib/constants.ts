@@ -368,7 +368,7 @@ interface ProductData {
 }
 
 export function getOutletName(product: ProductData): string {
-  if (!product) return 'Wedson Restaurant'
+  if (!product) return ''
 
   const rId = product.restaurantId || product.restaurant?.id
   const rName = product.restaurantName || product.restaurant?.name
@@ -394,7 +394,7 @@ export function getOutletName(product: ProductData): string {
     return 'Bal Udyan Restaurant'
   }
 
-  // 1. Explicit A.S. Restaurant / Cafe checks (Highest Priority)
+  // 2. Explicit A.S. Restaurant / Cafe checks (Highest Priority)
   if (
     rId === OUTLET_AS_RESTAURANT_ID ||
     rId === 'as-restaurant' ||
@@ -412,7 +412,7 @@ export function getOutletName(product: ProductData): string {
     return 'A.S Restaurant'
   }
 
-  // 2. Explicit Wedson Restaurant checks (Second Highest Priority)
+  // 3. Explicit Wedson Restaurant checks
   if (
     rId === OUTLET_WEDSON_ID ||
     rId === 'wedson' ||
@@ -424,41 +424,22 @@ export function getOutletName(product: ProductData): string {
     return 'Wedson Restaurant'
   }
 
-  // 3. Known ID mapping from OUTLET_NAMES
+  // 4. Known ID mapping from OUTLET_NAMES
   if (rId && OUTLET_NAMES[rId]) return OUTLET_NAMES[rId]
 
-  // 4. Known tag mapping from OUTLET_NAMES
+  // 5. Known tag mapping from OUTLET_NAMES
   for (const tag of tags) {
     if (OUTLET_NAMES[tag]) return OUTLET_NAMES[tag]
   }
 
-  // 5. If product has a custom restaurant name, return normalized name
+  // 6. If product has a custom restaurant name, return normalized name
   if (product.restaurant?.name) return product.restaurant.name
   if (product.restaurantName) return product.restaurantName
 
-  // 6. Generic food fallback for items without explicit restaurant tags/ids
-  if (
-    tags.includes('dal-fry') ||
-    tags.includes('burger') ||
-    tags.includes('pizza') ||
-    tags.includes('chowmein') ||
-    tags.includes('fast-food') ||
-    pName.includes('burger') ||
-    pName.includes('pizza') ||
-    pName.includes('chowmein') ||
-    pName.includes('noodle') ||
-    pName.includes('momos') ||
-    pName.includes('fries') ||
-    pName.includes('roll') ||
-    pName.includes('sandwich') ||
-    pName.includes('pasta') ||
-    pName.includes('manchurian') ||
-    pName.includes('shake') ||
-    pName.includes('mocktail') ||
-    pName.includes('tikki')
-  ) {
-    return 'Wedson Restaurant'
+  // 7. If the product has an explicit restaurantId, fallback to A.S. Restaurant
+  if (rId) {
+    return 'A.S. Restaurant'
   }
 
-  return 'Wedson Restaurant'
+  return 'FastKirana Store'
 }

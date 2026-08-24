@@ -139,10 +139,10 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
     
     filteredProducts.forEach(p => {
       const rest = (p as any).restaurant
-      const isRest = Boolean(p.restaurantId || rest || p.category?.slug === 'restaurant' || p.tags?.includes('restaurant'))
+      const isRest = Boolean(p.restaurantId || rest?.id || p.category?.slug === 'restaurant' || p.category?.slug === 'restaurant-food')
       
-      const outletName = isRest ? getOutletName(p) : 'FastKirana Store (Grocery)'
-      const groupKey = isRest ? (p.restaurantId || outletName) : 'kirana-grocery'
+      const outletName = isRest ? (getOutletName(p) || 'Restaurant') : 'FastKirana Store (Grocery)'
+      const groupKey = isRest ? (p.restaurantId || rest?.id || outletName) : 'kirana-grocery'
 
       if (!groups[groupKey]) {
         groups[groupKey] = {

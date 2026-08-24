@@ -36,11 +36,16 @@ export { formatTime12h }
 
 export function isCafeProduct(p: any): boolean {
   if (!p) return false
+  // 1. Explicit restaurant assignment
   if (p.restaurantId || p.restaurant || p.restaurantName) return true
+  
+  // 2. Explicit restaurant category
   const categorySlug = (p.category?.slug || p.categorySlug || '').toLowerCase()
-  const categoryName = (p.category?.name || '').toLowerCase()
-  if (categorySlug === 'cafe' || categorySlug === 'restaurant' || categorySlug.includes('cafe') || categorySlug.includes('restaurant')) return true
-  if (Array.isArray(p.tags) && p.tags.some((t: string) => ['cafe', 'restaurant', 'wedson', 'as-restaurant', 'food', 'shakes', 'beverage', 'beverages', 'pizza', 'burger', 'dessert', 'starters', 'main-course'].includes(t.toLowerCase()))) return true
+  if (categorySlug === 'restaurant' || categorySlug === 'restaurant-food' || categorySlug === 'fast-food-kitchen' || categorySlug === 'cafe') return true
+  
+  // 3. Explicit restaurant tags ONLY (do not include grocery terms like beverage or dessert)
+  if (Array.isArray(p.tags) && p.tags.some((t: string) => ['restaurant', 'wedson', 'as-restaurant', 'as-cafe', 'bal-udyan'].includes(t.toLowerCase()))) return true
+  
   return false
 }
 

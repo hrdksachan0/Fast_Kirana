@@ -32,7 +32,7 @@ function createPrismaClient() {
     ssl: { rejectUnauthorized: false },
     max: 15,                     // Supabase Pro supports 100+ connections — 15 is safe for serverless
     idleTimeoutMillis: 30000,    // Release idle connections after 30s
-    connectionTimeoutMillis: 10000, // 10s timeout — fail fast on cold starts instead of hanging
+    connectionTimeoutMillis: 30000, // 30s timeout for reliable connection establishment
   })
 
   // Silently handle pool errors to prevent unhandled rejections crashing the process

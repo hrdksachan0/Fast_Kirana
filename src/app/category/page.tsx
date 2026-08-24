@@ -17,8 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function CategoriesLoader() {
   try {
-    // Fetch all categories from database
+    // Fetch all grocery categories from database (exclude restaurant food)
     const categoriesRaw = await prisma.category.findMany({
+      where: {
+        slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
+      },
       orderBy: { sortOrder: 'asc' },
       include: {
         _count: {
