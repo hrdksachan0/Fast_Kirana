@@ -18,6 +18,7 @@ class Restaurant {
   final String? discountOffer;
   final String? discountBadge;
   final int sortOrder;
+  final List<dynamic>? menuSections;
 
   Restaurant({
     required this.id,
@@ -39,6 +40,7 @@ class Restaurant {
     this.discountOffer,
     this.discountBadge,
     this.sortOrder = 0,
+    this.menuSections,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -76,6 +78,7 @@ class Restaurant {
       discountOffer: json['discountOffer']?.toString() ?? 'FLAT 5% OFF',
       discountBadge: json['discountBadge']?.toString(),
       sortOrder: json['sortOrder'] != null ? int.tryParse(json['sortOrder'].toString()) ?? 0 : 0,
+      menuSections: json['menuSections'] is List ? json['menuSections'] as List<dynamic> : null,
     );
   }
 
@@ -99,5 +102,6 @@ class Restaurant {
         'discountOffer': discountOffer,
         'discountBadge': discountBadge,
         'sortOrder': sortOrder,
+        'menuSections': menuSections,
       };
 }

@@ -57,8 +57,32 @@ class AuthRepository {
 
   Future<User> getProfile() async {
     try {
-      final response = await dio.get('/api/profile');
+      final response = await dio.get('/api/profile/setup');
       return User.fromJson(response.data['user'] ?? response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> updateName(String name) async {
+    try {
+      await dio.post('/api/profile/update-name', data: {'name': name});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> updatePhone(String phone) async {
+    try {
+      await dio.post('/api/profile/update-phone', data: {'phone': phone});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> updateEmail(String email) async {
+    try {
+      await dio.post('/api/profile/update-email', data: {'email': email});
     } on DioException catch (e) {
       throw _handleError(e);
     }

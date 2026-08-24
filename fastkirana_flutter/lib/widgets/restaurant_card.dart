@@ -23,24 +23,43 @@ class RestaurantCard extends StatefulWidget {
 class _RestaurantCardState extends State<RestaurantCard> {
   bool _isFavorite = false;
 
+  String _getFallbackAsset(String name, String slug) {
+    final lower = '$name $slug'.toLowerCase();
+    if (lower.contains('a.s') || lower.contains('burger')) {
+      return 'assets/categories/cafe_burgers_category.png';
+    } else if (lower.contains('wedson') || lower.contains('pizza')) {
+      return 'assets/categories/cafe_pizza_category.png';
+    } else if (lower.contains('bal udyan') || lower.contains('thali') || lower.contains('cafe')) {
+      return 'assets/categories/cafe_category.png';
+    }
+    return 'assets/categories/cafe_category.png';
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = widget.restaurant;
     final offer = r.discountOffer ?? 'FLAT 5% OFF';
     final isOpen = r.isOpen;
+    final fallbackAsset = _getFallbackAsset(r.name, r.slug);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-        border: Border.all(color: AppDesignSystem.border),
-        boxShadow: AppDesignSystem.shadowSm,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+          borderRadius: BorderRadius.circular(22),
           onTap: widget.onTap ??
               () {
                 HapticFeedback.lightImpact();
@@ -50,6 +69,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                     builder: (_) => CafeMenuScreen(
                       restaurantId: r.id,
                       restaurantName: r.name,
+                      restaurant: r,
                     ),
                   ),
                 );
@@ -61,38 +81,39 @@ class _RestaurantCardState extends State<RestaurantCard> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Left: Restaurant Image with Favourite & Closed Overlay
+                  // 1. Left: Restaurant Image with Favourite & Clean Surface
                   Stack(
                     children: [
                       Container(
-                        width: 110,
-                        height: 128,
+                        width: 114,
+                        height: 134,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFF1F5F9)),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-                          child: (r.bannerUrl != null && r.bannerUrl!.isNotEmpty)
+                          borderRadius: BorderRadius.circular(17),
+                          child: (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('http'))
                               ? CachedNetworkImage(
                                   imageUrl: r.bannerUrl!,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) => const Center(
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Color(0xFFF97316),
-                                      ),
+                                  errorWidget: (_, __, ___) => Image.asset(
+                                    fallbackAsset,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Image.asset(
+                                      'assets/categories/cafe_category.png',
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
-                                  errorWidget: (_, __, ___) => const Center(
-                                    child: Text('🍽️', style: TextStyle(fontSize: 38)),
-                                  ),
                                 )
-                              : const Center(
-                                  child: Text('🍽️', style: TextStyle(fontSize: 38)),
+                              : Image.asset(
+                                  fallbackAsset,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    'assets/categories/cafe_category.png',
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                         ),
                       ),
@@ -107,9 +128,9 @@ class _RestaurantCardState extends State<RestaurantCard> {
                             setState(() => _isFavorite = !_isFavorite);
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(4.5),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.35),
+                              color: Colors.black.withOpacity(0.4),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -126,20 +147,20 @@ class _RestaurantCardState extends State<RestaurantCard> {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+                              color: Colors.black.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(18),
                             ),
                             child: Center(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE11D48),
-                                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   'CLOSED',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9,
+                                    fontSize: 9.5,
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                     letterSpacing: 0.5,
@@ -158,43 +179,76 @@ class _RestaurantCardState extends State<RestaurantCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Restaurant Name + 3-Dot Overflow Row
+                        // Restaurant Name + Verified Badge
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Text(
                                 r.name,
                                 style: GoogleFonts.inter(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppDesignSystem.textPrimary,
-                                  height: 1.2,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.3,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const Icon(
-                              Icons.more_vert_rounded,
-                              size: 16,
-                              color: Color(0xFF9CA3AF),
+                              Icons.verified_rounded,
+                              size: 15,
+                              color: Color(0xFF0284C7),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
 
-                        // Badges: Top Rated & Pure Veg
+                        // Badges: Rating & Top Rated & Pure Veg
                         Wrap(
                           spacing: 5,
                           runSpacing: 4,
                           children: [
+                            // Clean Star Rating
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star_rounded, size: 11, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${r.rating > 0 ? r.rating : 4.5}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                  if (r.totalRatings > 0)
+                                    Text(
+                                      ' (${r.totalRatings})',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF92400E),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFFEDD5)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -206,7 +260,8 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                     style: GoogleFonts.inter(
                                       fontSize: 8.5,
                                       fontWeight: FontWeight.w900,
-                                      color: const Color(0xFFB45309),
+                                      color: const Color(0xFFC2410C),
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
                                 ],
@@ -217,7 +272,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFDCFCE7),
-                                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: const Color(0xFFBBF7D0)),
                                 ),
                                 child: Row(
@@ -229,8 +284,9 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                       'PURE VEG',
                                       style: GoogleFonts.inter(
                                         fontSize: 8.5,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w900,
                                         color: const Color(0xFF15803D),
+                                        letterSpacing: 0.2,
                                       ),
                                     ),
                                   ],
@@ -247,11 +303,13 @@ class _RestaurantCardState extends State<RestaurantCard> {
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
-                                r.address ?? 'Ghatampur Market',
+                                r.address != null && r.address!.isNotEmpty
+                                    ? r.address!
+                                    : 'Nagar Palika, Ghatampur',
                                 style: GoogleFonts.inter(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w500,
-                                  color: AppDesignSystem.textSecondary,
+                                  color: const Color(0xFF64748B),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -261,55 +319,57 @@ class _RestaurantCardState extends State<RestaurantCard> {
                         ),
                         const SizedBox(height: 5),
 
-                        // Offer Badge
+                        // Offer Badge with Flame
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: const Color(0xFFFFEDD5)),
                           ),
                           child: Text(
                             '🔥 $offer',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w900,
                               color: const Color(0xFFEA580C),
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ),
                         const SizedBox(height: 8),
 
-                        // Divider before Bottom Row
-                        const Divider(height: 1, color: Color(0xFFF3F4F6)),
-                        const SizedBox(height: 6),
-
-                        // Bottom Row: Prep Time + Explore Button
+                        // Bottom Row: Free Delivery + Explore CTA
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '⚡ Fast Delivery',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppDesignSystem.textMuted,
-                              ),
+                            Row(
+                              children: [
+                                const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF16A34A)),
+                                Text(
+                                  'Fast Delivery',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFEA580C), Color(0xFFD97706)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFEA580C).withOpacity(0.25),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
+                                    color: const Color(0xFFEA580C).withOpacity(0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
@@ -319,15 +379,16 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                   Text(
                                     'Explore',
                                     style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
                                       color: Colors.white,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
                                   const SizedBox(width: 3),
                                   const Icon(
                                     Icons.arrow_forward_rounded,
-                                    size: 10,
+                                    size: 12,
                                     color: Colors.white,
                                   ),
                                 ],

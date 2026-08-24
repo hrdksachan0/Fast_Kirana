@@ -13,6 +13,7 @@ import '../../features/orders/order_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/auth/admin_login.dart';
+import '../../features/location/delivery_location_screen.dart';
 import '../theme/design_system.dart';
 
 class AppRouter {
@@ -24,6 +25,8 @@ class AppRouter {
       case '/home':
       case '/main':
         return MaterialPageRoute(builder: (_) => const MainShell());
+      case '/location':
+        return MaterialPageRoute(builder: (_) => const DeliveryLocationScreen());
       case '/login':
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/admin':

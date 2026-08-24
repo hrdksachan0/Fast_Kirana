@@ -34,7 +34,7 @@ def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee
     if distance_km > max_radius_km:
         return {
             "distanceKm": distance_km,
-            "minOrder": 20.0,
+            "minOrder": 0.0,
             "deliveryFee": 0.0,
             "freeDeliveryThreshold": 499.0,
             "isServiceable": False,
@@ -43,49 +43,52 @@ def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee
             "maxRadiusKm": max_radius_km,
         }
     
+    # Zone 1: 0 - 2.0 km (Local Ghatampur)
     if distance_km <= 2.0:
         return {
             "distanceKm": distance_km,
-            "minOrder": 20.0,
+            "minOrder": 0.0,
             "deliveryFee": 25.0 + surge_fee,
-            "freeDeliveryThreshold": 200.0,
+            "freeDeliveryThreshold": 199.0,
             "isServiceable": True,
-            "zoneName": "0-2 km (Express Zone)",
+            "zoneName": "0 - 2 km (Local Ghatampur Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
-    if distance_km <= 4.0:
+    # Zone 2: 2.0 - 3.0 km (Suburban Zone)
+    if distance_km <= 3.0:
         return {
             "distanceKm": distance_km,
-            "minOrder": 20.0,
+            "minOrder": 0.0,
             "deliveryFee": 35.0 + surge_fee,
-            "freeDeliveryThreshold": 249.0,
+            "freeDeliveryThreshold": 299.0,
             "isServiceable": True,
-            "zoneName": "2-4 km (Standard Zone)",
+            "zoneName": "2 - 3 km (Suburban Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
-    if distance_km <= 6.0:
+    # Zone 3: 3.0 - 5.0 km (Extended Zone)
+    if distance_km <= 5.0:
         return {
             "distanceKm": distance_km,
-            "minOrder": 50.0,
+            "minOrder": 0.0,
             "deliveryFee": 50.0 + surge_fee,
-            "freeDeliveryThreshold": 349.0,
+            "freeDeliveryThreshold": 399.0,
             "isServiceable": True,
-            "zoneName": "4-6 km (Extended Zone)",
+            "zoneName": "3 - 5 km (Extended Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
     return {
         "distanceKm": distance_km,
-        "minOrder": 100.0,
+        "minOrder": 0.0,
         "deliveryFee": 70.0 + surge_fee,
         "freeDeliveryThreshold": 499.0,
-        "isServiceable": True,
-        "zoneName": "6+ km (Outer Zone)",
+        "isServiceable": False,
+        "zoneName": f"Outside Delivery Zone (> {max_radius_km:.1f} km)",
         "surgeFee": surge_fee,
         "maxRadiusKm": max_radius_km,
     }

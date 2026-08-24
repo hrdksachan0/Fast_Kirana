@@ -9,7 +9,10 @@ import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/address_provider.dart';
 import '../../core/network/api_client.dart';
+import '../location/delivery_location_screen.dart';
+import '../profile/address_book_screen.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -100,25 +103,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   static const Color textDark = Color(0xFF111827);
   static const Color textMuted = Color(0xFF6B7280);
 
-  final List<Map<String, String>> _addresses = [
-    {
-      'tag': 'Home',
-      'icon': '🏠',
-      'name': 'Ghatampur Home',
-      'address': 'Ward No. 4, Near Subhash Chowk, Kanpur Road',
-      'city': 'Ghatampur, Kanpur Nagar - 209206',
-      'phone': '+91 70544 70303',
-    },
-    {
-      'tag': 'Work',
-      'icon': '🏢',
-      'name': 'Market Office',
-      'address': 'Shop #12, Station Road Market',
-      'city': 'Ghatampur - 209206',
-      'phone': '+91 70544 70303',
-    },
-  ];
-
   final List<Map<String, dynamic>> _paymentOptions = [
     {
       'id': 'cod',
@@ -148,20 +132,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     setState(() => _isPlacingOrder = true);
 
     final dio = ref.read(dioProvider);
+    final addresses = ref.read(addressesProvider).valueOrNull ?? [];
+    final selectedAddress = ref.read(selectedAddressProvider) ??
+        (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
 
     // 1. Pre-create DB Order in PENDING status FIRST
     try {
       final orderPayload = {
+        if (selectedAddress != null && _deliveryMethod == 'DELIVERY') 'addressId': selectedAddress.id,
         'deliveryMethod': _deliveryMethod,
         'paymentMethod': _selectedPayment.toUpperCase(),
         'couponCode': widget.couponCode,
         'items': cart.items.map((item) => {
-          'product': {
-            'id': item.product.id,
-            'name': item.product.name,
-            'slug': item.product.slug,
-          },
+          'productId': item.product.id,
+          'name': item.product.name,
+          'price': item.product.price,
           'quantity': item.quantity,
+          'selectedVariant': item.selectedVariant,
+          'imageUrl': item.product.imageUrl,
         }).toList(),
       };
 
@@ -243,13 +231,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 20.0);
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 25.0);
     final taxes = 0.0;
     final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
 
+    final addresses = ref.read(addressesProvider).valueOrNull ?? [];
+    final selectedAddress = ref.read(selectedAddressProvider) ??
+        (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
+
     final selectedAddr = _deliveryMethod == 'PICKUP'
         ? '🏬 Self Pickup: Ghatampur Darkstore Counter'
-        : '${_addresses[_selectedAddressIndex]['name']}, ${_addresses[_selectedAddressIndex]['address']}';
+        : (selectedAddress != null
+            ? '${selectedAddress.label}, ${selectedAddress.fullAddress}'
+            : 'Ghatampur Express Zone');
 
     ref.read(cartProvider.notifier).clearCart();
 
@@ -260,6 +254,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => OrderSuccessScreen(
+          orderId: _pendingOrderId,
           totalAmount: grandTotal,
           deliveryAddress: selectedAddr,
           paymentMethod: paymentId != null ? 'RAZORPAY ($paymentId)' : _selectedPayment.toUpperCase(),
@@ -282,7 +277,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 20.0);
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 25.0);
     final taxes = 0.0;
     final grandTotal = (subtotal + deliveryFee + taxes - widget.discountAmount).clamp(0.0, 999999.0);
 
@@ -420,6 +415,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   // 2A. Delivery Address Selector
   Widget _buildDeliveryAddressSection() {
+    final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
+    final selectedAddress = ref.watch(selectedAddressProvider);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -443,50 +441,102 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Text('Delivery Address', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: textDark)),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(6)),
-                child: Text('10-15 Mins', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF047857))),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(6)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_rounded, size: 12, color: primaryRed),
+                      const SizedBox(width: 2),
+                      Text('Add New', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: primaryRed)),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          ..._addresses.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final addr = entry.value;
-            final isSelected = _selectedAddressIndex == idx;
-            return GestureDetector(
+          if (addresses.isEmpty)
+            GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _selectedAddressIndex = idx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                );
               },
               child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+                  color: const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isSelected ? primaryRed : const Color(0xFFE5E7EB), width: isSelected ? 1.5 : 1),
+                  border: Border.all(color: const Color(0xFFFECDD3)),
                 ),
                 child: Row(
                   children: [
-                    Text(addr['icon']!, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 10),
+                    const Icon(Icons.add_location_alt_rounded, color: primaryRed, size: 22),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(addr['name']!, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: textDark)),
-                          Text(addr['address']!, style: GoogleFonts.inter(fontSize: 11, color: textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text('Add Delivery Address', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: primaryRed)),
+                          Text('Save home or office location in Ghatampur', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9F1239))),
                         ],
                       ),
                     ),
-                    if (isSelected) const Icon(Icons.check_circle_rounded, color: primaryRed, size: 20),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: primaryRed),
                   ],
                 ),
               ),
-            );
-          }),
+            )
+          else
+            ...addresses.map((addr) {
+              final isSelected = selectedAddress?.id == addr.id ||
+                  (selectedAddress == null && addresses.indexOf(addr) == _selectedAddressIndex);
+              final isHome = addr.label.toLowerCase() == 'home';
+              final isWork = addr.label.toLowerCase() == 'work';
+
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(selectedAddressProvider.notifier).state = addr;
+                  setState(() => _selectedAddressIndex = addresses.indexOf(addr));
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isSelected ? primaryRed : const Color(0xFFE5E7EB), width: isSelected ? 1.5 : 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(isHome ? '🏠' : (isWork ? '🏢' : '📍'), style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(addr.label, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: textDark)),
+                            Text(addr.fullAddress, style: GoogleFonts.inter(fontSize: 11, color: textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      if (isSelected) const Icon(Icons.check_circle_rounded, color: primaryRed, size: 20),
+                    ],
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -585,12 +635,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isSelected ? primaryRed : const Color(0xFFE5E7EB), width: isSelected ? 1.5 : 1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isSelected ? primaryRed : const Color(0xFFE5E7EB),
+                    width: isSelected ? 1.5 : 1,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(opt['icon'] as IconData, color: isSelected ? primaryRed : const Color(0xFF4B5563), size: 20),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFFEE2E2) : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        opt['icon'] as IconData,
+                        color: isSelected ? primaryRed : const Color(0xFF4B5563),
+                        size: 20,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -598,22 +662,60 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         children: [
                           Row(
                             children: [
-                              Text(opt['name'] as String, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: textDark)),
+                              Flexible(
+                                child: Text(
+                                  opt['name'] as String,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: textDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               if (opt['badge'] != null) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                  decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)),
-                                  child: Text(opt['badge'] as String, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF16A34A))),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    opt['badge'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF16A34A),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ],
                           ),
-                          Text(opt['desc'] as String, style: GoogleFonts.inter(fontSize: 10.5, color: textMuted)),
+                          const SizedBox(height: 2),
+                          Text(
+                            opt['desc'] as String,
+                            style: GoogleFonts.inter(fontSize: 10.5, color: textMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
-                    if (isSelected) const Icon(Icons.check_circle_rounded, color: primaryRed, size: 20),
+                    const SizedBox(width: 8),
+                    if (isSelected)
+                      const Icon(Icons.check_circle_rounded, color: primaryRed, size: 20)
+                    else
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
+                        ),
+                      ),
                   ],
                 ),
               ),

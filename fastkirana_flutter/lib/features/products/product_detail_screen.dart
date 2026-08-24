@@ -18,19 +18,34 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  ProductVariant? _selectedVariant;
   bool _isFavorite = false;
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF10B981);
 
   @override
+  void initState() {
+    super.initState();
+    final variants = widget.product.parsedVariants;
+    if (variants.isNotEmpty) {
+      _selectedVariant = variants.first;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = widget.product;
+    final variants = p.parsedVariants;
+    final activePrice = _selectedVariant?.price ?? p.price;
+    final activeMrp = _selectedVariant?.mrp ?? p.mrp;
+    final activeUnit = _selectedVariant?.name ?? p.unit;
+
     final cart = ref.watch(cartProvider).value;
     final cartItem = cart?.items.where((i) => i.productId == p.id).firstOrNull;
     final inCartQty = cartItem?.quantity ?? 0;
-    final discountPct = p.discount > 0
-        ? p.discount.toInt()
-        : (p.mrp > p.price && p.mrp > 0 ? (((p.mrp - p.price) / p.mrp) * 100).toInt() : 0);
+    final discountPct = activeMrp > activePrice && activeMrp > 0
+        ? (((activeMrp - activePrice) / activeMrp) * 100).toInt()
+        : p.discount.toInt();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -153,7 +168,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
                     // Unit
                     Text(
-                      p.unit,
+                      activeUnit,
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -168,17 +183,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          '₹${p.price.toInt()}',
+                          '₹${activePrice.toInt()}',
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF111827),
                           ),
                         ),
-                        if (p.mrp > p.price) ...[
+                        if (activeMrp > activePrice) ...[
                           const SizedBox(width: 10),
                           Text(
-                            '₹${p.mrp.toInt()}',
+                            '₹${activeMrp.toInt()}',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -194,7 +209,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'Save ₹${(p.mrp - p.price).toInt()}',
+                              'Save ₹${(activeMrp - activePrice).toInt()}',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -205,7 +220,74 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
+
+                    // Variants / Pack Sizes (if available)
+                    if (variants.isNotEmpty) ...[
+                      Text(
+                        'Select Pack Size / Variant',
+                        style: GoogleFonts.inter(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 52,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: variants.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemBuilder: (context, index) {
+                            final variant = variants[index];
+                            final isSelected = _selectedVariant?.name == variant.name;
+
+                            return GestureDetector(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setState(() => _selectedVariant = variant);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? primaryRed : const Color(0xFFE5E7EB),
+                                    width: isSelected ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      variant.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                        color: isSelected ? primaryRed : const Color(0xFF111827),
+                                      ),
+                                    ),
+                                    Text(
+                                      '₹${variant.price.toInt()}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        color: isSelected ? primaryRed : const Color(0xFF4B5563),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                    ],
 
                     // Product Highlights & Quality Promise
                     Container(
@@ -381,7 +463,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ),
                       ),
                       Text(
-                        '₹${((inCartQty > 0 ? inCartQty : 1) * p.price).toInt()}',
+                        '₹${((inCartQty > 0 ? inCartQty : 1) * activePrice).toInt()}',
                         style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
@@ -405,11 +487,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 InkWell(
                                   onTap: () {
                                     HapticFeedback.lightImpact();
-                                    if (inCartQty == 1 && cartItem != null) {
-                                      ref.read(cartProvider.notifier).removeItem(cartItem.id);
-                                    } else if (cartItem != null) {
-                                      ref.read(cartProvider.notifier).updateQuantity(cartItem.id, inCartQty - 1);
-                                    }
+                                    ref.read(cartProvider.notifier).decrement(p.id);
                                   },
                                   child: const Padding(
                                     padding: EdgeInsets.all(12),
@@ -427,9 +505,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 InkWell(
                                   onTap: () {
                                     HapticFeedback.lightImpact();
-                                    if (cartItem != null) {
-                                      ref.read(cartProvider.notifier).updateQuantity(cartItem.id, inCartQty + 1);
-                                    }
+                                    ref.read(cartProvider.notifier).increment(p);
                                   },
                                   child: const Padding(
                                     padding: EdgeInsets.all(12),
@@ -442,7 +518,33 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         : GestureDetector(
                             onTap: () {
                               HapticFeedback.mediumImpact();
-                              ref.read(cartProvider.notifier).addItem(p.id, 1);
+                              final productToCart = Product(
+                                id: p.id,
+                                name: p.name,
+                                slug: p.slug,
+                                description: p.description,
+                                imageUrl: p.imageUrl,
+                                categoryId: p.categoryId,
+                                restaurantId: p.restaurantId,
+                                mrp: activeMrp,
+                                price: activePrice,
+                                discount: activeMrp > activePrice ? ((activeMrp - activePrice) / activeMrp * 100) : 0,
+                                unit: activeUnit,
+                                stock: p.stock,
+                                isAvailable: p.isAvailable,
+                                tags: p.tags,
+                                variants: p.variants,
+                                minStock: p.minStock,
+                                costPrice: p.costPrice,
+                                isFlashDeal: p.isFlashDeal,
+                                isTopPick: p.isTopPick,
+                                isBestSeller: p.isBestSeller,
+                                sortOrder: p.sortOrder,
+                                createdAt: p.createdAt,
+                                category: p.category,
+                                restaurant: p.restaurant,
+                              );
+                              ref.read(cartProvider.notifier).addProduct(productToCart, 1, _selectedVariant?.name);
                             },
                             child: Container(
                               height: 50,

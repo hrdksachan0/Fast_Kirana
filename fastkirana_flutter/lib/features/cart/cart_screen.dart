@@ -26,7 +26,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF00B140);
   static const double freeDeliveryThreshold = 199.0;
-  static const double standardDeliveryFee = 20.0;
+  static const double standardDeliveryFee = 25.0;
 
   @override
   void dispose() {
@@ -740,12 +740,35 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  p.unit,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: const Color(0xFF6B7280),
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      p.unit,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (item.selectedVariant != null && item.selectedVariant!.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFFECDD3)),
+                        ),
+                        child: Text(
+                          item.selectedVariant!,
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: primaryRed,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -788,11 +811,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 InkWell(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    if (item.quantity == 1) {
-                      ref.read(cartProvider.notifier).removeItem(item.id);
-                    } else {
-                      ref.read(cartProvider.notifier).updateQuantity(item.id, item.quantity - 1);
-                    }
+                    ref.read(cartProvider.notifier).decrement(item.productId);
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -814,7 +833,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 InkWell(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    ref.read(cartProvider.notifier).updateQuantity(item.id, item.quantity + 1);
+                    ref.read(cartProvider.notifier).increment(item.product);
                   },
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),

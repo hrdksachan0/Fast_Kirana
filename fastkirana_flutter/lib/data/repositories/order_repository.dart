@@ -27,7 +27,7 @@ class OrderRepository {
 
   Future<Order> placeOrder(Map<String, dynamic> orderData) async {
     try {
-      final response = await dio.post('/api/orders/create', data: orderData);
+      final response = await dio.post('/api/orders', data: orderData);
       return Order.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -36,7 +36,10 @@ class OrderRepository {
 
   Future<void> cancelOrder(String orderId, String reason) async {
     try {
-      await dio.patch('/api/orders/$orderId/cancel', data: {'reason': reason});
+      await dio.patch('/api/orders/$orderId', data: {
+        'status': 'CANCELLED',
+        'reason': reason,
+      });
     } on DioException catch (e) {
       throw _handleError(e);
     }

@@ -171,6 +171,46 @@ class Product {
   bool get isInStock => stock > 0 && isAvailable;
   double get savings => mrp - price;
   int get discountPercentage => discount.toInt();
+
+  List<ProductVariant> get parsedVariants {
+    if (variants == null) return [];
+    if (variants is List) {
+      return (variants as List).map((v) {
+        if (v is Map) {
+          final vMap = Map<String, dynamic>.from(v);
+          final p = double.tryParse(vMap['price']?.toString() ?? '') ?? price;
+          final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : mrp);
+          return ProductVariant(
+            name: vMap['name']?.toString() ?? vMap['unit']?.toString() ?? unit,
+            price: p,
+            mrp: m,
+          );
+        } else if (v is String) {
+          return ProductVariant(name: v, price: price, mrp: mrp);
+        }
+        return ProductVariant(name: v.toString(), price: price, mrp: mrp);
+      }).toList();
+    }
+    return [];
+  }
+}
+
+class ProductVariant {
+  final String name;
+  final double price;
+  final double mrp;
+
+  ProductVariant({
+    required this.name,
+    required this.price,
+    required this.mrp,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'price': price,
+        'mrp': mrp,
+      };
 }
 
 class CategoryInfo {

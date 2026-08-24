@@ -132,40 +132,27 @@ class ProductRepository {
 
   Future<List<Category>> getCategories() async {
     try {
+      final response = await dio.get('/api/categories');
+      final data = response.data;
+      if (data is List) {
+        return data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+
+    try {
       final allProducts = await getProducts(limit: 500);
       final Map<String, Category> uniqueCategories = {};
-
-      // Category image mapping with high-res defaults
-      final Map<String, String> categoryFallbackImages = {
-        'fruits-vegetables': 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&auto=format&fit=crop&q=60',
-        'snacks-munchies': 'https://images.unsplash.com/photo-1621447504864-d8686e12698c?w=400&auto=format&fit=crop&q=60',
-        'instant-foods': 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400&auto=format&fit=crop&q=60',
-        'chocolates': 'https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&auto=format&fit=crop&q=60',
-        'kitchen-needs': 'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=400&auto=format&fit=crop&q=60',
-        'home-needs-and-cleaning': 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=400&auto=format&fit=crop&q=60',
-        'home-cleaning': 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=400&auto=format&fit=crop&q=60',
-        'personal-care': 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&auto=format&fit=crop&q=60',
-        'dry-fruits-superfoods': 'https://images.unsplash.com/photo-1596560548464-f010549b84d7?w=400&auto=format&fit=crop&q=60',
-        'dairy-breakfast': 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=400&auto=format&fit=crop&q=60',
-        'ice-cream': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&auto=format&fit=crop&q=60',
-      };
 
       for (final p in allProducts) {
         if (p.category != null && p.category!.slug.isNotEmpty) {
           final cat = p.category!;
           final slug = cat.slug.toLowerCase().trim();
           if (!uniqueCategories.containsKey(slug) && slug != 'restaurant') {
-            String resolvedImg = cat.imageUrl ?? '';
-            if (resolvedImg.isEmpty || resolvedImg.length < 5 || !resolvedImg.startsWith('http')) {
-              resolvedImg = categoryFallbackImages[slug] ??
-                  'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=60';
-            }
-
             uniqueCategories[slug] = Category(
               id: cat.id.isNotEmpty ? cat.id : 'cat_$slug',
               name: cat.name.isNotEmpty ? cat.name : slug.replaceAll('-', ' ').toUpperCase(),
               slug: slug,
-              imageUrl: resolvedImg,
+              imageUrl: cat.imageUrl,
               sortOrder: uniqueCategories.length + 1,
             );
           }
@@ -175,19 +162,8 @@ class ProductRepository {
       if (uniqueCategories.isNotEmpty) {
         return uniqueCategories.values.toList();
       }
+    } catch (_) {}
 
-      return [
-        Category(id: 'cat_snacks', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: categoryFallbackImages['snacks-munchies'], sortOrder: 1),
-        Category(id: 'cat_instant', name: 'Instant Foods', slug: 'instant-foods', imageUrl: categoryFallbackImages['instant-foods'], sortOrder: 2),
-        Category(id: 'cat_chocolates', name: 'Chocolates', slug: 'chocolates', imageUrl: categoryFallbackImages['chocolates'], sortOrder: 3),
-        Category(id: 'cat_kitchen', name: 'Kitchen Needs', slug: 'kitchen-needs', imageUrl: categoryFallbackImages['kitchen-needs'], sortOrder: 4),
-        Category(id: 'cat_cleaning', name: 'Home Needs & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: categoryFallbackImages['home-needs-and-cleaning'], sortOrder: 5),
-        Category(id: 'cat_fruits', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: categoryFallbackImages['fruits-vegetables'], sortOrder: 6),
-        Category(id: 'cat_personal', name: 'Personal Care', slug: 'personal-care', imageUrl: categoryFallbackImages['personal-care'], sortOrder: 7),
-        Category(id: 'cat_dryfruits', name: 'Dry Fruits & Superfoods', slug: 'dry-fruits-superfoods', imageUrl: categoryFallbackImages['dry-fruits-superfoods'], sortOrder: 8),
-      ];
-    } catch (e) {
-      rethrow;
-    }
+    return [];
   }
 }

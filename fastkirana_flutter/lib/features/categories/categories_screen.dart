@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
@@ -21,144 +22,95 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   // Synchronized with Web constants.ts and database slugs
   static const Map<String, Map<String, dynamic>> _categoryMetadata = {
     'fruits-vegetables': {
-      'emoji': '🥦',
       'tagline': '100% Farm-Fresh Organic',
-      'badge': 'Farm Direct',
-      'badgeIcon': '🌿',
-      'badgeBg': Color(0xFFDCFCE7),
-      'badgeText': Color(0xFF15803D),
+      'items': 33,
+      'btnColor': Color(0xFF059669),
       'asset': 'assets/categories/fruits_vegetables_category.png',
-      'subcats': ['Fresh Vegetables', 'Fresh Fruits', 'Leafy Herbs'],
+      'webImage': 'https://www.fastkirana.in/fruits-vegetables.png',
     },
-    'dairy-breakfast': {
-      'emoji': '🥛',
-      'tagline': 'Chilled Dairy, Bread & Breakfast',
-      'badge': 'Fresh Daily',
-      'badgeIcon': '✨',
-      'badgeBg': Color(0xFFEFF6FF),
-      'badgeText': Color(0xFF1D4ED8),
-      'asset': 'assets/categories/dairy_breakfast_category.png',
-      'subcats': ['Milk & Curd', 'Cheese & Paneer', 'Bread & Butter'],
-    },
-    'dairy-bread-eggs': {
-      'emoji': '🥛',
-      'tagline': 'Chilled Dairy, Bread & Breakfast',
-      'badge': 'Fresh Daily',
-      'badgeIcon': '✨',
-      'badgeBg': Color(0xFFEFF6FF),
-      'badgeText': Color(0xFF1D4ED8),
-      'asset': 'assets/categories/dairy_breakfast_category.png',
-      'subcats': ['Milk & Curd', 'Cheese & Paneer', 'Bread & Butter'],
-    },
-    'snacks-munchies': {
-      'emoji': '🍿',
-      'tagline': 'Crunchy Chips & Namkeen',
-      'badge': 'Snack Time',
-      'badgeIcon': '⚡',
-      'badgeBg': Color(0xFFFFF7ED),
-      'badgeText': Color(0xFFC2410C),
-      'asset': 'assets/categories/snacks_munchies_category.png',
-      'subcats': ['Chips & Crisps', 'Namkeen', 'Biscuits & Cookies'],
-    },
-    'instant-foods': {
-      'emoji': '🍜',
-      'tagline': 'Maggi, Noodles & Quick Meals',
-      'badge': 'Superfast',
-      'badgeIcon': '🔥',
-      'badgeBg': Color(0xFFFEF2F2),
-      'badgeText': Color(0xFFB91C1C),
-      'asset': 'assets/categories/snacks_munchies_category.png',
-      'subcats': ['Maggi & Noodles', 'Pasta', 'Ready to Eat'],
-    },
-    'bakery-biscuits': {
-      'emoji': '🍪',
-      'tagline': 'Cakes, Cookies & Toast',
-      'badge': 'Fresh Baked',
-      'badgeIcon': '🎂',
-      'badgeBg': Color(0xFFFAF5FF),
-      'badgeText': Color(0xFF7E22CE),
-      'asset': 'assets/categories/bakery_biscuits_category.png',
-      'subcats': ['Cookies', 'Rusk & Toast', 'Cakes & Muffins'],
-    },
-    'chocolates': {
-      'emoji': '🍫',
-      'tagline': 'Sweet Cravings & Chocolates',
-      'badge': 'Sweet Treats',
-      'badgeIcon': '✨',
-      'badgeBg': Color(0xFFFAF5FF),
-      'badgeText': Color(0xFF7E22CE),
-      'asset': 'assets/categories/bakery_biscuits_category.png',
-      'subcats': ['Silk & Bars', 'Candies', 'Gift Boxes'],
-    },
-    'atta-rice-dal': {
-      'emoji': '🌾',
-      'tagline': 'Flours, Grains, Oils & Spices',
-      'badge': 'Kitchen Staples',
-      'badgeIcon': '🧂',
-      'badgeBg': Color(0xFFFEFCE8),
-      'badgeText': Color(0xFFA16207),
-      'asset': 'assets/categories/atta_rice_dal_category.png',
-      'subcats': ['Atta & Flours', 'Fortune Oil & Ghee', 'Spices & Salt'],
+    'healthy-foods': {
+      'tagline': 'Essential Products',
+      'items': 11,
+      'btnColor': Color(0xFFDC2626),
+      'asset': 'assets/categories/fruits_vegetables_category.png',
+      'webImage': 'https://www.fastkirana.in/healthy-foods.png',
     },
     'kitchen-needs': {
-      'emoji': '🌾',
-      'tagline': 'Flours, Grains, Oils & Spices',
-      'badge': 'Kitchen Staples',
-      'badgeIcon': '🧂',
-      'badgeBg': Color(0xFFFEFCE8),
-      'badgeText': Color(0xFFA16207),
+      'tagline': 'Fortune Oil, Atta & Dal',
+      'items': 42,
+      'btnColor': Color(0xFF059669),
       'asset': 'assets/categories/atta_rice_dal_category.png',
-      'subcats': ['Atta & Flours', 'Fortune Oil & Ghee', 'Spices & Salt'],
+      'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
-    'ice-cream': {
-      'emoji': '🍦',
-      'tagline': 'Chilled Cones, Tubs & Kulfi',
-      'badge': 'Chilled',
-      'badgeIcon': '❄️',
-      'badgeBg': Color(0xFFF0FDF4),
-      'badgeText': Color(0xFF047857),
-      'asset': 'assets/categories/ice_cream_category.png',
-      'subcats': ['Tubs & Party Packs', 'Cones & Sticks', 'Kulfi'],
+    'atta-rice-dal': {
+      'tagline': 'Fortune Oil, Atta & Dal',
+      'items': 42,
+      'btnColor': Color(0xFF059669),
+      'asset': 'assets/categories/atta_rice_dal_category.png',
+      'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
+    },
+    'snacks-munchies': {
+      'tagline': 'Crisps, Namkeen & Chips',
+      'items': 28,
+      'btnColor': Color(0xFFDC2626),
+      'asset': 'assets/categories/snacks_munchies_category.png',
+      'webImage': 'https://www.fastkirana.in/snacks-munchies.png',
     },
     'beverages': {
-      'emoji': '🥤',
-      'tagline': 'Cold Drinks, Juices & Tea',
-      'badge': 'Refreshing',
-      'badgeIcon': '🧊',
-      'badgeBg': Color(0xFFF0F9FF),
-      'badgeText': Color(0xFF0369A1),
+      'tagline': 'Cold Drinks & Real Juices',
+      'items': 19,
+      'btnColor': Color(0xFF0284C7),
       'asset': 'assets/categories/beverages_category.png',
-      'subcats': ['Cold Drinks', 'Fruit Juices', 'Tea & Coffee'],
+      'webImage': 'https://www.fastkirana.in/beverages.png',
     },
-    'household': {
-      'emoji': '🧼',
-      'tagline': 'Detergents, Cleaners & Care',
-      'badge': 'Home Care',
-      'badgeIcon': '🏠',
-      'badgeBg': Color(0xFFF8FAFC),
-      'badgeText': Color(0xFF334155),
-      'asset': 'assets/categories/household_category.png',
-      'subcats': ['Detergents', 'Dishwash', 'Cleaners'],
+    'ice-cream': {
+      'tagline': 'Cool Tubs, Cones & Treats',
+      'items': 15,
+      'btnColor': Color(0xFFDC2626),
+      'asset': 'assets/categories/ice_cream_category.png',
+      'webImage': 'https://www.fastkirana.in/ice-cream.png',
     },
-    'home-cleaning': {
-      'emoji': '🧼',
-      'tagline': 'Detergents, Cleaners & Care',
-      'badge': 'Home Care',
-      'badgeIcon': '🏠',
-      'badgeBg': Color(0xFFF8FAFC),
-      'badgeText': Color(0xFF334155),
-      'asset': 'assets/categories/household_category.png',
-      'subcats': ['Detergents', 'Dishwash', 'Cleaners'],
+    'chocolates': {
+      'tagline': 'Silk, Bars & Confectionery',
+      'items': 24,
+      'btnColor': Color(0xFF7C3AED),
+      'asset': 'assets/categories/bakery_biscuits_category.png',
+      'webImage': 'https://www.fastkirana.in/chocolates.png',
+    },
+    'bakery': {
+      'tagline': 'Fresh Cookies & Rusks',
+      'items': 16,
+      'btnColor': Color(0xFFEA580C),
+      'asset': 'assets/categories/bakery_biscuits_category.png',
+      'webImage': 'https://www.fastkirana.in/bakery.png',
+    },
+    'packaged-foods': {
+      'tagline': 'Instant Maggi & Ready Meals',
+      'items': 18,
+      'btnColor': Color(0xFFDC2626),
+      'asset': 'assets/categories/snacks_munchies_category.png',
+      'webImage': 'https://www.fastkirana.in/packaged-foods.png',
     },
     'personal-care': {
-      'emoji': '🧴',
-      'tagline': 'Soaps, Shampoos & Skin Care',
-      'badge': 'Wellness',
-      'badgeIcon': '✨',
-      'badgeBg': Color(0xFFF0F9FF),
-      'badgeText': Color(0xFF0369A1),
+      'tagline': 'Soaps, Shampoos & Skincare',
+      'items': 22,
+      'btnColor': Color(0xFF0D9488),
       'asset': 'assets/categories/personal_care_category.png',
-      'subcats': ['Soaps & Body Wash', 'Hair Care', 'Oral Care'],
+      'webImage': 'https://www.fastkirana.in/personal-care.png',
+    },
+    'home-needs-and-cleaning': {
+      'tagline': 'Detergents & Home Cleaners',
+      'items': 20,
+      'btnColor': Color(0xFF0284C7),
+      'asset': 'assets/categories/household_category.png',
+      'webImage': 'https://www.fastkirana.in/home-cleaning.png',
+    },
+    'restaurant-food': {
+      'tagline': 'Hot Burgers, Rolls & Meals',
+      'items': 35,
+      'btnColor': Color(0xFFEA580C),
+      'asset': 'assets/categories/cafe_category.png',
+      'webImage': 'https://www.fastkirana.in/restaurant-food.png',
     },
   };
 
@@ -173,106 +125,184 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.primaryBg,
-                borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-              ),
-              child: const Icon(Icons.grid_view_rounded, color: AppDesignSystem.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'All Categories',
-                  style: GoogleFonts.inter(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: AppDesignSystem.textPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Text(
-                  'Delivered in 10-15 mins',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppDesignSystem.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // 1. Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: Container(
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                border: Border.all(color: AppDesignSystem.border),
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(
-                  hintText: 'Search categories or items...',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppDesignSystem.textMuted,
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textSecondary),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 16, color: AppDesignSystem.textSecondary),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
-          ),
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // 1. Top Header Banner (Exact Replica from Reference Screenshot)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left Column: Breadcrumb + Title + Subtitle
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Breadcrumb Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDF2F8),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFFCE7F3), width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'HOME',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF475569),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: Color(0xFF94A3B8)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'CATEGORIES DIRECTORY',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFFE11D48),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
 
-          // 2. Categories Directory Cards
-          Expanded(
-            child: RefreshIndicator(
-              color: AppDesignSystem.primary,
-              onRefresh: () async => ref.invalidate(categoriesProvider),
-              child: categoriesAsync.when(
-                data: (categories) {
-                  var filtered = categories.where((c) => c.slug != 'restaurant').toList();
-                  if (_searchQuery.isNotEmpty) {
-                    filtered = filtered.where((c) {
-                      return c.name.toLowerCase().contains(_searchQuery) ||
-                          c.slug.toLowerCase().contains(_searchQuery);
-                    }).toList();
-                  }
+                          // Heading
+                          Text(
+                            'Shop by Category',
+                            style: GoogleFonts.inter(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF0F172A),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
 
-                  if (filtered.isEmpty) {
-                    return Center(
+                          // Subtitle
+                          Text(
+                            'Explore our curated catalog of groceries\nand hot café treats',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF64748B),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Right Illustration: Grocery Shopping Bag
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          'assets/categories/hero_welcome.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            'assets/categories/fruits_vegetables_category.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Text('🛍️', style: TextStyle(fontSize: 36)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 2. Search Input Bar (Pill style matching reference)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: 'Search categories...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // 3. 2-Column Grid of Beautiful Category Cards
+            categoriesAsync.when(
+              data: (categories) {
+                var filtered = categories.where((c) => c.slug != 'restaurant').toList();
+                if (_searchQuery.isNotEmpty) {
+                  filtered = filtered.where((c) {
+                    return c.name.toLowerCase().contains(_searchQuery) ||
+                        c.slug.toLowerCase().contains(_searchQuery);
+                  }).toList();
+                }
+
+                if (filtered.isEmpty) {
+                  return SliverFillRemaining(
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -283,36 +313,50 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.textPrimary,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Try searching with a different name',
-                            style: GoogleFonts.inter(fontSize: 11.5, color: AppDesignSystem.textMuted),
+                            'Try searching with another keyword',
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
                           ),
                         ],
                       ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final cat = filtered[index];
-                      return _buildCategoryCard(context, cat);
-                    },
+                    ),
                   );
-                },
-                loading: () => Center(
-                  child: CircularProgressIndicator(color: AppDesignSystem.primary),
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.74,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final cat = filtered[index];
+                        return _buildReferenceCategoryCard(context, cat);
+                      },
+                      childCount: filtered.length,
+                    ),
+                  ),
+                );
+              },
+              loading: () => const SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFFDC2626)),
                 ),
-                error: (err, _) => Center(
+              ),
+              error: (_, __) => SliverFillRemaining(
+                child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.wifi_off_rounded, size: 44, color: AppDesignSystem.primary),
+                      const Icon(Icons.wifi_off_rounded, size: 44, color: Color(0xFFDC2626)),
                       const SizedBox(height: 10),
                       Text(
                         'Failed to load categories',
@@ -322,9 +366,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       ElevatedButton(
                         onPressed: () => ref.invalidate(categoriesProvider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppDesignSystem.primary,
+                          backgroundColor: const Color(0xFFDC2626),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd)),
                         ),
                         child: const Text('Retry'),
                       ),
@@ -333,206 +376,204 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, Category category) {
+  // 1:1 Replica of Category Card in Screenshot
+  Widget _buildReferenceCategoryCard(BuildContext context, Category category) {
     final meta = _categoryMetadata[category.slug] ??
         {
-          'emoji': '🛒',
-          'tagline': 'Fresh & Quality Products',
-          'badge': '10-Min Fast',
-          'badgeIcon': '⚡',
-          'badgeBg': const Color(0xFFFFE4E6),
-          'badgeText': AppDesignSystem.primary,
-          'asset': 'assets/brand/fastkirana_app_icon.png',
-          'subcats': <String>['Popular Items', 'Top Deals'],
+          'tagline': 'Essential Products',
+          'items': category.productCount ?? 15,
+          'btnColor': const Color(0xFFDC2626),
+          'asset': 'assets/categories/fruits_vegetables_category.png',
+          'webImage': category.imageUrl ?? 'https://www.fastkirana.in/fruits-vegetables.png',
         };
 
-    final List<String> subcats = (meta['subcats'] as List<String>?) ?? [];
-    final count = category.productCount ?? 0;
+    final int itemCount = (meta['items'] as int?) ?? (category.productCount ?? 20);
+    final Color btnColor = (meta['btnColor'] as Color?) ?? const Color(0xFFDC2626);
+    final String tagline = (meta['tagline'] as String?) ?? '100% Quality Checked';
+    final String assetPath = (meta['asset'] as String?) ?? 'assets/categories/fruits_vegetables_category.png';
+    final String? webUrl = category.imageUrl ?? (meta['webImage'] as String?);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-        border: Border.all(color: AppDesignSystem.border),
-        boxShadow: AppDesignSystem.shadowSm,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CategoryProductsScreen(category: category),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CategoryProductsScreen(category: category),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Image Box with Items Pill
+            Container(
+              height: 124,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFF1F5F9)),
               ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Row: Badge + Category Name + Image Thumbnail
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left: Name, Badge & Tagline
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: meta['badgeBg'] as Color? ?? const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(meta['badgeIcon'] as String? ?? '✨', style: const TextStyle(fontSize: 9.5)),
-                                const SizedBox(width: 3),
-                                Text(
-                                  meta['badge'] as String? ?? 'Fast Delivery',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: meta['badgeText'] as Color? ?? AppDesignSystem.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-
-                          // Title + Count
-                          Row(
-                            children: [
-                              Text(
-                                category.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppDesignSystem.textPrimary,
-                                  letterSpacing: -0.3,
-                                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Real Image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: webUrl != null && webUrl.startsWith('http')
+                        ? CachedNetworkImage(
+                            imageUrl: webUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Image.asset(
+                              assetPath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Text('🥬', style: TextStyle(fontSize: 38)),
                               ),
-                              if (count > 0) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF3F4F6),
-                                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                                  ),
-                                  child: Text(
-                                    '$count Items',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 8.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppDesignSystem.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+                            ),
+                          )
+                        : Image.asset(
+                            assetPath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Text('🥬', style: TextStyle(fontSize: 38)),
+                            ),
                           ),
-                          const SizedBox(height: 2),
+                  ),
 
-                          // Tagline
+                  // Top Left: Items Badge Pill (Exact Replica from Reference)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.inventory_2_outlined, size: 10, color: Color(0xFFE11D48)),
+                          const SizedBox(width: 3),
                           Text(
-                            meta['tagline'] as String? ?? 'Order now and get it in minutes',
+                            '$itemCount ITEMS',
                             style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppDesignSystem.textSecondary,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFE11D48),
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // Right: Category Asset Icon
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                        child: Image.asset(
-                          meta['asset'] as String? ?? 'assets/brand/fastkirana_app_icon.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Text(meta['emoji'] as String? ?? '🛒', style: const TextStyle(fontSize: 24)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Subcategories Chips Row
-                if (subcats.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 5,
-                    children: subcats.map((subcat) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Text(
-                          subcat,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: AppDesignSystem.textSecondary,
-                          ),
-                        ),
-                      );
-                    }).toList(),
                   ),
                 ],
-
-                const SizedBox(height: 8),
-
-                // Bottom Row: Explore Category Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Explore Category',
-                      style: GoogleFonts.inter(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    const Icon(Icons.arrow_forward_rounded, size: 13, color: AppDesignSystem.primary),
-                  ],
-                ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+
+            // Category Name
+            Text(
+              category.name,
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w900,
+                color: category.slug.contains('fruit')
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF0F172A),
+                letterSpacing: -0.2,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+
+            // Tagline
+            Text(
+              tagline,
+              style: GoogleFonts.inter(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            // SHOP NOW Button with Chevron Circle (Exact Replica)
+            Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: btnColor,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: btnColor.withOpacity(0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'SHOP NOW',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 9,
+                      color: btnColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

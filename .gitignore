@@ -62,3 +62,7 @@ scripts/
 # Firebase Admin credentials
 firebase-credentials.json
 fastapi-backend/firebase-credentials.json
+graphify-out/cache/
+fastkirana_fastapi/**/__pycache__/
+*.pyc
+

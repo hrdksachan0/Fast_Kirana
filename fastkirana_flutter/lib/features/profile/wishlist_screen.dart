@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../widgets/product_card.dart';
-
-final wishlistProvider = StateProvider<List<Product>>((ref) => []);
 
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});

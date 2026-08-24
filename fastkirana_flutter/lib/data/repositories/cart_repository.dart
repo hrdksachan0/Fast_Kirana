@@ -8,41 +8,34 @@ class CartRepository {
   final Dio dio;
   CartRepository(this.dio);
 
-  Future<Cart> getCart(String userId) async {
+  Future<Cart> getCart() async {
     try {
-      final response = await dio.get('/api/cart', queryParameters: {'userId': userId});
+      final response = await dio.get('/api/cart');
       return Cart.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<void> addItem(String userId, String productId, int quantity) async {
+  Future<void> syncCart(List<CartItem> items) async {
     try {
-      await dio.post('/api/cart/add', data: {
-        'userId': userId,
-        'productId': productId,
-        'quantity': quantity,
+      await dio.post('/api/cart', data: {
+        'items': items.map((item) => {
+          'productId': item.productId,
+          'quantity': item.quantity,
+          'selectedVariant': item.selectedVariant,
+          'notes': item.notes,
+        }).toList(),
       });
-    } on DioException catch (e) {
-      throw _handleError(e);
+    } on DioException catch (_) {
+      // Background sync fail silent
     }
   }
 
-  Future<void> updateItem(String itemId, int quantity) async {
+  Future<void> clearCart() async {
     try {
-      await dio.patch('/api/cart/item/$itemId', data: {'quantity': quantity});
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  Future<void> removeItem(String itemId) async {
-    try {
-      await dio.delete('/api/cart/item/$itemId');
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
+      await dio.delete('/api/cart');
+    } catch (_) {}
   }
 
   Future<void> applyCoupon(String code) async {
@@ -64,8 +57,20 @@ class CartRepository {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString('local_cart');
     if (data == null) return [];
-    final list = jsonDecode(data) as List;
-    return list.map((json) => CartItem.fromJson(json)).toList();
+    try {
+      final list = jsonDecode(data) as List;
+      final items = list
+          .map((json) => CartItem.fromJson(json as Map<String, dynamic>))
+          .where((i) => i.product.name != 'FastKirana Item' && i.product.name.trim().isNotEmpty)
+          .toList();
+      // If mock items were filtered out, save clean cart
+      if (items.length != list.length) {
+        await saveLocalCart(items);
+      }
+      return items;
+    } catch (_) {
+      return [];
+    }
   }
 
   Exception _handleError(DioException e) {

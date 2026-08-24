@@ -51,10 +51,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
-    Navigator.pushReplacementNamed(
-      context,
-      '/home',
-    );
+    final prefs = await SharedPreferences.getInstance();
+    final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
+    if (!hasChosenLocation) {
+      await prefs.setBool('has_chosen_location', true);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/location');
+    } else {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
 
   @override

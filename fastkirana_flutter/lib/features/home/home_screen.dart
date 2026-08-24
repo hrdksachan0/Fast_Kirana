@@ -15,12 +15,15 @@ import '../../widgets/product_card.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/brand_logo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../providers/address_provider.dart';
+import '../../providers/banner_provider.dart';
 import '../categories/category_products_screen.dart';
 import '../search/search_screen.dart';
 import '../cart/cart_screen.dart';
 import '../cafe/cafe_menu_screen.dart';
 import '../profile/address_book_screen.dart';
 import '../profile/notifications_screen.dart';
+import '../location/delivery_location_screen.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -40,11 +43,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final PageController _bannerController = PageController();
 
   static const List<String> _searchPlaceholders = [
-    "Search 'milk', 'bread', 'butter'...",
-    "Search 'paneer', 'cheese', 'curd'...",
-    "Search 'maggi', 'chips', 'snacks'...",
-    "Search 'atta', 'rice', 'fortune oil'...",
-    "Search 'burger', 'pizza', 'rolls'...",
+    'Search "atta"',
+    'Search "milk"',
+    'Search "maggi"',
+    'Search "fortune oil"',
+    'Search "dairy milk"',
+    'Search "chips"',
   ];
 
   static const List<Map<String, dynamic>> _heroPromoSlides = [
@@ -53,24 +57,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       'title': 'Flat 5% OFF on Order',
       'subtitle': 'Use code FIRST5 on checkout',
       'code': 'FIRST5',
-      'gradient': [Color(0xFFE20A22), Color(0xFFFF4D62)],
-      'emoji': '🛍️',
+      'gradient': [Color(0xFFE20A22), Color(0xFFFF416C)],
+      'imageAsset': 'assets/categories/grocery_bag_banner.png',
+      'webFallback': 'https://www.fastkirana.in/grocery_bag_banner.png',
+      'categorySlug': 'all',
     },
     {
-      'badge': 'SUPER SAVINGS',
-      'title': 'Free Delivery on ₹200+',
-      'subtitle': 'Express Fast Delivery',
-      'code': 'FASTFREE',
-      'gradient': [Color(0xFF00B140), Color(0xFF3CC070)],
-      'emoji': '⚡',
+      'badge': 'FARM FRESH',
+      'title': 'Fresh Veggies & Fruits',
+      'subtitle': 'Directly from local farms',
+      'code': 'SAVE20',
+      'gradient': [Color(0xFF059669), Color(0xFF10B981)],
+      'imageAsset': 'assets/categories/fruits_vegetables_category.png',
+      'webFallback': 'https://www.fastkirana.in/fruits_vegetables_category.png',
+      'categorySlug': 'fruits-vegetables',
     },
     {
       'badge': 'HOT CAFE MEALS',
       'title': 'Burger, Pizza & Rolls',
       'subtitle': 'Freshly prepared from top cafes',
       'code': 'CAFE5',
-      'gradient': [Color(0xFFEA580C), Color(0xFFD97706)],
-      'emoji': '🍔',
+      'gradient': [Color(0xFFEA580C), Color(0xFFF97316)],
+      'imageAsset': 'assets/categories/cafe_promo_banner.png',
+      'webFallback': 'https://www.fastkirana.in/cafe_promo_banner.png',
+      'categorySlug': 'restaurant-food',
+    },
+    {
+      'badge': 'SUMMER SPECIAL',
+      'title': 'Ice Creams & Shakes',
+      'subtitle': 'Amul, Kwality Wall\'s & more',
+      'code': 'SWEET10',
+      'gradient': [Color(0xFF4F46E5), Color(0xFF818CF8)],
+      'imageAsset': 'assets/categories/ice_cream_category.png',
+      'webFallback': 'https://www.fastkirana.in/ice_cream_category.png',
+      'categorySlug': 'ice-cream',
     },
   ];
 
@@ -167,7 +187,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // 1. Pinned Header & Search
-              SliverToBoxAdapter(child: _buildHeader(cartCount)),
+              SliverToBoxAdapter(child: _buildTopHeader()),
 
               // 2. Mode Switcher (Grocery vs Food)
               SliverToBoxAdapter(child: _buildCategoryToggle()),
@@ -208,94 +228,94 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildTopHeader() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Logo + Delivery Speed & Address + Notifications
+          // Top Row: Logo + Clean Location Header + Notifications
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // FastKirana Speed Logo
               FastKiranaLogoWidget(size: 38),
               const SizedBox(width: 12),
 
-              // Location & Speed Delivery Info
+              // Location Selector
               Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressBookScreen()));
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Timing & Lightning Badge Row
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                              border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF15803D)),
-                                const SizedBox(width: 2.5),
-                                Text(
-                                  '10-15 MINS',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF14532D),
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'EXPRESS',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFFE20A22),
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final selectedAddress = ref.watch(selectedAddressProvider);
+                    final locationTitle = selectedAddress != null
+                        ? (selectedAddress.label.isNotEmpty ? selectedAddress.label : 'Saved Location')
+                        : 'Ghatampur, UP';
+                    final locationSubtitle = selectedAddress != null
+                        ? selectedAddress.area.isNotEmpty
+                            ? selectedAddress.area
+                            : selectedAddress.fullAddress
+                        : '10-Min Express Zone';
 
-                      // Location Name with Chevron
-                      Row(
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const DeliveryLocationScreen()),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Ghatampur, UP',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF111827),
-                                height: 1.15,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF16A34A),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  'Delivering to • $locationSubtitle',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF6B7280),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 3),
-                          const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF111827)),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  locationTitle,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF111827),
+                                    height: 1.1,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF111827)),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
 
@@ -344,64 +364,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Search Bar (Modern Pill with Animated Rotating Placeholder & Mic)
+          // Search Bar (Exact Reference Match: Clean Rounded Pill)
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
             },
             child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFFE20A22)),
-                  const SizedBox(width: 10),
+                  const Icon(Icons.search_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 250),
+                      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                        return Stack(
+                          alignment: Alignment.centerLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
                       transitionBuilder: (child, animation) => FadeTransition(
                         opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.3),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
+                        child: child,
                       ),
-                      child: Text(
-                        _searchPlaceholders[_searchPlaceholderIndex],
+                      child: Align(
                         key: ValueKey<int>(_searchPlaceholderIndex),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF6B7280),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _searchPlaceholders[_searchPlaceholderIndex],
+                          textAlign: TextAlign.left,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFFEA580C)),
                   ),
                 ],
               ),
@@ -412,21 +425,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 2. Grocery / Food Mode Switcher
+  // 2. Grocery / Food Mode Switcher (100% Exact Match to Reference Screenshot)
   Widget _buildCategoryToggle() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
       child: Container(
-        height: 50,
+        height: 52,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
         ),
         child: Row(
           children: [
-            // Grocery Option
+            // Grocery Option (Active Red Gradient Pill)
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -436,19 +449,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     gradient: _isGrocerySelected
                         ? const LinearGradient(
-                            colors: [Color(0xFFE8153A), Color(0xFFFF2D55), Color(0xFFFF5533)],
+                            colors: [Color(0xFFE20A22), Color(0xFFFF334B)],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           )
                         : null,
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: _isGrocerySelected
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFE8153A).withOpacity(0.35),
+                              color: const Color(0xFFE20A22).withOpacity(0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -460,30 +474,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       Icon(
                         Icons.shopping_bag_outlined,
-                        size: 18,
-                        color: _isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
+                        size: 20,
+                        color: _isGrocerySelected ? Colors.white : const Color(0xFF6B7280),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Grocery',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w900,
-                              color: _isGrocerySelected ? Colors.white : AppDesignSystem.textPrimary,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _isGrocerySelected ? Colors.white : const Color(0xFF374151),
                               height: 1.1,
                             ),
                           ),
                           Text(
                             'FAST DELIVERY',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 8,
+                            style: GoogleFonts.inter(
+                              fontSize: 7.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5,
-                              color: _isGrocerySelected ? Colors.white.withOpacity(0.9) : AppDesignSystem.textMuted,
+                              color: _isGrocerySelected ? Colors.white.withOpacity(0.95) : const Color(0xFF9CA3AF),
                             ),
                           ),
                         ],
@@ -494,18 +508,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            // Center Dot Divider
-            Container(
-              width: 3,
-              height: 3,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1D5DB),
-                shape: BoxShape.circle,
-              ),
-            ),
+            const SizedBox(width: 4),
 
-            // Food & Cafe Option
+            // Food Option (Inactive / Active Switch)
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -515,19 +520,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     gradient: !_isGrocerySelected
                         ? const LinearGradient(
-                            colors: [Color(0xFFFF5500), Color(0xFFFF7700), Color(0xFFFFAA00)],
+                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           )
                         : null,
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: !_isGrocerySelected
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFFF5500).withOpacity(0.35),
+                              color: const Color(0xFFEA580C).withOpacity(0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -539,30 +545,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       Icon(
                         Icons.restaurant_outlined,
-                        size: 18,
-                        color: !_isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
+                        size: 19,
+                        color: !_isGrocerySelected ? Colors.white : const Color(0xFF6B7280),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Food & Cafe',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w900,
-                              color: !_isGrocerySelected ? Colors.white : AppDesignSystem.textPrimary,
+                            'Food',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: !_isGrocerySelected ? Colors.white : const Color(0xFF374151),
                               height: 1.1,
                             ),
                           ),
                           Text(
-                            'CAFE & BISTRO',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
+                            'FOOD & RESTAURANTS',
+                            style: GoogleFonts.inter(
+                              fontSize: 7.5,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
-                              color: !_isGrocerySelected ? Colors.white.withOpacity(0.9) : AppDesignSystem.textMuted,
+                              color: !_isGrocerySelected ? Colors.white.withOpacity(0.95) : const Color(0xFF9CA3AF),
                             ),
                           ),
                         ],
@@ -619,21 +625,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.22),
-                                borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-                              ),
-                              child: Text(
-                                slide['badge'] as String,
-                                style: GoogleFonts.inter(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.22),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    slide['badge'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if ((slide['code'] as String).isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 0.8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.confirmation_number_outlined, size: 10, color: Colors.white),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          slide['code'] as String,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -659,18 +695,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // Real Graphical Banner Illustration
                       Container(
-                        width: 58,
-                        height: 58,
+                        width: 78,
+                        height: 78,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.2),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          color: Colors.white.withOpacity(0.18),
+                          border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
                         ),
-                        child: Center(
-                          child: Text(
-                            slide['emoji'] as String,
-                            style: const TextStyle(fontSize: 28),
+                        child: ClipOval(
+                          child: Image.asset(
+                            slide['imageAsset'] as String,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => CachedNetworkImage(
+                              imageUrl: slide['webFallback'] as String,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => const Center(
+                                child: Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 32),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -702,96 +747,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // 4. Value Proposition Strip (Exact www.fastkirana.in Web Match)
-  Widget _buildValuePropositionStrip() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '⚡ Ghatampur',
-                  style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF111827),
-                  ),
-                ),
-              ],
-            ),
-            Container(width: 1, height: 16, color: const Color(0xFFE5E7EB)),
-            Text(
-              '📦 50+',
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF111827),
-              ),
-            ),
-            Container(width: 1, height: 16, color: const Color(0xFFE5E7EB)),
-            Text(
-              '❤️ 1000+',
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF111827),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPropItem(String title, String subtitle) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.inter(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
-            color: AppDesignSystem.textPrimary,
-          ),
-        ),
-        Text(
-          subtitle,
-          style: GoogleFonts.inter(
-            fontSize: 8.5,
-            fontWeight: FontWeight.w500,
-            color: AppDesignSystem.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 
@@ -851,7 +806,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final cat = categories[index];
-                    final imgUrl = cat.imageUrl ?? '';
 
                     return GestureDetector(
                       onTap: () {
@@ -867,42 +821,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         width: 68,
                         child: Column(
                           children: [
-                            // Circular Avatar with High-Res Image
                             Container(
-                              width: 62,
-                              height: 62,
+                              width: 64,
+                              height: 64,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: const Color(0xFFF3F4F6),
+                                color: const Color(0xFFF9FAFB),
                                 border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-                                boxShadow: AppDesignSystem.shadowSm,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: ClipOval(
-                                child: imgUrl.startsWith('http')
-                                    ? CachedNetworkImage(
-                                        imageUrl: imgUrl,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, __) => Shimmer.fromColors(
-                                          baseColor: const Color(0xFFE5E7EB),
-                                          highlightColor: const Color(0xFFF9FAFB),
-                                          child: Container(color: Colors.white),
-                                        ),
-                                        errorWidget: (_, __, ___) => const Center(
-                                          child: Icon(Icons.shopping_bag_outlined, color: Color(0xFF9CA3AF), size: 28),
-                                        ),
-                                      )
-                                    : const Center(
-                                        child: Icon(Icons.shopping_bag_outlined, color: Color(0xFF9CA3AF), size: 28),
-                                      ),
+                                child: _buildCategoryAvatarImage(cat),
                               ),
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 6),
                             Text(
                               cat.name,
                               style: GoogleFonts.inter(
-                                fontSize: 9.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: AppDesignSystem.textPrimary,
+                                color: const Color(0xFF1F2937),
                                 height: 1.15,
                               ),
                               textAlign: TextAlign.center,
@@ -950,77 +894,302 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 6. Curated For You Filter Tabs (Sticky & Dynamic)
+  Widget _buildCategoryAvatarImage(Category cat) {
+    final imgUrl = cat.imageUrl ?? '';
+
+    // 1. If real Cloudinary / HTTP URL from Supabase is present, use it directly!
+    if (imgUrl.isNotEmpty && imgUrl.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: imgUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: const Color(0xFFE5E7EB),
+          highlightColor: const Color(0xFFF9FAFB),
+          child: Container(color: Colors.white),
+        ),
+        errorWidget: (_, __, ___) => _buildCategoryFallback(cat),
+      );
+    }
+
+    // 2. If relative URL from Supabase (e.g. /fruits_vegetables_category.png), load from live domain
+    if (imgUrl.isNotEmpty && imgUrl.startsWith('/')) {
+      return CachedNetworkImage(
+        imageUrl: 'https://www.fastkirana.in$imgUrl',
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: const Color(0xFFE5E7EB),
+          highlightColor: const Color(0xFFF9FAFB),
+          child: Container(color: Colors.white),
+        ),
+        errorWidget: (_, __, ___) => _buildCategoryFallback(cat),
+      );
+    }
+
+    // 3. Check exact slug mappings
+    final slug = cat.slug.toLowerCase().trim();
+    if (slug == 'fruits-vegetables' || slug.contains('fruit') || slug.contains('veg')) {
+      return Image.asset('assets/categories/fruits_vegetables_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'dairy-breakfast' || slug.contains('dairy') || slug.contains('milk')) {
+      return Image.asset('assets/categories/dairy_breakfast_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'snacks-munchies' || slug.contains('snack')) {
+      return Image.asset('assets/categories/snacks_munchies_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'beverages' || slug.contains('drink') || slug.contains('cold')) {
+      return Image.asset('assets/categories/beverages_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'ice-cream' || slug.contains('ice') || slug.contains('dessert')) {
+      return Image.asset('assets/categories/ice_cream_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'atta-rice-dal' || slug.contains('atta') || slug.contains('rice') || slug.contains('kitchen')) {
+      return Image.asset('assets/categories/atta_rice_dal_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'personal-care' || slug.contains('care') || slug.contains('hygiene')) {
+      return Image.asset('assets/categories/personal_care_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'home-needs-and-cleaning' || slug == 'household' || slug.contains('clean')) {
+      return Image.asset('assets/categories/household_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'bakery' || slug.contains('biscuit')) {
+      return Image.asset('assets/categories/bakery_biscuits_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+    if (slug == 'restaurant-food' || slug.contains('cafe') || slug.contains('food')) {
+      return Image.asset('assets/categories/cafe_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+    }
+
+    return _buildCategoryFallback(cat);
+  }
+
+  Widget _buildCategoryFallback(Category cat) {
+    return Container(
+      color: const Color(0xFFF3F4F6),
+      child: Center(
+        child: Text(
+          cat.name.isNotEmpty ? cat.name.characters.first.toUpperCase() : '🛍️',
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFFE20A22),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 4. Value Proposition Strip (Exact Reference Screenshot Match)
+  Widget _buildValuePropositionStrip() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text('⚡', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 3),
+                Text(
+                  'Ghatampur',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ],
+            ),
+            Container(width: 1, height: 14, color: const Color(0xFFE5E7EB)),
+            Row(
+              children: [
+                const Text('📦', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                Text(
+                  '50+',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ],
+            ),
+            Container(width: 1, height: 14, color: const Color(0xFFE5E7EB)),
+            Row(
+              children: [
+                const Text('🩷', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                Text(
+                  '1000+',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFE11D48),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 6. Curated For You Filter Tabs (100% Exact Screenshot Match: Circular Icon Tabs + Underline)
   Widget _buildCuratedForYouFilter() {
-    final timeTab = _getTimeBasedTab();
-    final filterTabs = ['All', 'Flash Deals', 'Best Sellers', 'Trending', timeTab];
+    final curations = [
+      {
+        'title': 'All',
+        'icon': Icons.storefront_rounded,
+        'iconColor': const Color(0xFF6366F1),
+        'bg': const Color(0xFFEEF2FF),
+      },
+      {
+        'title': 'Flash Deals',
+        'icon': Icons.bolt_rounded,
+        'iconColor': const Color(0xFFEF4444),
+        'bg': const Color(0xFFFEF2F2),
+      },
+      {
+        'title': 'Best Sellers',
+        'icon': Icons.emoji_events_rounded,
+        'iconColor': const Color(0xFFF59E0B),
+        'bg': const Color(0xFFFEFCE8),
+      },
+      {
+        'title': 'Trending',
+        'icon': Icons.local_fire_department_rounded,
+        'iconColor': const Color(0xFFF97316),
+        'bg': const Color(0xFFFFF7ED),
+      },
+      {
+        'title': 'Snacks',
+        'icon': Icons.fastfood_rounded,
+        'iconColor': const Color(0xFFEC4899),
+        'bg': const Color(0xFFFDF2F8),
+      },
+    ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Text('✨', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 4),
-              Text(
-                'Curated For You',
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: AppDesignSystem.textPrimary,
-                ),
-              ),
-            ],
+          // Header Section
+          Text(
+            'Curated For You',
+            style: GoogleFonts.inter(
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF111827),
+              letterSpacing: -0.3,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
+          Text(
+            'Handpicked collections for every mood',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Circular Tabs Row
           SizedBox(
-            height: 34,
+            height: 94,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: filterTabs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemCount: curations.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
+                final item = curations[index];
                 final isSelected = index == _selectedFilterIndex;
-                final isTimeTab = index == 4;
 
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() => _selectedFilterIndex = index);
                   },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppDesignSystem.primary
-                          : isTimeTab
-                              ? const Color(0xFFFEF3C7)
-                              : Colors.white,
-                      borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppDesignSystem.primary
-                            : isTimeTab
-                                ? const Color(0xFFFDE68A)
-                                : AppDesignSystem.border,
+                  child: Column(
+                    children: [
+                      // Circular Icon Avatar (Crisp Vector Graphic)
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: item['bg'] as Color,
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE5E7EB),
+                            width: isSelected ? 2.0 : 1.0,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF6366F1).withOpacity(0.25),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            item['icon'] as IconData,
+                            color: item['iconColor'] as Color,
+                            size: 26,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      filterTabs[index],
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : isTimeTab
-                                ? const Color(0xFFB45309)
-                                : AppDesignSystem.textSecondary,
+                      const SizedBox(height: 6),
+                      // Tab Title Text
+                      Text(
+                        item['title'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? const Color(0xFF111827) : const Color(0xFF6B7280),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      // Active Purple Underline Indicator
+                      if (isSelected)
+                        Container(
+                          width: 22,
+                          height: 2.5,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 2.5),
+                    ],
                   ),
                 );
               },
@@ -1031,43 +1200,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 7. Dynamic Product Sections
+  // 7. Dynamic Product Sections (All Categories 10+ Products like Webapp)
   List<Widget> _buildApiProductSections() {
-    final entries = _sectionCategorySlugs.entries.toList();
-    return entries.map((entry) {
-      final slug = entry.value;
-      final productsAsync = ref.watch(productsProvider(slug));
-      return SliverToBoxAdapter(
-        child: productsAsync.when(
-          data: (products) => products.isEmpty
-              ? const SizedBox.shrink()
-              : _buildHorizontalProductSection(
-                  entry.key,
-                  _sectionSubtitle(entry.key),
-                  products,
-                ),
-          loading: () => _buildProductSectionSkeleton(entry.key),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
-      );
-    }).toList();
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
+
+        return categories.map((cat) {
+          final productsAsync = ref.watch(productsProvider(cat.slug));
+          return SliverToBoxAdapter(
+            child: productsAsync.when(
+              data: (products) {
+                if (products.isEmpty) return const SizedBox.shrink();
+                // Take up to 10 products for the home preview
+                final displayProducts = products.take(10).toList();
+                return _buildHorizontalProductSection(
+                  cat,
+                  displayProducts,
+                  totalCount: products.length,
+                );
+              },
+              loading: () => _buildProductSectionSkeleton(cat.name),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          );
+        }).toList();
+      },
+      loading: () => [
+        SliverToBoxAdapter(child: _buildProductSectionSkeleton('Loading Categories...')),
+      ],
+      error: (_, __) => [const SliverToBoxAdapter(child: SizedBox.shrink())],
+    );
   }
 
-  String _sectionSubtitle(String name) {
-    switch (name) {
-      case 'Snacks & Munchies':
-        return 'Crunchy chips, namkeen & biscuits';
-      case 'Chocolates & Sweets':
-        return 'Dairy Milk Silk, bars & treats';
-      case 'Instant Foods':
-        return 'Maggi, noodles & instant soup';
-      case 'Kitchen Needs':
-        return 'Fortune oil, atta, spices & salt';
-      case 'Ice Cream':
-        return 'Cool tubs, cones & shakes';
-      default:
-        return '';
-    }
+  String _getCategorySubtitle(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('snack') || lower.contains('munch')) return 'Crunchy chips, namkeen & snacks';
+    if (lower.contains('choco') || lower.contains('sweet')) return 'Dairy Milk Silk, bars & confectionery';
+    if (lower.contains('fruit') || lower.contains('veg')) return 'Farm fresh vegetables & fruits';
+    if (lower.contains('atta') || lower.contains('rice') || lower.contains('kitchen')) return 'Fortune oil, grains, atta & pulses';
+    if (lower.contains('ice') || lower.contains('cream') || lower.contains('dessert')) return 'Cool tubs, cones, kulfi & desserts';
+    if (lower.contains('beverage') || lower.contains('drink')) return 'Cold drinks, real juices & energy sodas';
+    if (lower.contains('bakery') || lower.contains('biscuit')) return 'Fresh cookies, rusks & bakery bites';
+    if (lower.contains('care') || lower.contains('hygiene')) return 'Soaps, shampoos, skincare & essentials';
+    if (lower.contains('clean') || lower.contains('home')) return 'Detergents, cleaners & home supplies';
+    if (lower.contains('health')) return 'Nutritious picks, dry fruits & oats';
+    if (lower.contains('pack')) return 'Instant noodles, pasta & ready to eat';
+    if (lower.contains('food') || lower.contains('rest') || lower.contains('cafe')) return 'Hot burgers, rolls, pizzas & meals';
+    return 'Top quality grocery essentials';
   }
 
   Widget _buildProductSectionSkeleton(String title) {
@@ -1168,10 +1350,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // Horizontal Product Track with End Card
-  Widget _buildHorizontalProductSection(String title, String subtitle, List<Product> products) {
+  // Horizontal Product Track with Direct Category Navigation & View More Card
+  Widget _buildHorizontalProductSection(Category cat, List<Product> products, {required int totalCount}) {
+    final subtitle = _getCategorySubtitle(cat.name);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
+      padding: const EdgeInsets.fromLTRB(16, 18, 0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1184,51 +1368,128 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      cat.name,
                       style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF111827),
+                        letterSpacing: -0.2,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
                       subtitle,
                       style: GoogleFonts.inter(
-                        fontSize: 10.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: AppDesignSystem.textSecondary,
+                        color: const Color(0xFF6B7280),
                       ),
                     ),
                   ],
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'See All →',
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppDesignSystem.primary,
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryProductsScreen(category: cat),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFCA5A5), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'SEE ALL ($totalCount)',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFFDC2626),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFFDC2626)),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 235,
+            height: 220,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(right: 16),
-              itemCount: products.length,
+              itemCount: products.length + 1, // +1 for "Explore More" End Card
               separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
-                final product = products[index];
-                return SizedBox(
-                  width: 150,
-                  child: ProductCard(product: product),
+                if (index < products.length) {
+                  final product = products[index];
+                  return SizedBox(
+                    width: 148,
+                    child: ProductCard(product: product),
+                  );
+                }
+
+                // "Explore All" End Card
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryProductsScreen(category: cat),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 110,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFFEE2E2),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 22,
+                            color: Color(0xFFDC2626),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'See all\n$totalCount items',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
@@ -1506,7 +1767,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Text(
-            'Popular Restaurants & Cafes',
+            'Popular Restaurants Nearby',
             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: AppDesignSystem.textPrimary),
           ),
         ),

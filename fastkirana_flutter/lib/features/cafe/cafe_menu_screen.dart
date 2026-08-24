@@ -1,37 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/product.dart';
+import '../../data/models/restaurant.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../widgets/product_card.dart';
+import '../cart/cart_screen.dart';
 import 'table_booking_screen.dart';
+import '../profile/add_review_screen.dart';
 
-class CafeCategorySection {
-  final String id;
-  final String name;
-  final String emoji;
+class WebMenuSection {
+  final String tag;
   final List<String> matchTags;
+  final String title;
+  final String emoji;
+  final String description;
 
-  const CafeCategorySection({
-    required this.id,
-    required this.name,
-    required this.emoji,
+  const WebMenuSection({
+    required this.tag,
     required this.matchTags,
+    required this.title,
+    required this.emoji,
+    required this.description,
+  });
+}
+
+// 1:1 Parity with www.fastkirana.in DEFAULT_CAFE_MENU_SECTIONS
+const List<WebMenuSection> webCafeSections = [
+  WebMenuSection(tag: 'hot-beverage', matchTags: ['hot-beverage', 'hot-coffee', 'hot coffee', 'tea', 'chai'], title: 'Brews & Tea', emoji: '☕', description: 'Chai, hot coffee, and fresh brewing mixes'),
+  WebMenuSection(tag: 'hot-bite', matchTags: ['hot-bite', 'snacks', 'momos', 'fries', 'samosa'], title: 'Quick Snacks', emoji: '🥟', description: 'Samosas, Momos, French Fries, and warm treats'),
+  WebMenuSection(tag: 'sandwiches', matchTags: ['sandwiches', 'sandwich'], title: 'Sandwiches', emoji: '🥪', description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies'),
+  WebMenuSection(tag: 'burgers', matchTags: ['burgers', 'burger', 'veg-burger', 'cheese-burger', 'paneer-burger'], title: 'Burgers', emoji: '🍔', description: 'Juicy veg burgers, paneer burgers, and loaded cheese burgers'),
+  WebMenuSection(tag: 'frankie-rolls', matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll'], title: 'Rolls & Frankie', emoji: '🌯', description: 'Fresh rolls stuffed with paneer, cheese, and veg patties'),
+  WebMenuSection(tag: 'garlic-bread', matchTags: ['garlic-bread', 'garlic bread', 'garlic-breads'], title: 'Garlic Bread', emoji: '🧄', description: 'Loaded garlic breads with corn, paneer & cheese'),
+  WebMenuSection(tag: 'pizza', matchTags: ['pizza', 'pizzas'], title: 'Pizzas', emoji: '🍕', description: 'Loaded pizzas with fresh toppings and melted cheese'),
+  WebMenuSection(tag: 'pav-bhaji', matchTags: ['pav-bhaji', 'pav bhaji', 'pavbhaji', 'pav'], title: 'Pav Bhaji', emoji: '🍲', description: 'Butter Pav Bhaji, Paneer Pav Bhaji & Extra Pav'),
+  WebMenuSection(tag: 'chinese', matchTags: ['chinese', 'chinese-cuisine', 'noodles', 'manchurian', 'chilli'], title: 'Chinese', emoji: '🥡', description: 'Momos, noodles, fried dishes & sauces'),
+  WebMenuSection(tag: 'italian-pasta', matchTags: ['italian-pasta', 'italian-pastas', 'pasta'], title: 'Pastas', emoji: '🍝', description: 'Fresh penne tossed in aromatic red & white sauces'),
+  WebMenuSection(tag: 'south-indian', matchTags: ['south-indian', 'south indian', 'dosa', 'idli', 'vada'], title: 'South Indian', emoji: '🥞', description: 'Dosa, Idli, Vada, Uttapam & more'),
+  WebMenuSection(tag: 'bombay-bites', matchTags: ['bombay-bites', 'bombay bites', 'vada pav'], title: 'Bombay Bites', emoji: '🥪', description: 'Vada Pav, special Bombay Masala Toast, and street snacks'),
+  WebMenuSection(tag: 'rice-dishes', matchTags: ['rice-dishes', 'rice dishes', 'biryani', 'pulav', 'fried rice', 'rice'], title: 'Rice & Bowls', emoji: '🍚', description: 'Flavourful biryani, fried rice, and combos'),
+  WebMenuSection(tag: 'shakes', matchTags: ['shakes', 'shake', 'milkshake', 'oreo shake'], title: 'Shakes', emoji: '🥤', description: 'Creamy strawberry, chocolate, and Oreo shakes'),
+  WebMenuSection(tag: 'mocktails', matchTags: ['mocktails', 'mocktail', 'coolers', 'mojito'], title: 'Mocktails', emoji: '🍹', description: 'Iced coolers, Virgin Mojito, and summer drinks'),
+  WebMenuSection(tag: 'cold-coffee', matchTags: ['cold-coffee', 'cold coffee', 'iced coffee'], title: 'Cold Coffee', emoji: '🧋', description: 'Classic cold brews, hazelnut cold coffee & iced sips'),
+  WebMenuSection(tag: 'desserts', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet'], title: 'Desserts', emoji: '🍦', description: 'Chilled premium ice creams, kulfis, and desserts'),
+];
+
+// 1:1 Parity with www.fastkirana.in DEFAULT_RESTAURANT_MENU_SECTIONS (Wedson, Bal Udyan)
+const List<WebMenuSection> webRestaurantSections = [
+  WebMenuSection(tag: 'main-course', matchTags: ['north-indian', 'curry', 'dal-makhani', 'paneer-butter-masala', 'paneer', 'main-course', 'dal', 'makhani', 'tadka', 'shahi', 'kadhai', 'curries', 'gravy'], title: 'Curries & Gravies', emoji: '🥘', description: 'Rich paneer butter masala, creamy dal makhani & Special Kadhai Gravies'),
+  WebMenuSection(tag: 'roti-naan-breads', matchTags: ['roti-naan-kulcha', 'roti', 'naan', 'kulcha', 'breads', 'paratha', 'missi roti', 'lachha'], title: 'Rotis & Naans', emoji: '🫓', description: 'Butter Naan, Garlic Naan, Tandoori Roti, Missi Roti & Stuffed Kulchas'),
+  WebMenuSection(tag: 'starters-tandoori', matchTags: ['special-starters', 'tandoori', 'starter', 'starters', 'kebabs', 'tikka', 'chaap', 'malai tikka', 'achari tikka'], title: 'Starters & Tandoori', emoji: '🍢', description: 'Soya Malai Chaap, Paneer Tikka, Veg Seekh Kebab & Tandoori Treats'),
+  WebMenuSection(tag: 'biryani-rice', matchTags: ['biryani-rice', 'biryani', 'pulav', 'fried-rice', 'jeera-rice', 'rice'], title: 'Biryani & Rice', emoji: '🍚', description: 'Aromatic basmati veg biryanis, paneer pulavs & loaded fried rice bowls'),
+  WebMenuSection(tag: 'pizzas-burgers', matchTags: ['pizza', 'burger', 'burgers', 'pizzas', 'sandwich', 'garlic-bread'], title: 'Pizza & Burgers', emoji: '🍕', description: 'Fresh baked pizzas, loaded veggie burgers & grilled sandwiches'),
+  WebMenuSection(tag: 'chinese-soups', matchTags: ['chinese', 'noodles', 'manchurian', 'chilli-paneer', 'spring-rolls', 'soup', 'pasta', 'momo'], title: 'Chinese & Soups', emoji: '🥡', description: 'Stir-fried noodles, saucy veg manchurian, hot soups & pastas'),
+  WebMenuSection(tag: 'breakfast', matchTags: ['breakfast', 'paratha', 'poori', 'chole-bhature', 'nashta', 'poha'], title: 'Breakfast', emoji: '🍳', description: 'Chole Bhature, Parathas, Poori and morning favorites'),
+  WebMenuSection(tag: 'shakes-beverages', matchTags: ['shake', 'shakes', 'beverage', 'beverages', 'drinks', 'drink', 'cold-drink', 'mocktail', 'coffee', 'chai', 'tea', 'chilled'], title: 'Shakes & Drinks', emoji: '🥤', description: 'Thick shakes, cold sodas, tea & coffee'),
+  WebMenuSection(tag: 'desserts', matchTags: ['dessert', 'desserts', 'ice-cream', 'ice cream', 'kulfi', 'sweet', 'gulab jamun'], title: 'Desserts & Sweets', emoji: '🍦', description: 'Chilled premium desserts and traditional sweets'),
+];
+
+class RenderedCategory {
+  final String tag;
+  final String title;
+  final String emoji;
+  final List<Product> products;
+
+  const RenderedCategory({
+    required this.tag,
+    required this.title,
+    required this.emoji,
+    required this.products,
   });
 }
 
 class CafeMenuScreen extends ConsumerStatefulWidget {
   final String restaurantId;
   final String restaurantName;
+  final Restaurant? restaurant;
 
   const CafeMenuScreen({
     super.key,
     required this.restaurantId,
     required this.restaurantName,
+    this.restaurant,
   });
 
   @override
@@ -39,34 +95,13 @@ class CafeMenuScreen extends ConsumerStatefulWidget {
 }
 
 class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
-  String _selectedCategory = 'all';
-  bool _vegOnly = false;
+  String _activeCategoryTag = 'all';
+  bool _isVegOnly = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // Full 19 Categories from Web constants.ts (DEFAULT_CAFE_MENU_SECTIONS)
-  static const List<CafeCategorySection> _categories = [
-    CafeCategorySection(id: 'all', name: 'All Items', emoji: '🍽️', matchTags: []),
-    CafeCategorySection(id: 'hot-beverage', name: 'Brews & Tea', emoji: '☕', matchTags: ['hot-beverage', 'brews', 'tea', 'chai', 'hot coffee', 'coffee']),
-    CafeCategorySection(id: 'hot-bite', name: 'Quick Snacks', emoji: '🥟', matchTags: ['hot-bite', 'snacks', 'momos', 'fries', 'samosa']),
-    CafeCategorySection(id: 'sandwiches', name: 'Sandwiches', emoji: '🥪', matchTags: ['sandwiches', 'sandwich', 'grilled sandwich']),
-    CafeCategorySection(id: 'burgers', name: 'Burgers', emoji: '🍔', matchTags: ['burgers', 'burger', 'veg-burger', 'cheese-burger', 'paneer-burger']),
-    CafeCategorySection(id: 'frankie-rolls', name: 'Rolls & Frankie', emoji: '🌯', matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll']),
-    CafeCategorySection(id: 'garlic-bread', name: 'Garlic Bread', emoji: '🧄', matchTags: ['garlic-bread', 'garlic bread', 'garlic-breads']),
-    CafeCategorySection(id: 'pizza', name: 'Pizzas', emoji: '🍕', matchTags: ['pizza', 'pizzas']),
-    CafeCategorySection(id: 'pav-bhaji', name: 'Pav Bhaji', emoji: '🫕', matchTags: ['pav-bhaji', 'pav bhaji', 'pavbhaji']),
-    CafeCategorySection(id: 'chinese', name: 'Chinese', emoji: '🥡', matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine', 'noodles', 'manchurian']),
-    CafeCategorySection(id: 'italian-pasta', name: 'Pastas', emoji: '🍝', matchTags: ['italian-pasta', 'italian-pastas', 'pasta', 'penne']),
-    CafeCategorySection(id: 'south-indian', name: 'South Indian', emoji: '🍛', matchTags: ['south-indian', 'south indian', 'dosa', 'idli', 'vada', 'uttapam']),
-    CafeCategorySection(id: 'bombay-bites', name: 'Bombay Bites', emoji: '🥪', matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'vada pav', 'misal']),
-    CafeCategorySection(id: 'rice-dishes', name: 'Rice & Bowls', emoji: '🍚', matchTags: ['rice-dishes', 'rice dishes', 'biryani', 'pulav', 'fried rice']),
-    CafeCategorySection(id: 'shakes', name: 'Shakes', emoji: '🥤', matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes', 'oreo shake']),
-    CafeCategorySection(id: 'mocktails', name: 'Mocktails', emoji: '🍹', matchTags: ['mocktails', 'mocktail', 'coolers', 'mojito']),
-    CafeCategorySection(id: 'cold-coffee', name: 'Cold Coffee', emoji: '🧋', matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'frappe']),
-    CafeCategorySection(id: 'bakery', name: 'Bakery', emoji: '🎂', matchTags: ['bakery', 'bakery-biscuits', 'cake', 'cakes', 'pastry']),
-    CafeCategorySection(id: 'chilled', name: 'Cold Drinks', emoji: '🥤', matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'soft drink']),
-    CafeCategorySection(id: 'desserts', name: 'Desserts', emoji: '🍦', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet', 'brownie']),
-  ];
+  static const Color primaryOrange = Color(0xFFEA580C);
+  static const Color primaryRed = Color(0xFFE20A22);
 
   @override
   void dispose() {
@@ -75,129 +110,311 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
   }
 
   bool _isVeg(Product product) {
-    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+    final tags = product.tags.map((t) => t.toLowerCase()).toList();
     if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) {
+      return false;
+    }
+    final nameLower = product.name.toLowerCase();
+    if (nameLower.contains('chicken') || nameLower.contains('egg') || nameLower.contains('mutton') || nameLower.contains('fish')) {
       return false;
     }
     return true;
   }
 
-  bool _matchesCategory(Product product, CafeCategorySection section) {
-    if (section.id == 'all') return true;
-    final catId = product.categoryId?.toLowerCase() ?? '';
-    final prodName = product.name.toLowerCase();
-    final prodDesc = (product.description ?? '').toLowerCase();
-    final tags = (product.tags ?? []).map((t) => t.toLowerCase()).toList();
+  bool _isCafeRestaurant(Restaurant? r, String name, String id) {
+    final nameLower = (r?.name ?? name).toLowerCase();
+    final slugLower = (r?.slug ?? '').toLowerCase();
+    return nameLower.contains('a.s') || nameLower.contains('cafe') || slugLower.contains('as-') || slugLower.contains('cafe');
+  }
 
-    // Check matchTags synonym list
-    for (final tag in section.matchTags) {
-      final t = tag.toLowerCase();
-      if (catId.contains(t) || prodName.contains(t) || prodDesc.contains(t) || tags.any((pt) => pt.contains(t))) {
-        return true;
+  List<RenderedCategory> _buildCategories(List<Product> products, Restaurant? restaurant) {
+    List<WebMenuSection> baseSections;
+    if (restaurant?.menuSections != null && restaurant!.menuSections!.isNotEmpty) {
+      baseSections = restaurant!.menuSections!.map((s) {
+        final map = s is Map ? s : <String, dynamic>{};
+        final tag = map['tag']?.toString() ?? 'section';
+        final title = map['title']?.toString() ?? 'Menu Section';
+        final emoji = map['emoji']?.toString() ?? '🍽️';
+        final desc = map['description']?.toString() ?? '';
+        final matchTags = (map['matchTags'] is List)
+            ? (map['matchTags'] as List).map((e) => e.toString()).toList()
+            : <String>[];
+        return WebMenuSection(
+          tag: tag,
+          title: title,
+          emoji: emoji,
+          description: desc,
+          matchTags: matchTags,
+        );
+      }).toList();
+    } else {
+      final isCafe = _isCafeRestaurant(restaurant, widget.restaurantName, widget.restaurantId);
+      baseSections = isCafe ? webCafeSections : webRestaurantSections;
+    }
+
+    // Filter products by search & veg
+    var filtered = products;
+    if (_isVegOnly) {
+      filtered = filtered.where((p) => restaurant?.isPureVeg == true || _isVeg(p)).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((p) {
+        final matchName = p.name.toLowerCase().contains(q);
+        final matchDesc = (p.description ?? '').toLowerCase().contains(q);
+        final matchTag = p.tags.any((t) => t.toLowerCase().contains(q));
+        return matchName || matchDesc || matchTag;
+      }).toList();
+    }
+
+    final assignedIds = <String>{};
+    final result = <RenderedCategory>[];
+
+    for (final sec in baseSections) {
+      final secTagLower = sec.tag.toLowerCase();
+      final secTitleLower = sec.title.toLowerCase();
+
+      final secProducts = filtered.where((p) {
+        final pTags = p.tags.map((t) => t.toLowerCase()).toList();
+        final pCatSlug = (p.category?.slug ?? '').toLowerCase();
+        final pCatName = (p.category?.name ?? '').toLowerCase();
+        final pName = p.name.toLowerCase();
+
+        final matched = sec.matchTags.any((tag) {
+          final t = tag.toLowerCase();
+          return pTags.contains(t) || pCatSlug.contains(t) || pCatName.contains(t) || pName.contains(t);
+        }) || pTags.contains(secTagLower) || pCatSlug == secTagLower || pCatName == secTitleLower;
+
+        if (matched) {
+          assignedIds.add(p.id);
+        }
+        return matched;
+      }).toList();
+
+      if (secProducts.isNotEmpty) {
+        result.add(RenderedCategory(
+          tag: sec.tag,
+          title: sec.title,
+          emoji: sec.emoji,
+          products: secProducts,
+        ));
       }
     }
-    return false;
+
+    // Smartly auto-group unassigned products
+    final unassigned = filtered.where((p) => !assignedIds.contains(p.id)).toList();
+    if (unassigned.isNotEmpty) {
+      final Map<String, List<Product>> categoryGroups = {};
+      for (final p in unassigned) {
+        final groupTitle = (p.category?.name != null && p.category!.name.trim().isNotEmpty && p.category!.name != 'Restaurant Food' && p.category!.name != 'Cafe')
+            ? p.category!.name.trim()
+            : 'Specialties';
+        categoryGroups.putIfAbsent(groupTitle, () => []).add(p);
+      }
+
+      categoryGroups.forEach((title, grpProducts) {
+        result.add(RenderedCategory(
+          tag: 'custom-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}',
+          title: title,
+          emoji: '🍳',
+          products: grpProducts,
+        ));
+      });
+    }
+
+    return [
+      RenderedCategory(tag: 'all', title: 'All Items', emoji: '🍽️', products: filtered),
+      ...result,
+    ];
+  }
+
+  String _getFallbackBackground(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('wedson')) return 'assets/categories/wedson_restaurant_bg.png';
+    if (lower.contains('bal udyan') || lower.contains('baludyan')) return 'assets/categories/cafe_banner.png';
+    return 'assets/categories/cafe_banner.png';
   }
 
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(restaurantMenuProvider(widget.restaurantId));
+    final restaurantsList = ref.watch(restaurantsProvider).valueOrNull ?? [];
+    final currentRestaurant = widget.restaurant ??
+        restaurantsList.cast<Restaurant?>().firstWhere((r) => r?.id == widget.restaurantId, orElse: () => null);
+
     final cart = ref.watch(cartProvider).value;
     final cartCount = cart?.totalItems ?? 0;
     final cartSubtotal = cart?.subtotal ?? 0.0;
 
+    final restaurantName = currentRestaurant?.name ?? widget.restaurantName;
+    final addressText = currentRestaurant?.address ?? 'Ghatampur Express Zone';
+    final ratingVal = currentRestaurant?.rating ?? 4.5;
+    final totalReviews = currentRestaurant?.totalRatings ?? 48;
+    final deliveryTime = currentRestaurant?.deliveryTime ?? '25-30 min';
+    final cuisineTags = currentRestaurant?.cuisineTags ?? ['North Indian', 'Fast Food', 'Snacks'];
+    final isPureVeg = currentRestaurant?.isPureVeg ?? true;
+
     return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // 1. Sliver AppBar with Restaurant Details & Hero Banner
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 180,
-            backgroundColor: const Color(0xFFEA580C),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.table_restaurant_rounded, color: Colors.white),
-                tooltip: 'Reserve Table',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TableBookingScreen(
-                        restaurantId: widget.restaurantId,
-                        restaurantName: widget.restaurantName,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: Stack(
+        children: [
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              // 1. Hero Restaurant Photo Header
+              SliverAppBar(
+                pinned: true,
+                expandedHeight: 220,
+                backgroundColor: const Color(0xFF1F2937),
+                leading: Container(
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    shape: BoxShape.circle,
                   ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 48, 20, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Row(
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Restaurant background image
+                      if (currentRestaurant?.bannerUrl != null && currentRestaurant!.bannerUrl!.startsWith('http'))
+                        CachedNetworkImage(
+                          imageUrl: currentRestaurant.bannerUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Image.asset(
+                            _getFallbackBackground(restaurantName),
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      else
+                        Image.asset(
+                          _getFallbackBackground(restaurantName),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
+                        ),
+
+                      // Dark Vignette Gradient
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.35),
+                              Colors.black.withOpacity(0.85),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+
+                      // Content
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
+                              // Restaurant Thumbnail Card
                               Container(
-                                width: 44,
-                                height: 44,
+                                width: 62,
+                                height: 62,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.12),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: const Center(
-                                  child: Text('🥘', style: TextStyle(fontSize: 24)),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: (currentRestaurant?.logoUrl != null && currentRestaurant!.logoUrl!.startsWith('http'))
+                                      ? CachedNetworkImage(
+                                          imageUrl: currentRestaurant.logoUrl!,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => const Center(
+                                            child: Text('🍽️', style: TextStyle(fontSize: 28)),
+                                          ),
+                                        )
+                                      : const Center(
+                                          child: Text('🍽️', style: TextStyle(fontSize: 28)),
+                                        ),
                                 ),
                               ),
                               const SizedBox(width: 12),
+
+                              // Details
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     Text(
-                                      widget.restaurantName,
+                                      restaurantName,
                                       style: GoogleFonts.inter(
-                                        fontSize: 18,
+                                        fontSize: 18.5,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
+                                        letterSpacing: -0.3,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Freshly prepared • Fast Delivery in 25-35 mins',
+                                      addressText,
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w500,
-                                        color: Colors.white.withOpacity(0.9),
+                                        color: Colors.white.withOpacity(0.85),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 5),
+
+                                    // Cuisine Badges
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          ...cuisineTags.take(4).map((tag) => Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: _buildCuisineTag(tag.toUpperCase()),
+                                          )),
+                                          if (isPureVeg)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF00B140).withOpacity(0.25),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: const Color(0xFF4ADE80), width: 0.8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.eco_rounded, size: 9, color: Color(0xFF4ADE80)),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    'Pure Veg',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: const Color(0xFF4ADE80),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -205,640 +422,402 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 2. Info Strip, Search & Web-Parity Category Tabs
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Rating & Delivery Strip
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF15803D),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '$ratingVal ($totalReviews reviews)',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF16A34A),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.star_rounded, size: 12, color: Colors.white),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '4.8',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
+                              const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF9CA3AF)),
+                              const SizedBox(width: 4),
                               Text(
-                                '• 30-40 min',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withOpacity(0.9),
-                                ),
+                                deliveryTime,
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF374151)),
                               ),
                             ],
+                          ),
+                          const Spacer(),
+                          // Veg Only Filter Switch
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _isVegOnly = !_isVegOnly);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _isVegOnly ? const Color(0xFFECFDF5) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _isVegOnly ? const Color(0xFF10B981) : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.eco_rounded, size: 12, color: _isVegOnly ? const Color(0xFF10B981) : const Color(0xFF64748B)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Veg Only',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: _isVegOnly ? const Color(0xFF047857) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
 
-          // 2. Filters, In-Menu Search & Categories Header
-          SliverToBoxAdapter(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                  // Search Bar inside Menu
-                  Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        hintText: 'Search dishes in ${widget.restaurantName}...',
-                        hintStyle: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF9CA3AF)),
-                        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF6B7280)),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF6B7280)),
-                                onPressed: () {
+                    // Search inside restaurant bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                                decoration: InputDecoration(
+                                  hintText: 'Search items in $restaurantName...',
+                                  hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A)),
+                              ),
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
                                   _searchController.clear();
                                   setState(() => _searchQuery = '');
                                 },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF94A3B8)),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
 
-                  // Veg Only Switch + Book Table Pill
-                  Row(
-                    children: [
-                      // Veg Only Toggle
-                      GestureDetector(
-                        onTap: () => setState(() => _vegOnly = !_vegOnly),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: _vegOnly ? const Color(0xFFDCFCE7) : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                            border: Border.all(
-                              color: _vegOnly ? const Color(0xFF86EFAC) : const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFF16A34A), width: 1.5),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                                child: Center(
-                                  child: Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Color(0xFF16A34A),
+                    // Exact 1:1 Web-Parity Category Tabs for this Restaurant
+                    menuAsync.when(
+                      data: (products) {
+                        final renderedCats = _buildCategories(products, currentRestaurant);
+                        return Container(
+                          height: 46,
+                          margin: const EdgeInsets.only(top: 4, bottom: 4),
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: renderedCats.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final cat = renderedCats[index];
+                              final isSelected = _activeCategoryTag == cat.tag;
+
+                              return GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _activeCategoryTag = cat.tag);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? primaryOrange : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected ? primaryOrange : const Color(0xFFE2E8F0),
                                     ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: primaryOrange.withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(cat.emoji, style: const TextStyle(fontSize: 13)),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${cat.title} (${cat.products.length})',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11.5,
+                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                          color: isSelected ? Colors.white : const Color(0xFF334155),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Veg Only',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: _vegOnly ? const Color(0xFF15803D) : const Color(0xFF4B5563),
-                                ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Reserve Table Pill
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TableBookingScreen(
-                                restaurantId: widget.restaurantId,
-                                restaurantName: widget.restaurantName,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                            border: Border.all(color: const Color(0xFFFFEDD5)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.event_seat_rounded, size: 13, color: Color(0xFFEA580C)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Book Table',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFFEA580C),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Horizontal Category Pills (Web Style with Counts)
-                  menuAsync.when(
-                    data: (products) {
-                      return SizedBox(
-                        height: 36,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _categories.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 6),
-                          itemBuilder: (context, index) {
-                            final cat = _categories[index];
-                            final isSelected = _selectedCategory == cat.id;
-
-                            // Compute items count in this category
-                            final count = cat.id == 'all'
-                                ? products.length
-                                : products.where((p) => _matchesCategory(p, cat)).length;
-
-                            if (cat.id != 'all' && count == 0) {
-                              return const SizedBox.shrink(); // Don't show empty categories
-                            }
-
-                            return GestureDetector(
-                              onTap: () => setState(() => _selectedCategory = cat.id),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                                  border: Border.all(
-                                    color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFE5E7EB),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(cat.emoji, style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      cat.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                        color: isSelected ? Colors.white : const Color(0xFF4B5563),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '($count)',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected ? Colors.white.withOpacity(0.85) : const Color(0xFF9CA3AF),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox(height: 36),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-        body: menuAsync.when(
-          data: (products) {
-            var filtered = products;
-
-            // 1. Apply Veg Only Filter (FIXED BUG)
-            if (_vegOnly) {
-              filtered = filtered.where((p) => _isVeg(p)).toList();
-            }
-
-            // 2. Apply Category Filter (FIXED BUG)
-            if (_selectedCategory != 'all') {
-              final section = _categories.firstWhere(
-                (c) => c.id == _selectedCategory,
-                orElse: () => _categories.first,
-              );
-              filtered = filtered.where((p) => _matchesCategory(p, section)).toList();
-            }
-
-            // 3. Apply Search Filter
-            if (_searchQuery.isNotEmpty) {
-              final q = _searchQuery.toLowerCase();
-              filtered = filtered.where((p) {
-                return p.name.toLowerCase().contains(q) ||
-                    (p.description?.toLowerCase().contains(q) ?? false) ||
-                    (p.tags?.any((t) => t.toLowerCase().contains(q)) ?? false);
-              }).toList();
-            }
-
-            if (filtered.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('🍽️', style: TextStyle(fontSize: 48)),
-                    const SizedBox(height: 12),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'No items found matching "$_searchQuery"'
-                          : _vegOnly
-                              ? 'No veg items in this category'
-                              : 'No items in this category',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF6B7280),
-                      ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
+                    const Divider(height: 12, color: Color(0xFFF1F5F9)),
                   ],
-                ),
-              );
-            }
-
-            return GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-              physics: const BouncingScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.60,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: filtered[index]);
-              },
-            );
-          },
-          loading: () => Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.60,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: 6,
-              itemBuilder: (context, index) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                );
-              },
-            ),
-          ),
-          error: (_, __) => const Center(
-            child: Text('Failed to load menu items'),
-          ),
-        ),
-      ),
-
-      // 3. Floating Bottom Cart Bar
-      bottomSheet: cartCount > 0
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEA580C), Color(0xFFD97706)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$cartCount items · ₹${cartSubtotal.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Extra charges may apply',
-                            style: GoogleFonts.inter(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.85),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            'View Cart',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildFoodItemCard(Product product) {
-    final cart = ref.watch(cartProvider).value;
-    final cartItem = cart?.items.where((i) => i.productId == product.id).firstOrNull;
-    final inCartQty = cartItem?.quantity ?? 0;
-    final isVeg = _isVeg(product);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-        border: Border.all(color: AppDesignSystem.border),
-        boxShadow: AppDesignSystem.shadowSm,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Food Image with rounded border
-          Stack(
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
-                  child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: product.imageUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => const Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEA580C)),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Text('🍔', style: TextStyle(fontSize: 32)),
-                          ),
-                        )
-                      : const Center(
-                          child: Text('🍔', style: TextStyle(fontSize: 32)),
-                        ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(width: 12),
 
-          // Food Info (Veg/Non-Veg Dynamic Icon, Name, Price, Description)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Veg / Non-Veg Indicator (DYNAMIC CHECK)
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
-                        borderRadius: isVeg ? null : BorderRadius.circular(1),
-                        color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
+            // 3. Menu Grid displaying the restaurant's products
+            body: menuAsync.when(
+              data: (products) {
+                final renderedCats = _buildCategories(products, currentRestaurant);
+                final selectedCat = renderedCats.firstWhere(
+                  (c) => c.tag == _activeCategoryTag,
+                  orElse: () => renderedCats.first,
+                );
+                final displayItems = selectedCat.products;
 
-                // Name
-                Text(
-                  product.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF111827),
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-
-                // Price & MRP
-                Row(
-                  children: [
-                    Text(
-                      '₹${product.price.toInt()}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF111827),
-                      ),
-                    ),
-                    if (product.mrp > product.price) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '₹${product.mrp.toInt()}',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.lineThrough,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (product.description != null && product.description!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    product.description!,
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6B7280),
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Contextual ADD Button on Right
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: inCartQty > 0
-                ? Container(
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C),
-                      borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                if (displayItems.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        InkWell(
-                          onTap: () {
-                            if (inCartQty == 1 && cartItem != null) {
-                              ref.read(cartProvider.notifier).removeItem(cartItem.id);
-                            } else if (cartItem != null) {
-                              ref.read(cartProvider.notifier).updateQuantity(cartItem.id, inCartQty - 1);
-                            }
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                            child: Icon(Icons.remove, size: 14, color: Colors.white),
-                          ),
-                        ),
+                        const Text('🍽️', style: TextStyle(fontSize: 48)),
+                        const SizedBox(height: 12),
                         Text(
-                          '$inCartQty',
-                          style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
+                          'No items found in this section',
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
                         ),
-                        InkWell(
-                          onTap: () {
-                            if (cartItem != null) {
-                              ref.read(cartProvider.notifier).updateQuantity(cartItem.id, inCartQty + 1);
-                            }
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                            child: Icon(Icons.add, size: 14, color: Colors.white),
-                          ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Try selecting another category or clear search filter',
+                          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
                         ),
                       ],
                     ),
-                  )
-                : GestureDetector(
-                    onTap: () {
-                      ref.read(cartProvider.notifier).addItem(product.id, 1);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  );
+                }
+
+                return GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  physics: const BouncingScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.80,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: displayItems.length,
+                  itemBuilder: (context, index) {
+                    return ProductCard(product: displayItems[index]);
+                  },
+                );
+              },
+              loading: () => Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.80,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: 6,
+                  itemBuilder: (context, index) {
+                    return Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-                        border: Border.all(color: const Color(0xFFEA580C), width: 1.5),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(
-                        'ADD',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFEA580C),
+                    );
+                  },
+                ),
+              ),
+              error: (_, __) => const Center(
+                child: Text('Failed to load menu items'),
+              ),
+            ),
+          ),
+
+          // 4. Floating Island Cart Bar
+          if (cartCount > 0)
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: MediaQuery.of(context).padding.bottom + 12,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.heavyImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  );
+                },
+                child: Container(
+                  height: 62,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF18181B), Color(0xFF27272A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: const Color(0xFFFB923C).withOpacity(0.6),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEA580C).withOpacity(0.35),
+                        blurRadius: 22,
+                        offset: const Offset(0, 8),
+                        spreadRadius: 1,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.40),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 20),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$cartCount ${cartCount == 1 ? 'ITEM' : 'ITEMS'} ADDED',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFFB923C),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              '₹${cartSubtotal.toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEA580C),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'View Cart',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-          ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCuisineTag(String tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        tag,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
