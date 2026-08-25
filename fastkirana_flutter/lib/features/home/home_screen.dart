@@ -985,76 +985,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 4. Value Proposition Strip (Exact Reference Screenshot Match)
+  // 4. Value Proposition Strip
   Widget _buildValuePropositionStrip() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
-              blurRadius: 6,
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Row(
               children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                  ),
-                ),
+                const Text('⚡', style: TextStyle(fontSize: 13)),
                 const SizedBox(width: 4),
-                const Text('⚡', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 3),
                 Text(
-                  'Ghatampur',
+                  '10-15 Min Delivery',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF111827),
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
               ],
             ),
-            Container(width: 1, height: 14, color: const Color(0xFFE5E7EB)),
+            Container(width: 1, height: 12, color: const Color(0xFFE2E8F0)),
             Row(
               children: [
-                const Text('📦', style: TextStyle(fontSize: 12)),
+                const Text('🏷️', style: TextStyle(fontSize: 13)),
                 const SizedBox(width: 4),
                 Text(
-                  '50+',
+                  'Best Prices',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF2563EB),
                   ),
                 ),
               ],
             ),
-            Container(width: 1, height: 14, color: const Color(0xFFE5E7EB)),
+            Container(width: 1, height: 12, color: const Color(0xFFE2E8F0)),
             Row(
               children: [
-                const Text('🩷', style: TextStyle(fontSize: 12)),
+                const Text('🛡️', style: TextStyle(fontSize: 13)),
                 const SizedBox(width: 4),
                 Text(
-                  '1000+',
+                  '100% Genuine',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFFE11D48),
+                    color: const Color(0xFF16A34A),
                   ),
                 ),
               ],
