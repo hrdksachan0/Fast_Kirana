@@ -376,17 +376,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             mainAxisSpacing: 10,
                           ),
                           itemCount: 6,
-                          itemBuilder: (_, __) => Shimmer.fromColors(
-                            baseColor: const Color(0xFFF3F4F6),
-                            highlightColor: const Color(0xFFFFFFFF),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE5E7EB)),
-                              ),
-                            ),
-                          ),
+                          itemBuilder: (_, __) => const ProductCardSkeleton(),
                         ),
                         error: (e, _) => Center(
                           child: Text('Error loading products: $e'),

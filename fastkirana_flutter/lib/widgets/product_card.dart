@@ -338,12 +338,21 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   }
 
   Widget _buildProductImage(Product product) {
-    if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
+    var imgUrl = product.imageUrl?.trim() ?? '';
+    if (imgUrl.isNotEmpty) {
+      if (imgUrl.startsWith('/')) {
+        imgUrl = 'https://www.fastkirana.in$imgUrl';
+      }
       return Padding(
         padding: const EdgeInsets.all(6),
         child: CachedNetworkImage(
-          imageUrl: product.imageUrl!,
+          imageUrl: imgUrl,
           fit: BoxFit.contain,
+          memCacheWidth: 400,
+          memCacheHeight: 400,
+          maxWidthDiskCache: 600,
+          maxHeightDiskCache: 600,
+          fadeInDuration: const Duration(milliseconds: 180),
           errorWidget: (context, url, error) => Center(
             child: Text(
               _getEmojiForProduct(product.name),
@@ -352,7 +361,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           ),
           placeholder: (context, url) => Shimmer.fromColors(
             baseColor: const Color(0xFFF1F5F9),
-            highlightColor: const Color(0xFFFFFFFF),
+            highlightColor: const Color(0xFFFAFAFA),
             child: Container(
               margin: const EdgeInsets.all(6),
               decoration: BoxDecoration(
@@ -510,5 +519,111 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     if (lower.contains('pizza')) return '🍕';
     if (lower.contains('roll') || lower.contains('frankie')) return '🌯';
     return '🍽️';
+  }
+}
+
+class ProductCardSkeleton extends StatelessWidget {
+  final double? width;
+  final bool isCompact;
+
+  const ProductCardSkeleton({
+    super.key,
+    this.width,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width ?? (isCompact ? 138 : 156),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Shimmer.fromColors(
+        baseColor: const Color(0xFFF1F5F9),
+        highlightColor: const Color(0xFFFAFAFA),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Box
+            Container(
+              height: isCompact ? 100 : 114,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Tag Line
+            Container(
+              height: 10,
+              width: 45,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // Title Line 1
+            Container(
+              height: 12,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            // Title Line 2 / Unit
+            Container(
+              height: 10,
+              width: 70,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const Spacer(),
+
+            // Price & Add Button Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  height: 16,
+                  width: 45,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Container(
+                  height: 28,
+                  width: 58,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

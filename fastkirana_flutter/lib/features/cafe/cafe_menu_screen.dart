@@ -46,8 +46,8 @@ const List<WebMenuSection> webCafeSections = [
   WebMenuSection(tag: 'rice-dishes', matchTags: ['rice-dishes', 'rice dishes', 'biryani', 'pulav', 'fried rice', 'fried-rice', 'rice'], title: 'Rice & Bowls', emoji: '🍚', description: 'Flavourful biryani, fried rice, and combos'),
   WebMenuSection(tag: 'shakes', matchTags: ['shakes', 'shake', 'milkshake', 'oreo shake', 'strawberry shake'], title: 'Shakes', emoji: '🥤', description: 'Creamy strawberry, chocolate, and Oreo shakes'),
   WebMenuSection(tag: 'mocktails', matchTags: ['mocktails', 'mocktail', 'coolers', 'mojito'], title: 'Mocktails', emoji: '🍹', description: 'Iced coolers, Virgin Mojito, and summer drinks'),
-  WebMenuSection(tag: 'cold-coffee', matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'frappe'], title: 'Cold Coffee', emoji: '🧋', description: 'Classic cold brews, hazelnut cold coffee & iced sips'),
-  WebMenuSection(tag: 'desserts', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet', 'icecream'], title: 'Desserts', emoji: '🍦', description: 'Chilled premium ice creams, kulfis, and desserts'),
+  WebMenuSection(tag: 'chilled-drinks', matchTags: ['chilled-drinks', 'chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'drink', 'soda'], title: 'Cold Drinks & Sodas', emoji: '🥤', description: 'Chilled soft drinks, Campa, Coke, Sprite & refreshing beverages'),
+  WebMenuSection(tag: 'desserts', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet', 'icecream', 'ice-creams'], title: 'Ice Creams & Desserts', emoji: '🍦', description: 'Chilled premium ice creams, kulfis, and desserts'),
 ];
 
 // 1:1 Parity with www.fastkirana.in DEFAULT_RESTAURANT_MENU_SECTIONS (Wedson, Bal Udyan)
