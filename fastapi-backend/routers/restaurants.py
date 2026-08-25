@@ -91,6 +91,7 @@ async def get_restaurants(
             "ownerEmail": r.ownerEmail,
             "isActive": r.isActive,
             "rating": r.rating,
+            "reviewCount": r.reviewCount,
             "menuSections": r.menuSections,
             "createdAt": r.createdAt,
             "updatedAt": r.updatedAt,
@@ -398,3 +399,163 @@ async def delete_restaurant(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete restaurant: {str(e)}")
+
+
+@router.get("/{id}/menu")
+async def get_restaurant_menu(
+    id: str,
+    isVeg: Optional[bool] = Query(None),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get structured ID-wise menu sections and dishes for a restaurant.
+    """
+    stmt = select(Restaurant).where(
+        or_(Restaurant.id == id, Restaurant.slug == id, Restaurant.slug.ilike(id))
+    )
+    res = await db.execute(stmt)
+    restaurant = res.scalars().first()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    # Fetch active dishes
+    prod_stmt = select(Product).where(
+        Product.restaurantId == restaurant.id,
+        Product.isAvailable == True
+    ).order_by(Product.sortOrder.desc(), Product.createdAt.desc())
+
+    prod_res = await db.execute(prod_stmt)
+    products = prod_res.scalars().all()
+
+    # Parse menu sections
+    raw_sections = restaurant.menuSections or []
+    if isinstance(raw_sections, str):
+        try:
+            import json
+            raw_sections = json.loads(raw_sections)
+        except Exception:
+            raw_sections = []
+
+    sections_map = {}
+    normalized_sections = []
+
+    for idx, s in enumerate(raw_sections):
+        if s.get("disabled"):
+            continue
+        tag = (s.get("tag") or f"section_{idx}").lower().strip()
+        sec_id = s.get("id") or f"sec_{tag}"
+        sec_obj = {
+            "id": sec_id,
+            "tag": tag,
+            "title": s.get("title") or s.get("name") or "Section",
+            "emoji": s.get("emoji") or "🍽️",
+            "imageUrl": s.get("imageUrl") or s.get("image"),
+            "description": s.get("description") or "",
+            "sortOrder": s.get("sortOrder", idx + 1),
+            "matchTags": [t.lower() for t in s.get("matchTags", [tag])],
+            "itemsCount": 0,
+            "dishes": []
+        }
+        sections_map[sec_id] = sec_obj
+        normalized_sections.append(sec_obj)
+
+    other_dishes = []
+
+    for p in products:
+        p_tags = [t.lower() for t in (p.tags or [])]
+        is_non_veg = "non-veg" in p_tags or "nonveg" in p_tags
+        is_dish_veg = not is_non_veg
+
+        if isVeg is True and not is_dish_veg:
+            continue
+
+        if search:
+            q = search.lower()
+            if q not in p.name.lower() and (not p.description or q not in p.description.lower()):
+                continue
+
+        dish_dict = {
+            "id": p.id,
+            "name": p.name,
+            "slug": p.slug,
+            "description": p.description,
+            "imageUrl": p.imageUrl,
+            "price": p.price,
+            "mrp": p.mrp,
+            "discount": p.discount,
+            "unit": p.unit,
+            "stock": p.stock,
+            "isAvailable": p.isAvailable,
+            "isVeg": is_dish_veg,
+            "isNonVeg": is_non_veg,
+            "variants": p.variants,
+            "availableStartTime": p.availableStartTime,
+            "availableEndTime": p.availableEndTime,
+            "categoryId": p.categoryId,
+            "restaurantId": restaurant.id,
+            "sectionId": None,
+            "sectionTitle": None
+        }
+
+        # Match section
+        matched_sec = None
+        for sec in normalized_sections:
+            if sec["tag"] in p_tags or any(mt in p_tags for mt in sec["matchTags"]):
+                matched_sec = sec
+                break
+
+        if matched_sec and matched_sec["id"] in sections_map:
+            sec_ref = sections_map[matched_sec["id"]]
+            dish_dict["sectionId"] = matched_sec["id"]
+            dish_dict["sectionTitle"] = matched_sec["title"]
+            sec_ref["dishes"].append(dish_dict)
+            sec_ref["itemsCount"] += 1
+        else:
+            dish_dict["sectionId"] = "sec_kitchen_specials"
+            dish_dict["sectionTitle"] = "Kitchen Specials"
+            other_dishes.append(dish_dict)
+
+    final_sections = [s for s in sections_map.values() if s["itemsCount"] > 0]
+    if other_dishes:
+        final_sections.append({
+            "id": "sec_kitchen_specials",
+            "tag": "kitchen-specials",
+            "title": "Kitchen Specials & Others",
+            "emoji": "⭐",
+            "imageUrl": None,
+            "description": "Chef special dishes and side items",
+            "sortOrder": 99,
+            "itemsCount": len(other_dishes),
+            "dishes": other_dishes
+        })
+
+    final_sections.sort(key=lambda s: s["sortOrder"])
+
+    return {
+        "success": True,
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+            "slug": restaurant.slug,
+            "description": restaurant.description,
+            "logoUrl": restaurant.logoUrl,
+            "bannerUrl": restaurant.bannerUrl,
+            "address": restaurant.address,
+            "phone": restaurant.ownerPhone,
+            "rating": restaurant.rating,
+            "reviewCount": restaurant.reviewCount,
+            "isVeg": restaurant.isVeg,
+            "isPureVeg": restaurant.isPureVeg,
+            "isOpen": restaurant.isOpen,
+            "openTime": restaurant.openTime,
+            "closeTime": restaurant.closeTime,
+            "discountOffer": restaurant.discountOffer,
+            "discountBadge": restaurant.discountBadge,
+            "cuisineTags": restaurant.cuisineTags,
+            "totalDishes": len(products)
+        },
+        "sections": final_sections,
+        "totalDishesCount": len(products)
+    }

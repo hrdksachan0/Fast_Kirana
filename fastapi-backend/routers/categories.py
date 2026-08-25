@@ -287,3 +287,157 @@ async def delete_category(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete category: {str(e)}"
         )
+
+
+@router.get("/catalog")
+async def get_categories_catalog(
+    includeProducts: bool = False,
+    limitPerCat: int = 8,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get structured grocery categories catalog with product counts and preview items.
+    """
+    stmt = (
+        select(Category)
+        .where(~Category.slug.in_(["restaurant-food", "restaurant", "cafe"]))
+        .order_by(Category.sortOrder.asc())
+    )
+    res = await db.execute(stmt)
+    categories = res.scalars().all()
+
+    formatted = []
+    for cat in categories:
+        # Product count
+        count_stmt = select(func.count(Product.id)).where(
+            Product.categoryId == cat.id,
+            Product.restaurantId.is_(None),
+            Product.isAvailable == True
+        )
+        count_res = await db.execute(count_stmt)
+        p_count = count_res.scalar() or 0
+
+        cat_dict = {
+            "id": cat.id,
+            "name": cat.name,
+            "slug": cat.slug,
+            "imageUrl": cat.imageUrl,
+            "parentId": cat.parentId,
+            "sortOrder": cat.sortOrder,
+            "productCount": p_count,
+            "products": []
+        }
+
+        if includeProducts:
+            prods_stmt = select(Product).where(
+                Product.categoryId == cat.id,
+                Product.restaurantId.is_(None),
+                Product.isAvailable == True
+            ).order_by(Product.sortOrder.desc(), Product.createdAt.desc()).limit(limitPerCat)
+            prods_res = await db.execute(prods_stmt)
+            prods = prods_res.scalars().all()
+            cat_dict["products"] = [{
+                "id": p.id,
+                "name": p.name,
+                "slug": p.slug,
+                "price": p.price,
+                "mrp": p.mrp,
+                "discount": p.discount,
+                "unit": p.unit,
+                "stock": p.stock,
+                "imageUrl": p.imageUrl
+            } for p in prods]
+
+        formatted.append(cat_dict)
+
+    return {
+        "success": True,
+        "totalCategories": len(formatted),
+        "categories": formatted
+    }
+
+
+@router.get("/{id}/products")
+async def get_category_products(
+    id: str,
+    page: int = 1,
+    limit: int = 30,
+    sort: str = "default",
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get paginated grocery products for a specific category ID.
+    """
+    stmt = select(Category).where(
+        or_(Category.id == id, Category.slug == id)
+    )
+    res = await db.execute(stmt)
+    category = res.scalars().first()
+
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    filters = [
+        Product.categoryId == category.id,
+        Product.restaurantId.is_(None),
+        Product.isAvailable == True
+    ]
+
+    if search:
+        filters.append(Product.name.ilike(f"%{search}%"))
+
+    order_by_clause = [Product.sortOrder.desc(), Product.createdAt.desc()]
+    if sort == "price-asc":
+        order_by_clause = [Product.price.asc(), Product.sortOrder.desc()]
+    elif sort == "price-desc":
+        order_by_clause = [Product.price.desc(), Product.sortOrder.desc()]
+    elif sort == "newest":
+        order_by_clause = [Product.createdAt.desc()]
+    elif sort == "popular":
+        order_by_clause = [Product.isBestSeller.desc(), Product.sortOrder.desc()]
+
+    count_stmt = select(func.count(Product.id)).where(*filters)
+    count_res = await db.execute(count_stmt)
+    total_count = count_res.scalar() or 0
+
+    skip = (max(1, page) - 1) * limit
+    prods_stmt = select(Product).where(*filters).order_by(*order_by_clause).offset(skip).limit(limit)
+    prods_res = await db.execute(prods_stmt)
+    products = prods_res.scalars().all()
+
+    total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+
+    return {
+        "success": True,
+        "category": {
+            "id": category.id,
+            "name": category.name,
+            "slug": category.slug,
+            "imageUrl": category.imageUrl,
+            "sortOrder": category.sortOrder
+        },
+        "pagination": {
+            "totalItems": total_count,
+            "totalPages": total_pages,
+            "currentPage": page,
+            "limit": limit,
+            "hasNextPage": page < total_pages,
+            "hasPrevPage": page > 1
+        },
+        "products": [{
+            "id": p.id,
+            "name": p.name,
+            "slug": p.slug,
+            "description": p.description,
+            "imageUrl": p.imageUrl,
+            "price": p.price,
+            "mrp": p.mrp,
+            "discount": p.discount,
+            "unit": p.unit,
+            "stock": p.stock,
+            "isAvailable": p.isAvailable,
+            "tags": p.tags,
+            "categoryId": p.categoryId
+        } for p in products]
+    }

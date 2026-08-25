@@ -69,13 +69,15 @@ class Restaurant {
       logoUrl: json['logoUrl']?.toString(),
       bannerUrl: json['bannerUrl']?.toString(),
       cuisineTags: tags,
-      rating: (json['rating'] != null) ? double.tryParse(json['rating'].toString()) ?? 4.5 : 4.5,
-      totalRatings: json['totalRatings'] != null ? int.tryParse(json['totalRatings'].toString()) ?? 100 : 100,
+      rating: (json['rating'] != null) ? double.tryParse(json['rating'].toString()) ?? 0.0 : 0.0,
+      totalRatings: json['reviewCount'] != null
+          ? int.tryParse(json['reviewCount'].toString()) ?? 0
+          : (json['totalRatings'] != null ? int.tryParse(json['totalRatings'].toString()) ?? 0 : 0),
       deliveryTime: json['deliveryTime']?.toString() ?? '25-30 min',
       priceForTwo: json['priceForTwo']?.toString() ?? '₹250 for two',
       isPureVeg: json['isPureVeg'] == true,
       isOpen: json['isOpen'] != false,
-      discountOffer: json['discountOffer']?.toString() ?? 'FLAT 5% OFF',
+      discountOffer: json['discountOffer']?.toString(),
       discountBadge: json['discountBadge']?.toString(),
       sortOrder: json['sortOrder'] != null ? int.tryParse(json['sortOrder'].toString()) ?? 0 : 0,
       menuSections: json['menuSections'] is List ? json['menuSections'] as List<dynamic> : null,

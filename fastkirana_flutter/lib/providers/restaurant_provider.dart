@@ -73,3 +73,8 @@ final restaurantMenuProvider = FutureProvider.family<List<Product>, String>((ref
   final repo = ref.watch(restaurantRepositoryProvider);
   return repo.getRestaurantMenu(restaurantId);
 });
+
+final restaurantReviewsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, restaurantId) async {
+  final repo = ref.watch(restaurantRepositoryProvider);
+  return repo.getRestaurantReviews(restaurantId);
+});

@@ -135,6 +135,7 @@ def generate_slug(name: str) -> str:
 async def get_products(
     response: Response,
     category: Optional[str] = Query(None),
+    categoryId: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     sort: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
@@ -179,25 +180,35 @@ async def get_products(
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
                 Product.restaurantId == LEGACY_AS_RESTAURANT_ID
             ))
-        elif restaurantId in [OUTLET_WEDSON_ID, LEGACY_WEDSON_ID, "wedson"]:
+        elif restaurantId in [OUTLET_WEDSON_ID, LEGACY_WEDSON_ID, "wedson", "wedson-restaurant"]:
             filters.append(or_(
                 Product.restaurantId == restaurantId,
                 Product.restaurantId == OUTLET_WEDSON_ID,
                 Product.restaurantId == LEGACY_WEDSON_ID
             ))
+        elif restaurantId in ["cmsbhxb6a000304if8kf1cwji", "bal-udyan-restaurant", "bal-udyan"]:
+            filters.append(or_(
+                Product.restaurantId == restaurantId,
+                Product.restaurantId == "cmsbhxb6a000304if8kf1cwji"
+            ))
         else:
-            filters.append(Product.restaurantId == restaurantId)
+            filters.append(or_(
+                Product.restaurantId == restaurantId,
+                Product.restaurant.has(Restaurant.slug == restaurantId)
+            ))
     elif restaurantSlug:
         if restaurantSlug in ["as-restaurant", "as-cafe"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
                 Product.restaurantId == LEGACY_AS_RESTAURANT_ID
             ))
-        elif restaurantSlug in ["wedson", "restaurant-kitchen"]:
+        elif restaurantSlug in ["wedson", "wedson-restaurant", "restaurant-kitchen"]:
             filters.append(or_(
                 Product.restaurantId == OUTLET_WEDSON_ID,
                 Product.restaurantId == LEGACY_WEDSON_ID
             ))
+        elif restaurantSlug in ["bal-udyan-restaurant", "bal-udyan"]:
+            filters.append(Product.restaurantId == "cmsbhxb6a000304if8kf1cwji")
         else:
             # Query restaurant id matching slug
             res_stmt = select(Restaurant.id).where(Restaurant.slug == restaurantSlug)
@@ -211,7 +222,12 @@ async def get_products(
         filters.append(Product.restaurantId == None)
 
     # Category matching
-    if category:
+    if categoryId:
+        cat_ids = [c.strip() for c in categoryId.split(",") if c.strip()]
+        filters.append(Product.categoryId.in_(cat_ids))
+        if not restaurantId and not restaurantSlug:
+            filters.append(Product.restaurantId == None)
+    elif category:
         slugs = category.split(",")
         is_cafe_query = any(s in ["cafe", "fastkirana-cafe"] for s in slugs)
         is_restaurant_query = any(s in ["restaurant", "wedson-restaurant"] for s in slugs)

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../providers/restaurant_provider.dart';
 import '../../core/network/api_client.dart';
 import '../../widgets/brand_button.dart';
 
@@ -44,6 +45,10 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
         'rating': _rating,
         'comment': comment.isNotEmpty ? comment : 'Delicious food and fast delivery!',
       });
+
+      // Instantly refresh reviews and restaurant stats across the entire app
+      ref.invalidate(restaurantReviewsProvider(targetId));
+      ref.invalidate(restaurantsProvider);
 
       if (!mounted) return;
 

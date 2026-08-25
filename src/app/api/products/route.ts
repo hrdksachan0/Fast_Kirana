@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
     const storeId = searchParams.get('storeId')
     const restaurantId = searchParams.get('restaurantId')
     const restaurantSlug = searchParams.get('restaurantSlug')
+    const categoryId = searchParams.get('categoryId')
 
     const session = await auth()
     const role = session?.user?.role
@@ -92,8 +93,14 @@ export async function GET(request: NextRequest) {
       where.restaurantId = null
     }
 
-    if (category) {
-      const slugs = category.split(',')
+    if (categoryId) {
+      const ids = categoryId.split(',').map(s => s.trim()).filter(Boolean)
+      where.categoryId = { in: ids }
+      if (!restaurantId && !restaurantSlug) {
+        where.restaurantId = null
+      }
+    } else if (category) {
+      const slugs = category.split(',').map(s => s.trim()).filter(Boolean)
       where.category = { slug: { in: slugs } }
       // In grocery context (browsing by category without restaurant), enforce grocery only
       if (!restaurantId && !restaurantSlug) {
@@ -557,10 +564,19 @@ export async function POST(request: NextRequest) {
     // ── Restaurant product hardening ──
     // When restaurantId is present, ALWAYS force restaurant category, tags, and unlimited stock
     if (restaurantId) {
-      let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
+      let restCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: 'restaurant-food' },
+            { slug: 'restaurant' },
+            { name: { contains: 'Fast Food', mode: 'insensitive' } },
+            { name: { contains: 'Restaurant', mode: 'insensitive' } }
+          ]
+        }
+      })
       if (!restCat) {
         restCat = await prisma.category.create({
-          data: { name: 'FastKirana Restaurant', slug: 'restaurant', imageUrl: '🍽️', sortOrder: 10 }
+          data: { name: 'Fast Food & Restaurant Kitchen', slug: 'restaurant-food', imageUrl: '🍽️', sortOrder: 99 }
         })
       }
       finalCategoryId = restCat.id

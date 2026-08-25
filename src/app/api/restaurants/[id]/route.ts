@@ -13,6 +13,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const includeProducts = searchParams.get('includeProducts') !== 'false'
 
     const restaurant = await prisma.restaurant.findFirst({
       where: {
@@ -36,7 +38,16 @@ export async function GET(
             products: true,
             orders: true
           }
-        }
+        },
+        ...(includeProducts
+          ? {
+              products: {
+                where: { isAvailable: true },
+                include: { category: true, images: true },
+                orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
+              },
+            }
+          : {}),
       }
     })
 

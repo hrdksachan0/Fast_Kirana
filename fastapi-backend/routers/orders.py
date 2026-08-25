@@ -916,15 +916,19 @@ async def create_order(
 @router.get("")
 async def list_orders(
     all: bool = False,
-    current_user: dict = Depends(require_auth),
+    userId: Optional[str] = Query(None),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     List user orders (normal user gets combined view; staff gets dashboard flat view).
     """
-    user_id = current_user.get("id") or current_user.get("sub")
-    role = current_user.get("role")
+    user_id = current_user.get("id") or current_user.get("sub") if current_user else userId
+    role = current_user.get("role") if current_user else None
     is_staff = role in ["ADMIN", "CHEF", "PICKER", "DELIVERY"]
+
+    if not user_id and not is_staff:
+        return []
 
     if is_staff and all:
         # Fetch all orders in the system with user details

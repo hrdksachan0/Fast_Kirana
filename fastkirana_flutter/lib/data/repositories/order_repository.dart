@@ -8,9 +8,12 @@ class OrderRepository {
 
   Future<List<Order>> getOrders(String userId) async {
     try {
-      final response = await dio.get('/api/orders', queryParameters: {
-        if (userId.isNotEmpty) 'userId': userId,
-      });
+      final queryParams = <String, dynamic>{};
+      if (userId.isNotEmpty) {
+        queryParams['userId'] = userId;
+      }
+
+      final response = await dio.get('/api/orders', queryParameters: queryParams);
       final data = response.data;
       List ordersList = [];
       if (data is List) {

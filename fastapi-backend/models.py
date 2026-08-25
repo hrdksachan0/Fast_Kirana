@@ -310,6 +310,20 @@ class Review(Base):
     product = relationship("Product", back_populates="reviews")
 
 
+class RestaurantReview(Base):
+    __tablename__ = "restaurant_reviews"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    userId: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    restaurantId: Mapped[str] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), index=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+
 class Banner(Base):
     __tablename__ = "banners"
 

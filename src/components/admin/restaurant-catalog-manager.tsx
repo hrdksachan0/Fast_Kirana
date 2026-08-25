@@ -276,7 +276,8 @@ export function RestaurantCatalogManager() {
     setPrice('')
     setMrp('')
     setUnit('Serving')
-    setCategoryId(categories[0]?.id || '')
+    const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase().includes('fast food') || c.name.toLowerCase().includes('kitchen'))
+    setCategoryId(defaultFoodCat?.id || categories[0]?.id || '')
     setSelectedSectionTag(menuSections[0]?.tag || '')
     setDescription('')
     setImageUrl('')
@@ -1131,7 +1132,8 @@ export function RestaurantCatalogManager() {
                       value={selectedSectionTag}
                       onChange={e => {
                         setSelectedSectionTag(e.target.value)
-                        if (categories[0]?.id) setCategoryId(categories[0].id)
+                        const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase().includes('fast food') || c.name.toLowerCase().includes('kitchen'))
+                        if (defaultFoodCat?.id) setCategoryId(defaultFoodCat.id)
                       }}
                       className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
                       required

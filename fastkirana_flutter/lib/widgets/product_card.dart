@@ -31,7 +31,6 @@ class ProductCard extends ConsumerStatefulWidget {
 
 class _ProductCardState extends ConsumerState<ProductCard> {
   bool _isPressed = false;
-  bool _isFavorite = false;
 
   bool _isFoodProduct(Product product) {
     final cat = product.categoryId.toLowerCase();
@@ -47,14 +46,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) {
       return false;
     }
+    final nameLower = product.name.toLowerCase();
+    if (nameLower.contains('chicken') || nameLower.contains('egg') || nameLower.contains('mutton') || nameLower.contains('fish')) {
+      return false;
+    }
     return true;
   }
 
-  Color _getThemeColor(Product product) {
+  List<Color> _getThemeGradient(Product product) {
     if (_isFoodProduct(product)) {
-      return const Color(0xFFF97316); // Cafe / Food Orange
+      return const [Color(0xFFEA580C), Color(0xFFF97316)]; // Deep Orange to Bright Sunset
     }
-    return AppDesignSystem.accent; // Grocery Green (#00B140)
+    return const [Color(0xFF15803D), Color(0xFF16A34A)]; // Emerald Green
+  }
+
+  Color _getPrimaryColor(Product product) {
+    if (_isFoodProduct(product)) {
+      return const Color(0xFFEA580C);
+    }
+    return const Color(0xFF15803D);
   }
 
   @override
@@ -63,7 +73,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final cart = ref.watch(cartProvider).value;
     final items = cart?.items.where((i) => i.productId == product.id).toList() ?? [];
     final inCartQty = items.fold<int>(0, (s, i) => s + i.quantity);
-    final themeColor = _getThemeColor(product);
+    final themeGradient = _getThemeGradient(product);
+    final primaryColor = _getPrimaryColor(product);
     final isFood = _isFoodProduct(product);
     final isVeg = _isVeg(product);
 
@@ -80,39 +91,39 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             );
           },
       child: AnimatedScale(
-        scale: _isPressed ? 0.97 : 1.0,
+        scale: _isPressed ? 0.975 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         child: Container(
-          width: widget.width ?? (widget.isCompact ? 136 : 148),
-          padding: const EdgeInsets.all(7),
+          width: widget.width ?? (widget.isCompact ? 138 : 156),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.0),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product Image Box
+              // 1. PRODUCT IMAGE SHOWCASE BOX
               Container(
-                height: widget.isCompact ? 96 : 106,
+                height: widget.isCompact ? 100 : 114,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF1F5F9), width: 0.8),
                 ),
                 child: Stack(
                   children: [
-                    // Center Product Image
+                    // Centered Product Photo
                     Center(
                       child: Hero(
                         tag: 'product_image_${product.id}',
@@ -120,23 +131,23 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ),
                     ),
 
-                    // Top Left: Discount Badge (Red-Orange Gradient Pill)
+                    // Top Left: Discount Badge
                     if (product.discountPercentage > 0)
                       Positioned(
-                        top: 5,
-                        left: 5,
+                        top: 6,
+                        left: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFF43F5E), Color(0xFFFB923C)],
+                              colors: [Color(0xFFE11D48), Color(0xFFF97316)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFF43F5E).withOpacity(0.3),
+                                color: const Color(0xFFE11D48).withValues(alpha: 0.25),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
                               ),
@@ -145,18 +156,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                           child: Text(
                             '${product.discountPercentage}% OFF',
                             style: GoogleFonts.inter(
-                              fontSize: 8,
+                              fontSize: 8.5,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ),
                       ),
 
-                    // Top Right: Wishlist Heart
+                    // Top Right: Translucent Glass Wishlist Heart Button
                     Positioned(
-                      top: 4,
-                      right: 4,
+                      top: 5,
+                      right: 5,
                       child: Consumer(
                         builder: (context, ref, _) {
                           final isFav = ref.watch(wishlistProvider).any((p) => p.id == product.id);
@@ -166,10 +178,17 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ref.read(wishlistProvider.notifier).toggleWishlist(product);
                             },
                             child: Container(
-                              padding: const EdgeInsets.all(3.5),
+                              padding: const EdgeInsets.all(4.5),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.92),
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Icon(
                                 isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
@@ -185,24 +204,24 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     // Bottom Left: Bestseller Pill
                     if (product.isBestSeller)
                       Positioned(
-                        bottom: 4,
-                        left: 4,
+                        bottom: 5,
+                        left: 5,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFFBEB),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
+                            border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('⭐', style: TextStyle(fontSize: 7.5)),
+                              const Text('⭐', style: TextStyle(fontSize: 8)),
                               const SizedBox(width: 2),
                               Text(
                                 'Bestseller',
                                 style: GoogleFonts.inter(
-                                  fontSize: 7.5,
+                                  fontSize: 8,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFFB45309),
                                 ),
@@ -214,31 +233,31 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
-              // Title & Veg Indicator Row
+              // 2. VEG / NON-VEG + PRODUCT TITLE
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isFood) ...[
                     Container(
-                      margin: const EdgeInsets.only(top: 2, right: 4),
-                      width: 11,
-                      height: 11,
+                      margin: const EdgeInsets.only(top: 2, right: 5),
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
                           width: 1.2,
                         ),
-                        borderRadius: BorderRadius.circular(2.5),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                       child: Center(
                         child: Container(
-                          width: 4.5,
-                          height: 4.5,
+                          width: 5,
+                          height: 5,
                           decoration: BoxDecoration(
                             shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
-                            color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
                           ),
                         ),
                       ),
@@ -248,10 +267,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     child: Text(
                       product.name,
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF0F172A),
                         height: 1.2,
+                        letterSpacing: -0.1,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -259,13 +279,13 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
 
-              // Unit / Pack info
+              // 3. UNIT / PACK INFO
               Text(
-                product.unit,
+                product.unit.isNotEmpty ? product.unit : '1 unit',
                 style: GoogleFonts.inter(
-                  fontSize: 10,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF64748B),
                 ),
@@ -274,12 +294,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               ),
               const SizedBox(height: 8),
 
-              // Bottom Row: Price + ADD Stepper
+              // 4. BOTTOM BAR: PRICE + PREMIUM ADD BUTTON
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Price & MRP
+                  // Price Stack
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -287,16 +307,17 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       Text(
                         '₹${product.price.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF0F172A),
+                          letterSpacing: -0.2,
                         ),
                       ),
                       if (product.mrp > product.price)
                         Text(
                           '₹${product.mrp.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: 9,
+                            fontSize: 9.5,
                             fontWeight: FontWeight.w500,
                             decoration: TextDecoration.lineThrough,
                             color: const Color(0xFF94A3B8),
@@ -305,8 +326,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     ],
                   ),
 
-                  // Contextual ADD Button
-                  _buildAddButton(product, inCartQty, items.isNotEmpty ? items.first.id : null, themeColor),
+                  // ADD Button / Stepper
+                  _buildAddButton(product, inCartQty, items.isNotEmpty ? items.first.id : null, themeGradient, primaryColor),
                 ],
               ),
             ],
@@ -319,14 +340,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   Widget _buildProductImage(Product product) {
     if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(6),
         child: CachedNetworkImage(
           imageUrl: product.imageUrl!,
           fit: BoxFit.contain,
           errorWidget: (context, url, error) => Center(
             child: Text(
               _getEmojiForProduct(product.name),
-              style: const TextStyle(fontSize: 30),
+              style: const TextStyle(fontSize: 32),
             ),
           ),
           placeholder: (context, url) => Shimmer.fromColors(
@@ -336,7 +357,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               margin: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -346,23 +367,27 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return Center(
       child: Text(
         _getEmojiForProduct(product.name),
-        style: const TextStyle(fontSize: 30),
+        style: const TextStyle(fontSize: 32),
       ),
     );
   }
 
-  Widget _buildAddButton(Product product, int inCartQty, String? cartItemId, Color themeColor) {
+  Widget _buildAddButton(Product product, int inCartQty, String? cartItemId, List<Color> themeGradient, Color primaryColor) {
     if (inCartQty > 0) {
       return Container(
-        height: 28,
+        height: 30,
         decoration: BoxDecoration(
-          color: themeColor,
+          gradient: LinearGradient(
+            colors: themeGradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: themeColor.withOpacity(0.25),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+              color: primaryColor.withValues(alpha: 0.35),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -375,9 +400,9 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 ref.read(cartProvider.notifier).decrement(product.id);
               },
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
                 child: Icon(
-                  Icons.remove,
+                  Icons.remove_rounded,
                   size: 14,
                   color: Colors.white,
                 ),
@@ -396,7 +421,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontSize: 11.5,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -407,8 +432,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 ref.read(cartProvider.notifier).increment(product);
               },
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Icon(Icons.add, size: 14, color: Colors.white),
+                padding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                child: Icon(Icons.add_rounded, size: 14, color: Colors.white),
               ),
             ),
           ],
@@ -422,15 +447,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         ref.read(cartProvider.notifier).addProduct(product, 1);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
         decoration: BoxDecoration(
-          color: themeColor,
+          gradient: LinearGradient(
+            colors: themeGradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: themeColor.withOpacity(0.3),
-              blurRadius: 5,
-              offset: const Offset(0, 1.5),
+              color: primaryColor.withValues(alpha: 0.35),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -440,14 +469,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             Text(
               'ADD',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
               ),
             ),
-            const SizedBox(width: 2),
-            const Icon(Icons.add, size: 13, color: Colors.white),
+            const SizedBox(width: 3),
+            const Icon(Icons.add_rounded, size: 14, color: Colors.white),
           ],
         ),
       ),
@@ -480,6 +509,6 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     if (lower.contains('burger')) return '🍔';
     if (lower.contains('pizza')) return '🍕';
     if (lower.contains('roll') || lower.contains('frankie')) return '🌯';
-    return '🛒';
+    return '🍽️';
   }
 }

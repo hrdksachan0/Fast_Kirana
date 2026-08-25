@@ -58,7 +58,6 @@ final dioProvider = Provider<Dio>((ref) {
       return handler.next(options);
     },
     onError: (DioException error, ErrorInterceptorHandler handler) async {
-      // If primary endpoint fails (DNS resolving / network error), retry on secondary cloud endpoint
       final isConnectionError = error.type == DioExceptionType.connectionError ||
           error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.unknown;
@@ -70,18 +69,22 @@ final dioProvider = Provider<Dio>((ref) {
 
       if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
         try {
-          final options = Options(
-            method: error.requestOptions.method,
-            headers: error.requestOptions.headers,
-            extra: {...error.requestOptions.extra, 'retried_fallback': true},
-          );
+          final targetPath = error.requestOptions.path.startsWith('http')
+              ? error.requestOptions.path
+              : '$fallbackUrl${error.requestOptions.path}';
 
-          final retryResponse = await dio.request(
-            error.requestOptions.path,
+          final fallbackDio = Dio(BaseOptions(
+            connectTimeout: const Duration(seconds: 20),
+            receiveTimeout: const Duration(seconds: 20),
+          ));
+
+          final retryResponse = await fallbackDio.request(
+            targetPath,
             data: error.requestOptions.data,
             queryParameters: error.requestOptions.queryParameters,
-            options: options.copyWith(
-              extra: {...options.extra!, 'override_base_url': fallbackUrl},
+            options: Options(
+              method: error.requestOptions.method,
+              headers: error.requestOptions.headers,
             ),
           );
           return handler.resolve(retryResponse);

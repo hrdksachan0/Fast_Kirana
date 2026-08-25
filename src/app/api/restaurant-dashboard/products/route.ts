@@ -80,7 +80,16 @@ export async function POST(request: NextRequest) {
 
     let targetCategoryId = categoryId
     if (!targetCategoryId || targetCategoryId === '') {
-      let restCat = await prisma.category.findFirst({ where: { slug: 'restaurant' } })
+      let restCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: 'restaurant-food' },
+            { slug: 'restaurant' },
+            { name: { contains: 'Fast Food', mode: 'insensitive' } },
+            { name: { contains: 'Restaurant', mode: 'insensitive' } }
+          ]
+        }
+      })
       if (!restCat) {
         restCat = await prisma.category.findFirst()
       }

@@ -77,27 +77,118 @@ async def get_restaurant_reviews(
     limit: int = Query(20, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get reviews for a restaurant."""
-    # Restaurant's reviews are reviews on its products
-    from models import Restaurant
-    stmt = select(Restaurant).where(Restaurant.id == restaurant_id)
+    """Get reviews for a restaurant from restaurant_reviews and product reviews."""
+    from models import Restaurant, RestaurantReview
+    # Resolve restaurant by id or slug
+    stmt = select(Restaurant).where(or_(
+        Restaurant.id == restaurant_id,
+        Restaurant.slug == restaurant_id
+    ))
+    rest_result = await db.execute(stmt)
+    restaurant = rest_result.scalars().first()
+    real_rest_id = restaurant.id if restaurant else restaurant_id
+
+    # 1. Fetch direct restaurant reviews
+    rest_reviews_stmt = select(RestaurantReview).options(selectinload(RestaurantReview.user)).where(
+        RestaurantReview.restaurantId == real_rest_id
+    ).order_by(desc(RestaurantReview.createdAt)).limit(limit)
+    rest_reviews_res = await db.execute(rest_reviews_stmt)
+    direct_reviews = rest_reviews_res.scalars().all()
+
+    # 2. Fetch product reviews under this restaurant
+    prod_stmt = select(Review).options(selectinload(Review.user)).join(
+        Product, Review.productId == Product.id
+    ).where(Product.restaurantId == real_rest_id).order_by(desc(Review.createdAt)).limit(limit)
+    prod_res = await db.execute(prod_stmt)
+    prod_reviews = prod_res.scalars().all()
+
+    all_reviews_list = []
+    for r in direct_reviews:
+        all_reviews_list.append({
+            "id": r.id,
+            "rating": r.rating,
+            "comment": r.comment,
+            "user": {"id": r.user.id, "name": r.user.name, "image": r.user.image} if r.user else None,
+            "createdAt": r.createdAt.isoformat() if r.createdAt else None
+        })
+    for r in prod_reviews:
+        all_reviews_list.append({
+            "id": r.id,
+            "rating": r.rating,
+            "comment": r.comment,
+            "user": {"id": r.user.id, "name": r.user.name, "image": r.user.image} if r.user else None,
+            "createdAt": r.createdAt.isoformat() if r.createdAt else None
+        })
+
+    # Sort combined reviews by createdAt descending
+    all_reviews_list.sort(key=lambda x: x.get("createdAt") or "", reverse=True)
+    total_count = len(all_reviews_list)
+    avg_rating = (sum(r["rating"] for r in all_reviews_list) / total_count) if total_count > 0 else (restaurant.rating if restaurant else 4.5)
+
+    return {
+        "reviews": all_reviews_list[:limit],
+        "totalCount": restaurant.reviewCount if (restaurant and restaurant.reviewCount > total_count) else total_count,
+        "averageRating": round(float(avg_rating), 1)
+    }
+
+
+@router.post("/restaurants/{restaurant_id}/reviews")
+async def post_restaurant_review(
+    restaurant_id: str,
+    payload: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """Submit a review for a restaurant."""
+    from models import Restaurant, RestaurantReview, User
+    rating = int(payload.get("rating", 5))
+    comment = str(payload.get("comment", "")).strip()
+
+    # Resolve restaurant
+    stmt = select(Restaurant).where(or_(
+        Restaurant.id == restaurant_id,
+        Restaurant.slug == restaurant_id
+    ))
     rest_result = await db.execute(stmt)
     restaurant = rest_result.scalars().first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    stmt = select(Review).options(selectinload(Review.user)).join(
-        Product, r.id == Product.id
-    ).where(Product.restaurantId == restaurant_id).order_by(desc(Review.createdAt)).limit(limit)
+    # Resolve or create a default user for guest reviews if not logged in
+    user_stmt = select(User).limit(1)
+    user_res = await db.execute(user_stmt)
+    first_user = user_res.scalars().first()
+    user_id = payload.get("userId") or (first_user.id if first_user else str(uuid.uuid4()))
 
-    result = await db.execute(stmt)
-    reviews = result.scalars().all()
-    return {"reviews": [
-        {"id": r.id, "rating": r.rating, "comment": r.comment,
-         "user": {"id": r.user.id, "name": r.user.name, "image": r.user.image} if r.user else None,
-         "createdAt": r.createdAt.isoformat() if r.createdAt else None}
-        for r in reviews
-    ]}
+    new_review = RestaurantReview(
+        id=str(uuid.uuid4()),
+        userId=user_id,
+        restaurantId=restaurant.id,
+        rating=rating,
+        comment=comment if comment else "Delicious food & prompt service!",
+        createdAt=datetime.utcnow()
+    )
+    db.add(new_review)
+
+    # Update restaurant rating and count
+    restaurant.reviewCount = (restaurant.reviewCount or 0) + 1
+    # Recalculate average
+    new_avg = ((restaurant.rating or 4.5) * (restaurant.reviewCount - 1) + rating) / restaurant.reviewCount
+    restaurant.rating = round(new_avg, 1)
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": "Review submitted successfully",
+        "review": {
+            "id": new_review.id,
+            "rating": new_review.rating,
+            "comment": new_review.comment,
+            "createdAt": new_review.createdAt.isoformat()
+        },
+        "newAverageRating": restaurant.rating,
+        "newTotalCount": restaurant.reviewCount
+    }
 
 
 # ============================================================
