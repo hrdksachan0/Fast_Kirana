@@ -161,15 +161,40 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
       ? (typeof restaurant.menuSections === 'string' ? JSON.parse(restaurant.menuSections) : restaurant.menuSections)
       : getDefaultSections()
 
-    // Filter out disabled sections (owner can toggle sections off)
+    // Filter out disabled sections
     sections = sections.filter((s: any) => !s.disabled)
 
-    // Filter products — strictly attach current restaurant so tags/badges never mismatch
+    // Ensure Chilled Drinks and Desserts sections exist
+    const hasDrinks = sections.some((s: any) => ['chilled', 'beverages', 'shakes-beverages', 'sec_chilled_drinks'].includes(s.tag || s.id))
+    if (!hasDrinks) {
+      sections.push({
+        id: 'sec_chilled_drinks',
+        tag: 'chilled',
+        title: 'Cold Drinks & Beverages',
+        emoji: '🥤',
+        matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'soda'],
+        description: 'Chilled soft drinks and coolers'
+      })
+    }
+
+    const hasDesserts = sections.some((s: any) => ['desserts', 'ice-cream', 'sec_ice_creams'].includes(s.tag || s.id))
+    if (!hasDesserts) {
+      sections.push({
+        id: 'sec_ice_creams',
+        tag: 'desserts',
+        title: 'Ice Creams & Desserts',
+        emoji: '🍦',
+        matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'sweet'],
+        description: 'Chilled premium ice creams and desserts'
+      })
+    }
+
+    // Filter products — attach restaurant info
     let filteredProducts = products.map((p: any) => ({
       ...p,
-      restaurantId: restaurant.id,
-      restaurantName: restaurant.name,
-      restaurant: {
+      restaurantId: p.restaurantId || restaurant.id,
+      restaurantName: p.restaurantName || restaurant.name,
+      restaurant: p.restaurant || {
         id: restaurant.id,
         name: restaurant.name,
         slug: restaurant.slug,
@@ -178,11 +203,15 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
         isOpen: restaurant.isOpen
       }
     }))
+
     if (isVegOnly) {
-      filteredProducts = filteredProducts.filter(p =>
-        restaurant.isPureVeg || p.tags?.some((t: string) => ['veg', 'pure-veg', 'vegetarian'].includes(t.toLowerCase()))
-      )
+      filteredProducts = filteredProducts.filter(p => {
+        const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
+        const isNonVeg = pTags.includes('non-veg') || pTags.includes('nonveg')
+        return !isNonVeg
+      })
     }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       filteredProducts = filteredProducts.filter(p =>
@@ -197,12 +226,29 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     const catsWithProducts = sections.map((sec: any) => {
       const secTagLower = (sec.tag || '').toLowerCase()
       const secTitleLower = (sec.title || '').toLowerCase()
+      const secIdLower = (sec.id || '').toLowerCase()
 
       const secProducts = filteredProducts.filter((p: any) => {
         const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
         const pCatSlug = (p.category?.slug || '').toLowerCase()
         const pCatName = (p.category?.name || '').toLowerCase()
         const pMenuSec = (p.menuSection || '').toLowerCase()
+
+        // Match Cold Drinks
+        if (['chilled', 'beverages', 'shakes-beverages', 'sec_chilled_drinks'].includes(secTagLower) || secTagLower === 'chilled') {
+          if (pCatSlug === 'beverages' || pCatSlug === 'chilled' || pTags.includes('beverages') || pTags.includes('cold-drink') || pTags.includes('chilled')) {
+            assignedIds.add(p.id)
+            return true
+          }
+        }
+
+        // Match Desserts & Ice Cream
+        if (['desserts', 'ice-cream', 'sec_ice_creams'].includes(secTagLower) || secTagLower === 'desserts') {
+          if (pCatSlug === 'ice-cream' || pCatSlug === 'desserts' || pTags.includes('ice-cream') || pTags.includes('desserts') || pTags.includes('kulfi')) {
+            assignedIds.add(p.id)
+            return true
+          }
+        }
 
         const matched = 
           (sec.matchTags || []).some((tag: string) => {
@@ -212,7 +258,8 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
           pTags.includes(secTagLower) || 
           pCatSlug === secTagLower || 
           pCatName === secTitleLower || 
-          (pMenuSec && pMenuSec === secTagLower)
+          (pMenuSec && pMenuSec === secTagLower) ||
+          pTags.includes(secIdLower)
 
         if (matched) assignedIds.add(p.id)
         return matched

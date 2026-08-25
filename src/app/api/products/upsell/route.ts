@@ -21,19 +21,21 @@ export async function GET(request: NextRequest) {
 
     const cartTags = new Set(cartProducts.flatMap(p => p.tags || []).map(t => t.toLowerCase()))
 
-    const isASCart = cartProducts.some(p => p.restaurantId === OUTLET_AS_RESTAURANT_ID)
-    const isWedsonCart = cartProducts.some(p => p.restaurantId === OUTLET_WEDSON_ID)
+    // Detect if cart has items from a specific restaurant
+    const restaurantCartItem = cartProducts.find(p => p.restaurantId !== null)
+    const activeRestaurantId = restaurantCartItem?.restaurantId || null
 
-    // Enforce strict separation: strictly match restaurantId or null for grocery
-    const typeFilter: Prisma.ProductWhereInput = {}
-    if (isASCart) {
-      typeFilter.restaurantId = OUTLET_AS_RESTAURANT_ID
-    } else if (isWedsonCart) {
-      typeFilter.restaurantId = OUTLET_WEDSON_ID
-    } else {
-      // Pure grocery cart: strictly grocery products!
-      typeFilter.restaurantId = null
-    }
+    // Allowed filter:
+    // If cart has a restaurant item: recommend items from THAT SAME restaurant OR Darkstore Groceries (restaurantId: null)
+    // If cart is pure grocery: recommend strictly Darkstore Groceries (restaurantId: null)
+    const typeFilter: Prisma.ProductWhereInput = activeRestaurantId
+      ? {
+          OR: [
+            { restaurantId: activeRestaurantId },
+            { restaurantId: null }
+          ]
+        }
+      : { restaurantId: null }
 
     // 2. Try to find products frequently bought together in past orders
     let recommendedProducts: any[] = []
@@ -109,21 +111,18 @@ export async function GET(request: NextRequest) {
       // Define tag association mapping
       const targetTags = new Set<string>()
       
-      if (isASCart || isWedsonCart) {
-        if (cartTags.has('burgers') || cartTags.has('burger')) {
-          ['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'].forEach(t => targetTags.add(t))
+      if (activeRestaurantId) {
+        if (cartTags.has('burgers') || cartTags.has('burger') || cartTags.has('pizza') || cartTags.has('pizzas')) {
+          ['beverages', 'cold-drink', 'drinks', 'shakes', 'mocktails', 'ice-cream', 'desserts', 'garlic-bread', 'fries'].forEach(t => targetTags.add(t))
         }
-        if (cartTags.has('sandwiches') || cartTags.has('sandwich')) {
-          ['shakes', 'mocktails', 'cold-coffee', 'beverages'].forEach(t => targetTags.add(t))
+        if (cartTags.has('sandwiches') || cartTags.has('sandwich') || cartTags.has('rolls') || cartTags.has('frankie-rolls')) {
+          ['beverages', 'cold-drink', 'shakes', 'mocktails', 'cold-coffee', 'ice-cream'].forEach(t => targetTags.add(t))
         }
-        if (cartTags.has('hot-beverage') || cartTags.has('tea') || cartTags.has('coffee')) {
-          ['bakery', 'snacks', 'hot-bite'].forEach(t => targetTags.add(t))
+        if (cartTags.has('chinese') || cartTags.has('noodles') || cartTags.has('pasta')) {
+          ['beverages', 'cold-drink', 'drinks', 'mocktails', 'ice-cream'].forEach(t => targetTags.add(t))
         }
-        if (cartTags.has('chinese') || cartTags.has('noodles') || cartTags.has('frankie-rolls')) {
-          ['drinks', 'beverages', 'mocktails', 'chilled'].forEach(t => targetTags.add(t))
-        }
-        // For restaurant, recommend curries, rotis, naans, biryanis or other restaurant tags
-        ['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'].forEach(t => targetTags.add(t))
+        // General restaurant recommendation: curries, breads, biryani, or darkstore drinks & ice cream
+        ['curry', 'roti', 'naan', 'biryani', 'beverages', 'ice-cream', 'drinks'].forEach(t => targetTags.add(t))
       } else {
         if (cartTags.has('staples') || cartTags.has('cooking')) {
           ['dairy', 'breakfast'].forEach(t => targetTags.add(t))

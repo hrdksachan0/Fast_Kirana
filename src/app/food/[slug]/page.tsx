@@ -92,23 +92,43 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const productWhere: any = {
-    isAvailable: true,
-    restaurantId: restaurant.id,
-  }
+  const [restaurantProducts, darkstoreProducts] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        restaurantId: restaurant.id,
+      },
+      include: {
+        category: true,
+        images: true,
+        restaurant: true,
+      },
+      orderBy: [
+        { sortOrder: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    }),
+    prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        restaurantId: null,
+        category: {
+          slug: { in: ['beverages', 'ice-cream'] }
+        }
+      },
+      include: {
+        category: true,
+        images: true,
+        restaurant: true,
+      },
+      orderBy: [
+        { isBestSeller: 'desc' },
+        { sortOrder: 'desc' },
+      ],
+    })
+  ])
 
-  const products = await prisma.product.findMany({
-    where: productWhere,
-    include: {
-      category: true,
-      images: true,
-      restaurant: true,
-    },
-    orderBy: [
-      { sortOrder: 'desc' },
-      { createdAt: 'desc' },
-    ],
-  })
+  const products = [...restaurantProducts, ...darkstoreProducts]
 
   const opStatus = checkStoreOperatingStatus(restaurant)
   const mappedRestaurant = {
