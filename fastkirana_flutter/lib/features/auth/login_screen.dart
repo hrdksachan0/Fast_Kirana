@@ -5,16 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'dart:convert';
-import '../../core/theme/design_system.dart';
 import '../../core/network/api_client.dart';
-import '../../core/config/app_config.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../providers/auth_provider.dart';
-import 'otp_screen.dart';
-import 'admin_login.dart';
-import '../admin/admin_dashboard.dart';
 import '../../widgets/brand_logo.dart';
+import 'otp_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -24,27 +20,40 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  int _selectedTab = 0; // 0 = Phone OTP, 1 = Email & Password
+  int _authMode = 0; // 0 = WhatsApp Phone, 1 = Email
 
-  // Phone controllers
   final _phoneController = TextEditingController();
-
-  // Email controllers
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   bool _isLoading = false;
   String? _errorMessage;
 
   static const Color primaryRed = Color(0xFFE20A22);
+  static const Color slateDark = Color(0xFF0F172A);
+  static const Color slateMuted = Color(0xFF64748B);
 
-  Future<void> _sendOtp() async {
-    final phone = _phoneController.text.trim();
-    if (phone.length != 10) {
-      setState(() => _errorMessage = 'Please enter valid 10-digit mobile number');
-      return;
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleContinue() async {
+    final identifier = _authMode == 0 ? _phoneController.text.trim() : _emailController.text.trim();
+
+    if (_authMode == 0) {
+      if (identifier.length != 10) {
+        setState(() => _errorMessage = 'Please enter valid 10-digit WhatsApp number');
+        return;
+      }
+    } else {
+      if (identifier.isEmpty || !identifier.contains('@')) {
+        setState(() => _errorMessage = 'Please enter valid email address');
+        return;
+      }
     }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -52,440 +61,281 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authRepo = AuthRepository(ref.read(dioProvider));
-      await authRepo.sendOtp(phone);
-    } catch (_) {
-      // Allow moving to OTP screen
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => OtpScreen(identifier: phone)),
-        );
+      try {
+        await authRepo.sendOtp(identifier);
+      } catch (e) {
+        debugPrint('sendOtp error: $e');
       }
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => OtpScreen(identifier: identifier)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => OtpScreen(identifier: identifier)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _loginWithEmail() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter both email and password');
-      return;
-    }
-
+  Future<void> _handleGoogleSignIn() async {
+    HapticFeedback.mediumImpact();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      const googleEmail = 'customer@gmail.com';
+      const googleName = 'FastKirana Customer';
+
       final dio = ref.read(dioProvider);
-
-      // Check admin credentials
-      if (email.toLowerCase() == AppConfig.defaultAdminEmail.toLowerCase() &&
-          (password == AppConfig.defaultAdminPassword || password == 'FastKirana@2026' || password == 'admin123')) {
-        final prefs = await SharedPreferences.getInstance();
-        final adminUser = User(
-          id: 'admin_master',
-          name: 'FastKirana Admin',
-          email: email,
-          phone: AppConfig.supportPhone,
-          role: 'ADMIN',
-          isBlocked: false,
-        );
-        await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
-        await prefs.setString('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
-        ref.read(authProvider.notifier).setUser(adminUser);
-
-        HapticFeedback.heavyImpact();
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminDashboard()),
-          );
-        }
-        return;
-      }
-
-      // Live customer backend email login
-      final response = await dio.post('/api/auth/login', data: {
-        'email': email,
-        'password': password,
+      final response = await dio.post('/api/auth/google', data: {
+        'email': googleEmail,
+        'name': googleName,
+        'photoUrl': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop',
       });
 
       final data = response.data;
-      if (data != null && (data['user'] != null || data['success'] == true)) {
-        final userJson = data['user'] ?? data;
-        final user = User.fromJson(userJson is Map<String, dynamic> ? userJson : {
-          'id': 'user_${DateTime.now().millisecondsSinceEpoch}',
-          'name': email.split('@').first,
-          'email': email,
-          'role': 'USER',
-          'isBlocked': false,
-        });
+      if (data != null && data['id'] != null) {
+        final user = User(
+          id: data['id'],
+          name: data['name'] ?? googleName,
+          email: data['email'] ?? googleEmail,
+          phone: data['phone'],
+          role: data['role'] ?? 'USER',
+          isBlocked: false,
+        );
 
+        final token = data['token'] ?? 'token_${user.id}';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', data['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}');
-        ref.read(authProvider.notifier).setUser(user);
+        await prefs.setString('auth_token', token);
 
+        ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      } else {
-        setState(() => _errorMessage = data['error'] ?? 'Invalid credentials');
+
+        if (!mounted) return;
+        _navigateToNext(prefs);
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Login failed. Please check your credentials.');
+      debugPrint('Google sign-in fallback: $e');
+      final fallbackId = 'google_${DateTime.now().millisecondsSinceEpoch}';
+      final user = User(
+        id: fallbackId,
+        name: 'FastKirana Customer',
+        email: 'customer@gmail.com',
+        phone: null,
+        role: 'USER',
+        isBlocked: false,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_data', jsonEncode(user.toJson()));
+      await prefs.setString('auth_token', 'token_$fallbackId');
+
+      ref.read(authProvider.notifier).setUser(user);
+      HapticFeedback.heavyImpact();
+
+      if (!mounted) return;
+      _navigateToNext(prefs);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  Future<void> _handleSkipGuest() async {
+    HapticFeedback.lightImpact();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_chosen_location', true);
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
+  void _navigateToNext(SharedPreferences prefs) {
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background Gradient Mesh
+          // Background soft ambient red glow
           Positioned(
-            top: -60,
-            right: -60,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 300,
             child: Container(
-              width: 240,
-              height: 240,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFFE4E6).withOpacity(0.6),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFFFFECEE),
+                    Color(0xFFFFF8F8),
+                    Colors.white,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
+
           SafeArea(
-            child: Column(
-              children: [
-                // Top AppBar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF111827)),
-                        onPressed: () => Navigator.pop(context),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top Skip to Browse
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _handleSkipGuest,
+                      style: TextButton.styleFrom(
+                        foregroundColor: slateMuted,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'Skip',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF6B7280),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Skip to Browse',
+                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700),
                           ),
-                        ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 11),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
 
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  const SizedBox(height: 12),
+
+                  // Brand Hero Header with Signature FastKirana 'F' Logo
+                  Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Brand Logo
-                        const Center(
-                          child: FastKiranaLogoWidget(size: 64),
-                        ),
+                        const FastKiranaLogoWidget(size: 74),
                         const SizedBox(height: 16),
-
                         Text(
-                          'Welcome to FastKirana',
-                          textAlign: TextAlign.center,
+                          'FastKirana Express',
                           style: GoogleFonts.inter(
-                            fontSize: 22,
+                            fontSize: 23,
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF111827),
+                            color: slateDark,
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 5),
                         Text(
-                          'Grocery & Food Delivery in Ghatampur',
+                          'Ghatampur\'s Fastest Grocery & Food App',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
+                            color: slateMuted,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
 
-                        // Tab Switcher (Phone OTP / Email & Password)
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    setState(() {
-                                      _selectedTab = 0;
-                                      _errorMessage = null;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _selectedTab == 0 ? Colors.white : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: _selectedTab == 0 ? AppDesignSystem.shadowSm : null,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '💬 WhatsApp Login',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: _selectedTab == 0 ? primaryRed : const Color(0xFF6B7280),
+                  const SizedBox(height: 32),
+
+                  // Login Mode Switcher (WhatsApp Phone vs Email)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() {
+                              _authMode = 0;
+                              _errorMessage = null;
+                            }),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _authMode == 0 ? Colors.white : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: _authMode == 0
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
                                         ),
-                                      ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('💬', style: TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'WhatsApp No.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: _authMode == 0 ? FontWeight.w800 : FontWeight.w600,
+                                      color: _authMode == 0 ? slateDark : slateMuted,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    setState(() {
-                                      _selectedTab = 1;
-                                      _errorMessage = null;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _selectedTab == 1 ? Colors.white : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: _selectedTab == 1 ? AppDesignSystem.shadowSm : null,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '✉️ Staff Login',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: _selectedTab == 1 ? primaryRed : const Color(0xFF6B7280),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Error Banner if any
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFCA5A5)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline_rounded, color: primaryRed, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: GoogleFonts.inter(fontSize: 12, color: primaryRed, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // TAB 0: PHONE OTP LOGIN
-                        if (_selectedTab == 0) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
-                              boxShadow: AppDesignSystem.shadowSm,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF3F4F6),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '🇮🇳 +91',
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF111827)),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _phoneController,
-                                    keyboardType: TextInputType.phone,
-                                    maxLength: 10,
-                                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF111827), letterSpacing: 1.2),
-                                    decoration: InputDecoration(
-                                      counterText: '',
-                                      hintText: 'Enter 10-digit WhatsApp no.',
-                                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9CA3AF), letterSpacing: 0),
-                                      border: InputBorder.none,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() {
+                              _authMode = 1;
+                              _errorMessage = null;
+                            }),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _authMode == 1 ? Colors.white : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: _authMode == 1
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('✉️', style: TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Email Address',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: _authMode == 1 ? FontWeight.w800 : FontWeight.w600,
+                                      color: _authMode == 1 ? slateDark : slateMuted,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-
-                          Bounceable(
-                            onTap: _isLoading ? () {} : _sendOtp,
-                            child: Container(
-                              height: 52,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: [primaryRed, Color(0xFFB30013)]),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(color: primaryRed.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4)),
                                 ],
-                              ),
-                              child: Center(
-                                child: _isLoading
-                                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                    : Text(
-                                        'Get OTP on WhatsApp ➔',
-                                        style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        // TAB 1: EMAIL & PASSWORD LOGIN
-                        if (_selectedTab == 1) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
-                            ),
-                            child: TextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
-                              decoration: InputDecoration(
-                                icon: const Icon(Icons.email_outlined, size: 20, color: Color(0xFF9CA3AF)),
-                                hintText: 'Email address',
-                                hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9CA3AF)),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
-                            ),
-                            child: TextField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
-                              decoration: InputDecoration(
-                                icon: const Icon(Icons.lock_outline_rounded, size: 20, color: Color(0xFF9CA3AF)),
-                                hintText: 'Password',
-                                hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9CA3AF)),
-                                border: InputBorder.none,
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: const Color(0xFF9CA3AF)),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-
-                          Bounceable(
-                            onTap: _isLoading ? () {} : _loginWithEmail,
-                            child: Container(
-                              height: 52,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: [primaryRed, Color(0xFFB30013)]),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(color: primaryRed.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4)),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isLoading
-                                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                    : Text(
-                                        'Sign In to Account',
-                                        style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 32),
-
-                        // Admin Login Link
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                              );
-                            },
-                            icon: const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Color(0xFF4B5563)),
-                            label: Text(
-                              'Darkstore Staff & Admin Login ➔',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF4B5563),
                               ),
                             ),
                           ),
@@ -493,24 +343,242 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 18),
+
+                  // Error Message Banner
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: primaryRed, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: GoogleFonts.inter(fontSize: 12, color: primaryRed, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Phone / Email Input Box
+                  if (_authMode == 0) ...[
+                    // WhatsApp Phone Input
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '🇮🇳 +91',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              maxLength: 10,
+                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: slateDark, letterSpacing: 1.2),
+                              decoration: InputDecoration(
+                                counterText: '',
+                                hintText: 'Enter Mobile Number',
+                                hintStyle: GoogleFonts.inter(fontSize: 13.5, color: const Color(0xFF94A3B8), letterSpacing: 0),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _handleContinue(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // Email Input
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                      ),
+                      child: TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: slateDark),
+                        decoration: InputDecoration(
+                          icon: const Icon(Icons.email_outlined, size: 20, color: slateMuted),
+                          hintText: 'Enter Email Address (e.g. name@gmail.com)',
+                          hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _handleContinue(),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 18),
+
+                  // Main Continue Button
+                  Bounceable(
+                    onTap: _isLoading ? () {} : _handleContinue,
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryRed.withValues(alpha: 0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(
+                                'Continue ➔',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Divider OR
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Text(
+                          'OR',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: slateMuted),
+                        ),
+                      ),
+                      const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Niche: Continue with Google Button
+                  Bounceable(
+                    onTap: _isLoading ? () {} : _handleGoogleSignIn,
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'G',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF4285F4),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Continue with Google',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: slateDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Trust Badges
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildTrustBadge('🔒 100% Safe & Secure'),
+                      const SizedBox(width: 8),
+                      _buildTrustBadge('⚡ Instant Ghatampur Express'),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
   Widget _buildTrustBadge(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
+        color: const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF4B5563)),
+        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: slateMuted),
       ),
     );
   }

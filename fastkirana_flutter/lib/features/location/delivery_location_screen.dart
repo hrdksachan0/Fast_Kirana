@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
@@ -157,8 +158,11 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
     _proceedToApp();
   }
 
-  void _proceedToApp() {
-    if (widget.isInitialOnboarding) {
+  Future<void> _proceedToApp() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_chosen_location', true);
+    if (!mounted) return;
+    if (widget.isInitialOnboarding || !Navigator.canPop(context)) {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       Navigator.pop(context);
@@ -178,7 +182,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
           onPressed: () {
-            if (widget.isInitialOnboarding) {
+            if (widget.isInitialOnboarding || !Navigator.canPop(context)) {
               Navigator.pushReplacementNamed(context, '/home');
             } else {
               Navigator.pop(context);

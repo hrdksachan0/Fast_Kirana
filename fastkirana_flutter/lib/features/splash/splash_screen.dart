@@ -46,18 +46,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _mainController.forward();
-    Future.delayed(const Duration(milliseconds: 2200), _navigateToNextScreen);
+    Future.delayed(const Duration(milliseconds: 700), _navigateToNextScreen);
   }
 
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
     final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
-    if (!hasChosenLocation) {
-      await prefs.setBool('has_chosen_location', true);
-      if (!mounted) return;
+
+    if (token == null || token.isEmpty) {
+      // 1. First Gate: Login with Mobile Number & OTP (like Zepto / Blinkit)
+      Navigator.pushReplacementNamed(context, '/login');
+    } else if (!hasChosenLocation) {
+      // 2. Second Gate: Select Delivery Location
       Navigator.pushReplacementNamed(context, '/location');
     } else {
+      // 3. Final: Main Storefront
       Navigator.pushReplacementNamed(context, '/home');
     }
   }

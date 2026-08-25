@@ -3,11 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/product.dart';
+import '../../data/models/store_settings.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/store_settings_provider.dart';
+import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -223,11 +228,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildCartModalContent(BuildContext context, WidgetRef ref, Cart cart) {
+    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final subtotal = cart.subtotal;
-    final deliveryFee = subtotal >= freeDeliveryThreshold ? 0.0 : standardDeliveryFee;
+    final deliveryFee = subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee;
+    final packagingFee = settings.miscFee;
+    final packagingLabel = settings.miscFeeLabel;
     final itemSavings = cart.savings;
     final totalSavings = itemSavings + _couponDiscount;
-    final grandTotal = (subtotal + deliveryFee + _selectedTip - _couponDiscount).clamp(0.0, 999999.0);
+    final grandTotal = (subtotal + deliveryFee + packagingFee + _selectedTip - _couponDiscount).clamp(0.0, 999999.0);
     final totalItems = cart.totalItems;
 
     return Column(
@@ -706,7 +714,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               const SizedBox(height: 14),
 
               // 7. Bill Details Card
-              _buildBillDetailsCard(subtotal, itemSavings, deliveryFee, totalSavings, grandTotal),
+              _buildBillDetailsCard(subtotal, itemSavings, deliveryFee, packagingFee, packagingLabel, totalSavings, grandTotal),
               const SizedBox(height: 14),
 
               // 8. Cancellation Policy Info
@@ -872,7 +880,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildBillDetailsCard(double subtotal, double itemSavings, double deliveryFee, double totalSavings, double grandTotal) {
+  Widget _buildBillDetailsCard(double subtotal, double itemSavings, double deliveryFee, double packagingFee, String packagingLabel, double totalSavings, double grandTotal) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -898,6 +906,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           if (itemSavings > 0) _buildBillRow('Product Savings', '-₹${itemSavings.toInt()}', isGreen: true),
           if (_couponDiscount > 0) _buildBillRow('Coupon Discount', '-₹${_couponDiscount.toInt()}', isGreen: true),
           _buildBillRow('Delivery Fee', deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}', isGreen: deliveryFee == 0),
+          _buildBillRow(packagingLabel, packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}', isGreen: packagingFee == 0),
           if (_selectedTip > 0) _buildBillRow('Delivery Partner Tip', '₹$_selectedTip'),
           _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
           const Divider(height: 16, color: slateBorder),
@@ -1024,8 +1033,33 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  final user = ref.read(authProvider).value;
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  if (!context.mounted) return;
+
+                  if (user == null && (token == null || token.isEmpty)) {
+                    // Redirect to Login if customer is not logged in
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                    
+                    // After returning from Login, verify if user successfully logged in
+                    final updatedUser = ref.read(authProvider).value;
+                    final updatedPrefs = await SharedPreferences.getInstance();
+                    final updatedToken = updatedPrefs.getString('auth_token');
+
+                    if (!context.mounted) return;
+                    if (updatedUser == null && (updatedToken == null || updatedToken.isEmpty)) {
+                      return;
+                    }
+                  }
+
+                  if (!context.mounted) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(

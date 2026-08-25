@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,21 +55,51 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       final response = await authRepo.verifyOtp(widget.identifier, otp);
       if (response.success) {
         final prefs = await SharedPreferences.getInstance();
-        final user = response.user ??
+        User user = response.user ??
             User(
               id: 'user_${widget.identifier}',
-              name: 'User ${widget.identifier.length >= 4 ? widget.identifier.substring(widget.identifier.length - 4) : widget.identifier}',
-              email: '',
-              phone: widget.identifier,
+              name: '',
+              email: widget.identifier.contains('@') ? widget.identifier : 'wa-${widget.identifier}@fastkirana.in',
+              phone: !widget.identifier.contains('@') ? widget.identifier : null,
               role: 'USER',
               isBlocked: false,
             );
+
+        final rawName = (user.name ?? '').trim();
+        final isExistingUser = rawName.isNotEmpty && !rawName.toLowerCase().startsWith('user ');
+
+        // If new or first-time customer with generic/empty name -> Compulsory ask for Full Name
+        if (!isExistingUser) {
+          if (!mounted) return;
+          final enteredName = await _showNameBottomSheet(context);
+          if (enteredName != null && enteredName.trim().isNotEmpty) {
+            final validName = enteredName.trim();
+            user = user.copyWith(name: validName);
+            try {
+              final dio = ref.read(dioProvider);
+              await dio.post('/api/auth/profile/update', data: {
+                'name': validName,
+                'phone': widget.identifier,
+              });
+            } catch (_) {}
+          }
+        }
+
         await prefs.setString('user_data', jsonEncode(user.toJson()));
         await prefs.setString('auth_token', response.token ?? 'auth_${user.id}');
+        
         // Update auth provider so all screens see the logged-in user
         ref.read(authProvider.notifier).setUser(user);
+        HapticFeedback.heavyImpact();
+
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/home');
+
+        final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
+        if (!hasChosenLocation) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+        } else {
+          Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+        }
         return;
       } else {
         _showError('Invalid OTP code. Please try again.');
@@ -78,6 +109,180 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<String?> _showNameBottomSheet(BuildContext context) async {
+    final nameCtrl = TextEditingController();
+    String? errorText;
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text('👋', style: TextStyle(fontSize: 22)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'What should we call you?',
+                              style: GoogleFonts.inter(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Required for orders & superfast delivery',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: const Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  if (errorText != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Text(
+                        errorText!,
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFFE20A22), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  Text(
+                    'Full Name *',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: TextField(
+                      controller: nameCtrl,
+                      autofocus: true,
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        icon: const Icon(Icons.person_outline_rounded, size: 20, color: Color(0xFF94A3B8)),
+                        hintText: 'Enter your full name (e.g. Rahul Sharma)',
+                        hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (val) {
+                        if (val.trim().isEmpty) {
+                          setModalState(() => errorText = 'Please enter your name to proceed');
+                        } else {
+                          Navigator.pop(ctx, val.trim());
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  GestureDetector(
+                    onTap: () {
+                      final val = nameCtrl.text.trim();
+                      if (val.isEmpty) {
+                        setModalState(() => errorText = 'Please enter your name to proceed');
+                      } else {
+                        Navigator.pop(ctx, val);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE20A22).withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Let\'s Get Started ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleResend() async {
@@ -126,13 +331,34 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.of(context).pop(),
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF0F172A),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
@@ -162,7 +388,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {

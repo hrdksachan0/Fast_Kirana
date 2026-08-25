@@ -11,9 +11,13 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
+import '../../data/models/order.dart';
+import '../../data/models/store_settings.dart';
+import '../../data/repositories/order_repository.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/address_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../core/network/api_client.dart';
 import '../profile/address_book_screen.dart';
 import '../orders/orders_screen.dart';
@@ -122,8 +126,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final selectedAddress = ref.read(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
 
+    final user = ref.read(authProvider).value;
+    final phone = user?.phone ?? '7054470303';
+    final userName = user?.name ?? 'FastKirana Customer';
+    final userId = user?.id;
+
     try {
       final orderPayload = {
+        if (userId != null && userId.isNotEmpty) 'userId': userId,
+        'phone': phone,
+        'userName': userName,
         if (selectedAddress != null && _deliveryMethod == 'DELIVERY') 'addressId': selectedAddress.id,
         'deliveryMethod': _deliveryMethod,
         'paymentMethod': paymentMethod.toUpperCase(),
@@ -147,9 +159,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final orderRes = await dio.post('/api/orders', data: orderPayload);
       if (orderRes.data != null) {
         if (orderRes.data is List && (orderRes.data as List).isNotEmpty) {
-          _pendingOrderId = orderRes.data[0]['id'];
+          _pendingOrderId = orderRes.data[0]['readableId']?.toString() ?? orderRes.data[0]['id'];
         } else if (orderRes.data is Map) {
-          _pendingOrderId = orderRes.data['id'];
+          _pendingOrderId = orderRes.data['readableId']?.toString() ?? orderRes.data['id'];
         }
       }
     } catch (e) {
@@ -179,9 +191,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         }
       } catch (_) {}
 
+      final settings = ref.read(storeSettingsProvider).valueOrNull ?? StoreSettings();
       final subtotal = cart.subtotal;
-      final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 25.0);
-      final grandTotal = (subtotal + deliveryFee - widget.discountAmount).clamp(0.0, 999999.0);
+      final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
+      final packagingFee = settings.miscFee;
+      final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
       final amountInPaise = (grandTotal * 100).toInt();
 
       final options = {
@@ -262,9 +276,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
+    final settings = ref.read(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 25.0);
-    final grandTotal = (subtotal + deliveryFee - widget.discountAmount).clamp(0.0, 999999.0);
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
+    final packagingFee = settings.miscFee;
+    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.read(selectedAddressProvider) ??
@@ -276,10 +292,41 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ? '${selectedAddress.label}, ${selectedAddress.fullAddress}'
             : 'Ghatampur Express Zone');
 
-    ref.read(cartProvider.notifier).clearCart();
-
     final user = ref.read(authProvider).value;
     final userId = user?.id ?? '';
+
+    final newOrder = Order(
+      id: _pendingOrderId ?? 'FK-${DateTime.now().millisecondsSinceEpoch}',
+      readableId: _pendingOrderId,
+      userId: userId,
+      addressId: selectedAddress?.id ?? 'addr_default',
+      status: OrderStatus.confirmed,
+      subtotal: subtotal,
+      discount: widget.discountAmount,
+      deliveryFee: deliveryFee,
+      taxes: 0,
+      miscFee: packagingFee,
+      total: grandTotal,
+      paymentMethod: _selectedPayment == 'upi' ? PaymentMethod.upi : (_selectedPayment == 'card' ? PaymentMethod.card : PaymentMethod.cod),
+      paymentStatus: paymentId != null ? 'PAID' : 'PENDING',
+      deliveryMethod: _deliveryMethod,
+      createdAt: DateTime.now(),
+      items: cart.items.map<OrderItem>((i) => OrderItem(
+        id: 'item_${i.product.id}',
+        productId: i.product.id,
+        name: i.product.name,
+        price: i.product.price,
+        quantity: i.quantity,
+        imageUrl: i.product.imageUrl,
+        selectedVariant: i.selectedVariant,
+      )).toList(),
+    );
+
+    try {
+      await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(newOrder);
+    } catch (_) {}
+
+    ref.read(cartProvider.notifier).clearCart();
     ref.invalidate(ordersProvider(userId));
     if (userId.isEmpty) {
       ref.invalidate(ordersProvider(''));
@@ -290,13 +337,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => OrderSuccessScreen(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (_, __, ___) => OrderSuccessScreen(
           orderId: _pendingOrderId,
           totalAmount: grandTotal,
           deliveryAddress: selectedAddr,
           paymentMethod: paymentId != null ? 'RAZORPAY ($paymentId)' : _selectedPayment.toUpperCase(),
         ),
+        transitionsBuilder: (_, animation, __, child) {
+          final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          return FadeTransition(
+            opacity: curve,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0).animate(curve),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -314,9 +372,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     }
 
+    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= 199 ? 0.0 : 25.0);
-    final grandTotal = (subtotal + deliveryFee - widget.discountAmount).clamp(0.0, 999999.0);
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
+    final packagingFee = settings.miscFee;
+    final packagingLabel = settings.miscFeeLabel;
+    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -365,7 +426,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 14),
             _buildOrderItemsPreview(cart),
             const SizedBox(height: 14),
-            _buildBillSummary(subtotal, deliveryFee, grandTotal),
+            _buildBillSummary(subtotal, deliveryFee, packagingFee, packagingLabel, grandTotal),
             const SizedBox(height: 14),
             _buildGuaranteeBanner(),
           ],
@@ -772,7 +833,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildBillSummary(double subtotal, double deliveryFee, double grandTotal) {
+  Widget _buildBillSummary(double subtotal, double deliveryFee, double packagingFee, String packagingLabel, double grandTotal) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -801,6 +862,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             'Delivery Fee',
             _deliveryMethod == 'PICKUP' ? 'FREE (Store Pickup)' : (deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}'),
             isGreen: deliveryFee == 0 || _deliveryMethod == 'PICKUP',
+          ),
+          _buildRow(
+            packagingLabel,
+            packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}',
+            isGreen: packagingFee == 0,
           ),
           _buildRow('Handling & Taxes', '₹0', isGreen: true),
           const Divider(height: 18, color: slateBorder),

@@ -462,18 +462,19 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
     );
   }
 
-  // Ultra-Pretty Map & Address Form Sheet
+  // Map-First Simplified Address Bottom Sheet (Zepto / Blinkit Style)
   void _showMapLocationPicker(BuildContext context, {Address? editAddress}) {
     final houseCtrl = TextEditingController(text: editAddress?.houseNo ?? '');
-    final streetCtrl = TextEditingController(text: editAddress?.street ?? '');
-    final areaCtrl = TextEditingController(text: editAddress?.area ?? 'Central Market');
-    final cityCtrl = TextEditingController(text: editAddress?.city ?? 'Ghatampur, Kanpur Nagar');
-    final pinCtrl = TextEditingController(text: editAddress?.pincode ?? '209206');
-    final phoneCtrl = TextEditingController(text: editAddress?.phone ?? '');
+    final landmarkCtrl = TextEditingController(text: editAddress?.street ?? '');
+    String area = editAddress?.area ?? 'Central Market';
+    String city = editAddress?.city ?? 'Ghatampur';
+    String pincode = editAddress?.pincode ?? '209206';
+    String phone = editAddress?.phone ?? '';
     String selectedTag = editAddress?.label ?? 'Home';
     bool isSaving = false;
-    double? currentLat = editAddress?.latitude ?? 26.1534185;
-    double? currentLng = editAddress?.longitude ?? 80.1714024;
+    bool isLocating = false;
+    double currentLat = editAddress?.latitude ?? 26.1534185;
+    double currentLng = editAddress?.longitude ?? 80.1714024;
 
     showModalBottomSheet(
       context: context,
@@ -483,7 +484,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Container(
-              height: MediaQuery.of(context).size.height * 0.90,
+              height: MediaQuery.of(context).size.height * 0.82,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -500,7 +501,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -519,7 +520,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  editAddress != null ? 'Edit Address' : 'Add Delivery Address',
+                                  editAddress != null ? 'Edit Address' : 'Select Delivery Location',
                                   style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
@@ -527,7 +528,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Ghatampur Express Zone (10-15 min)',
+                                  'Ghatampur Express Zone • 10-15 Min Delivery',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -549,145 +550,155 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // GPS Detect Banner Button
-                          GestureDetector(
-                            onTap: () async {
-                              HapticFeedback.lightImpact();
-                              final pos = await LocationService.getCurrentPosition();
-                              if (pos != null) {
-                                final loc = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
-                                setSheetState(() {
-                                  currentLat = pos.latitude;
-                                  currentLng = pos.longitude;
-                                  if (loc.houseNo.isNotEmpty) houseCtrl.text = loc.houseNo;
-                                  if (loc.street.isNotEmpty) streetCtrl.text = loc.street;
-                                  areaCtrl.text = loc.area;
-                                  cityCtrl.text = loc.city;
-                                  pinCtrl.text = loc.pincode;
-                                });
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFFECDD3)),
+                          // 1. Map & Location Prioritized Hero Card
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.my_location_rounded, size: 18, color: primaryRed),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Auto-Fill using Current GPS Location',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w800,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: const BoxDecoration(
                                         color: primaryRed,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.my_location_rounded, size: 16, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '$area, $city',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: const Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Pincode: $pincode • Kanpur Nagar',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // GPS Auto-Detect Button
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () async {
+                                    HapticFeedback.lightImpact();
+                                    setSheetState(() => isLocating = true);
+                                    try {
+                                      final pos = await LocationService.getCurrentPosition();
+                                      if (pos != null) {
+                                        final loc = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+                                        setSheetState(() {
+                                          currentLat = pos.latitude;
+                                          currentLng = pos.longitude;
+                                          if (loc.houseNo.isNotEmpty) houseCtrl.text = loc.houseNo;
+                                          if (loc.street.isNotEmpty) landmarkCtrl.text = loc.street;
+                                          area = loc.area.isNotEmpty ? loc.area : area;
+                                          city = loc.city.isNotEmpty ? loc.city : city;
+                                          pincode = loc.pincode.isNotEmpty ? loc.pincode : pincode;
+                                        });
+                                      }
+                                    } finally {
+                                      setSheetState(() => isLocating = false);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (isLocating)
+                                          const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: primaryRed),
+                                          )
+                                        else
+                                          const Icon(Icons.gps_fixed_rounded, size: 14, color: primaryRed),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          isLocating ? 'Locating on Map...' : 'Refetch GPS Location 🎯',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: primaryRed,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  const Icon(Icons.bolt_rounded, size: 16, color: primaryRed),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
 
-                          // House / Flat / Building No
-                          _buildFieldLabel('House / Flat / Floor / Building *'),
-                          const SizedBox(height: 5),
+                          // 2. Simplified Field 1: Flat / House No
+                          _buildFieldLabel('House / Flat / Floor / Building No. *'),
+                          const SizedBox(height: 6),
                           _buildTextField(houseCtrl, 'e.g. Flat 302, Royal Residency / Shop #12'),
 
                           const SizedBox(height: 14),
 
-                          // Street / Road / Landmark
-                          _buildFieldLabel('Street / Road / Landmark *'),
-                          const SizedBox(height: 5),
-                          _buildTextField(streetCtrl, 'e.g. Near Subhash Chowk, Station Road'),
+                          // 3. Simplified Field 2: Landmark
+                          _buildFieldLabel('Nearby Landmark (Optional)'),
+                          const SizedBox(height: 6),
+                          _buildTextField(landmarkCtrl, 'e.g. Near Subhash Chowk / Clock Tower'),
 
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 18),
 
-                          // Area & City row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildFieldLabel('Area / Locality *'),
-                                    const SizedBox(height: 5),
-                                    _buildTextField(areaCtrl, 'e.g. Central Market'),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildFieldLabel('City *'),
-                                    const SizedBox(height: 5),
-                                    _buildTextField(cityCtrl, 'Ghatampur'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // Pincode & Phone row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildFieldLabel('Pincode *'),
-                                    const SizedBox(height: 5),
-                                    _buildTextField(pinCtrl, '209206', keyboardType: TextInputType.number),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildFieldLabel('Contact Phone *'),
-                                    const SizedBox(height: 5),
-                                    _buildTextField(phoneCtrl, '10-digit mobile', keyboardType: TextInputType.phone),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Tag Chips
+                          // 4. Save Address As Tag Selector
                           _buildFieldLabel('Save Address As'),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               _buildTagChip('Home', '🏠', selectedTag, (val) => setSheetState(() => selectedTag = val)),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               _buildTagChip('Work', '🏢', selectedTag, (val) => setSheetState(() => selectedTag = val)),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               _buildTagChip('Other', '📍', selectedTag, (val) => setSheetState(() => selectedTag = val)),
                             ],
                           ),
 
                           const SizedBox(height: 24),
 
-                          // Save CTA
+                          // 5. Save & Deliver CTA Button
                           SizedBox(
                             width: double.infinity,
                             height: 52,
@@ -695,21 +706,17 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryRed,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                elevation: 2,
+                                elevation: 3,
                               ),
                               onPressed: isSaving
                                   ? null
                                   : () async {
                                       final house = houseCtrl.text.trim();
-                                      final street = streetCtrl.text.trim();
-                                      final area = areaCtrl.text.trim();
-                                      final city = cityCtrl.text.trim();
-                                      final pin = pinCtrl.text.trim();
-                                      String phone = phoneCtrl.text.trim();
+                                      final landmark = landmarkCtrl.text.trim();
 
-                                      if (house.isEmpty || street.isEmpty || area.isEmpty || city.isEmpty || pin.isEmpty) {
+                                      if (house.isEmpty) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Please fill all required address fields')),
+                                          const SnackBar(content: Text('Please enter your House / Flat number')),
                                         );
                                         return;
                                       }
@@ -727,10 +734,10 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           if (editAddress != null) 'id': editAddress.id,
                                           'label': selectedTag,
                                           'houseNo': house,
-                                          'street': street,
+                                          'street': landmark.isNotEmpty ? landmark : area,
                                           'area': area,
                                           'city': city,
-                                          'pincode': pin,
+                                          'pincode': pincode,
                                           'phone': phone,
                                           'lat': currentLat,
                                           'lng': currentLng,
@@ -752,7 +759,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                                 children: const [
                                                   Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                                                   SizedBox(width: 8),
-                                                  Text('Delivery address saved to server successfully!'),
+                                                  Text('Delivery address saved successfully!'),
                                                 ],
                                               ),
                                               behavior: SnackBarBehavior.floating,
@@ -780,9 +787,9 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
                                     )
                                   : Text(
-                                      editAddress != null ? 'Update Address' : 'Save Address & Deliver Here',
+                                      editAddress != null ? 'Update Address' : 'Save Address & Deliver Here ➔',
                                       style: GoogleFonts.inter(
-                                        fontSize: 14,
+                                        fontSize: 14.5,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                       ),

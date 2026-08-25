@@ -196,6 +196,17 @@ class ProductRepository {
       }
     } catch (_) {}
 
-    return [];
+    return [
+      Category(id: 'cmqh1haw30000zcid4vj7i1yj', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
+      Category(id: 'cmsfuzs73000404l7q139nk61', name: 'Atta, Rice & Dal', slug: 'atta-rice-dal', imageUrl: '/atta_rice_dal_category.png', sortOrder: 1),
+      Category(id: 'cmqgzqfz20008vkidoycqg5u2', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 2),
+      Category(id: 'cmqh1hb920002zcidoywpi240', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 3),
+      Category(id: 'cmqgzqfv70007vkider7h6e4j', name: 'Ice Creams & More', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 4),
+      Category(id: 'cmseowmy7000004i562szts34', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 5),
+      Category(id: 'cmqh1hbyc0005zcidr45bj1ac', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 6),
+      Category(id: 'cmqh1hblj0003zcidm9gq5net', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 7),
+      Category(id: 'cmrv2psby000004ldl25xjrlt', name: 'Home & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 8),
+      Category(id: 'cmt59fuss0000tgidoc35458x', name: 'Cafe & Fast Food', slug: 'restaurant-food', imageUrl: '/cafe_category.png', sortOrder: 9),
+    ];
   }
 }

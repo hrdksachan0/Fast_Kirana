@@ -92,25 +92,48 @@ export async function GET(
     // 2. Compute operating status
     const opStatus = checkStoreOperatingStatus(restaurant)
 
-    // 3. Fetch All Active Dishes of this Restaurant
-    const products = await prisma.product.findMany({
-      where: {
-        restaurantId: restaurant.id,
-        isAvailable: true
-      },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true }
+    // 3. Fetch All Active Dishes of this Restaurant + Shared Darkstore Cold Drinks & Ice Creams
+    const [products, darkstoreItems] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          restaurantId: restaurant.id,
+          isAvailable: true
         },
-        images: {
-          select: { id: true, url: true, sortOrder: true }
-        }
-      },
-      orderBy: [
-        { sortOrder: 'desc' },
-        { createdAt: 'desc' }
-      ]
-    })
+        include: {
+          category: {
+            select: { id: true, name: true, slug: true }
+          },
+          images: {
+            select: { id: true, url: true, sortOrder: true }
+          }
+        },
+        orderBy: [
+          { sortOrder: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      }),
+      prisma.product.findMany({
+        where: {
+          restaurantId: null,
+          isAvailable: true,
+          category: {
+            slug: { in: ['beverages', 'ice-cream'] }
+          }
+        },
+        include: {
+          category: {
+            select: { id: true, name: true, slug: true }
+          },
+          images: {
+            select: { id: true, url: true, sortOrder: true }
+          }
+        },
+        orderBy: [
+          { isBestSeller: 'desc' },
+          { sortOrder: 'desc' }
+        ]
+      })
+    ])
 
     // 4. Resolve Menu Sections
     let rawSections: any[] = []
@@ -219,7 +242,7 @@ export async function GET(
       }
     }
 
-    // Build final sections array (only non-empty sections unless empty requested)
+    // Build final sections array (only non-empty sections)
     const finalSections = Array.from(sectionMap.values()).filter(sec => sec.itemsCount > 0)
 
     if (otherDishes.length > 0) {
@@ -233,6 +256,80 @@ export async function GET(
         sortOrder: 99,
         itemsCount: otherDishes.length,
         dishes: otherDishes
+      })
+    }
+
+    // 6. Add Shared Darkstore Cold Drinks & Ice Creams Sections
+    const coldDrinksDishes: any[] = []
+    const iceCreamsDishes: any[] = []
+
+    for (const item of darkstoreItems) {
+      if (search && !item.name.toLowerCase().includes(search) && !item.description?.toLowerCase().includes(search)) {
+        continue
+      }
+
+      const formattedGroceryItem = {
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        description: item.description,
+        imageUrl: item.imageUrl,
+        images: item.images,
+        price: item.price,
+        mrp: item.mrp,
+        discount: item.discount,
+        unit: item.unit,
+        stock: item.stock,
+        isAvailable: item.isAvailable,
+        isVeg: true,
+        isNonVeg: false,
+        variants: item.variants,
+        availableStartTime: null,
+        availableEndTime: null,
+        categoryId: item.categoryId,
+        categoryName: item.category?.name || 'Beverages & Desserts',
+        restaurantId: null, // Null indicates FastKirana Darkstore Item
+        isDarkstoreFulfillment: true,
+        sectionId: '',
+        sectionTitle: ''
+      }
+
+      if (item.category?.slug === 'beverages') {
+        formattedGroceryItem.sectionId = 'sec_chilled_drinks'
+        formattedGroceryItem.sectionTitle = 'Chilled Cold Drinks & Sodas'
+        coldDrinksDishes.push(formattedGroceryItem)
+      } else if (item.category?.slug === 'ice-cream') {
+        formattedGroceryItem.sectionId = 'sec_ice_creams'
+        formattedGroceryItem.sectionTitle = 'Ice Creams & Sweet Treats'
+        iceCreamsDishes.push(formattedGroceryItem)
+      }
+    }
+
+    if (coldDrinksDishes.length > 0) {
+      finalSections.push({
+        id: 'sec_chilled_drinks',
+        tag: 'chilled-drinks',
+        title: 'Chilled Cold Drinks & Sodas',
+        emoji: '🥤',
+        imageUrl: '/beverages_category.png',
+        description: 'Chilled soft drinks, energy boosts & refreshing coolers from FastKirana Darkstore',
+        sortOrder: 90,
+        itemsCount: coldDrinksDishes.length,
+        dishes: coldDrinksDishes
+      })
+    }
+
+    if (iceCreamsDishes.length > 0) {
+      finalSections.push({
+        id: 'sec_ice_creams',
+        tag: 'ice-creams',
+        title: 'Ice Creams & Sweet Treats',
+        emoji: '🍦',
+        imageUrl: '/icecream_category.png',
+        description: 'Creamy cones, family tubs, sundaes & kulfis from FastKirana Darkstore',
+        sortOrder: 91,
+        itemsCount: iceCreamsDishes.length,
+        dishes: iceCreamsDishes
       })
     }
 

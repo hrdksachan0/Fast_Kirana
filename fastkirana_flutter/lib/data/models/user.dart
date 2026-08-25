@@ -29,6 +29,30 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
   Map<String, dynamic> toJson() => _$UserToJson(this);
 
+  User copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? phone,
+    String? image,
+    String? role,
+    bool? isBlocked,
+    String? blockReason,
+    DateTime? createdAt,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      image: image ?? this.image,
+      role: role ?? this.role,
+      isBlocked: isBlocked ?? this.isBlocked,
+      blockReason: blockReason ?? this.blockReason,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   bool get isWorker => role != 'USER';
   bool get isAdmin => role == 'ADMIN';
 }

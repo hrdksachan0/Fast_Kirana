@@ -8,9 +8,15 @@ class AuthRepository {
 
   Future<AuthResponse> sendOtp(String identifier) async {
     try {
+      final clean = identifier.trim();
+
       final response = await dio.post(
-        '/api/auth/otp/send',
-        data: {'phone': identifier, 'email': identifier, 'identifier': identifier},
+        'https://www.fastkirana.in/api/auth/otp/send',
+        data: {
+          'email': clean,
+          'phone': clean,
+          'identifier': clean,
+        },
       );
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
@@ -20,9 +26,16 @@ class AuthRepository {
 
   Future<AuthResponse> verifyOtp(String identifier, String otp) async {
     try {
+      final clean = identifier.trim();
+
       final response = await dio.post(
-        '/api/auth/otp/verify',
-        data: {'phone': identifier, 'email': identifier, 'identifier': identifier, 'otp': otp},
+        'https://www.fastkirana.in/api/auth/otp/verify',
+        data: {
+          'email': clean,
+          'phone': clean,
+          'identifier': clean,
+          'otp': otp.trim(),
+        },
       );
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {

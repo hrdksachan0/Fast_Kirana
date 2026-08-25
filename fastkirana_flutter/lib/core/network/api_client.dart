@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
@@ -20,39 +21,45 @@ final dioProvider = Provider<Dio>((ref) {
         }
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('auth_token');
-        final rawUserData = prefs.getString('user_data');
-        String? userId = prefs.getString('user_id');
-        String? userEmail;
-        String? userName;
-        String? userRole;
-        String? userPhone;
-
-        if (rawUserData != null && rawUserData.isNotEmpty) {
-          try {
-            final json = jsonDecode(rawUserData) as Map<String, dynamic>;
-            userId ??= json['id']?.toString();
-            userEmail = json['email']?.toString();
-            userName = json['name']?.toString();
-            userRole = json['role']?.toString();
-            userPhone = json['phone']?.toString();
-          } catch (_) {}
-        }
-
-        // Real Admin / Default user identity in DB
-        userId ??= 'cmqgzqeud0000vkid7hd6mti4';
-        userEmail ??= 'admin@fastkirana.com';
-        userRole ??= 'ADMIN';
-        userPhone ??= '+917054470303';
-        userName ??= 'FastKirana Admin';
 
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
-        options.headers['x-user-id'] = userId;
-        options.headers['x-user-email'] = userEmail;
-        options.headers['x-user-name'] = userName;
-        options.headers['x-user-role'] = userRole;
-        options.headers['x-user-phone'] = userPhone;
+
+        if (!kIsWeb) {
+          final rawUserData = prefs.getString('user_data');
+          String? userId = prefs.getString('user_id');
+          String? userEmail;
+          String? userName;
+          String? userRole;
+          String? userPhone;
+
+          if (rawUserData != null && rawUserData.isNotEmpty) {
+            try {
+              final json = jsonDecode(rawUserData) as Map<String, dynamic>;
+              userId ??= json['id']?.toString();
+              userEmail = json['email']?.toString();
+              userName = json['name']?.toString();
+              userRole = json['role']?.toString();
+              userPhone = json['phone']?.toString();
+            } catch (_) {}
+          }
+
+          userId ??= 'cmqgzqeud0000vkid7hd6mti4';
+          userEmail ??= 'admin@fastkirana.com';
+          userRole ??= 'ADMIN';
+          userPhone ??= '+917054470303';
+          userName ??= 'FastKirana Admin';
+
+          final isAuthRoute = options.path.contains('/api/auth');
+          if (!isAuthRoute) {
+            options.headers['x-user-id'] = userId;
+            options.headers['x-user-email'] = userEmail;
+            options.headers['x-user-name'] = userName;
+            options.headers['x-user-role'] = userRole;
+            options.headers['x-user-phone'] = userPhone;
+          }
+        }
       } catch (_) {}
 
       return handler.next(options);
@@ -63,9 +70,7 @@ final dioProvider = Provider<Dio>((ref) {
           error.type == DioExceptionType.unknown;
 
       final currentBaseUrl = error.requestOptions.baseUrl;
-      final fallbackUrl = currentBaseUrl.contains('railway.app')
-          ? 'https://fast-kirana-0ezx.onrender.com'
-          : 'https://fastkirana-production.up.railway.app';
+      final fallbackUrl = 'https://www.fastkirana.in';
 
       if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
         try {

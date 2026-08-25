@@ -517,6 +517,59 @@ async def get_restaurant_menu(
             dish_dict["sectionTitle"] = "Kitchen Specials"
             other_dishes.append(dish_dict)
 
+    # Fetch shared darkstore beverages and ice creams
+    darkstore_stmt = select(Product).join(Product.category).where(
+        Product.restaurantId.is_(None),
+        Product.isAvailable == True,
+        Category.slug.in_(["beverages", "ice-cream"])
+    ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc())
+    darkstore_res = await db.execute(darkstore_stmt)
+    darkstore_items = darkstore_res.scalars().all()
+
+    cold_drinks = []
+    ice_creams = []
+
+    for d in darkstore_items:
+        if search:
+            q = search.lower()
+            if q not in d.name.lower() and (not d.description or q not in d.description.lower()):
+                continue
+
+        g_item = {
+            "id": d.id,
+            "name": d.name,
+            "slug": d.slug,
+            "description": d.description,
+            "imageUrl": d.imageUrl,
+            "price": d.price,
+            "mrp": d.mrp,
+            "discount": d.discount,
+            "unit": d.unit,
+            "stock": d.stock,
+            "isAvailable": d.isAvailable,
+            "isVeg": True,
+            "isNonVeg": False,
+            "variants": d.variants,
+            "availableStartTime": None,
+            "availableEndTime": None,
+            "categoryId": d.categoryId,
+            "restaurantId": None,
+            "isDarkstoreFulfillment": True,
+            "sectionId": "",
+            "sectionTitle": ""
+        }
+
+        # Check category slug via d.category if available, or query
+        cat_slug = getattr(d.category, "slug", "") if hasattr(d, "category") and d.category else ""
+        if "ice" in cat_slug or "ice-cream" in (d.tags or []):
+            g_item["sectionId"] = "sec_ice_creams"
+            g_item["sectionTitle"] = "Ice Creams & Sweet Treats"
+            ice_creams.append(g_item)
+        else:
+            g_item["sectionId"] = "sec_chilled_drinks"
+            g_item["sectionTitle"] = "Chilled Cold Drinks & Sodas"
+            cold_drinks.append(g_item)
+
     final_sections = [s for s in sections_map.values() if s["itemsCount"] > 0]
     if other_dishes:
         final_sections.append({
@@ -529,6 +582,32 @@ async def get_restaurant_menu(
             "sortOrder": 99,
             "itemsCount": len(other_dishes),
             "dishes": other_dishes
+        })
+
+    if cold_drinks:
+        final_sections.append({
+            "id": "sec_chilled_drinks",
+            "tag": "chilled-drinks",
+            "title": "Chilled Cold Drinks & Sodas",
+            "emoji": "🥤",
+            "imageUrl": "/beverages_category.png",
+            "description": "Chilled soft drinks, energy boosts & refreshing coolers from FastKirana Darkstore",
+            "sortOrder": 90,
+            "itemsCount": len(cold_drinks),
+            "dishes": cold_drinks
+        })
+
+    if ice_creams:
+        final_sections.append({
+            "id": "sec_ice_creams",
+            "tag": "ice-creams",
+            "title": "Ice Creams & Sweet Treats",
+            "emoji": "🍦",
+            "imageUrl": "/icecream_category.png",
+            "description": "Creamy cones, family tubs, sundaes & kulfis from FastKirana Darkstore",
+            "sortOrder": 91,
+            "itemsCount": len(ice_creams),
+            "dishes": ice_creams
         })
 
     final_sections.sort(key=lambda s: s["sortOrder"])
