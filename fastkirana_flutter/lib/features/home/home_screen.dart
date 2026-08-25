@@ -223,9 +223,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-
-            // Persistent Zepto/Blinkit style Floating Cart Bar
-            const FloatingCartBar(bottomOffset: 16),
           ],
         ),
       ),
