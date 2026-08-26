@@ -73,19 +73,21 @@ export async function POST(request: NextRequest) {
     const isNewOrUnnamedUser = !user || !user.name || user.name.startsWith('User ') || user.name === 'Customer' || user.name.trim() === ''
     const needsProfileSetup = isNewOrUnnamedUser
 
+    const cleanEmail = (user?.email && !user.email.startsWith('wa-') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
+
     return NextResponse.json({
       success: true,
       needsProfileSetup,
       token: `token_${user?.id || 'new'}_${Date.now()}`,
       id: user?.id || `user_${trimmed}`,
       name: user?.name || '',
-      email: user?.email || normalizedEmail,
+      email: cleanEmail,
       phone: user?.phone || trimmed,
       role: user?.role || 'USER',
       user: {
         id: user?.id || `user_${trimmed}`,
         name: user?.name || '',
-        email: user?.email || normalizedEmail,
+        email: cleanEmail,
         phone: user?.phone || trimmed,
         role: user?.role || 'USER',
         isBlocked: user?.isBlocked || false,
