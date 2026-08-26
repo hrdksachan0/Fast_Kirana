@@ -500,15 +500,16 @@ async def send_otp(
         from models import OtpToken
         from sqlalchemy import delete
         expires_at = datetime.utcnow() + timedelta(minutes=5)
-        phone_patterns = [phone, f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com"]
+        phone_patterns = [phone, f"+91{phone}", f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com", f"wa-{phone}@fastkirana.in"]
         await db.execute(delete(OtpToken).where(OtpToken.email.in_(phone_patterns)))
-        db_otp = OtpToken(
-            id=f"otp_{uuid.uuid4().hex[:20]}",
-            email=phone,
-            token=otp,
-            expiresAt=expires_at
-        )
-        db.add(db_otp)
+        for pattern in phone_patterns:
+            db_otp = OtpToken(
+                id=f"otp_{uuid.uuid4().hex[:20]}",
+                email=pattern,
+                token=otp,
+                expiresAt=expires_at
+            )
+            db.add(db_otp)
         await db.commit()
     except Exception as e:
         print(f"Error persisting OTPToken to database: {e}")
