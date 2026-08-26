@@ -23,7 +23,8 @@ final dioProvider = Provider<Dio>((ref) {
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('auth_token');
 
-        if (token != null && token.isNotEmpty) {
+        final isOtpRoute = options.path.contains('/api/auth/otp');
+        if (token != null && token.isNotEmpty && !isOtpRoute) {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
@@ -53,53 +54,19 @@ final dioProvider = Provider<Dio>((ref) {
             } catch (_) {}
           }
 
-          userId ??= 'cmqgzqeud0000vkid7hd6mti4';
-          userEmail ??= 'admin@fastkirana.com';
-          userRole ??= 'ADMIN';
-          userPhone ??= '+917054470303';
-          userName ??= 'FastKirana Admin';
-
-          options.headers['x-user-id'] = userId;
-          options.headers['x-user-email'] = userEmail;
-          options.headers['x-user-name'] = userName;
-          options.headers['x-user-role'] = userRole;
-          options.headers['x-user-phone'] = userPhone;
+          if (userId != null && userId.isNotEmpty) {
+            options.headers['x-user-id'] = userId;
+            if (userEmail != null) options.headers['x-user-email'] = userEmail;
+            if (userName != null) options.headers['x-user-name'] = userName;
+            if (userRole != null) options.headers['x-user-role'] = userRole;
+            if (userPhone != null) options.headers['x-user-phone'] = userPhone;
+          }
         }
       } catch (_) {}
 
       return handler.next(options);
     },
-    onError: (DioException error, ErrorInterceptorHandler handler) async {
-      final isConnectionError = error.type == DioExceptionType.connectionError ||
-          error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.unknown;
-
-      final currentBaseUrl = error.requestOptions.baseUrl;
-      final fallbackUrl = 'https://www.fastkirana.in';
-
-      if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
-        try {
-          final targetPath = error.requestOptions.path.startsWith('http')
-              ? error.requestOptions.path
-              : '$fallbackUrl${error.requestOptions.path}';
-
-          final fallbackDio = Dio(BaseOptions(
-            connectTimeout: const Duration(seconds: 20),
-            receiveTimeout: const Duration(seconds: 20),
-          ));
-
-          final retryResponse = await fallbackDio.request(
-            targetPath,
-            data: error.requestOptions.data,
-            queryParameters: error.requestOptions.queryParameters,
-            options: Options(
-              method: error.requestOptions.method,
-              headers: error.requestOptions.headers,
-            ),
-          );
-          return handler.resolve(retryResponse);
-        } catch (_) {}
-      }
+    onError: (DioException error, ErrorInterceptorHandler handler) {
       return handler.next(error);
     },
   ));

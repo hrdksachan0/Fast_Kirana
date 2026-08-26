@@ -188,7 +188,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF059669)),
                           const SizedBox(width: 4),
                           Text(
-                            '10 MINS DELIVERY',
+                            'FAST DELIVERY',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
@@ -347,7 +347,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                       child: Column(
                         children: [
-                          _buildQualityRow('⚡ Superfast 10-min delivery from local darkstore'),
+                          _buildQualityRow('⚡ Superfast express delivery from local darkstore'),
                           const Divider(height: 16, color: Color(0xFFF3F4F6)),
                           _buildQualityRow('🛡️ 100% Genuine & Quality assured by FastKirana'),
                           const Divider(height: 16, color: Color(0xFFF3F4F6)),

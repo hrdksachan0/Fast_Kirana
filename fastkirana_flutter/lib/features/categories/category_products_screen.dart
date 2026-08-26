@@ -118,7 +118,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                 const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF059669)),
                 const SizedBox(width: 2),
                 Text(
-                  'EXPRESS DELIVERY',
+                  'FAST DELIVERY',
                   style: GoogleFonts.inter(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w800,

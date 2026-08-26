@@ -104,30 +104,59 @@ class AuthRepository {
 
   AuthResponse _parseSessionResponse(dynamic data) {
     final json = data is Map<String, dynamic> ? data : {};
-    final id = json['id']?.toString() ?? '';
     final token = json['token']?.toString();
-    final role = json['role']?.toString() ?? 'USER';
 
-    if (id.isEmpty) {
-      return AuthResponse(success: false, user: null, token: token);
+    // 1. Next.js / nested user format: { "user": { "id": "...", ... }, "token": "..." }
+    if (json['user'] is Map) {
+      final u = json['user'] as Map;
+      final id = u['id']?.toString() ?? '';
+      if (id.isNotEmpty) {
+        final user = User(
+          id: id,
+          name: u['name']?.toString(),
+          email: u['email']?.toString() ?? '',
+          phone: u['phone']?.toString(),
+          role: u['role']?.toString() ?? 'USER',
+          isBlocked: u['isBlocked'] == true,
+        );
+        return AuthResponse(success: true, user: user, token: token);
+      }
     }
 
-    final user = User(
-      id: id,
-      name: json['name']?.toString(),
-      email: json['email']?.toString() ?? '',
-      phone: json['phone']?.toString(),
-      role: role,
-      isBlocked: false,
-    );
+    // 2. FastAPI flat format: { "id": "...", "name": "...", "email": "...", "token": "..." }
+    final id = json['id']?.toString() ?? '';
+    final role = json['role']?.toString() ?? 'USER';
 
-    return AuthResponse(success: true, user: user, token: token);
+    if (id.isNotEmpty) {
+      final user = User(
+        id: id,
+        name: json['name']?.toString(),
+        email: json['email']?.toString() ?? '',
+        phone: json['phone']?.toString(),
+        role: role,
+        isBlocked: false,
+      );
+      return AuthResponse(success: true, user: user, token: token);
+    }
+
+    // 3. Fallback if success flag is true
+    if (json['success'] == true) {
+      return AuthResponse(success: true, user: null, token: token);
+    }
+
+    return AuthResponse(success: false, user: null, token: token);
   }
 
   Exception _handleError(DioException e) {
     if (e.response != null) {
-      final message =
-          e.response?.data['error'] ?? 'Something went wrong';
+      final data = e.response?.data;
+      String message = 'Something went wrong';
+      if (data is Map) {
+        message = data['detail']?.toString() ??
+            data['error']?.toString() ??
+            data['message']?.toString() ??
+            'Something went wrong';
+      }
       return ApiException(message, e.response?.statusCode);
     }
     return ApiException('Network error. Please check your connection.');

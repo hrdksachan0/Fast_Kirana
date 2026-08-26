@@ -558,7 +558,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final description = currentRestaurant?.description;
     final ratingVal = currentRestaurant?.rating ?? 4.5;
     final totalReviews = reviewsAsync.valueOrNull?['totalCount'] ?? currentRestaurant?.totalRatings ?? 8;
-    final deliveryTime = currentRestaurant?.deliveryTime ?? '30-40 min';
+    final deliveryTime = currentRestaurant?.deliveryTime ?? 'Hot & Fresh';
     final cuisineTags = currentRestaurant?.cuisineTags ?? ['BURGERS', 'BEVERAGES', 'SHAKES', 'PIZZA'];
     final isPureVeg = currentRestaurant?.isPureVeg ?? true;
 

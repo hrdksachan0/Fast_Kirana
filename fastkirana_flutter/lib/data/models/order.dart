@@ -133,7 +133,7 @@ class Order {
     this.items,
   });
 
-  static OrderStatus _parseStatus(dynamic val) {
+  static OrderStatus parseStatus(dynamic val) {
     if (val == null) return OrderStatus.pending;
     final str = val.toString().toLowerCase().trim();
     if (str.contains('confirm')) return OrderStatus.confirmed;
@@ -208,7 +208,7 @@ class Order {
       userId: json['userId']?.toString() ?? '',
       addressId: json['addressId']?.toString() ?? '',
       restaurantId: json['restaurantId']?.toString(),
-      status: _parseStatus(json['status']),
+      status: parseStatus(json['status']),
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,

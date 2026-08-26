@@ -37,11 +37,6 @@ class AddressRepository {
       } catch (_) {}
     }
 
-    if (localAddresses.isEmpty) {
-      localAddresses = [defaultGhatampurAddress];
-      await _saveToCache(localAddresses);
-    }
-
     try {
       final response = await dio.get('/api/addresses');
       if (response.data is List) {

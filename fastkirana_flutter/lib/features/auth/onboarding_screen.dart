@@ -18,7 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, String>> _pages = const [
     {
       'emoji': '⚡',
-      'title': '10-Minute Grocery Delivery',
+      'title': 'Lightning-Fast Delivery',
       'subtitle': 'Fresh groceries, daily staples, fruits & vegetables delivered right to your doorstep in minutes.',
     },
     {

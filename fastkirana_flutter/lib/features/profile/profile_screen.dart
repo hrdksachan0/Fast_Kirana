@@ -479,7 +479,7 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '10-Min Free Delivery on orders above ₹199',
+                            'Free Express Delivery on orders above ₹199',
                             style: GoogleFonts.inter(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
@@ -671,7 +671,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                'Log in for 10-min fast delivery',
+                'Log in for express fast delivery',
                 style: GoogleFonts.inter(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,

@@ -33,7 +33,7 @@ class Restaurant {
     this.cuisineTags = const [],
     this.rating = 4.5,
     this.totalRatings = 120,
-    this.deliveryTime = '25-30 min',
+    this.deliveryTime = 'Hot & Fresh',
     this.priceForTwo = '₹250 for two',
     this.isPureVeg = false,
     this.isOpen = true,
@@ -73,7 +73,7 @@ class Restaurant {
       totalRatings: json['reviewCount'] != null
           ? int.tryParse(json['reviewCount'].toString()) ?? 0
           : (json['totalRatings'] != null ? int.tryParse(json['totalRatings'].toString()) ?? 0 : 0),
-      deliveryTime: json['deliveryTime']?.toString() ?? '25-30 min',
+      deliveryTime: json['deliveryTime']?.toString() ?? 'Hot & Fresh',
       priceForTwo: json['priceForTwo']?.toString() ?? '₹250 for two',
       isPureVeg: json['isPureVeg'] == true,
       isOpen: json['isOpen'] != false,

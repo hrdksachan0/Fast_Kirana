@@ -416,7 +416,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your delivery address in Ghatampur for fast 10-minute grocery and food deliveries.',
+              'Add your delivery address in Ghatampur for fast grocery and food deliveries.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 13,

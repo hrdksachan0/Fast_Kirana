@@ -4,7 +4,16 @@
       "Bash(d:/flutter/bin/flutter analyze *)",
       "Bash(d:/flutter/bin/flutter build *)",
       "Bash(\"C:/flutter/bin/flutter\" --version)",
-      "Bash(/c/flutter/bin/flutter --version)"
+      "Bash(/c/flutter/bin/flutter --version)",
+      "Bash(flutter analyze *)",
+      "Bash(where flutter *)",
+      "Read(//c/flutter/**)",
+      "Read(//d/flutter/bin/**)",
+      "Read(//d//**)",
+      "Bash(\"C:/flutter/bin/flutter.bat\" analyze *2)",
+      "Bash(/d/flutter/bin/flutter.bat *)",
+      "Bash(git checkout *)",
+      "Bash(curl *)"
     ]
   }
 }

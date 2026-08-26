@@ -384,7 +384,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              'Enabling location helps us reach you quickly with accurate 10-min delivery in Ghatampur',
+                              'Enabling location helps us reach you quickly with accurate delivery estimates in Ghatampur',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 12.5,
@@ -872,7 +872,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                         const Text('⚡', style: TextStyle(fontSize: 11)),
                         const SizedBox(width: 3),
                         Text(
-                          '10 MINS',
+                          'FAST',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -1022,7 +1022,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Delivered to your doorstep in minutes',
+                          'Delivered fast to your doorstep',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,

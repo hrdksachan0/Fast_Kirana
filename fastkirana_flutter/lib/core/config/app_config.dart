@@ -4,7 +4,7 @@ class AppConfig {
   // Base URLs
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://fastkirana-fastkirana.up.railway.app',
+    defaultValue: 'https://fastkirana-production-a4b8.up.railway.app',
   );
 
   static const String webStorefrontUrl = String.fromEnvironment(

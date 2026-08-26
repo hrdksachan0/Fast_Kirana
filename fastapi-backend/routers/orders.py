@@ -600,10 +600,11 @@ async def create_order(
                             if coupon.maxDiscount:
                                 combined_discount = min(combined_discount, coupon.maxDiscount)
 
-    # Taxes and fees
-    server_misc_fee = float(settings_map.get("misc_fee", 0.0))
-    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0
-    resolved_packaging_fee = 15.0 if is_premium_packaging else 0.0
+    # Packaging and handling charge
+    server_misc_fee = float(settings_map.get("misc_fee", 5.0))
+    packaging_fee_input = float(payload.get("packagingFee", payload.get("packaging_fee", 0.0)))
+    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input > 0
+    resolved_packaging_fee = packaging_fee_input if packaging_fee_input > 0 else (15.0 if is_premium_packaging else (server_misc_fee if restaurant_id else 5.0))
 
     def get_order_subtotal(item_list: list) -> float:
         sub = 0.0
@@ -833,6 +834,7 @@ async def create_order(
             "deliveryFee": float(main_order.deliveryFee or 0),
             "taxes": float(main_order.taxes or 0),
             "miscFee": float(main_order.miscFee or 0),
+            "packagingFee": float(main_order.miscFee or 0),
             "total": float(main_order.total or 0),
             "paymentMethod": main_order.paymentMethod.value,
             "paymentStatus": main_order.paymentStatus.value,
@@ -1019,7 +1021,8 @@ async def list_orders(
                 "paymentStatus": o.paymentStatus.value,
                 "deliveryMethod": o.deliveryMethod or "DELIVERY",
                 "createdAt": o.createdAt.isoformat() if o.createdAt else None,
-                "shopName": o.shopName,
+                "shopName": o.shopName or ("FastKirana DarkStore" if not o.restaurantId else "Restaurant"),
+                "restaurantId": o.restaurantId,
                 "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl} for i in o.items],
                 "address": {
                     "id": o.address.id,
@@ -1062,7 +1065,8 @@ async def list_orders(
                 "paymentStatus": main_order.paymentStatus.value,
                 "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
                 "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
-                "shopName": main_order.shopName,
+                "shopName": main_order.shopName or ("FastKirana DarkStore" if not main_order.restaurantId else "Restaurant"),
+                "restaurantId": main_order.restaurantId,
                 "items": all_items,
                 "address": {
                     "id": main_order.address.id,

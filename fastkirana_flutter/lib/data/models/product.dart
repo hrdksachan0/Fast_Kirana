@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Product {
   final String id;
   final String name;
@@ -174,8 +176,16 @@ class Product {
 
   List<ProductVariant> get parsedVariants {
     if (variants == null) return [];
-    if (variants is List) {
-      return (variants as List).map((v) {
+    dynamic listData = variants;
+    if (variants is String) {
+      try {
+        listData = jsonDecode(variants as String);
+      } catch (_) {
+        return [];
+      }
+    }
+    if (listData is List) {
+      return listData.map((v) {
         if (v is Map) {
           final vMap = Map<String, dynamic>.from(v);
           final p = double.tryParse(vMap['price']?.toString() ?? '') ?? price;
@@ -269,7 +279,7 @@ class RestaurantInfo {
         logoUrl: json['logoUrl']?.toString(),
         bannerUrl: json['bannerUrl']?.toString(),
         rating: double.tryParse(json['rating']?.toString() ?? '4.5') ?? 4.5,
-        deliveryTime: json['deliveryTime']?.toString() ?? '25-30 min',
+        deliveryTime: json['deliveryTime']?.toString() ?? 'Fast Delivery',
         isOpen: json['isOpen'] != false,
       );
 

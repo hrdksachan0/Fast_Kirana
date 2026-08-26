@@ -636,7 +636,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const Text('⚡', style: TextStyle(fontSize: 11)),
                 const SizedBox(width: 3),
                 Text(
-                  'Fast Delivery in 10-15 mins',
+                  'Express Delivery',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -1466,7 +1466,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Station Road Market, Ghatampur • Ready in 5-10 mins (₹0 fee)',
+            'Station Road Market, Ghatampur • Ready for pickup in minutes (₹0 fee)',
             style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF047857)),
           ),
         ],

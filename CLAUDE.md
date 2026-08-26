@@ -1,6 +1,6 @@
 # FastKirana — Complete Codebase & System Architecture Guide
 
-> **FastKirana** is an ultra-fast, 10-minute Quick-Commerce & Multi-Restaurant Food Delivery platform built for Tier-2/3 Indian cities (Ghatampur / Kanpur Nagar).
+> **FastKirana** is an ultra-fast Quick-Commerce & Multi-Restaurant Food Delivery platform built for Tier-2/3 Indian cities (Ghatampur / Kanpur Nagar).
 
 ---
 

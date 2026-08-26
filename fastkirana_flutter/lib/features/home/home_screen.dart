@@ -65,7 +65,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ];
 
   static const Map<String, dynamic> _heroPromoBanner = {
-    'type': 'express-delivery',
+    'type': 'fast-delivery',
     'tag': 'FAST DELIVERY IN',
     'title': 'Ghatampur',
     'subtitle': 'Milk, Fruits, Vegetables, Snacks & more',
@@ -437,7 +437,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ? selectedAddress.area.isNotEmpty
                             ? selectedAddress.area
                             : selectedAddress.fullAddress
-                        : 'Express Delivery Zone';
+                        : 'Fast Delivery Zone';
 
                     return GestureDetector(
                       onTap: () {
@@ -2444,7 +2444,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Fresh dairy, fruits & daily essentials in 10-15 mins',
+              'Fresh dairy, fruits & daily essentials — delivered fast',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
@@ -2591,7 +2591,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          'HOT & FRESH • 25-30 MINS ⚡',
+                          'HOT & FRESH ⚡',
                           style: GoogleFonts.inter(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w900,

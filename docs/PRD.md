@@ -7,7 +7,7 @@
 ---
 
 ## 1. Executive Summary & Product Vision
-FastKirana is an enterprise-grade **Quick-Commerce & Hyperlocal Food Delivery Platform** that combines **10-Minute Dark Store Grocery Delivery** with **Hot Restaurant/Cafe Food Delivery** into a single unified customer experience.
+FastKirana is an enterprise-grade **Quick-Commerce & Hyperlocal Food Delivery Platform** that combines **Dark Store Grocery Delivery** with **Hot Restaurant/Cafe Food Delivery** into a single unified customer experience.
 
 ### Key Differentiators:
 - **Dual Experience Switcher**: Seamless 1-tap toggling between `🛒 Grocery Mode` and `☕ Food/Cafe Mode`.
@@ -21,7 +21,7 @@ FastKirana is an enterprise-grade **Quick-Commerce & Hyperlocal Food Delivery Pl
 
 | Persona | Primary Goal | Core Interfaces Used |
 | :--- | :--- | :--- |
-| **End Customer** | Order groceries & hot food in under 10 mins with zero friction | Web App, Flutter iOS/Android |
+| **End Customer** | Order groceries & hot food fast with zero friction | Web App, Flutter iOS/Android |
 | **Dark Store Picker** | Fulfill grocery item picking lists within 120 seconds | Picker Web/Mobile Console |
 | **Restaurant Kitchen Chef** | Receive KOT food orders, track prep timer, print receipt | Kitchen Console & KOT Printer |
 | **Delivery Rider** | Complete multi-pickup orders and collect Cash-on-Delivery (COD) | Delivery Rider Console & Wallet |

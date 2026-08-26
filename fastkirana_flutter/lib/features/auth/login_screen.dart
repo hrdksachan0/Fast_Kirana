@@ -162,7 +162,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ).animate().fadeIn(duration: 400.ms, delay: 250.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 250.ms, curve: Curves.easeOutCubic),
                         const SizedBox(height: 6),
                         Text(
-                          'Ghatampur\'s 10-Minute Grocery & Food App',
+                          'Ghatampur\'s Fast Grocery & Food App',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 13,

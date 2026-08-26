@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
                   Text('Our Story', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 12),
                   Text(
-                    'FastKirana brings the local kirana store to your fingertips. We deliver fresh groceries, daily essentials, and cafe delights in under 30 minutes. From farm to your home, we ensure quality and freshness at the best prices.',
+                    'FastKirana brings the local kirana store to your fingertips. We deliver fresh groceries, daily essentials, and cafe delights fast — from farm to your home, we ensure quality and freshness at the best prices.',
                     style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary, height: 1.6),
                   ),
                 ],

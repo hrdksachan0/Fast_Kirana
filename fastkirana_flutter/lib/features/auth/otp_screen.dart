@@ -46,7 +46,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   Future<void> _handleVerifyOtp() async {
-    final otp = _otpControllers.map((c) => c.text).join();
+    final rawOtp = _otpControllers.map((c) => c.text).join().replaceAll(RegExp(r'\D'), '');
+    final otp = rawOtp.length > 6 ? rawOtp.substring(0, 6) : rawOtp;
     if (otp.length != 6) {
       _showError('Please enter the complete 6-digit OTP');
       return;

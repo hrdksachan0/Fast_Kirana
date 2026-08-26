@@ -34,7 +34,7 @@ class StoreSettings {
     this.groceryMartOpen = true,
     this.cafeOpen = true,
     this.restaurantOpen = true,
-    this.avgDeliveryTime = '10-15 min',
+    this.avgDeliveryTime = 'Fast',
     this.adminWhatsappPhone = '7054470303',
     this.contactPhone = '+917054470303',
     this.supportPhone = '8112849854',
@@ -76,7 +76,7 @@ class StoreSettings {
       groceryMartOpen: parseBool(json['grocery_mart_open'], true),
       cafeOpen: parseBool(json['cafe_open'], true),
       restaurantOpen: parseBool(json['restaurant_open'], true),
-      avgDeliveryTime: json['avg_delivery_time']?.toString() ?? '10-15 min',
+      avgDeliveryTime: json['avg_delivery_time']?.toString() ?? 'Fast',
       adminWhatsappPhone: json['admin_whatsapp_phone']?.toString().isNotEmpty == true
           ? json['admin_whatsapp_phone'].toString()
           : (json['admin_phone']?.toString().isNotEmpty == true
