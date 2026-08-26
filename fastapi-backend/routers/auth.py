@@ -170,6 +170,7 @@ class OTPVerifyRequest(BaseModel):
 
 
 class SessionResponse(BaseModel):
+    success: Optional[bool] = True
     id: str
     email: str
     name: Optional[str]
@@ -177,6 +178,7 @@ class SessionResponse(BaseModel):
     phone: Optional[str]
     assignedRestaurantId: Optional[str] = None
     token: Optional[str] = None
+    user: Optional[Dict[str, Any]] = None
 
 
 class MessageResponse(BaseModel):
@@ -704,6 +706,7 @@ async def verify_otp(
     })
 
     return SessionResponse(
+        success=True,
         id=user.id,
         email=clean_email,
         name=user.name,
@@ -711,6 +714,14 @@ async def verify_otp(
         phone=user.phone,
         assignedRestaurantId=user.assignedRestaurantId,
         token=token,
+        user={
+            "id": user.id,
+            "email": clean_email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
