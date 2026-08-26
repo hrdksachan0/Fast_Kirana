@@ -4,7 +4,7 @@ class AppConfig {
   // Base URLs
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    defaultValue: 'https://fastkirana-fastkirana.up.railway.app',
   );
 
   static const String webStorefrontUrl = String.fromEnvironment(
