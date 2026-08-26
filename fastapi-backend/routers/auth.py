@@ -559,7 +559,7 @@ async def verify_otp(
     """
     raw_ident = body.phone or body.email or ""
     phone = normalize_phone(raw_ident)
-    entered_otp = body.otp.strip()
+    entered_otp = "".join(c for c in (body.otp or "") if c.isdigit())
 
     cached = _otp_cache.get(phone)
     is_valid = False
