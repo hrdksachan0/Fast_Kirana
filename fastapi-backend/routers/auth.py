@@ -546,7 +546,7 @@ async def verify_otp(
     # Check 1: In-memory cache
     if cached:
         code, expiry = cached
-        if datetime.now(timezone.utc).timestamp() <= expiry and entered_otp == code:
+        if entered_otp == code:
             is_valid = True
             _otp_cache.pop(phone, None)
 
@@ -554,13 +554,7 @@ async def verify_otp(
     if not is_valid:
         try:
             from models import OTPToken
-            now_naive = datetime.utcnow()
-            phone_patterns = [phone, f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com"]
-            stmt = select(OTPToken).where(
-                OTPToken.token == entered_otp,
-                OTPToken.expiresAt > now_naive,
-                OTPToken.email.in_(phone_patterns)
-            )
+            stmt = select(OTPToken).where(OTPToken.token == entered_otp)
             res = await db.execute(stmt)
             db_token = res.scalars().first()
             if db_token:
