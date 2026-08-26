@@ -518,9 +518,30 @@ async def send_otp(
     # Persist OTP in database otp_tokens table for multi-worker / multi-backend verification
     try:
         from models import OtpToken
-        from sqlalchemy import delete
-        expires_at = datetime.utcnow() + timedelta(minutes=5)
-        phone_patterns = [phone, f"+91{phone}", f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com", f"wa-{phone}@fastkirana.in"]
+        from sqlalchemy import delete, or_
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+        
+        # Also find any existing user emails associated with this phone
+        stmt_users = select(User).where(
+            or_(
+                User.phone.like(f"%{phone}%"),
+                User.email.like(f"%{phone}%")
+            )
+        )
+        res_users = await db.execute(stmt_users)
+        existing_users = res_users.scalars().all()
+        user_emails = [u.email for u in existing_users if u.email]
+
+        phone_patterns = list(set([
+            phone,
+            f"+91{phone}",
+            f"91{phone}",
+            f"wa-91{phone}@fastkirana.in",
+            f"wa-{phone}@fastkirana.com",
+            f"wa-91{phone}@fastkirana.com",
+            f"wa-{phone}@fastkirana.in"
+        ] + user_emails))
+
         await db.execute(delete(OtpToken).where(OtpToken.email.in_(phone_patterns)))
         for pattern in phone_patterns:
             db_otp = OtpToken(
@@ -557,7 +578,7 @@ async def verify_otp(
     Verify OTP and create/login user via WhatsApp / Phone.
     Checks in-memory cache, PostgreSQL otp_tokens table, and backup bypass code.
     """
-    from sqlalchemy import or_, and_
+    from sqlalchemy import or_, and_, select
     from models import OtpToken
 
     raw_ident = body.phone or body.email or ""
@@ -577,69 +598,67 @@ async def verify_otp(
             if entered_otp == code:
                 is_valid = True
                 _otp_cache.pop(p_key, None)
-                print(f"[OTP-VERIFY] ✅ Cache match!")
+                print("[OTP-VERIFY] Cache match!")
                 break
 
     # Check 2: Database otp_tokens table (shared between Next.js & FastAPI)
     if not is_valid:
         try:
-            phone_patterns = [phone, f"+91{phone}", f"91{phone}", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com", f"wa-{phone}@fastkirana.in", f"wa-91{phone}@fastkirana.in"]
-            print(f"[OTP-VERIFY] Checking DB with patterns={phone_patterns}")
-            stmt = select(OtpToken).where(
-                and_(
-                    OtpToken.token == entered_otp,
-                    or_(
-                        OtpToken.email.in_(phone_patterns),
-                        OtpToken.email.like(f"%{phone}%")
-                    )
-                )
-            )
-            res = await db.execute(stmt)
-            db_token = res.scalars().first()
-            if not db_token:
-                # Fallback: check any matching active token in DB
-                print(f"[OTP-VERIFY] No pattern match, trying global token lookup")
-                stmt_any = select(OtpToken).where(OtpToken.token == entered_otp)
-                res_any = await db.execute(stmt_any)
-                db_token = res_any.scalars().first()
+            # Check if any token matches the entered OTP directly
+            stmt_any = select(OtpToken).where(OtpToken.token == entered_otp)
+            res_any = await db.execute(stmt_any)
+            db_tokens = res_any.scalars().all()
 
-            if db_token:
+            if db_tokens:
+                # If ANY token in the database matches the entered 6-digit code
                 is_valid = True
-                print(f"[OTP-VERIFY] ✅ DB match! email={db_token.email}")
-                try:
-                    await db.delete(db_token)
-                    await db.commit()
-                except Exception:
-                    await db.rollback()
+                print(f"[OTP-VERIFY] DB match found for entered_otp={entered_otp}")
+                for dt in db_tokens:
+                    try:
+                        await db.delete(dt)
+                    except Exception:
+                        pass
+                await db.commit()
             else:
-                print(f"[OTP-VERIFY] ❌ No DB match found")
+                print(f"[OTP-VERIFY] No DB match found for entered_otp={entered_otp}")
         except Exception as e:
             print(f"[OTP-VERIFY] Error checking OtpToken in DB: {e}")
 
     # Check 3: Emergency testing code
     if not is_valid and entered_otp in ("123456", "654321"):
         is_valid = True
-        print(f"[OTP-VERIFY] ✅ Test code bypass")
+        print("[OTP-VERIFY] Test code bypass")
 
     if not is_valid:
-        print(f"[OTP-VERIFY] ❌ FINAL REJECTION for phone={phone}, otp={entered_otp}")
+        print(f"[OTP-VERIFY] FINAL REJECTION for phone={phone}, otp={entered_otp}")
         raise HTTPException(status_code=400, detail="Invalid or expired OTP code")
 
-    print(f"[OTP-VERIFY] ✅ OTP verified for phone={phone}")
+    print(f"[OTP-VERIFY] OTP verified successfully for phone={phone}")
 
     # Find or create user matching any phone pattern (+91, 10-digits, wa- email)
     phone_patterns = [phone, f"+91{phone}", f"91{phone}"]
     email_patterns = [f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.in"]
 
-    result = await db.execute(
-        select(User).where(
-            or_(
-                User.phone.in_(phone_patterns),
-                User.email.in_(email_patterns)
-            )
+    stmt_u = select(User).where(
+        or_(
+            User.phone.in_(phone_patterns),
+            User.phone.like(f"%{phone}%"),
+            User.email.in_(email_patterns),
+            User.email.like(f"%{phone}%")
         )
     )
-    user = result.scalars().first()
+    result = await db.execute(stmt_u)
+    matching_users = result.scalars().all()
+
+    # Prefer USER role account for mobile customers, fallback to first account
+    user = None
+    for u in matching_users:
+        role_str = u.role.value if hasattr(u.role, 'value') else str(u.role)
+        if role_str == "USER":
+            user = u
+            break
+    if not user and matching_users:
+        user = matching_users[0]
 
     if not user:
         try:
@@ -658,14 +677,7 @@ async def verify_otp(
             await db.refresh(user)
         except Exception:
             await db.rollback()
-            res_retry = await db.execute(
-                select(User).where(
-                    or_(
-                        User.phone.in_(phone_patterns),
-                        User.email.in_(email_patterns)
-                    )
-                )
-            )
+            res_retry = await db.execute(stmt_u)
             user = res_retry.scalars().first()
 
     if not user:
