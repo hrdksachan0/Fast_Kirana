@@ -1,10 +1,13 @@
 // FastKirana App Configuration & Environment Variables
 
 class AppConfig {
-  // Base URLs
+  // Production Multi-Host URLs (Zero DNS Failure)
+  static const String primaryApiUrl = 'https://www.fastkirana.in';
+  static const String secondaryApiUrl = 'https://fastkirana-production-a4b8.up.railway.app';
+
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://fastkirana-production-a4b8.up.railway.app',
+    defaultValue: primaryApiUrl,
   );
 
   static const String webStorefrontUrl = String.fromEnvironment(

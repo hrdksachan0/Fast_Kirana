@@ -50,23 +50,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authRepo = AuthRepository(ref.read(dioProvider));
-      try {
-        await authRepo.sendOtp(phone);
-      } catch (e) {
-        debugPrint('sendOtp API notice: $e');
-      }
+      await authRepo.sendOtp(phone);
 
       if (!mounted) return;
       Navigator.push(
         context,
         FadeSlideRoute(page: OtpScreen(identifier: phone)),
       );
+    } on DioException catch (e) {
+      if (mounted) {
+        final msg = e.response?.data?['detail'] ??
+            e.response?.data?['message'] ??
+            'Failed to send OTP. Please try again.';
+        setState(() => _errorMessage = msg);
+      }
     } catch (e) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        FadeSlideRoute(page: OtpScreen(identifier: phone)),
-      );
+      if (mounted) {
+        setState(() => _errorMessage = 'Network error. Check your connection.');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

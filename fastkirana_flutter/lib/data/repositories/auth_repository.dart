@@ -7,41 +7,32 @@ class AuthRepository {
   AuthRepository(this.dio);
 
   Future<AuthResponse> sendOtp(String identifier) async {
-    try {
-      final clean = identifier.trim();
-      final response = await dio.post(
-        '/api/auth/otp/send',
-        data: {
-          'phone': clean,
-          'email': clean,
-        },
-      );
-      // FastAPI / Next.js response handling
-      return AuthResponse(
-        success: true,
-        user: null,
-        token: null,
-      );
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
+    final clean = identifier.trim();
+    final response = await dio.post(
+      '/api/auth/otp/send',
+      data: {
+        'phone': clean,
+      },
+    );
+    // FastAPI returns: { "message": "OTP sent via WhatsApp successfully" }
+    // If we got here without exception, OTP was sent successfully
+    return AuthResponse(
+      success: true,
+      user: null,
+      token: null,
+    );
   }
 
   Future<AuthResponse> verifyOtp(String identifier, String otp) async {
-    try {
-      final clean = identifier.trim();
-      final response = await dio.post(
-        '/api/auth/otp/verify',
-        data: {
-          'phone': clean,
-          'email': clean,
-          'otp': otp.trim(),
-        },
-      );
-      return _parseSessionResponse(response.data);
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
+    final clean = identifier.trim();
+    final response = await dio.post(
+      '/api/auth/otp/verify',
+      data: {
+        'phone': clean,
+        'otp': otp.trim(),
+      },
+    );
+    return _parseSessionResponse(response.data);
   }
 
   Future<AuthResponse> login(String email, String password) async {

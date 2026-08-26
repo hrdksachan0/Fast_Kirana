@@ -580,7 +580,7 @@ async def send_otp(
         if sms_sent:
             return MessageResponse(message="OTP sent via SMS successfully")
 
-    return MessageResponse(message=f"OTP sent: {otp}")
+    raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
 
 
 @router.post("/otp/verify", response_model=SessionResponse)
@@ -615,16 +615,38 @@ async def verify_otp(
                 print("[OTP-VERIFY] Cache match!")
                 break
 
-    # Check 2: Database otp_tokens table (shared between Next.js & FastAPI)
+    # Check 2: Database otp_tokens table — match OTP AND phone pattern AND not expired
     if not is_valid:
         try:
-            # Check if any token matches the entered OTP directly
-            stmt_any = select(OtpToken).where(OtpToken.token == entered_otp)
-            res_any = await db.execute(stmt_any)
-            db_tokens = res_any.scalars().all()
+            stmt_users = select(User).where(
+                or_(
+                    User.phone.like(f"%{phone}%"),
+                    User.email.like(f"%{phone}%")
+                )
+            )
+            res_users = await db.execute(stmt_users)
+            existing_users = res_users.scalars().all()
+            user_emails = [u.email for u in existing_users if u.email]
+
+            phone_patterns = list(set([
+                phone,
+                f"+91{phone}",
+                f"91{phone}",
+                f"wa-91{phone}@fastkirana.in",
+                f"wa-{phone}@fastkirana.in",
+                f"wa-91{phone}@fastkirana.com",
+                f"wa-{phone}@fastkirana.com",
+            ] + user_emails))
+
+            stmt = select(OtpToken).where(
+                OtpToken.token == entered_otp,
+                OtpToken.email.in_(phone_patterns),
+                OtpToken.expiresAt > datetime.utcnow()
+            )
+            res = await db.execute(stmt)
+            db_tokens = res.scalars().all()
 
             if db_tokens:
-                # If ANY token in the database matches the entered 6-digit code
                 is_valid = True
                 print(f"[OTP-VERIFY] DB match found for entered_otp={entered_otp}")
                 for dt in db_tokens:
@@ -637,11 +659,6 @@ async def verify_otp(
                 print(f"[OTP-VERIFY] No DB match found for entered_otp={entered_otp}")
         except Exception as e:
             print(f"[OTP-VERIFY] Error checking OtpToken in DB: {e}")
-
-    # Check 3: Emergency testing code
-    if not is_valid and entered_otp in ("123456", "654321"):
-        is_valid = True
-        print("[OTP-VERIFY] Test code bypass")
 
     if not is_valid:
         print(f"[OTP-VERIFY] FINAL REJECTION for phone={phone}, otp={entered_otp}")

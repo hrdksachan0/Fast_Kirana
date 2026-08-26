@@ -117,8 +117,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    // 3-Second Live Order Sync with Admin Updates
-    _orderSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Live Order Sync with Admin Updates (15s — SSE handles real-time, this is fallback)
+    _orderSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) {
         ref.invalidate(ordersProvider(''));
       }

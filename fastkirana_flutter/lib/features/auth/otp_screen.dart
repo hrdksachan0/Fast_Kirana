@@ -56,14 +56,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     try {
       final authRepo = AuthRepository(ref.read(dioProvider));
       final response = await authRepo.verifyOtp(widget.identifier, otp);
-      if (response.success) {
+
+      if (response.success && response.token != null) {
         final prefs = await SharedPreferences.getInstance();
+
+        // Build user from response — no fabrication
         User user = response.user ??
             User(
-              id: 'user_${widget.identifier}',
+              id: response.token != null ? '' : '',
               name: '',
-              email: widget.identifier.contains('@') ? widget.identifier : 'wa-${widget.identifier}@fastkirana.in',
-              phone: !widget.identifier.contains('@') ? widget.identifier : null,
+              email: '',
+              phone: widget.identifier,
               role: 'USER',
               isBlocked: false,
             );
@@ -84,13 +87,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 'name': validName,
                 'phone': widget.identifier,
               });
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('Profile update failed: $e');
+            }
           }
         }
 
         await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', response.token ?? 'auth_${user.id}');
-        
+        await prefs.setString('auth_token', response.token);
+
         // Update auth provider so all screens see the logged-in user
         ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();

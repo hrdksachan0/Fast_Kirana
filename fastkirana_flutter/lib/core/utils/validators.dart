@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../config/app_config.dart';
 
 class Validators {
   static String? required(String? value, [String fieldName = 'This field']) {
@@ -58,6 +59,6 @@ class Helpers {
   static String getImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    return 'https://fast-kirana-0ezx.onrender.com$path';
+    return '${AppConfig.apiBaseUrl}$path';
   }
 }
