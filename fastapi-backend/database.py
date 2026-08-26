@@ -5,14 +5,19 @@ from sqlalchemy.orm import declarative_base
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
 
+DEFAULT_SUPABASE_DB_URL = "postgresql+asyncpg://postgres.bberzasmxwioxjynbuaf:YuvrajHardik%402613@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+
 def clean_async_db_url(raw_url: str) -> str:
     url = (raw_url or os.getenv("DATABASE_URL", "")).strip()
     if not url:
-        return ""
+        return DEFAULT_SUPABASE_DB_URL
 
     # Strip surrounding single or double quotes if present
     if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
         url = url[1:-1].strip()
+
+    if not url:
+        return DEFAULT_SUPABASE_DB_URL
 
     # Force asyncpg driver scheme
     if url.startswith("postgresql://"):
