@@ -13,7 +13,8 @@
       "Bash(\"C:/flutter/bin/flutter.bat\" analyze *2)",
       "Bash(/d/flutter/bin/flutter.bat *)",
       "Bash(git checkout *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git *)"
     ]
   }
 }

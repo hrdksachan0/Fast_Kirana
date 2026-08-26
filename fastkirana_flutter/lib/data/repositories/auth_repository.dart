@@ -12,10 +12,10 @@ class AuthRepository {
       '/api/auth/otp/send',
       data: {
         'phone': clean,
+        'email': clean,
       },
     );
-    // FastAPI returns: { "message": "OTP sent via WhatsApp successfully" }
-    // If we got here without exception, OTP was sent successfully
+    // FastAPI / Next.js returns success
     return AuthResponse(
       success: true,
       user: null,
@@ -29,6 +29,7 @@ class AuthRepository {
       '/api/auth/otp/verify',
       data: {
         'phone': clean,
+        'email': clean,
         'otp': otp.trim(),
       },
     );
