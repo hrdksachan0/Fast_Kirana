@@ -66,7 +66,38 @@ final dioProvider = Provider<Dio>((ref) {
 
       return handler.next(options);
     },
-    onError: (DioException error, ErrorInterceptorHandler handler) {
+    onError: (DioException error, ErrorInterceptorHandler handler) async {
+      final isConnectionError = error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.unknown;
+
+      const fallbackUrl = 'https://www.fastkirana.in';
+
+      if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
+        try {
+          final targetPath = error.requestOptions.path.startsWith('http')
+              ? error.requestOptions.path
+              : '$fallbackUrl${error.requestOptions.path}';
+
+          final fallbackDio = Dio(BaseOptions(
+            connectTimeout: const Duration(seconds: 15),
+            receiveTimeout: const Duration(seconds: 15),
+            headers: {'Content-Type': 'application/json'},
+          ));
+
+          final retryResponse = await fallbackDio.request(
+            targetPath,
+            data: error.requestOptions.data,
+            queryParameters: error.requestOptions.queryParameters,
+            options: Options(
+              method: error.requestOptions.method,
+              headers: error.requestOptions.headers,
+              extra: {'retried_fallback': true},
+            ),
+          );
+          return handler.resolve(retryResponse);
+        } catch (_) {}
+      }
       return handler.next(error);
     },
   ));

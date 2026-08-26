@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const limited = await authLimiter.check(request)
   if (limited) return limited
 
+  try {
     const body = await request.json()
     const rawEmail = (body.email || body.phone || '').toString()
     const otp = body.otp?.toString()?.trim()
@@ -76,8 +77,13 @@ export async function POST(request: NextRequest) {
       success: true,
       needsProfileSetup,
       token: `token_${user?.id || 'new'}_${Date.now()}`,
+      id: user?.id || `user_${trimmed}`,
+      name: user?.name || '',
+      email: user?.email || normalizedEmail,
+      phone: user?.phone || trimmed,
+      role: user?.role || 'USER',
       user: {
-        id: user?.id,
+        id: user?.id || `user_${trimmed}`,
         name: user?.name || '',
         email: user?.email || normalizedEmail,
         phone: user?.phone || trimmed,

@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   }
 
   const title = `${product.name} - Buy Online at ₹${product.price} | FastKirana Ghatampur`
-  const description = product.description || `Buy ${product.name} online in Ghatampur, Kanpur Nagar. 10-minute fast doorstep grocery delivery.`
+  const description = product.description || `Buy ${product.name} online in Ghatampur, Kanpur Nagar. Fast doorstep grocery delivery.`
 
   return {
     title,
@@ -146,7 +146,7 @@ const [productRaw, relatedRaw] = await Promise.all([
     '@type': 'Product',
     name: product.name,
     image: [product.imageUrl || 'https://www.fastkirana.in/brand/fastkirana_app_icon.png'],
-    description: product.description || `Buy ${product.name} online in Ghatampur. 10-min fast delivery from FastKirana.`,
+    description: product.description || `Buy ${product.name} online in Ghatampur. Fast delivery from FastKirana.`,
     sku: product.id,
     offers: {
       '@type': 'Offer',

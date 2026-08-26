@@ -21,7 +21,7 @@ export function DeliveryBanner() {
             <Truck className="h-5.5 w-5.5 text-primary" />
           </div>
           <div className="text-left">
-            <h3 className="text-xs md:text-sm font-bold text-text-primary">Fast Instant Delivery</h3>
+            <h3 className="text-xs md:text-sm font-bold text-text-primary">Fast Express Delivery</h3>
             <p className="text-[10px] md:text-xs text-text-secondary mt-0.5 leading-relaxed font-medium">
               Delivered fresh from local dark stores to your doorstep within 5 km.
             </p>

@@ -29,7 +29,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
   const [storeLat, setStoreLat] = useState('26.1534185')
   const [storeLng, setStoreLng] = useState('80.1714024')
-  const [avgDeliveryTime, setAvgDeliveryTime] = useState('8 min')
+  const [avgDeliveryTime, setAvgDeliveryTime] = useState('Fast')
   const [deliveredToday, setDeliveredToday] = useState('1,231+')
   const [freshStockLoaded, setFreshStockLoaded] = useState('2 hrs ago')
   const [taxRate, setTaxRate] = useState('5')

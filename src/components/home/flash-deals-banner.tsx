@@ -82,7 +82,7 @@ export function FlashDealsBanner() {
           </div>
           <div className="text-center sm:text-left">
             <h4 className="text-white font-extrabold text-sm tracking-tight flex items-center gap-1 justify-center sm:justify-start">
-              10-Min Flash Deal Alerts
+              Flash Deal Alerts
               <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300/20" />
             </h4>
             <p className="text-rose-100/90 text-[10.5px] font-semibold mt-0.5 leading-relaxed">

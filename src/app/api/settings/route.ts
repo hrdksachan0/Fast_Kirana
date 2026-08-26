@@ -30,7 +30,7 @@ const DEFAULT_SETTINGS = {
   store_address: 'NH34, Ghatampur, Kanpur Nagar',
   shop_name: 'FastKirana Dark Store',
   min_order_value: '20',
-  avg_delivery_time: '8 min',
+  avg_delivery_time: 'Fast',
   delivered_today: '1,231+',
   fresh_stock_loaded: '2 hrs ago',
   only_cod: 'false',

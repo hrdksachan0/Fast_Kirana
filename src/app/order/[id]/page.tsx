@@ -277,7 +277,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 <p className="text-text-secondary mt-1 leading-relaxed text-[11px]">
                   {order.deliveryMethod === 'PICKUP'
                     ? 'Your order is packed and ready for pickup at our local FastKirana Ghatampur Hub.'
-                    : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and instant delivery.'}
+                    : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and fast delivery.'}
                 </p>
               </div>
             </div>

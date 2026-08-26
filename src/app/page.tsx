@@ -480,7 +480,7 @@ export default async function Home() {
   const nightProducts = sortProductsByStock(nightRaw.map(mapProduct))
 
   const settingsMap: Record<string, string> = {
-    avg_delivery_time: '8 min',
+    avg_delivery_time: 'Fast',
     delivered_today: '1,231+',
     fresh_stock_loaded: '2 hrs ago',
     happy_families: '5,000+',

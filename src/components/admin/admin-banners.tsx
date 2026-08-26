@@ -86,7 +86,7 @@ const FESTIVAL_TEMPLATES = [
   {
     name: '🎨 Holi Splash',
     title: 'Holi Ke Rang, FastKirana Ke Sang!',
-    description: 'Get natural herbal gulal, sweets, thandai, and pichkaris delivered in 10 minutes!',
+    description: 'Get natural herbal gulal, sweets, thandai, and pichkaris delivered fast!',
     code: 'HOLI100',
     gradient: 'from-pink-500 via-purple-500 to-yellow-400',
     type: 'festive',
@@ -113,7 +113,7 @@ const FESTIVAL_TEMPLATES = [
   {
     name: '🍦 Summer Coolers (Blinkit Style)',
     title: 'Beat the Heat with Cold Drinks 🍦',
-    description: 'Amul, Kwality Walls, Coke, Pepsi & Juices delivered in 10 mins.',
+    description: 'Amul, Kwality Walls, Coke, Pepsi & Juices delivered fast.',
     code: 'COOL20',
     gradient: 'from-cyan-600 via-blue-600 to-indigo-600',
     type: 'festive',

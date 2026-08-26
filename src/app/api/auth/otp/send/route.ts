@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
   const limited = await otpLimiter.check(request)
   if (limited) return limited
 
+  try {
     const body = await request.json()
     const rawEmail = (body.email || body.phone || '').toString()
 

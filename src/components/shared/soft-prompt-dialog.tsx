@@ -105,7 +105,7 @@ export function SoftPromptDialog() {
               <span className="text-xs font-bold leading-none">⚡</span>
             </div>
             <div className="min-w-0">
-              <h5 className="text-[10.5px] font-black text-text-primary leading-tight">10-Minute Flash Deals</h5>
+              <h5 className="text-[10.5px] font-black text-text-primary leading-tight">Flash Deals</h5>
               <p className="text-[9px] text-text-muted mt-0.5 leading-none font-semibold">
                 Receive instant alerts for limited-stock bargains.
               </p>

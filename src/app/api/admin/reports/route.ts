@@ -292,7 +292,7 @@ export async function GET(request: NextRequest) {
       const isPickup = order.deliveryMethod === 'PICKUP'
       const isRetail = order.deliveryMethod === 'RETAIL'
       const dateString = order.createdAt.toISOString().split('T')[0]
-      const orderSales = (order.subtotal || 0) - (order.discount || 0)
+      const orderSales = isRetail ? (order.total || order.subtotal || 0) : ((order.subtotal || 0) - (order.discount || 0))
       
       // Ensure dailyData has the key (in case it fell outside initialized range due to timezone)
       if (!dailyData[dateString]) {

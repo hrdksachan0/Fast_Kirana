@@ -2375,7 +2375,7 @@ export function AdminDashboard({
                   </span>
                 </h3>
                 <p className="text-xs text-text-secondary mt-0.5 max-w-2xl font-medium">
-                  The following orders have exceeded the 10-minute queue limit. Please coordinate with staff immediately to prevent service level degradation.
+                  The following orders have exceeded the queue limit. Please coordinate with staff immediately to prevent service level degradation.
                 </p>
               </div>
             </div>

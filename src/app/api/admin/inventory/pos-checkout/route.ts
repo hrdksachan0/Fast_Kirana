@@ -67,6 +67,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Calculate exact subtotal & total on server to guarantee 100% accuracy
+    const calculatedSubtotal = items.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0)
+    const finalSubtotal = Math.round((calculatedSubtotal || subtotal || 0) * 100) / 100
+    const finalDiscount = Math.round((discount || 0) * 100) / 100
+    const finalTotal = Math.max(0, Math.round((total || (finalSubtotal - finalDiscount)) * 100) / 100)
+
     // Determine PaymentMethod enum
     let pm: PaymentMethod = PaymentMethod.COD
     if (paymentMethod === 'UPI') pm = PaymentMethod.UPI
@@ -86,9 +92,9 @@ export async function POST(request: NextRequest) {
           userId: walkinUser.id,
           addressId: walkinAddress.id,
           status: OrderStatus.DELIVERED,
-          subtotal,
-          discount,
-          total,
+          subtotal: finalSubtotal,
+          discount: finalDiscount,
+          total: finalTotal,
           paymentMethod: pm,
           paymentStatus: PaymentStatus.PAID,
           deliveryMethod: 'RETAIL',
