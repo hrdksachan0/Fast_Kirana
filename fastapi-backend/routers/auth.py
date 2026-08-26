@@ -562,7 +562,19 @@ async def send_otp(
     if whatsapp_sent:
         return MessageResponse(message="OTP sent via WhatsApp successfully")
 
-    # 2. Try Fast2SMS API
+    # 2. Try Next.js Live Production Webhook (Vercel WhatsApp bridge)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            res_live = await client.post("https://www.fastkirana.in/api/auth/otp/send", json={
+                "phone": phone,
+                "email": phone
+            })
+            if res_live.status_code == 200 and res_live.json().get("success"):
+                return MessageResponse(message="OTP sent via WhatsApp successfully")
+    except Exception as e:
+        print(f"Next.js OTP bridge notice: {e}")
+
+    # 3. Try Fast2SMS API
     if os.getenv("FAST2SMS_API_KEY"):
         sms_sent = await send_otp_via_fast2sms(phone, otp)
         if sms_sent:
