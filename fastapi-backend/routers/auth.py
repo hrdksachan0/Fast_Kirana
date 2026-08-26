@@ -497,12 +497,12 @@ async def send_otp(
 
     # Persist OTP in database otp_tokens table for multi-worker / multi-backend verification
     try:
-        from models import OTPToken
+        from models import OtpToken
         from sqlalchemy import delete
         expires_at = datetime.utcnow() + timedelta(minutes=5)
         phone_patterns = [phone, f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com"]
-        await db.execute(delete(OTPToken).where(OTPToken.email.in_(phone_patterns)))
-        db_otp = OTPToken(
+        await db.execute(delete(OtpToken).where(OtpToken.email.in_(phone_patterns)))
+        db_otp = OtpToken(
             id=f"otp_{uuid.uuid4().hex[:20]}",
             email=phone,
             token=otp,
@@ -553,8 +553,8 @@ async def verify_otp(
     # Check 2: Database otp_tokens table (shared between Next.js & FastAPI)
     if not is_valid:
         try:
-            from models import OTPToken
-            stmt = select(OTPToken).where(OTPToken.token == entered_otp)
+            from models import OtpToken
+            stmt = select(OtpToken).where(OtpToken.token == entered_otp)
             res = await db.execute(stmt)
             db_token = res.scalars().first()
             if db_token:
@@ -562,7 +562,7 @@ async def verify_otp(
                 await db.delete(db_token)
                 await db.commit()
         except Exception as e:
-            print(f"Error checking OTPToken in DB: {e}")
+            print(f"Error checking OtpToken in DB: {e}")
 
     # Check 3: Dev/Backup Bypass code
     if entered_otp in ["123456"]:
