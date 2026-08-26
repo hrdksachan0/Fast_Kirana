@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'page_transitions.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/otp_screen.dart';
@@ -14,6 +15,8 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/auth/admin_login.dart';
 import '../../features/location/delivery_location_screen.dart';
+import '../../features/cafe/restaurant_delivery_loading_screen.dart';
+import '../../features/splash/grocery_delivery_loading_screen.dart';
 import '../theme/design_system.dart';
 
 class AppRouter {
@@ -24,34 +27,40 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case '/home':
       case '/main':
-        return MaterialPageRoute(builder: (_) => const MainShell());
+        return FadeSlideRoute(page: const MainShell());
       case '/location':
-        return MaterialPageRoute(builder: (_) => const DeliveryLocationScreen());
+        return FadeSlideRoute(page: const DeliveryLocationScreen());
       case '/login':
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return FadeSlideRoute(page: const LoginScreen());
       case '/admin':
       case '/admin/login':
-        return MaterialPageRoute(builder: (_) => const AdminLoginScreen());
+        return FadeSlideRoute(page: const AdminLoginScreen());
       case '/otp':
         final identifier = (settings.arguments as String?) ?? '+91 70544 70303';
-        return MaterialPageRoute(builder: (_) => OtpScreen(identifier: identifier));
+        return FadeSlideRoute(page: OtpScreen(identifier: identifier));
       case '/products':
-        return MaterialPageRoute(builder: (_) => const ProductsScreen());
+        return FadeSlideRoute(page: const ProductsScreen());
       case '/categories':
-        return MaterialPageRoute(builder: (_) => const CategoriesScreen());
+        return FadeSlideRoute(page: const CategoriesScreen());
       case '/cart':
-        return MaterialPageRoute(builder: (_) => const CartScreen());
+        return FadeSlideRoute(page: const CartScreen());
       case '/checkout':
-        return MaterialPageRoute(builder: (_) => const CheckoutScreen());
+        return FadeSlideRoute(page: const CheckoutScreen());
       case '/orders':
-        return MaterialPageRoute(builder: (_) => const OrdersScreen());
+        return FadeSlideRoute(page: const OrdersScreen());
       case '/profile':
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+        return FadeSlideRoute(page: const ProfileScreen());
       case '/search':
-        return MaterialPageRoute(builder: (_) => const SearchScreen());
+        return FadeSlideRoute(page: const SearchScreen());
+      case '/restaurant-loading':
+      case '/food-loading':
+        return FadeSlideRoute(page: const RestaurantDeliveryLoadingScreen());
+      case '/grocery-loading':
+      case '/store-loading':
+        return FadeSlideRoute(page: const GroceryDeliveryLoadingScreen());
       default:
-        return MaterialPageRoute(
-          builder: (_) => Scaffold(
+        return FadeSlideRoute(
+          page: Scaffold(
             body: Center(
               child: Text(
                 'Route not found: ${settings.name}',

@@ -70,7 +70,13 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Review saved: ${e.toString().replaceAll("Exception: ", "")}'),
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Expanded(child: Text('Review submitted! Thank you for your feedback.')),
+              ],
+            ),
             backgroundColor: AppDesignSystem.success,
             behavior: SnackBarBehavior.floating,
           ),

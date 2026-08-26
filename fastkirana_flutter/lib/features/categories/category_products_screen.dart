@@ -4,14 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:action_slider/action_slider.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/floating_cart_bar.dart';
 import '../products/product_detail_screen.dart';
 import '../cart/cart_screen.dart';
+import '../search/search_screen.dart';
 
 class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
@@ -25,7 +30,9 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   int _selectedSubcatIndex = 0;
   String _selectedSort = 'Popularity';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
+  bool _isSearchActive = false;
 
   static const Color primaryRed = Color(0xFFE20A22);
 
@@ -68,6 +75,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -110,7 +118,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                 const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF059669)),
                 const SizedBox(width: 2),
                 Text(
-                  '10-15 MINS DELIVERY',
+                  'EXPRESS DELIVERY',
                   style: GoogleFonts.inter(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w800,
@@ -121,47 +129,15 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.shopping_bag_outlined, color: Color(0xFF111827)),
-                if (cartCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: primaryRed,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$cartCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-          ),
-        ],
       ),
-      body: Stack(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: Stack(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation)
               Container(
                 width: 82,
@@ -261,10 +237,20 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             child: TextField(
                               controller: _searchController,
                               onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF111827)),
                               decoration: InputDecoration(
-                                hintText: 'Search in ${subcats[_selectedSubcatIndex]['name']}...',
+                                hintText: 'Search in ${widget.category.name}...',
                                 hintStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9CA3AF)),
                                 prefixIcon: const Icon(Icons.search_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? GestureDetector(
+                                        onTap: () => setState(() {
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                        }),
+                                        child: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                                      )
+                                    : null,
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                               ),
@@ -297,8 +283,17 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                         data: (products) {
                           var list = List<Product>.from(products);
 
-                          // Subcategory filter
-                          if (_selectedSubcatIndex > 0) {
+                          // Search filter (searches across the whole category)
+                          if (_searchQuery.isNotEmpty) {
+                            list = list.where((p) {
+                              final nameMatch = p.name.toLowerCase().contains(_searchQuery);
+                              final tagMatch = p.tags.any((t) => t.toLowerCase().contains(_searchQuery));
+                              final descMatch = (p.description ?? '').toLowerCase().contains(_searchQuery);
+                              final unitMatch = p.unit.toLowerCase().contains(_searchQuery);
+                              return nameMatch || tagMatch || descMatch || unitMatch;
+                            }).toList();
+                          } else if (_selectedSubcatIndex > 0) {
+                            // Subcategory filter only when not searching
                             final currentSubcatName = subcats[_selectedSubcatIndex]['name']!.toLowerCase();
                             list = list.where((p) {
                               final name = p.name.toLowerCase();
@@ -306,11 +301,6 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               return name.contains(currentSubcatName) || tagMatch;
                             }).toList();
                             if (list.isEmpty) list = List<Product>.from(products); // fallback
-                          }
-
-                          // Search filter
-                          if (_searchQuery.isNotEmpty) {
-                            list = list.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
                           }
 
                           // Sort
@@ -342,44 +332,89 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             );
                           }
 
-                          return GridView.builder(
-                            padding: EdgeInsets.fromLTRB(8, 10, 8, cartCount > 0 ? 80 : 20),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.54,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 10,
-                            ),
-                            itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final product = list[index];
-                              return ProductCard(
-                                product: product,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ProductDetailScreen(product: product),
-                                    ),
-                                  );
-                                },
+                          return LayoutBuilder(
+                            builder: (context, constraints) {
+                              final columns = (constraints.maxWidth / 140).floor().clamp(2, 6);
+                              final itemAspect = constraints.maxWidth < 360 ? 0.58 : (columns > 2 ? 0.64 : 0.58);
+
+                              return AnimationLimiter(
+                                child: GridView.builder(
+                                  padding: EdgeInsets.fromLTRB(6, 6, 6, cartCount > 0 ? 80 : 20),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: columns,
+                                    childAspectRatio: itemAspect,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 10,
+                                  ),
+                                  itemCount: list.length,
+                                  itemBuilder: (context, index) {
+                                    final product = list[index];
+                                    return AnimationConfiguration.staggeredGrid(
+                                      position: index,
+                                      columnCount: columns,
+                                      duration: const Duration(milliseconds: 375),
+                                      child: ScaleAnimation(
+                                        scale: 0.9,
+                                        child: FadeInAnimation(
+                                          child: ProductCard(
+                                            product: product,
+                                            isCompact: true,
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                FadeSlideRoute(
+                                                  page: ProductDetailScreen(product: product),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               );
                             },
                           );
                         },
                         loading: () => GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(8, 10, 8, 20),
+                          padding: const EdgeInsets.fromLTRB(6, 6, 6, 20),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.54,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.58,
+                            crossAxisSpacing: 6,
+                            mainAxisSpacing: 6,
                           ),
                           itemCount: 6,
                           itemBuilder: (_, __) => const ProductCardSkeleton(),
                         ),
                         error: (e, _) => Center(
-                          child: Text('Error loading products: $e'),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.refresh_rounded, size: 36, color: Color(0xFF94A3B8)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap to reload products',
+                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    ref.invalidate(productsProvider(widget.category.slug));
+                                    ref.invalidate(productsProvider(widget.category.id));
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryRed,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  child: const Text('Retry', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -389,85 +424,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             ],
           ),
 
-          // 3. Floating Bottom Cart Bar
-          if (cartCount > 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CartScreen()),
-                  );
-                },
-                child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [primaryRed, Color(0xFFB30013)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryRed.withOpacity(0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$cartCount items · ₹${cartSubtotal.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Delivery in 10-15 mins',
-                            style: GoogleFonts.inter(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            'View Cart',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // 3. Floating Bottom Cart Bar (Exact Homepage Design)
+          const FloatingCartBar(bottomOffset: 16),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildFilterPill(String title, bool isSelected) {

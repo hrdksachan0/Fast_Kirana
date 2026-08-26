@@ -30,11 +30,15 @@ class RecentlyViewedScreen extends StatelessWidget {
         ),
         itemCount: 8,
         itemBuilder: (context, index) {
+          final names = ['Fresh Tomatoes', 'Amul Milk', 'Britannia Bread', 'Eggs', 'Apples', 'Rice 5kg', 'Dal 1kg', 'Oil 1L'];
           final product = Product(
             id: 'prod_$index',
-            name: ['Fresh Tomatoes', 'Amul Milk', 'Britannia Bread', 'Eggs', 'Apples', 'Rice 5kg', 'Dal 1kg', 'Oil 1L'][index],
+            name: names[index],
+            slug: names[index].toLowerCase().replaceAll(' ', '-'),
             price: [45, 28, 35, 60, 120, 450, 150, 180][index].toDouble(),
             mrp: [60, 35, 45, 75, 150, 500, 180, 210][index].toDouble(),
+            discount: 0,
+            isAvailable: true,
             categoryId: 'cat_1',
             unit: '1 kg',
             stock: 50,

@@ -3,9 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/cart_conflict_dialog.dart';
 import '../cart/cart_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -32,6 +37,46 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     }
   }
 
+  void _promptRestaurantConflict(BuildContext context, Product product, String? variantName) {
+    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+    if (conflictRestaurant == null) return;
+
+    final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
+    final newOutlet = getOutletName(product);
+
+    CartConflictDialog.show(
+      context,
+      product: product,
+      existingOutletName: conflictRestaurant,
+      groceryItemsCount: groceryCount,
+      onConfirm: () {
+        ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1, variantName);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF047857),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    groceryCount > 0
+                        ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
+                        : 'Switched to $newOutlet! 🍽️',
+                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
@@ -49,10 +94,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      body: Stack(
-        children: [
-          // Scrollable Content
-          ListView(
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: Stack(
+          children: [
+            // Scrollable Content
+            ListView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.zero,
             children: [
@@ -163,7 +211,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         height: 1.25,
                         letterSpacing: -0.5,
                       ),
-                    ),
+                    ).animate().fadeIn(duration: 350.ms, delay: 150.ms).slideY(begin: 0.06, end: 0, duration: 350.ms, delay: 150.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 4),
 
                     // Unit
@@ -174,7 +222,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF6B7280),
                       ),
-                    ),
+                    ).animate().fadeIn(duration: 350.ms, delay: 250.ms).slideY(begin: 0.06, end: 0, duration: 350.ms, delay: 250.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 14),
 
                     // Price and MRP Row
@@ -219,7 +267,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                         ],
                       ],
-                    ),
+                    ).animate().fadeIn(duration: 350.ms, delay: 350.ms).slideY(begin: 0.06, end: 0, duration: 350.ms, delay: 350.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 18),
 
                     // Variants / Pack Sizes (if available)
@@ -405,7 +453,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const CartScreen()),
+                              FadeSlideRoute(page: const CartScreen()),
                             );
                           },
                           child: Container(
@@ -504,6 +552,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                                 InkWell(
                                   onTap: () {
+                                    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(p);
+                                    if (conflictRestaurant != null) {
+                                      _promptRestaurantConflict(context, p, _selectedVariant?.name);
+                                      return;
+                                    }
                                     HapticFeedback.lightImpact();
                                     ref.read(cartProvider.notifier).increment(p);
                                   },
@@ -517,7 +570,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           )
                         : GestureDetector(
                             onTap: () {
-                              HapticFeedback.mediumImpact();
                               final productToCart = Product(
                                 id: p.id,
                                 name: p.name,
@@ -544,6 +596,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 category: p.category,
                                 restaurant: p.restaurant,
                               );
+
+                              final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(productToCart);
+                              if (conflictRestaurant != null) {
+                                _promptRestaurantConflict(context, productToCart, _selectedVariant?.name);
+                                return;
+                              }
+
+                              HapticFeedback.mediumImpact();
                               ref.read(cartProvider.notifier).addProduct(productToCart, 1, _selectedVariant?.name);
                             },
                             child: Container(
@@ -587,7 +647,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildQualityRow(String text) {

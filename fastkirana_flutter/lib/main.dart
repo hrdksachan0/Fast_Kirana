@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'core/theme/design_system.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -12,28 +13,33 @@ import 'package:flutter/foundation.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Custom Error Widget to prevent White Screen on unhandled UI errors
+  // Log all Flutter UI errors to console
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint("🔴 Flutter Error: ${details.exceptionAsString()}");
+  };
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFEF2F2),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.shopping_bag_rounded, size: 64, color: Color(0xFFE20A22)),
-              const SizedBox(height: 16),
-              const Text(
-                'FastKirana',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Loading app components...',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-            ],
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFDC2626)),
+                const SizedBox(height: 12),
+                const Text('Render Error', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF991B1B))),
+                const SizedBox(height: 6),
+                Text(
+                  details.exceptionAsString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -76,6 +82,7 @@ class FastKiranaApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       onGenerateRoute: AppRouter.generateRoute,
       initialRoute: '/splash',
+      builder: (context, child) => child ?? const SizedBox.shrink(),
     );
   }
 }

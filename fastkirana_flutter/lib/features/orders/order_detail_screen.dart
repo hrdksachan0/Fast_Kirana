@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/theme/design_system.dart';
-import '../../core/utils/validators.dart';
 import '../../data/models/order.dart';
 
 class OrderDetailScreen extends StatelessWidget {
@@ -11,8 +9,9 @@ class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.order});
 
   static const Color primaryRed = Color(0xFFE20A22);
-  static const Color textDark = Color(0xFF111827);
-  static const Color textMuted = Color(0xFF6B7280);
+  static const Color textDark = Color(0xFF0F172A);
+  static const Color textMuted = Color(0xFF64748B);
+  static const Color successGreen = Color(0xFF10B981);
 
   bool get isPickupOrder {
     final method = (order.deliveryMethod ?? '').toUpperCase();
@@ -34,6 +33,44 @@ class OrderDetailScreen extends StatelessWidget {
     }
   }
 
+  int _getStatusStepIndex(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 0;
+      case OrderStatus.confirmed:
+        return 1;
+      case OrderStatus.packed:
+        return 2;
+      case OrderStatus.shipped:
+        return 3;
+      case OrderStatus.delivered:
+        return 4;
+      case OrderStatus.cancelled:
+        return -1;
+    }
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return const Color(0xFFD97706);
+      case OrderStatus.confirmed:
+        return const Color(0xFF0284C7);
+      case OrderStatus.packed:
+        return const Color(0xFF7C3AED);
+      case OrderStatus.shipped:
+        return const Color(0xFFEA580C);
+      case OrderStatus.delivered:
+        return const Color(0xFF16A34A);
+      case OrderStatus.cancelled:
+        return const Color(0xFFDC2626);
+    }
+  }
+
+  Color _getStatusBg(OrderStatus status) {
+    return _getStatusColor(status).withOpacity(0.12);
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusIndex = _getStatusStepIndex(order.status);
@@ -41,7 +78,7 @@ class OrderDetailScreen extends StatelessWidget {
     final orderIdDisplay = order.readableId ?? order.id.substring(0, 8).toUpperCase();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -53,7 +90,7 @@ class OrderDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isPickupOrder ? 'Store Pickup Tracking' : 'Order Tracking',
+              isPickupOrder ? 'Store Pickup Tracking' : 'Live Order Tracking',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -84,7 +121,7 @@ class OrderDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.copy_rounded, size: 10, color: Color(0xFF9CA3AF)),
+                  const Icon(Icons.copy_rounded, size: 10, color: Color(0xFF94A3B8)),
                 ],
               ),
             ),
@@ -92,9 +129,17 @@ class OrderDetailScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.headset_mic_outlined, color: primaryRed),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: primaryRed.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.headset_mic_rounded, color: primaryRed, size: 18),
+            ),
             onPressed: () => _makeCall('+917054470303'),
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: SingleChildScrollView(
@@ -103,29 +148,30 @@ class OrderDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Live ETA & Status Header Card (Delivery vs Self-Pickup)
+            // 1. Premium Live Express ETA & Status Header Card
             _buildStatusHeaderCard(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
+            // Pay Online Banner (if COD)
             if (order.paymentStatus != 'PAID' && order.status != OrderStatus.cancelled) ...[
               _buildPayOnlineCard(context),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
             ],
 
-            // 2. Order Tracking Timeline (Adaptive for Delivery vs Pickup)
+            // 2. Premium 5-Stage Live Order Tracker Card (NO Timing clutter)
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: const Color(0xFF0F172A).withOpacity(0.03),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,87 +179,100 @@ class OrderDetailScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        isPickupOrder ? 'Store Pickup Status' : 'Live Order Tracker',
-                        style: GoogleFonts.inter(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w900,
-                          color: textDark,
-                        ),
+                      Row(
+                        children: [
+                          const Text('⚡', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 6),
+                          Text(
+                            isPickupOrder ? 'Store Pickup Status' : 'Live Order Tracker',
+                            style: GoogleFonts.inter(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                              color: textDark,
+                            ),
+                          ),
+                        ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: _getStatusBg(order.status),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _getStatusColor(order.status).withOpacity(0.3)),
                         ),
                         child: Text(
                           order.status.displayName.toUpperCase(),
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w900,
                             color: _getStatusColor(order.status),
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 18),
+
                   if (isPickupOrder) ...[
                     // Self-Pickup 4-Step Flow
                     _buildTimelineStep(
                       0,
-                      'Order Placed',
-                      'Order received at Ghatampur store',
+                      '1. Order Placed',
+                      'Order registered at Ghatampur store',
                       statusIndex >= 0,
-                      timeText: Helpers.formatDate(order.createdAt),
                     ),
                     _buildTimelineStep(
                       1,
-                      'Packing at Darkstore Counter',
-                      'Staff is bagging your items with care',
+                      '2. Order Confirmed',
+                      'Store accepted and verified items',
                       statusIndex >= 1,
                     ),
                     _buildTimelineStep(
                       2,
-                      'Ready for Self Pickup',
+                      '3. Ready for Self Pickup',
                       'Collect at Ghatampur Hub Counter (Show Order ID)',
                       statusIndex >= 2,
                     ),
                     _buildTimelineStep(
                       3,
-                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : 'Order Picked Up',
+                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : '4. Order Picked Up',
                       order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Handed over to customer',
                       statusIndex >= 3,
                       isLast: true,
                       isCancelled: order.status == OrderStatus.cancelled,
                     ),
                   ] else ...[
-                    // Doorstep Delivery 4-Step Flow
+                    // Doorstep Delivery 5-Step Flow (NO Timings)
                     _buildTimelineStep(
                       0,
-                      'Order Placed',
-                      'Your order has been verified by store',
+                      '1. Order Placed',
+                      'Your order has been registered in store system',
                       statusIndex >= 0,
-                      timeText: Helpers.formatDate(order.createdAt),
                     ),
                     _buildTimelineStep(
                       1,
-                      'Order Confirmed & Packed',
-                      'Items packed fresh at Ghatampur darkstore',
+                      '2. Order Confirmed',
+                      'Store accepted and verified items',
                       statusIndex >= 1,
                     ),
                     _buildTimelineStep(
                       2,
-                      'Out for Delivery',
-                      'Rider is on the way to your address',
+                      '3. Packed & Sealed',
+                      'Items packed fresh in safe tamper-proof bag',
                       statusIndex >= 2,
                     ),
                     _buildTimelineStep(
                       3,
-                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : 'Delivered',
-                      order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Package handed over at doorstep',
+                      '4. On the Way',
+                      'Delivery partner is on the way to your address',
                       statusIndex >= 3,
+                    ),
+                    _buildTimelineStep(
+                      4,
+                      order.status == OrderStatus.cancelled ? 'Order Cancelled' : '5. Delivered Successfully',
+                      order.status == OrderStatus.cancelled ? 'Order was cancelled' : 'Package handed over at doorstep',
+                      statusIndex >= 4,
                       isLast: true,
                       isCancelled: order.status == OrderStatus.cancelled,
                     ),
@@ -221,22 +280,22 @@ class OrderDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // 3. Delivery Address / Store Pickup Point Card
+            // 3. Delivery Address & Store Help Card
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: const Color(0xFF0F172A).withOpacity(0.03),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,49 +303,39 @@ class OrderDetailScreen extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isPickupOrder ? const Color(0xFFECFDF5) : const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(
-                          isPickupOrder ? '🏬' : '📍',
-                          style: const TextStyle(fontSize: 16),
-                        ),
+                        child: const Icon(Icons.location_on_rounded, size: 18, color: primaryRed),
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        isPickupOrder ? 'Store Pickup Counter' : 'Delivery Address',
+                        isPickupOrder ? 'Pickup Hub Point' : 'Delivery Address',
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: textDark,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     isPickupOrder
-                        ? 'Ghatampur Central Hub Store, Station Road Market, Kanpur Nagar - 209206'
+                        ? 'Ghatampur Darkstore Hub, Main Market Road, Ghatampur, UP 209206'
                         : 'Ghatampur Market, Kanpur Nagar, UP - 209206',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF4B5563),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF475569),
                       height: 1.4,
                     ),
                   ),
-                  if (isPickupOrder) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '⏱️ Store Timings: 7:00 AM – 10:00 PM (Show Order ID at counter)',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF047857)),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  const Divider(color: Color(0xFFF3F4F6)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+                  const Divider(color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -301,6 +350,7 @@ class OrderDetailScreen extends StatelessWidget {
                               color: textMuted,
                             ),
                           ),
+                          const SizedBox(height: 1),
                           Text(
                             '+91 70544 70303',
                             style: GoogleFonts.inter(
@@ -315,10 +365,11 @@ class OrderDetailScreen extends StatelessWidget {
                         children: [
                           IconButton(
                             onPressed: () => _openWhatsApp('917054470303', orderIdDisplay),
-                            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 20),
+                            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 18),
                             style: IconButton.styleFrom(
                               backgroundColor: const Color(0xFFDCFCE7),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.all(10),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -328,10 +379,10 @@ class OrderDetailScreen extends StatelessWidget {
                             label: const Text('Call Store'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryRed,
-                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700),
+                              textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800),
                             ),
                           ),
                         ],
@@ -341,7 +392,7 @@ class OrderDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // 4. Itemized Bill Summary
             Container(
@@ -349,32 +400,48 @@ class OrderDetailScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: const Color(0xFF0F172A).withOpacity(0.03),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Bill Details',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: textDark,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Bill Details',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: textDark,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${itemsList.length} ${itemsList.length == 1 ? 'ITEM' : 'ITEMS'}',
+                          style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   if (itemsList.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Text(
-                        'Items processed by store',
+                        'Items processed by darkstore',
                         style: GoogleFonts.inter(fontSize: 12, color: textMuted),
                       ),
                     )
@@ -386,15 +453,15 @@ class OrderDetailScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F4F6),
+                                  color: const Color(0xFFF1F5F9),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   '${item.quantity}x',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11.5,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF374151),
+                                    color: const Color(0xFF334155),
                                   ),
                                 ),
                               ),
@@ -421,7 +488,7 @@ class OrderDetailScreen extends StatelessWidget {
                           ),
                         )),
                   const SizedBox(height: 12),
-                  const Divider(color: Color(0xFFF3F4F6)),
+                  const Divider(color: Color(0xFFF1F5F9)),
                   const SizedBox(height: 8),
                   _buildBillRow('Item Total', '₹${order.subtotal.toInt()}'),
                   if (order.discount > 0)
@@ -431,9 +498,13 @@ class OrderDetailScreen extends StatelessWidget {
                     isPickupOrder ? 'FREE (Store Pickup)' : (order.deliveryFee == 0 ? 'FREE' : '₹${order.deliveryFee.toInt()}'),
                     isGreen: order.deliveryFee == 0 || isPickupOrder,
                   ),
-                  _buildBillRow('Taxes & Packaging', '₹${order.taxes.toInt()}'),
+                  _buildBillRow(
+                    'Packaging Charge',
+                    order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : '₹5',
+                  ),
+                  _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
                   const SizedBox(height: 10),
-                  const Divider(color: Color(0xFFE5E7EB)),
+                  const Divider(color: Color(0xFFE2E8F0)),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -474,7 +545,7 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  // Status Header Card (Adaptive for Pickup, Delivery, Delivered, and Cancelled)
+  // Premium Status Header Card
   Widget _buildStatusHeaderCard() {
     if (order.status == OrderStatus.delivered) {
       return Container(
@@ -562,70 +633,19 @@ class OrderDetailScreen extends StatelessWidget {
       );
     }
 
-    // Live Active Status
-    if (isPickupOrder) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFA7F3D0)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(child: Text('🏬', style: TextStyle(fontSize: 22))),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ready for Self Pickup in 5-10 mins',
-                    style: GoogleFonts.inter(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF065F46),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Collect at Ghatampur Darkstore Counter • ₹0 Fee',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF047857),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+    // Live In-Transit / Preparation Header
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFA7F3D0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -633,31 +653,84 @@ class OrderDetailScreen extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryRed.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: const Center(child: Text('🛵', style: TextStyle(fontSize: 22))),
+            child: Center(
+              child: Text(
+                isPickupOrder ? '🏬' : '🛵',
+                style: const TextStyle(fontSize: 22),
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Estimated Delivery in 10-15 mins',
-                  style: GoogleFonts.inter(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF065F46),
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      isPickupOrder ? 'Ready for Store Pickup' : 'Express Delivery In Progress',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Delivering from Ghatampur Hub Store',
+                  isPickupOrder
+                      ? 'Collect at Ghatampur Darkstore Counter'
+                      : 'Live tracking from Ghatampur Hub Store',
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF047857),
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withOpacity(0.18),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF10B981)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'LIVE',
+                  style: GoogleFonts.inter(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF10B981),
                   ),
                 ),
               ],
@@ -668,21 +741,104 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  int _getStatusStepIndex(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 0;
-      case OrderStatus.confirmed:
-        return 1;
-      case OrderStatus.packed:
-      case OrderStatus.shipped:
-        return 2;
-      case OrderStatus.delivered:
-      case OrderStatus.cancelled:
-        return 3;
-    }
+  // Pay Online Banner
+  Widget _buildPayOnlineCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('⚡', style: TextStyle(fontSize: 10)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'PAY ONLINE NOW',
+                      style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w900, color: const Color(0xFF16A34A)),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '100% Safe & Instant',
+                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Avoid Cash Hassle at Doorstep 💳',
+            style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Order is currently set to Cash on Delivery. Switch to Online Payment via UPI, GPay, PhonePe or Cards.',
+            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF475569), height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Opening secure UPI gateway...'),
+                  backgroundColor: Color(0xFF16A34A),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF059669).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.payment_rounded, color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pay ₹${order.total.toInt()} Online Now',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
+  // 5-Stage Timeline Step (NO Timestamps)
   Widget _buildTimelineStep(
     int stepIndex,
     String title,
@@ -690,7 +846,6 @@ class OrderDetailScreen extends StatelessWidget {
     bool isDone, {
     bool isLast = false,
     bool isCancelled = false,
-    String? timeText,
   }) {
     Color activeColor = isCancelled ? const Color(0xFFEF4444) : const Color(0xFF10B981);
 
@@ -700,58 +855,48 @@ class OrderDetailScreen extends StatelessWidget {
         Column(
           children: [
             Container(
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
-                color: isDone ? activeColor : const Color(0xFFE5E7EB),
+                color: isDone ? activeColor : const Color(0xFFE2E8F0),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: isDone
-                    ? Icon(isCancelled ? Icons.close : Icons.check, size: 14, color: Colors.white)
-                    : Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF9CA3AF), shape: BoxShape.circle)),
+                    ? Icon(isCancelled ? Icons.close : Icons.check, size: 13, color: Colors.white)
+                    : Container(width: 5, height: 5, decoration: const BoxDecoration(color: Color(0xFF94A3B8), shape: BoxShape.circle)),
               ),
             ),
             if (!isLast)
               Container(
                 width: 2,
-                height: 32,
-                color: isDone ? activeColor : const Color(0xFFE5E7EB),
+                height: 36,
+                color: isDone ? activeColor : const Color(0xFFE2E8F0),
               ),
           ],
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: isDone ? FontWeight.w800 : FontWeight.w600,
-                        color: isDone ? textDark : const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                    if (timeText != null)
-                      Text(
-                        timeText,
-                        style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w500, color: textMuted),
-                      ),
-                  ],
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: isDone ? FontWeight.w800 : FontWeight.w600,
+                    color: isDone ? textDark : const Color(0xFF94A3B8),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   desc,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w500,
-                    color: textMuted,
+                    color: isDone ? const Color(0xFF64748B) : const Color(0xFFCBD5E1),
                   ),
                 ),
               ],
@@ -764,14 +909,14 @@ class OrderDetailScreen extends StatelessWidget {
 
   Widget _buildBillRow(String label, String value, {bool isGreen = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: textMuted,
             ),
@@ -779,238 +924,12 @@ class OrderDetailScreen extends StatelessWidget {
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+              fontWeight: isGreen ? FontWeight.w800 : FontWeight.w600,
               color: isGreen ? const Color(0xFF16A34A) : textDark,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return const Color(0xFFD97706);
-      case OrderStatus.confirmed:
-        return const Color(0xFF2563EB);
-      case OrderStatus.packed:
-      case OrderStatus.shipped:
-        return const Color(0xFF059669);
-      case OrderStatus.delivered:
-        return const Color(0xFF16A34A);
-      case OrderStatus.cancelled:
-        return const Color(0xFFDC2626);
-    }
-  }
-
-  Color _getStatusBg(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return const Color(0xFFFEF3C7);
-      case OrderStatus.confirmed:
-        return const Color(0xFFDBEAFE);
-      case OrderStatus.packed:
-      case OrderStatus.shipped:
-        return const Color(0xFFD1FAE5);
-      case OrderStatus.delivered:
-        return const Color(0xFFDCFCE7);
-      case OrderStatus.cancelled:
-        return const Color(0xFFFEE2E2);
-    }
-  }
-
-  // Pay Online Option Card (Swiggy / Zepto Style)
-  Widget _buildPayOnlineCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFECFDF5), Color(0xFFF0FDF4)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF047857)),
-                    const SizedBox(width: 4),
-                    Text(
-                      'PAY ONLINE NOW',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF047857),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                '100% Safe & Instant',
-                style: GoogleFonts.inter(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF059669),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Avoid Cash Hassle at Doorstep 💳',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              color: textDark,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Order is currently set to Cash on Delivery. Switch to Online Payment via UPI, GPay, PhonePe or Cards.',
-            style: GoogleFonts.inter(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF374151),
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                _showPayOnlineBottomSheet(context);
-              },
-              icon: const Icon(Icons.credit_card_rounded, size: 18, color: Colors.white),
-              label: Text(
-                'Pay ₹${order.total.toInt()} Online Now',
-                style: GoogleFonts.inter(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 2,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPayOnlineBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Online Payment Options',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: textDark),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Select how you would like to complete your ₹${order.total.toInt()} payment:',
-              style: GoogleFonts.inter(fontSize: 12, color: textMuted),
-            ),
-            const SizedBox(height: 18),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF059669)),
-              ),
-              title: Text('Pay via Web Checkout / Razorpay', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800)),
-              subtitle: Text('Supports PhonePe, GPay, Paytm, BHIM & Cards', style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: textMuted),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final url = 'https://fast-kirana-gtm.vercel.app/order/${order.id}/track';
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF2563EB)),
-              ),
-              title: Text('Ask Rider to Show Doorstep UPI QR', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800)),
-              subtitle: Text('Rider can generate dynamic QR on delivery screen', style: GoogleFonts.inter(fontSize: 11, color: textMuted)),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: textMuted),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('📱 Inform delivery rider at doorstep to show UPI QR on their app!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }

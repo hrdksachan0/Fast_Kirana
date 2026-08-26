@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/user.dart';
 import '../../providers/auth_provider.dart';
@@ -61,7 +62,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+        FadeSlideRoute(page: const AdminDashboard()),
       );
     } else {
       HapticFeedback.vibrate();

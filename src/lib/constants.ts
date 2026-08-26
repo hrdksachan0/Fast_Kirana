@@ -409,7 +409,7 @@ export function getOutletName(product: ProductData): string {
     pName.includes('a.s special') ||
     pName.includes('a.s. special')
   ) {
-    return 'A.S Restaurant'
+    return 'A.S. Restaurant'
   }
 
   // 3. Explicit Wedson Restaurant checks

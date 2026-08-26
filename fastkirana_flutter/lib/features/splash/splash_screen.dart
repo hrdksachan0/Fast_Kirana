@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/services/notification_service.dart';
 import '../../widgets/brand_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -46,7 +47,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _mainController.forward();
-    Future.delayed(const Duration(milliseconds: 700), _navigateToNextScreen);
+    _requestAppPermissions();
+    Future.delayed(const Duration(milliseconds: 1400), _navigateToNextScreen);
+  }
+
+  Future<void> _requestAppPermissions() async {
+    try {
+      await NotificationService().requestPermissions();
+    } catch (_) {}
   }
 
   Future<void> _navigateToNextScreen() async {

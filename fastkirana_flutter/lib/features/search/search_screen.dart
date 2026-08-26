@@ -3,16 +3,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/floating_cart_bar.dart';
 import '../products/product_detail_screen.dart';
 import '../cart/cart_screen.dart';
+import '../../widgets/voice_search_sheet.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  final String? initialQuery;
+  const SearchScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -22,12 +28,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   String _query = '';
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _controller.text = widget.initialQuery!;
+      _query = widget.initialQuery!;
+    }
+  }
+
   final List<String> _recentSearches = [
     'Milk',
     'Amul Butter',
     'Maggi',
     'Fortune Oil',
     'Lays',
+  ];
+
+  final List<Map<String, String>> _trendingCategories = [
+    {'label': 'Doodh & Dairy', 'icon': '🥛', 'query': 'Milk'},
+    {'label': 'Atta & Rice', 'icon': '🌾', 'query': 'Atta'},
+    {'label': 'Mustard Oil', 'icon': '🍾', 'query': 'Oil'},
+    {'label': '2-Min Maggi', 'icon': '🍜', 'query': 'Maggi'},
+    {'label': 'Cold Drinks', 'icon': '🥤', 'query': 'Cola'},
+    {'label': 'Chips & Namkeen', 'icon': '🥔', 'query': 'Lays'},
+    {'label': 'Ice Cream', 'icon': '🍦', 'query': 'Ice Cream'},
+    {'label': 'Veg Burger', 'icon': '🍔', 'query': 'Burger'},
   ];
 
   final List<String> _trending = [
@@ -62,94 +88,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
-  void _startVoiceSearch(BuildContext context) {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFEA580C).withOpacity(0.3), width: 2),
-                ),
-                child: const Icon(Icons.mic_rounded, size: 36, color: Color(0xFFEA580C)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Listening... Speak Item Name',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: AppDesignSystem.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Say "Amul Butter", "Maggi", "Burger", or "Fortune Oil" in Hindi / English',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppDesignSystem.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['Amul Butter 🧈', 'Maggi 🍜', 'Veg Burger 🍔', 'Fortune Oil 🍾', 'Dairy Milk 🍫']
-                    .map((item) => GestureDetector(
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            final cleanTerm = item.split(' ')[0] + ' ' + (item.split(' ').length > 1 ? item.split(' ')[1] : '');
-                            _onSearchTermSelected(cleanTerm.trim());
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
-                            ),
-                            child: Text(
-                              item,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF374151),
-                              ),
-                            ),
-                          ),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
+  void _openVoiceSearch() {
+    VoiceSearchSheet.show(context, onResult: (query) {
+      _onSearchTermSelected(query);
+    });
   }
 
   @override
@@ -197,7 +139,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     )
                   : IconButton(
                       icon: const Icon(Icons.mic_rounded, size: 18, color: Color(0xFFEA580C)),
-                      onPressed: () => _startVoiceSearch(context),
+                      onPressed: _openVoiceSearch,
                     ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -207,83 +149,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          _query.isEmpty ? _buildTrendingAndRecent() : _buildSearchResults(),
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: Stack(
+          children: [
+            _query.isEmpty ? _buildTrendingAndRecent() : _buildSearchResults(),
 
-          // Floating Cart Bar
-          if (cartCount > 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CartScreen()),
-                  );
-                },
-                child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: AppDesignSystem.cartBarGradient,
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusLg),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppDesignSystem.primary.withOpacity(0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$cartCount items · ₹${cartSubtotal.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Delivery in 10-15 mins',
-                            style: GoogleFonts.inter(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            'View Cart',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
+            // Floating Cart Bar (Exact Homepage Design)
+            const FloatingCartBar(bottomOffset: 16),
+          ],
+        ),
       ),
     );
   }
@@ -363,7 +239,62 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           const SizedBox(height: 20),
         ],
 
-        // 2. Trending Searches
+        // 2. Popular Categories Rail
+        Row(
+          children: [
+            const Text('⚡', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 6),
+            Text(
+              'Popular Categories',
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: AppDesignSystem.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _trendingCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, idx) {
+              final cat = _trendingCategories[idx];
+              return GestureDetector(
+                onTap: () => _onSearchTermSelected(cat['query']!),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(cat['icon']!, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Text(
+                        cat['label']!,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // 3. Trending Searches
         Row(
           children: [
             const Text('🔥', style: TextStyle(fontSize: 15)),
@@ -544,26 +475,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ],
                             ),
                           ),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.65,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
-                            itemCount: products.length,
-                            itemBuilder: (context, idx) {
-                              final product = products[idx];
-                              return ProductCard(
-                                product: product,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ProductDetailScreen(product: product),
-                                    ),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final columns = (constraints.maxWidth / 155).floor().clamp(2, 6);
+                              final itemAspect = constraints.maxWidth < 360 ? 0.65 : (columns > 2 ? 0.72 : 0.68);
+
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  childAspectRatio: itemAspect,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 12,
+                                ),
+                                itemCount: products.length,
+                                itemBuilder: (context, idx) {
+                                  final product = products[idx];
+                                  return ProductCard(
+                                    product: product,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        FadeSlideRoute(
+                                          page: ProductDetailScreen(product: product),
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
                               );
@@ -594,26 +532,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ],
                       ),
                     ),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.65,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: groceryProducts.length,
-                      itemBuilder: (context, idx) {
-                        final product = groceryProducts[idx];
-                        return ProductCard(
-                          product: product,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ProductDetailScreen(product: product),
-                              ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns = (constraints.maxWidth / 155).floor().clamp(2, 6);
+                        final itemAspect = constraints.maxWidth < 360 ? 0.65 : (columns > 2 ? 0.72 : 0.68);
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            childAspectRatio: itemAspect,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: groceryProducts.length,
+                          itemBuilder: (context, idx) {
+                            final product = groceryProducts[idx];
+                            return ProductCard(
+                              product: product,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  FadeSlideRoute(
+                                    page: ProductDetailScreen(product: product),
+                                  ),
+                                );
+                              },
                             );
                           },
                         );

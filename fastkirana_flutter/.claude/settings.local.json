@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(d:/flutter/bin/flutter analyze *)",
-      "Bash(d:/flutter/bin/flutter build *)"
+      "Bash(d:/flutter/bin/flutter build *)",
+      "Bash(\"C:/flutter/bin/flutter\" --version)",
+      "Bash(/c/flutter/bin/flutter --version)"
     ]
   }
 }

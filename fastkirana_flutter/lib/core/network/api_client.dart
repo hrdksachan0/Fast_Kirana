@@ -8,8 +8,9 @@ import '../config/app_config.dart';
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: AppConfig.apiBaseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 20),
+    sendTimeout: const Duration(seconds: 20),
     headers: {'Content-Type': 'application/json'},
   ));
 
@@ -26,7 +27,14 @@ final dioProvider = Provider<Dio>((ref) {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
-        if (!kIsWeb) {
+        final isAuthRoute = options.path.contains('/api/auth');
+        final isPublicGetRoute = kIsWeb &&
+            options.method == 'GET' &&
+            !options.path.contains('/api/orders') &&
+            !options.path.contains('/api/addresses') &&
+            !options.path.contains('/api/user');
+
+        if (!isAuthRoute && !isPublicGetRoute) {
           final rawUserData = prefs.getString('user_data');
           String? userId = prefs.getString('user_id');
           String? userEmail;
@@ -51,14 +59,11 @@ final dioProvider = Provider<Dio>((ref) {
           userPhone ??= '+917054470303';
           userName ??= 'FastKirana Admin';
 
-          final isAuthRoute = options.path.contains('/api/auth');
-          if (!isAuthRoute) {
-            options.headers['x-user-id'] = userId;
-            options.headers['x-user-email'] = userEmail;
-            options.headers['x-user-name'] = userName;
-            options.headers['x-user-role'] = userRole;
-            options.headers['x-user-phone'] = userPhone;
-          }
+          options.headers['x-user-id'] = userId;
+          options.headers['x-user-email'] = userEmail;
+          options.headers['x-user-name'] = userName;
+          options.headers['x-user-role'] = userRole;
+          options.headers['x-user-phone'] = userPhone;
         }
       } catch (_) {}
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../widgets/brand_button.dart';
+import '../cafe/restaurant_dashboard.dart';
 
 class RestaurantLoginScreen extends ConsumerStatefulWidget {
   const RestaurantLoginScreen({super.key});
@@ -72,7 +74,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                     BrandButton(
                       text: 'Login',
                       onPressed: () {
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const RestaurantDashboard()));
+                        Navigator.pushReplacement(context, FadeSlideRoute(page: const RestaurantDashboard()));
                       },
                     ),
                   ],

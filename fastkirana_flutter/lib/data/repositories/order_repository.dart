@@ -127,6 +127,66 @@ class OrderRepository {
     }
   }
 
+  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
+    final statusStr = newStatus.name.toUpperCase();
+    try {
+      await dio.patch('/api/orders/$orderId', data: {'status': statusStr});
+    } catch (_) {
+      try {
+        await dio.patch('/api/admin/orders/$orderId/status', data: {'status': statusStr});
+      } catch (_) {}
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawJson = prefs.getString(_cacheKey);
+      if (rawJson != null && rawJson.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
+        final List<Order> localOrders = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((j) => Order.fromJson(j))
+            .toList();
+
+        final idx = localOrders.indexWhere((o) => o.id == orderId || o.readableId == orderId);
+        if (idx != -1) {
+          final old = localOrders[idx];
+          localOrders[idx] = Order(
+            id: old.id,
+            readableId: old.readableId,
+            userId: old.userId,
+            addressId: old.addressId,
+            restaurantId: old.restaurantId,
+            shopName: old.shopName,
+            shopPhone: old.shopPhone,
+            notes: old.notes,
+            customerName: old.customerName,
+            customerPhone: old.customerPhone,
+            customerAddress: old.customerAddress,
+            status: newStatus,
+            subtotal: old.subtotal,
+            discount: old.discount,
+            deliveryFee: old.deliveryFee,
+            taxes: old.taxes,
+            miscFee: old.miscFee,
+            total: old.total,
+            paymentMethod: old.paymentMethod,
+            paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : old.paymentStatus,
+            deliveryMethod: old.deliveryMethod,
+            createdAt: old.createdAt,
+            confirmedAt: newStatus == OrderStatus.confirmed ? DateTime.now() : old.confirmedAt,
+            packedAt: newStatus == OrderStatus.packed ? DateTime.now() : old.packedAt,
+            shippedAt: newStatus == OrderStatus.shipped ? DateTime.now() : old.shippedAt,
+            deliveredAt: newStatus == OrderStatus.delivered ? DateTime.now() : old.deliveredAt,
+            items: old.items,
+          );
+          await _saveToCache(localOrders);
+        }
+      }
+    } catch (_) {}
+
+    return true;
+  }
+
   Future<void> cancelOrder(String orderId, String reason) async {
     final orders = await getOrders('');
     final updated = orders.map((o) {

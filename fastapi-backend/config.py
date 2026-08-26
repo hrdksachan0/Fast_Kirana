@@ -7,7 +7,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     APP_NAME: str = "FastKirana FastAPI Microservice"
-    APP_ENV: str = os.getenv("NODE_ENV", "development")
+    APP_ENV: str = os.getenv("APP_ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
     # Database Configuration

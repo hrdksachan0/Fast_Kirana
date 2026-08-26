@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../data/models/restaurant.dart';
 import '../core/theme/design_system.dart';
+import '../core/routes/page_transitions.dart';
 import '../features/cafe/cafe_menu_screen.dart';
 
 class RestaurantCard extends StatefulWidget {
@@ -127,8 +128,8 @@ class _RestaurantCardState extends State<RestaurantCard> {
                 HapticFeedback.lightImpact();
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => CafeMenuScreen(
+                  FadeSlideRoute(
+                    page: CafeMenuScreen(
                       restaurantId: r.id,
                       restaurantName: r.name,
                       restaurant: r,

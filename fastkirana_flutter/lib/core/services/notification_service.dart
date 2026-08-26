@@ -102,10 +102,17 @@ class NotificationService {
 
   Future<void> requestPermissions() async {
     try {
+      // 1. Android 13+ (API 33+) native system notification dialog
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+
+      // 2. iOS and FCM system request
       NotificationSettings settings = await _fcm.requestPermission(
         alert: true,
         badge: true,
         sound: true,
+        provisional: false,
       );
       print("FCM permission status: ${settings.authorizationStatus}");
     } catch (e) {

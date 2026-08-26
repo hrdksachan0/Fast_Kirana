@@ -108,7 +108,7 @@ async function getOrderDetails(id: string) {
             id: o.id,
             readableId: o.readableId,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
-            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
+            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
             status: o.status,
             subtotal: Number(o.subtotal || 0),
             total: Number(o.total || 0),

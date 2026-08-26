@@ -44,18 +44,18 @@ class RestaurantOrderQueueScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(o['id'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary)),
+                    Text(o['id']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                      decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                       child: Text(o['status'].toString().toUpperCase(), style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: statusColor)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(o['customer'], style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                Text(o['customer']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                 const SizedBox(height: 4),
-                Text(o['items'], style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(o['items']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 10),
                 Row(
                   children: [

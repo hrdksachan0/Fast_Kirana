@@ -50,6 +50,33 @@ export function OrdersTab({
   livePendingOrders = [],
 }: OrdersTabProps) {
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
+  const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
+
+  const handleTogglePaymentStatus = async (order: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const targetStatus = order.paymentStatus === 'PAID' ? 'PENDING' : 'PAID'
+    const targetMethod = targetStatus === 'PAID' ? 'UPI' : 'COD'
+    setUpdatingPaymentId(order.id)
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentStatus: targetStatus, paymentMethod: targetMethod }),
+      })
+      if (res.ok) {
+        order.paymentStatus = targetStatus
+        order.paymentMethod = targetMethod
+        toast.success(`Order #${order.readableId || order.id.slice(0, 8)} payment updated to ${targetStatus}!`)
+        onUpdateOrderStatus(order.id, order.status)
+      } else {
+        toast.error('Failed to update payment status')
+      }
+    } catch (_) {
+      toast.error('Network error updating payment status')
+    } finally {
+      setUpdatingPaymentId(null)
+    }
+  }
 
   const handleStatusSelectChange = (order: any, newStatus: string) => {
     if (newStatus === 'CANCELLED') {
@@ -115,8 +142,8 @@ export function OrdersTab({
     const isRetail = getOrderMethod(o) === 'RETAIL'
     const restSub = o.subOrders?.find((s: any) => s.type === 'RESTAURANT')
     const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
-    const outletName = restSub?.shopName || o.restaurantName || (o.shopName !== 'FastKirana Grocery' ? o.shopName : 'Restaurant')
-    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
+    const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
+    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : ''
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
@@ -193,12 +220,31 @@ export function OrdersTab({
     window.open(url, '_blank')
   }
 
-  const getOrderStoreType = (o: any) => {
-    if (o.restaurantId || (o.shopName && o.shopName !== 'FastKirana Grocery' && o.shopName !== 'Grocery Mart')) {
+  const isGroceryOrder = (o: any) => {
+    if (o.readableId && (o.readableId.endsWith('-G') || o.readableId.includes('-G'))) return true
+    if (o.orderType === 'GROCERY') return true
+    if (!o.restaurantId) {
       const name = ((o.restaurantName || o.shopName) || '').toLowerCase()
-      if (name.includes('cafe') || name.includes('a.s') || name.includes('as-')) return 'CAFE'
+      if (name.includes('cafe') || name.includes('a.s') || name.includes('restaurant')) {
+        return false
+      }
+      return true
+    }
+    const name = ((o.restaurantName || o.shopName) || '').toLowerCase()
+    if (name.includes('dark store') || name.includes('darkstore') || name.includes('grocery')) return true
+    return false
+  }
+
+  const getOrderStoreType = (o: any) => {
+    if (isGroceryOrder(o)) return 'GROCERY'
+    if (o.restaurantId) {
+      const name = ((o.restaurantName || o.shopName) || '').toLowerCase()
+      if (name.includes('cafe')) return 'CAFE'
       return 'RESTAURANT'
     }
+    const name = (o.shopName || '').toLowerCase()
+    if (name.includes('cafe')) return 'CAFE'
+    if (name && !name.includes('grocery') && !name.includes('dark')) return 'RESTAURANT'
     return 'GROCERY'
   }
 
@@ -459,25 +505,28 @@ export function OrdersTab({
                           <div className="mt-1 flex items-center gap-1">
                             {(() => {
                               const displayName = ((o as any).restaurantName || o.shopName || '').trim()
-                              const isGenericGrocery = !displayName || displayName === 'FastKirana Grocery' || displayName === 'Grocery Mart'
+                              const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
 
-                              if (storeType === 'CAFE') {
+                              if (isDarkStoreOrGrocery) {
+                                const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
+                                  ? displayName 
+                                  : 'FASTKIRANA DARK STORE'
                                 return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
-                                    ☕ {isGenericGrocery ? 'CAFE' : displayName.toUpperCase()}
+                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
+                                    🥘 {storeLabel.toUpperCase()}
                                   </span>
                                 )
                               }
-                              if (storeType === 'RESTAURANT') {
+                              if (storeType === 'CAFE') {
                                 return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
-                                    🥘 {isGenericGrocery ? 'RESTAURANT' : displayName.toUpperCase()}
+                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
+                                    ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
                                   </span>
                                 )
                               }
                               return (
-                                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
-                                  🛒 GROCERY
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
+                                  🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
                                 </span>
                               )
                             })()}
@@ -576,16 +625,24 @@ export function OrdersTab({
                         </td>
                         <td className="py-3 px-3 whitespace-nowrap">
                           <div className="font-black text-text-primary text-sm">{formatPrice(o.total)}</div>
-                          {o.paymentStatus === 'PAID' ? (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              PAID ONLINE ✅
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1">
-                              💰 {o.paymentMethod || 'COD'} (UNPAID)
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePaymentStatus(o, e)}
+                            disabled={updatingPaymentId === o.id}
+                            className="cursor-pointer transition-all active:scale-95 block text-left"
+                            title="Click to toggle between PAID and UNPAID / COD"
+                          >
+                            {o.paymentStatus === 'PAID' ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs hover:bg-emerald-500/25">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                PAID ONLINE ✅
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1 hover:bg-amber-500/25">
+                                💰 {o.paymentMethod || 'COD'} (UNPAID)
+                              </span>
+                            )}
+                          </button>
                         </td>
                         <td className="py-3 px-3 text-center">
                           <div className="flex flex-col items-center justify-center gap-1.5 min-w-[105px]">
@@ -846,25 +903,28 @@ export function OrdersTab({
                           <div className="mt-1 flex items-center gap-1">
                             {(() => {
                               const displayName = ((o as any).restaurantName || o.shopName || '').trim()
-                              const isGenericGrocery = !displayName || displayName === 'FastKirana Grocery' || displayName === 'Grocery Mart'
+                              const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
 
-                              if (storeType === 'CAFE') {
+                              if (isDarkStoreOrGrocery) {
+                                const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
+                                  ? displayName 
+                                  : 'FASTKIRANA DARK STORE'
                                 return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
-                                    ☕ {isGenericGrocery ? 'CAFE' : displayName.toUpperCase()}
+                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
+                                    🥘 {storeLabel.toUpperCase()}
                                   </span>
                                 )
                               }
-                              if (storeType === 'RESTAURANT') {
+                              if (storeType === 'CAFE') {
                                 return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
-                                    🥘 {isGenericGrocery ? 'RESTAURANT' : displayName.toUpperCase()}
+                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
+                                    ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
                                   </span>
                                 )
                               }
                               return (
-                                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30">
-                                  🛒 GROCERY
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
+                                  🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
                                 </span>
                               )
                             })()}
@@ -935,16 +995,24 @@ export function OrdersTab({
                         </td>
                         <td className="py-3 px-3 whitespace-nowrap">
                           <div className="font-bold text-text-primary text-xs">{formatPrice(o.total)}</div>
-                          {o.paymentStatus === 'PAID' ? (
-                            <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full mt-0.5">
-                              <span className="h-1 w-1 rounded-full bg-emerald-500" />
-                              PAID ✅
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5">
-                              💰 {o.paymentMethod || 'COD'}
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePaymentStatus(o, e)}
+                            disabled={updatingPaymentId === o.id}
+                            className="cursor-pointer transition-all active:scale-95 block text-left"
+                            title="Click to toggle between PAID and UNPAID / COD"
+                          >
+                            {o.paymentStatus === 'PAID' ? (
+                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full mt-0.5 shadow-2xs hover:bg-emerald-500/25">
+                                <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                                PAID ✅
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5 hover:bg-amber-500/25">
+                                💰 {o.paymentMethod || 'COD'}
+                              </span>
+                            )}
+                          </button>
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${

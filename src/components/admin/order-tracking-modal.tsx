@@ -109,7 +109,7 @@ export default function OrderTrackingModal({
     // For combined orders, prefer restaurant sub-order token e.g. 600981-R
     const restSub = o.subOrders?.find(s => s.type === 'RESTAURANT')
     const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
-    const outletName = restSub?.shopName || o.restaurantName || (o.shopName !== 'FastKirana Grocery' ? o.shopName : 'Restaurant')
+    const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
     const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
@@ -409,7 +409,7 @@ export default function OrderTrackingModal({
                       return (
                         <div key={sub.id || subIdx} className="space-y-0">
                           <div className="bg-muted/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
-                            <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : '🛒 FastKirana Grocery'}</span>
+                            <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : `🥘 ${sub.shopName || 'FastKirana Dark Store'}`}</span>
                             <span className="font-mono text-text-muted">#{sub.readableId || sub.id?.slice(0, 8)}</span>
                           </div>
                           <div className="divide-y divide-border/30">

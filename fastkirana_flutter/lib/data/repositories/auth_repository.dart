@@ -9,16 +9,19 @@ class AuthRepository {
   Future<AuthResponse> sendOtp(String identifier) async {
     try {
       final clean = identifier.trim();
-
       final response = await dio.post(
-        'https://www.fastkirana.in/api/auth/otp/send',
+        '/api/auth/otp/send',
         data: {
-          'email': clean,
           'phone': clean,
-          'identifier': clean,
+          'email': clean,
         },
       );
-      return AuthResponse.fromJson(response.data);
+      // FastAPI / Next.js response handling
+      return AuthResponse(
+        success: true,
+        user: null,
+        token: null,
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -27,17 +30,15 @@ class AuthRepository {
   Future<AuthResponse> verifyOtp(String identifier, String otp) async {
     try {
       final clean = identifier.trim();
-
       final response = await dio.post(
-        'https://www.fastkirana.in/api/auth/otp/verify',
+        '/api/auth/otp/verify',
         data: {
-          'email': clean,
           'phone': clean,
-          'identifier': clean,
+          'email': clean,
           'otp': otp.trim(),
         },
       );
-      return AuthResponse.fromJson(response.data);
+      return _parseSessionResponse(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -99,6 +100,28 @@ class AuthRepository {
     } on DioException catch (e) {
       throw _handleError(e);
     }
+  }
+
+  AuthResponse _parseSessionResponse(dynamic data) {
+    final json = data is Map<String, dynamic> ? data : {};
+    final id = json['id']?.toString() ?? '';
+    final token = json['token']?.toString();
+    final role = json['role']?.toString() ?? 'USER';
+
+    if (id.isEmpty) {
+      return AuthResponse(success: false, user: null, token: token);
+    }
+
+    final user = User(
+      id: id,
+      name: json['name']?.toString(),
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      role: role,
+      isBlocked: false,
+    );
+
+    return AuthResponse(success: true, user: user, token: token);
   }
 
   Exception _handleError(DioException e) {

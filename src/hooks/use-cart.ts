@@ -41,7 +41,7 @@ export function useCart() {
     if (prevCafeSub < 200 && newCafeSub >= 200) {
       setTimeout(() => {
         triggerHaptic('success')
-        toast.success('🎉 FREE Cafe delivery unlocked!', {
+        toast.success('🎉 FREE Restaurant delivery unlocked!', {
           id: 'free-delivery-unlocked-cafe',
           duration: 2000,
         })
@@ -64,7 +64,7 @@ export function useCart() {
     if (isClosed) {
       triggerHaptic('warning')
       const type = getProductType(product)
-      const storeName = type === 'RESTAURANT' ? 'Restaurant Kitchen' : type === 'CAFE' ? 'Cafe' : 'Grocery Mart'
+      const storeName = (type === 'RESTAURANT' || type === 'CAFE') ? 'Restaurant Kitchen' : 'Grocery Mart'
       toast.error(`${storeName} is closed. Cannot add ${product.name}.`)
       return
     }

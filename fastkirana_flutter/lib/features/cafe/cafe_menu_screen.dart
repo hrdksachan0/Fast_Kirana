@@ -5,10 +5,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../data/models/product.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/theme/systematic_tokens.dart';
 import '../../data/models/restaurant.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/floating_cart_bar.dart';
+import '../../widgets/cart_conflict_dialog.dart';
+import '../../core/utils/restaurant_utils.dart';
+import '../products/product_detail_screen.dart';
 import '../cart/cart_screen.dart';
 import '../profile/add_review_screen.dart';
 
@@ -201,6 +208,11 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -270,33 +282,17 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
     _centerCategoryInHorizontalBar(tag);
 
-    if (tag == 'all') {
-      final firstKey = _sectionKeys.values.firstOrNull;
-      if (firstKey?.currentContext != null) {
-        Scrollable.ensureVisible(
-          firstKey!.currentContext!,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
-          alignment: 0.0,
-        );
-      }
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _isManualTabClick = false;
-      });
-      return;
-    }
-
-    final key = _sectionKeys[tag];
+    final key = tag == 'all' ? _sectionKeys.values.firstOrNull : _sectionKeys[tag];
     if (key?.currentContext != null) {
       Scrollable.ensureVisible(
         key!.currentContext!,
-        duration: const Duration(milliseconds: 450),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
         alignment: 0.0,
       );
     }
 
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _isManualTabClick = false;
     });
   }
@@ -568,10 +564,13 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: Stack(
-        children: [
-          NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: Stack(
+          children: [
+            NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
               // ─── 1. HERO SLIVER APP BAR (White & Clean on Collapse, Rich on Expand) ───
               SliverAppBar(
                 pinned: true,
@@ -819,6 +818,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               SliverToBoxAdapter(
                 child: Container(
                   decoration: const BoxDecoration(
+                    color: Colors.white,
                     border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
                   ),
                   child: TabBar(
@@ -838,18 +838,19 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 ),
               ),
 
-              // ─── 4. CIRCULAR CATEGORY CHIPS (Pinned with Real Photos & Auto-Centering) ───
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _CategoryChipsDelegate(
-                  horizontalController: _horizontalCategoryController,
-                  menuAsync: menuAsync,
-                  currentRestaurant: currentRestaurant,
-                  activeCategoryTag: _activeCategoryTag,
-                  buildCategories: (products) => _buildCategories(products, currentRestaurant),
-                  onCategoryTap: (tag) => _scrollToSection(tag),
+              // ─── 4. PINNED CATEGORY CHIPS BAR (Pinned cleanly below AppBar when scrolled!) ───
+              if (_tabController.index == 0)
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _CategoryChipsDelegate(
+                    horizontalController: _horizontalCategoryController,
+                    menuAsync: menuAsync,
+                    currentRestaurant: currentRestaurant,
+                    activeCategoryTag: _activeCategoryTag,
+                    buildCategories: (prods) => _buildCategories(prods, currentRestaurant),
+                    onCategoryTap: (tag) => _scrollToSection(tag),
+                  ),
                 ),
-              ),
             ],
 
             // ─── 5. BODY: MENU or REVIEWS ───
@@ -862,78 +863,12 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             ),
           ),
 
-          // ─── 6. STICKY CART BAR ───
-          if (cartCount > 0)
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: MediaQuery.of(context).padding.bottom + 10,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.heavyImpact();
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
-                },
-                child: Container(
-                  height: 58,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF15803D), Color(0xFF16A34A)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF15803D).withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '$cartCount ${cartCount == 1 ? "Item" : "Items"} • ₹${cartSubtotal.toInt()}',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
-                            ),
-                            if (cartSubtotal < 199)
-                              Text(
-                                'Add ₹${(199 - cartSubtotal).toInt()} for FREE delivery',
-                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.8)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'VIEW CART',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900, color: const Color(0xFF15803D)),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.arrow_forward_rounded, color: Color(0xFF15803D), size: 14),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // ─── 6. STICKY CART BAR (Unified Exact Homepage Design) ───
+          FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 10),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // ═══════════════════════════════════════════════════════
@@ -960,7 +895,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Items Count Bar
+              // 1. Items Count Bar
               SliverToBoxAdapter(
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(0, 0, 0, 4),
@@ -1005,17 +940,27 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 ),
                 if (!(_collapsedSections[section.tag] ?? false))
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     sliver: SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => ProductCard(product: section.products[index]),
-                        childCount: section.products.length,
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.78,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, tablet: 3, desktop: 4),
+                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.74, mobile: 0.76, tablet: 0.80, desktop: 0.84),
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => ProductCard(
+                          product: section.products[index],
+                          isCompact: true,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              FadeSlideRoute(page: ProductDetailScreen(product: section.products[index])),
+                            );
+                          },
+                        ),
+                        childCount: section.products.length,
                       ),
                     ),
                   ),
@@ -1028,6 +973,449 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       },
       loading: () => _buildShimmerGrid(),
       error: (_, __) => const Center(child: Text('Failed to load menu items')),
+    );
+  }
+
+  bool _isVegProduct(Product product) {
+    final tags = product.tags.map((t) => t.toLowerCase()).toList();
+    if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) {
+      return false;
+    }
+    final nameLower = product.name.toLowerCase();
+    if (nameLower.contains('chicken') || nameLower.contains('egg') || nameLower.contains('mutton') || nameLower.contains('fish')) {
+      return false;
+    }
+    return true;
+  }
+
+  void _handleDishAddToCart(BuildContext context, Product product) {
+    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+    if (conflictRestaurant != null) {
+      final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
+      final newOutlet = getOutletName(product);
+      CartConflictDialog.show(
+        context,
+        product: product,
+        existingOutletName: conflictRestaurant,
+        groceryItemsCount: groceryCount,
+        onConfirm: () {
+          ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF047857),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      groceryCount > 0
+                          ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
+                          : 'Switched to $newOutlet! 🍽️',
+                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    ref.read(cartProvider.notifier).addProduct(product, 1);
+  }
+
+  void _handleDishIncrement(BuildContext context, Product product) {
+    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+    if (conflictRestaurant != null) {
+      _handleDishAddToCart(context, product);
+      return;
+    }
+    HapticFeedback.lightImpact();
+    ref.read(cartProvider.notifier).increment(product);
+  }
+
+  Widget _buildRestaurantDishItem(Product product) {
+    final cart = ref.watch(cartProvider).value;
+    final items = cart?.items.where((i) => i.productId == product.id).toList() ?? [];
+    final inCartQty = items.fold<int>(0, (s, i) => s + i.quantity);
+    final isVeg = _isVegProduct(product);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          FadeSlideRoute(page: ProductDetailScreen(product: product)),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Content: Veg badge, Title, Price, Description
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(3.5),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                              color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (product.isBestSeller || product.isTopPick) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('⭐', style: TextStyle(fontSize: 8)),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Bestseller',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    product.name,
+                    style: GoogleFonts.inter(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Text(
+                        '₹${product.price.toInt()}',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      if (product.mrp > product.price) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '₹${product.mrp.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.lineThrough,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (product.description != null && product.description!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      product.description!.trim(),
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF64748B),
+                        height: 1.25,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Right Image + Layered ADD Button
+            SizedBox(
+              width: 106,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Container(
+                    width: 106,
+                    height: 100,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: _buildDishImage(product),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    child: _buildDishAddButton(product, inCartQty),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDishImage(Product product) {
+    var imgUrl = product.imageUrl?.trim() ?? '';
+    if (imgUrl.isNotEmpty) {
+      if (imgUrl.startsWith('/')) {
+        imgUrl = 'https://www.fastkirana.in$imgUrl';
+      }
+      return CachedNetworkImage(
+        imageUrl: imgUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: const Color(0xFFF1F5F9),
+          highlightColor: const Color(0xFFFAFAFA),
+          child: Container(color: Colors.white),
+        ),
+        errorWidget: (_, __, ___) => Center(
+          child: Text(
+            _getEmojiForDish(product.name),
+            style: const TextStyle(fontSize: 34),
+          ),
+        ),
+      );
+    }
+    return Center(
+      child: Text(
+        _getEmojiForDish(product.name),
+        style: const TextStyle(fontSize: 34),
+      ),
+    );
+  }
+
+  String _getEmojiForDish(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('burger')) return '🍔';
+    if (lower.contains('pizza')) return '🍕';
+    if (lower.contains('sandwich')) return '🥪';
+    if (lower.contains('roll') || lower.contains('frankie')) return '🌯';
+    if (lower.contains('momo') || lower.contains('spring roll')) return '🥟';
+    if (lower.contains('fries') || lower.contains('finger')) return '🍟';
+    if (lower.contains('pasta') || lower.contains('noodle')) return '🍝';
+    if (lower.contains('dosa') || lower.contains('idli')) return '🥞';
+    if (lower.contains('biryani') || lower.contains('rice')) return '🍚';
+    if (lower.contains('paneer') || lower.contains('curry') || lower.contains('dal')) return '🥘';
+    if (lower.contains('roti') || lower.contains('naan')) return '🫓';
+    if (lower.contains('tea') || lower.contains('chai') || lower.contains('coffee')) return '☕';
+    if (lower.contains('shake')) return '🥤';
+    if (lower.contains('ice cream') || lower.contains('dessert')) return '🍨';
+    return '🍽️';
+  }
+
+  Widget _buildDishAddButton(Product product, int inCartQty) {
+    final isClosed = widget.restaurant?.isOpen == false;
+    if (isClosed) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${widget.restaurantName} is currently closed for new orders.',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF0F172A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Center(
+            child: Text(
+              'CLOSED',
+              style: GoogleFonts.inter(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF94A3B8),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (inCartQty > 0) {
+      return Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                ref.read(cartProvider.notifier).decrement(product.id);
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Icon(Icons.remove_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                '$inCartQty',
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleDishIncrement(context, product),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Icon(Icons.add_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _handleDishAddToCart(context, product),
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'ADD',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 3),
+            const Icon(Icons.add_rounded, color: Colors.white, size: 14),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1106,8 +1494,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => AddReviewScreen(
+                      FadeSlideRoute(
+                        page: AddReviewScreen(
                           productName: widget.restaurantName,
                           restaurantId: widget.restaurantId,
                         ),
@@ -1172,8 +1560,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => AddReviewScreen(
+                          FadeSlideRoute(
+                            page: AddReviewScreen(
                               productName: widget.restaurantName,
                               restaurantId: widget.restaurantId,
                             ),
@@ -1334,27 +1722,18 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   }
 
   Widget _buildShimmerGrid() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 90),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.78,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-        ),
-        itemCount: 6,
-        itemBuilder: (context, index) {
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-          );
-        },
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.76,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
       ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return const ProductCardSkeleton();
+      },
     );
   }
 }
@@ -1380,10 +1759,10 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get maxExtent => 104;
+  double get maxExtent => 96;
 
   @override
-  double get minExtent => 104;
+  double get minExtent => 96;
 
   @override
   bool shouldRebuild(covariant _CategoryChipsDelegate oldDelegate) {
@@ -1418,17 +1797,29 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: menuAsync.when(
         data: (products) {
           final cats = buildCategories(products);
           return SizedBox(
-            height: 104,
+            height: 96,
             child: ListView.separated(
               controller: horizontalController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               itemCount: cats.length,
               separatorBuilder: (_, __) => const SizedBox(width: 4),
               itemBuilder: (context, index) {
@@ -1438,13 +1829,13 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                 return GestureDetector(
                   onTap: () => onCategoryTap(cat.tag),
                   child: SizedBox(
-                    width: 70,
+                    width: 68,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 48,
+                          height: 48,
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
@@ -1467,7 +1858,7 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                             child: _buildCategoryThumbnail(cat),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
                           cat.title,
                           style: GoogleFonts.inter(
@@ -1480,16 +1871,6 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          height: 2,
-                          width: isSelected ? 16 : 0,
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFEA580C) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -1498,8 +1879,8 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
             ),
           );
         },
-        loading: () => const SizedBox(height: 104),
-        error: (_, __) => const SizedBox(height: 104),
+        loading: () => const SizedBox(height: 96),
+        error: (_, __) => const SizedBox(height: 96),
       ),
     );
   }

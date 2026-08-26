@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:convert';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/responsive.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
@@ -362,14 +364,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
+        child: ResponsiveContainer(
+          maxWidth: Responsive.formMaxContentWidth,
+          fillHeight: true,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 10),
-              FastKiranaLogoWidget(size: 64),
+              FastKiranaLogoWidget(size: 64)
+                  .animate()
+                  .fadeIn(duration: 400.ms)
+                  .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.0, 1.0), curve: Curves.easeOutBack, duration: 500.ms),
               const SizedBox(height: 24),
               Text(
                 'Verify OTP',
@@ -378,7 +386,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
-              ),
+              ).animate().fadeIn(duration: 400.ms, delay: 150.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 150.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 8),
               Text(
                 'We sent a code to ${widget.identifier}',
@@ -387,7 +395,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
-              ),
+              ).animate().fadeIn(duration: 400.ms, delay: 250.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 250.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -421,7 +429,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         }
                       },
                     ),
-                  );
+                  )
+                      .animate()
+                      .fadeIn(duration: 350.ms, delay: (200 + index * 50).ms)
+                      .scale(begin: const Offset(0.85, 0.85), end: const Offset(1.0, 1.0), duration: 350.ms, delay: (200 + index * 50).ms, curve: Curves.easeOutBack);
                 }),
               ),
               const SizedBox(height: 24),
@@ -482,6 +493,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

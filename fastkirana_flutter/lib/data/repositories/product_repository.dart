@@ -56,8 +56,123 @@ class ProductRepository {
       if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
       }
-      rethrow;
+      return _filterProducts(_getStaticFallbackProducts(), category: category, search: search, restaurantId: restaurantId);
     }
+  }
+
+  List<Product> _getStaticFallbackProducts() {
+    final list = [
+      {
+        'id': 'prod_potato',
+        'name': 'Fresh Potato (Aloo)',
+        'slug': 'fresh-potato-aloo',
+        'categoryId': 'cmqh1haw30000zcid4vj7i1yj',
+        'category': {'id': 'cmqh1haw30000zcid4vj7i1yj', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables'},
+        'price': 28.0,
+        'mrp': 35.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500&q=80',
+        'unit': '1 kg',
+        'tags': ['potato', 'aloo', 'vegetables', 'fresh'],
+      },
+      {
+        'id': 'prod_onion',
+        'name': 'Fresh Red Onion (Pyaz)',
+        'slug': 'fresh-red-onion-pyaz',
+        'categoryId': 'cmqh1haw30000zcid4vj7i1yj',
+        'category': {'id': 'cmqh1haw30000zcid4vj7i1yj', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables'},
+        'price': 38.0,
+        'mrp': 45.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=500&q=80',
+        'unit': '1 kg',
+        'tags': ['onion', 'pyaz', 'vegetables', 'fresh'],
+      },
+      {
+        'id': 'prod_tomato',
+        'name': 'Hybrid Tomato (Tamatar)',
+        'slug': 'hybrid-tomato-tamatar',
+        'categoryId': 'cmqh1haw30000zcid4vj7i1yj',
+        'category': {'id': 'cmqh1haw30000zcid4vj7i1yj', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables'},
+        'price': 32.0,
+        'mrp': 40.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&q=80',
+        'unit': '1 kg',
+        'tags': ['tomato', 'tamatar', 'vegetables', 'fresh'],
+      },
+      {
+        'id': 'prod_banana',
+        'name': 'Robusta Banana (Kela)',
+        'slug': 'robusta-banana-kela',
+        'categoryId': 'cmqh1haw30000zcid4vj7i1yj',
+        'category': {'id': 'cmqh1haw30000zcid4vj7i1yj', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables'},
+        'price': 45.0,
+        'mrp': 60.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=500&q=80',
+        'unit': '1 Dozen (12 pcs)',
+        'tags': ['banana', 'kela', 'fruits', 'fresh'],
+      },
+      {
+        'id': 'prod_apple',
+        'name': 'Shimla Royal Apple (Seb)',
+        'slug': 'shimla-royal-apple-seb',
+        'categoryId': 'cmqh1haw30000zcid4vj7i1yj',
+        'category': {'id': 'cmqh1haw30000zcid4vj7i1yj', 'name': 'Fruits & Vegetables', 'slug': 'fruits-vegetables'},
+        'price': 140.0,
+        'mrp': 180.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=500&q=80',
+        'unit': '1 kg (4-5 pcs)',
+        'tags': ['apple', 'seb', 'fruits', 'fresh'],
+      },
+      {
+        'id': 'prod_atta',
+        'name': 'Aashirvaad Shudh Chakki Atta',
+        'slug': 'aashirvaad-shudh-chakki-atta',
+        'categoryId': 'cmsfuzs73000404l7q139nk61',
+        'category': {'id': 'cmsfuzs73000404l7q139nk61', 'name': 'Atta, Rice & Dal', 'slug': 'atta-rice-dal'},
+        'price': 245.0,
+        'mrp': 275.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=80',
+        'unit': '5 kg',
+        'tags': ['atta', 'aashirvaad', 'flour', 'grocery'],
+      },
+      {
+        'id': 'prod_milk',
+        'name': 'Amul Taaza Homogenised Toned Milk',
+        'slug': 'amul-taaza-toned-milk',
+        'categoryId': 'cmsfuzs73000404l7q139nk61',
+        'category': {'id': 'cmsfuzs73000404l7q139nk61', 'name': 'Dairy & Breakfast', 'slug': 'dairy'},
+        'price': 27.0,
+        'mrp': 28.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&q=80',
+        'unit': '500 ml',
+        'tags': ['milk', 'amul', 'doodh', 'dairy'],
+      },
+      {
+        'id': 'prod_lays',
+        'name': 'Lay\'s India\'s Magic Masala Chips',
+        'slug': 'lays-magical-masala',
+        'categoryId': 'cmqh1hb920002zcidoywpi240',
+        'category': {'id': 'cmqh1hb920002zcidoywpi240', 'name': 'Snacks & Munchies', 'slug': 'snacks-munchies'},
+        'price': 20.0,
+        'mrp': 20.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&q=80',
+        'unit': '50 g',
+        'tags': ['lays', 'chips', 'snacks', 'munchies'],
+      },
+      {
+        'id': 'prod_coke',
+        'name': 'Coca-Cola Original Taste',
+        'slug': 'coca-cola-can',
+        'categoryId': 'cmqgzqfz20008vkidoycqg5u2',
+        'category': {'id': 'cmqgzqfz20008vkidoycqg5u2', 'name': 'Cold Drinks & Juices', 'slug': 'beverages'},
+        'price': 40.0,
+        'mrp': 40.0,
+        'imageUrl': 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80',
+        'unit': '300 ml (Can)',
+        'tags': ['coke', 'coca-cola', 'drinks', 'cold drinks', 'beverages'],
+      },
+    ];
+
+    return list.map((j) => Product.fromJson(j)).toList();
   }
 
   static const Map<String, List<String>> _categoryAliases = {

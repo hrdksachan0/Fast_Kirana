@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../widgets/brand_button.dart';
+import '../delivery/delivery_dashboard.dart';
 
 class DeliveryLoginScreen extends ConsumerStatefulWidget {
   const DeliveryLoginScreen({super.key});
@@ -66,7 +68,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                       const SizedBox(height: 16),
                       BrandButton(
                         text: 'Send OTP',
-                        onPressed: _isLoading ? null : () {
+                        onPressed: () {
                           setState(() => _showOtp = true);
                         },
                         isLoading: _isLoading,
@@ -93,7 +95,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                       BrandButton(
                         text: 'Login',
                         onPressed: () {
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DeliveryDashboard()));
+                          Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
                         },
                       ),
                     ],

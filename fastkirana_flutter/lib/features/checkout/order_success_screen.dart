@@ -1,15 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
-import '../../core/theme/design_system.dart';
-import '../orders/orders_screen.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../core/network/api_client.dart';
+import '../../data/models/order.dart';
+import '../../data/repositories/order_repository.dart';
+import '../orders/order_tracking_screen.dart';
 
-class OrderSuccessScreen extends StatefulWidget {
+class OrderSuccessScreen extends ConsumerStatefulWidget {
   final String? orderId;
   final double totalAmount;
   final String deliveryAddress;
   final String paymentMethod;
+  final Order? order;
 
   const OrderSuccessScreen({
     super.key,
@@ -17,13 +23,14 @@ class OrderSuccessScreen extends StatefulWidget {
     this.totalAmount = 0.0,
     this.deliveryAddress = 'Ghatampur Home',
     this.paymentMethod = 'COD',
+    this.order,
   });
 
   @override
-  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+  ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
 }
 
-class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTickerProviderStateMixin {
+class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with SingleTickerProviderStateMixin {
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF10B981);
   static const Color slateDark = Color(0xFF0F172A);
@@ -40,6 +47,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
   late Animation<Offset> _detailsSlideAnim;
   late Animation<double> _buttonsFadeAnim;
   late Animation<Offset> _buttonsSlideAnim;
+
+  Order? _liveOrder;
+  Timer? _syncTimer;
 
   @override
   void initState() {
@@ -113,13 +123,103 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
 
     _animController.forward();
     HapticFeedback.heavyImpact();
+
+    // Start live syncing with admin/backend order updates
+    _fetchLiveOrderStatus();
+    _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     _confettiController.dispose();
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchLiveOrderStatus() async {
+    final displayId = widget.orderId;
+    if (displayId == null || displayId.isEmpty) return;
+
+    try {
+      final repo = OrderRepository(ref.read(dioProvider));
+      final order = await repo.getOrder(displayId);
+      if (mounted && order != null) {
+        setState(() {
+          _liveOrder = order;
+        });
+      }
+    } catch (_) {}
+  }
+
+  // Map backend OrderStatus to 5-stage integer step (0 to 4)
+  int _getStageIndex(OrderStatus? status) {
+    if (status == null) return 1; // Default to Confirmed if freshly placed
+    switch (status) {
+      case OrderStatus.pending:
+        return 0; // Placed
+      case OrderStatus.confirmed:
+        return 1; // Confirmed
+      case OrderStatus.packed:
+        return 2; // Packed
+      case OrderStatus.shipped:
+        return 3; // On the Way
+      case OrderStatus.delivered:
+        return 4; // Delivered
+      case OrderStatus.cancelled:
+        return -1;
+    }
+  }
+
+  String _getStatusTitle(int stage) {
+    switch (stage) {
+      case 0:
+        return 'Live Status: Order Placed';
+      case 1:
+        return 'Live Status: Order Confirmed';
+      case 2:
+        return 'Live Status: Order Packed';
+      case 3:
+        return 'Live Status: On the Way 🛵';
+      case 4:
+        return 'Live Status: Delivered ✨';
+      default:
+        return 'Live Status: In Progress';
+    }
+  }
+
+  String _getBadgeText(int stage) {
+    switch (stage) {
+      case 0:
+        return 'PLACED';
+      case 1:
+        return 'CONFIRMED';
+      case 2:
+        return 'PACKED';
+      case 3:
+        return 'ON THE WAY';
+      case 4:
+        return 'DELIVERED';
+      default:
+        return 'PROCESSING';
+    }
+  }
+
+  Color _getBadgeColor(int stage) {
+    switch (stage) {
+      case 0:
+        return const Color(0xFFD97706); // Amber
+      case 1:
+        return const Color(0xFF0284C7); // Sky Blue
+      case 2:
+        return const Color(0xFF7C3AED); // Purple
+      case 3:
+        return const Color(0xFFEA580C); // Orange
+      case 4:
+        return const Color(0xFF16A34A); // Green
+      default:
+        return const Color(0xFF16A34A);
+    }
   }
 
   Widget _buildDetailRow(String label, String value, {bool isBold = false, bool isHighlight = false, Widget? customValue}) {
@@ -155,6 +255,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     final displayId = widget.orderId ?? 'FK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final currentStatus = _liveOrder?.status ?? OrderStatus.confirmed;
+    final stageIndex = _getStageIndex(currentStatus);
+    final badgeColor = _getBadgeColor(stageIndex);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -238,7 +341,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Your order has been received & is being prepared fresh.',
+                            'Your order has been received & is being synced with store.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 12.5,
@@ -252,7 +355,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                   ),
                   const SizedBox(height: 22),
 
-                  // 3. LIVE PROGRESS TRACKER CARD
+                  // 3. LIVE 5-STAGE PROGRESS TRACKER CARD (Synced with Admin)
                   FadeTransition(
                     opacity: _trackerFadeAnim,
                     child: SlideTransition(
@@ -278,21 +381,22 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                               children: [
                                 const Text('⚡', style: TextStyle(fontSize: 15)),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Live Status: Order Confirmed',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: slateDark,
+                                Expanded(
+                                  child: Text(
+                                    _getStatusTitle(stageIndex),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: slateDark,
+                                    ),
                                   ),
                                 ),
-                                const Spacer(),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
+                                    color: badgeColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                                    border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -300,18 +404,18 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                                       Container(
                                         width: 6,
                                         height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFF16A34A),
+                                        decoration: BoxDecoration(
+                                          color: badgeColor,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'CONFIRMED',
+                                        _getBadgeText(stageIndex),
                                         style: GoogleFonts.inter(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w900,
-                                          color: const Color(0xFF16A34A),
+                                          color: badgeColor,
                                           letterSpacing: 0.3,
                                         ),
                                       ),
@@ -320,16 +424,20 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
+
+                            // 5-Stage Stepper Flow
                             Row(
                               children: [
-                                _buildProgressStep('Placed', true),
-                                _buildProgressLine(true),
-                                _buildProgressStep('Packing', true),
-                                _buildProgressLine(false),
-                                _buildProgressStep('On Way', false),
-                                _buildProgressLine(false),
-                                _buildProgressStep('Delivered', false),
+                                _buildProgressStep('Placed', stageIndex >= 0),
+                                _buildProgressLine(stageIndex >= 1),
+                                _buildProgressStep('Confirmed', stageIndex >= 1),
+                                _buildProgressLine(stageIndex >= 2),
+                                _buildProgressStep('Packed', stageIndex >= 2),
+                                _buildProgressLine(stageIndex >= 3),
+                                _buildProgressStep('On Way', stageIndex >= 3),
+                                _buildProgressLine(stageIndex >= 4),
+                                _buildProgressStep('Delivered', stageIndex >= 4),
                               ],
                             ),
                           ],
@@ -439,14 +547,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                           GestureDetector(
                             onTap: () {
                               HapticFeedback.mediumImpact();
-                              Navigator.pushReplacement(
+                              Navigator.push(
                                 context,
-                                PageRouteBuilder(
-                                  transitionDuration: const Duration(milliseconds: 350),
-                                  pageBuilder: (_, __, ___) => const OrdersScreen(),
-                                  transitionsBuilder: (_, animation, __, child) {
-                                    return FadeTransition(opacity: animation, child: child);
-                                  },
+                                FadeSlideRoute(
+                                  page: OrderTrackingScreen(orderId: displayId),
                                 ),
                               );
                             },
@@ -529,18 +633,18 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
     return Column(
       children: [
         Container(
-          width: 22,
-          height: 22,
+          width: 20,
+          height: 20,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isDone ? successGreen : const Color(0xFFE2E8F0),
           ),
           child: Center(
             child: isDone
-                ? const Icon(Icons.check, size: 13, color: Colors.white)
+                ? const Icon(Icons.check, size: 12, color: Colors.white)
                 : Container(
-                    width: 6,
-                    height: 6,
+                    width: 5,
+                    height: 5,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Color(0xFF94A3B8),
@@ -552,8 +656,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 9.5,
-            fontWeight: isDone ? FontWeight.w800 : FontWeight.w500,
+            fontSize: 8.5,
+            fontWeight: isDone ? FontWeight.w900 : FontWeight.w500,
             color: isDone ? slateDark : const Color(0xFF94A3B8),
           ),
         ),

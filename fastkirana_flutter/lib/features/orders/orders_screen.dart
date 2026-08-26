@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../core/utils/validators.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
@@ -59,7 +62,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final cartNotifier = ref.read(cartProvider.notifier);
     for (final item in items) {
       final pid = item.productId ?? item.id;
-      cartNotifier.addItem(pid, item.quantity);
+      final product = Product.fromJson({
+        'id': pid,
+        'name': item.name,
+        'slug': pid,
+        'price': item.price,
+        'mrp': item.price,
+        'imageUrl': item.imageUrl,
+        'categoryId': 'grocery',
+        'unit': '1 unit',
+        'stock': 50,
+      });
+      cartNotifier.addProduct(product, item.quantity, item.selectedVariant);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +86,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     );
 
     // Open Cart Screen directly
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+    Navigator.push(context, FadeSlideRoute(page: const CartScreen()));
   }
 
   @override
@@ -107,14 +121,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           ),
         ],
       ),
-      body: ordersAsync.when(
-        data: (allOrders) {
-          // Separate Active vs Completed/Cancelled orders
-          final activeOrders = allOrders.where((o) =>
-              o.status == OrderStatus.pending ||
-              o.status == OrderStatus.confirmed ||
-              o.status == OrderStatus.packed ||
-              o.status == OrderStatus.shipped).toList();
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: ordersAsync.when(
+          data: (allOrders) {
+            // Separate Active vs Completed/Cancelled orders
+            final activeOrders = allOrders.where((o) =>
+                o.status == OrderStatus.pending ||
+                o.status == OrderStatus.confirmed ||
+                o.status == OrderStatus.packed ||
+                o.status == OrderStatus.shipped).toList();
 
           final pastOrders = allOrders.where((o) =>
               o.status == OrderStatus.delivered ||
@@ -164,10 +181,23 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 if (currentList.isEmpty)
                   _buildEmptyState()
                 else
-                  ...currentList.map((order) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _buildOrderCard(order),
-                      )),
+                  AnimationLimiter(
+                    child: Column(
+                      children: AnimationConfiguration.toStaggeredList(
+                        duration: const Duration(milliseconds: 375),
+                        childAnimationBuilder: (widget) => SlideAnimation(
+                          verticalOffset: 30.0,
+                          child: FadeInAnimation(child: widget),
+                        ),
+                        children: currentList
+                            .map((order) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: _buildOrderCard(order),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -192,7 +222,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   // 1. Sub-Tabs Capsule
@@ -524,7 +555,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     // Track Order Button
                     ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order)));
+                        Navigator.push(context, FadeSlideRoute(page: OrderDetailScreen(order: order)));
                       },
                       icon: const Icon(Icons.location_on_outlined, size: 13, color: Colors.white),
                       label: const Text('Track'),

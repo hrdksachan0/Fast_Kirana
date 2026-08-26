@@ -27,8 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scratch", "src/scripts", "test_api_products.ts", "check_all_products.ts"]
+  "exclude": ["node_modules", ".next/dev", "scratch", "src/scripts", "test_api_products.ts", "check_all_products.ts"]
 }

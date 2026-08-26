@@ -1279,7 +1279,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 return (
                   <div key={sub.id || subIdx} className="rounded-xl border border-border/50 overflow-hidden bg-muted/10">
                     <div className="bg-muted/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
-                      <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : '🛒 FastKirana Grocery'}</span>
+                      <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : `🥘 ${sub.shopName || 'FastKirana Dark Store'}`}</span>
                       <span className="text-[9px] font-mono text-text-muted">{subItems.length} items</span>
                     </div>
                     <div className="p-3 space-y-2 divide-y divide-border/20">

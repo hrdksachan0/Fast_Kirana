@@ -111,10 +111,39 @@ async function processPrintQueue() {
 }
 
 /**
- * Generate thermal HTML layout for Kitchen Order Ticket (KOT)
+ * Format date strictly in Indian Standard Time (IST - Asia/Kolkata)
  */
-export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): string {
-  const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
+function formatKOTDate(dateValue?: string | Date | number | null): string {
+  if (!dateValue) {
+    return new Date().toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
+  let d: Date
+  if (typeof dateValue === 'string') {
+    const s = dateValue.trim()
+    if (!s.endsWith('Z') && !s.includes('+') && s.includes('-')) {
+      d = new Date(s.replace(' ', 'T') + 'Z')
+      if (isNaN(d.getTime())) d = new Date(s)
+    } else {
+      d = new Date(s)
+    }
+  } else {
+    d = new Date(dateValue)
+  }
+
+  if (isNaN(d.getTime())) {
+    d = new Date()
+  }
+
+  return d.toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
@@ -123,6 +152,39 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
     minute: '2-digit',
     hour12: true
   })
+}
+
+function getElapsedText(createdAt?: string | Date | number | null): string {
+  if (!createdAt) return 'Just now'
+  let d: Date
+  if (typeof createdAt === 'string') {
+    const s = createdAt.trim()
+    if (!s.endsWith('Z') && !s.includes('+') && s.includes('-')) {
+      d = new Date(s.replace(' ', 'T') + 'Z')
+      if (isNaN(d.getTime())) d = new Date(s)
+    } else {
+      d = new Date(s)
+    }
+  } else {
+    d = new Date(createdAt)
+  }
+  if (isNaN(d.getTime())) return 'Just now'
+
+  const diffMs = Date.now() - d.getTime()
+  const mins = Math.max(0, Math.floor(diffMs / 60000))
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  return `${hrs}h ${mins % 60}m ago`
+}
+
+/**
+ * Generate thermal HTML layout for Kitchen Order Ticket (KOT)
+ */
+export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): string {
+  const orderDateStr = formatKOTDate(order.createdAt)
+  const printDateStr = formatKOTDate(new Date())
+  const elapsedText = getElapsedText(order.createdAt)
 
   const orderIdText = order.readableId ? `#${order.readableId}` : `#${(order.id || '').slice(0, 8).toUpperCase()}`
 
@@ -212,8 +274,12 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
             <td style="text-align: right; font-weight: 900; font-size: 15px; width: 55%;">${orderIdText}</td>
           </tr>
           <tr>
-            <td style="width: 45%;">Date & Time:</td>
-            <td style="text-align: right; width: 55%;">${dateStr}</td>
+            <td style="width: 45%;">Order Placed:</td>
+            <td style="text-align: right; font-weight: bold; width: 55%;">${orderDateStr} <span style="font-size: 10px; color: #555;">(${elapsedText})</span></td>
+          </tr>
+          <tr>
+            <td style="width: 45%;">KOT Printed:</td>
+            <td style="text-align: right; width: 55%;">${printDateStr}</td>
           </tr>
           <tr>
             <td style="width: 45%;">Order Type:</td>
@@ -223,6 +289,11 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
             <td style="width: 45%;">Customer:</td>
             <td style="text-align: right; font-weight: bold; width: 55%;">${order.userName || order.user?.name || 'Customer'}</td>
           </tr>
+          ${order.notes ? `
+          <tr>
+            <td style="width: 45%; vertical-align: top;">Order Note:</td>
+            <td style="text-align: right; font-weight: bold; color: #b45309; width: 55%;">${order.notes}</td>
+          </tr>` : ''}
         </table>
 
         <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; text-transform: uppercase;">PREPARATION DISHES:</div>
@@ -260,14 +331,7 @@ export function printKOTReceipt(order: any, shopType: string = 'RESTAURANT') {
  * Generate Full Customer Invoice HTML for 80mm thermal printers
  */
 export function generateInvoiceHtml(order: any): string {
-  const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  })
+  const dateStr = formatKOTDate(order.createdAt)
 
   const orderIdText = order.readableId ? `#${order.readableId}` : `#${(order.id || '').slice(0, 8).toUpperCase()}`
 

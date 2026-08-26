@@ -72,15 +72,15 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item['name'], style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                            Text(item['category'], style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                            Text(item['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                            Text(item['category']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
                           ],
                         ),
                       ),
                       Text('₹${item['price']}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                       const SizedBox(width: 12),
                       Switch(
-                        value: item['available'],
+                        value: item['available'] as bool? ?? true,
                         onChanged: (v) {},
                         activeColor: AppDesignSystem.success,
                       ),

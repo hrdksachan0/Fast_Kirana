@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn, isCafeProduct, formatPhone, formatAddress, formatPrice } from '@/lib/utils'
+import { getOutletName } from '@/lib/constants'
 import {
   MapPin,
   ShoppingBag,
@@ -262,6 +263,7 @@ export default function CheckoutPage() {
   }, [])
   const [isAddressesLoading, setIsAddressesLoading] = useState(true)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [cookingInstruction, setCookingInstruction] = useState('')
 
   // New Address Form State
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
@@ -808,7 +810,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, notes: cookingInstruction.trim() || undefined }),
       })
 
       const data = await res.json()
@@ -887,7 +889,7 @@ export default function CheckoutPage() {
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, notes: cookingInstruction.trim() || undefined }),
       })
 
       const orderData = await orderRes.json()
@@ -1546,21 +1548,99 @@ export default function CheckoutPage() {
 
               {/* Cart Items Review */}
               <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
-                <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 text-primary" />
-                  Review Your Cart Items
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5 text-primary" />
+                    Review Your Cart Items
+                  </h3>
+                  <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-md">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
 
-                <div className="divide-y divide-border/40 max-h-60 overflow-y-auto pr-1">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0 text-xs font-semibold">
-                      <div className="max-w-[70%]">
-                        <h4 className="text-text-primary font-bold">{item.product.name}</h4>
-                        <p className="text-[10px] text-text-secondary mt-0.5">{item.product.unit} × {item.quantity}</p>
+                <div className="space-y-4">
+                  {/* 1. Grocery & Daily Essentials Section */}
+                  {groceryCartItems.length > 0 && (
+                    <div className="rounded-2xl border border-border/70 bg-muted/10 p-3.5 sm:p-4 space-y-3">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-primary flex items-center gap-1.5">
+                          📦 Grocery & Daily Essentials
+                        </span>
+                        <span className="text-[10px] text-text-muted font-bold ml-0.5 mt-0.5">
+                          Delivered from FastKirana Darkstore
+                        </span>
                       </div>
-                      <span className="text-text-primary font-bold">₹{item.product.price * item.quantity}</span>
+                      <div className="divide-y divide-border/30">
+                        {groceryCartItems.map((item) => (
+                          <div key={item.product.id} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs font-semibold">
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              {item.product.imageUrl && (
+                                <img src={item.product.imageUrl} alt={item.product.name} className="w-9 h-9 object-cover rounded-lg border border-border/40 shrink-0" />
+                              )}
+                              <div className="truncate">
+                                <h4 className="text-text-primary font-bold truncate">{item.product.name}</h4>
+                                <p className="text-[10px] text-text-secondary mt-0.5 font-medium">{item.product.unit || '1 unit'} × {item.quantity}</p>
+                              </div>
+                            </div>
+                            <span className="text-text-primary font-black shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* 2. Restaurant / Kitchen Sections (Grouped by Outlet) */}
+                  {(() => {
+                    const restaurantGroups: Record<string, typeof cafeCartItems> = {}
+                    for (const item of cafeCartItems) {
+                      const outlet = getOutletName(item.product)
+                      if (!restaurantGroups[outlet]) restaurantGroups[outlet] = []
+                      restaurantGroups[outlet].push(item)
+                    }
+
+                    return Object.entries(restaurantGroups).map(([outletName, rItems]) => {
+                      const isWedson = outletName.toLowerCase().includes('wedson')
+                      return (
+                        <div key={outletName} className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-3.5 sm:p-4 space-y-3">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
+                              {isWedson ? '🥘' : '☕'} {outletName}
+                            </span>
+                            <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
+                              Freshly prepared at outlet kitchen
+                            </span>
+                          </div>
+                          <div className="divide-y divide-border/30">
+                            {rItems.map((item) => (
+                              <div key={item.product.id} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs font-semibold">
+                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                  {item.product.imageUrl && (
+                                    <img src={item.product.imageUrl} alt={item.product.name} className="w-9 h-9 object-cover rounded-lg border border-border/40 shrink-0" />
+                                  )}
+                                  <div className="truncate">
+                                    <h4 className="text-text-primary font-bold truncate">{item.product.name}</h4>
+                                    <p className="text-[10px] text-text-secondary mt-0.5 font-medium">Qty: {item.quantity}</p>
+                                  </div>
+                                </div>
+                                <span className="text-text-primary font-black shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Cooking instructions input */}
+                          <div className="pt-2 border-t border-border/30">
+                            <input
+                              type="text"
+                              placeholder="Cooking instruction (e.g. less sugar, extra spicy)..."
+                              value={cookingInstruction}
+                              onChange={(e) => setCookingInstruction(e.target.value)}
+                              className="w-full h-9 px-3 text-[11px] font-semibold rounded-xl border border-border/60 bg-background placeholder:text-text-muted/60 focus:outline-none focus:border-rose-500"
+                            />
+                          </div>
+                        </div>
+                      )
+                    })
+                  })()}
                 </div>
               </div>
 

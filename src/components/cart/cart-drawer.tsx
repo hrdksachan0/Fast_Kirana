@@ -237,15 +237,7 @@ export function CartDrawer() {
     const isStoreClosed = isItemClosed(item.product)
 
     return (
-      <motion.div
-        key={item.product.id}
-        layout
-        initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-        animate={{ height: 'auto', opacity: 1, marginBottom: 12 }}
-        exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="overflow-hidden"
-      >
+      <div key={item.product.id} className="mb-3">
         <div className="flex flex-col gap-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 transition-all duration-300">
           <div className="flex items-center gap-3.5">
             {/* Product image */}
@@ -298,42 +290,62 @@ export function CartDrawer() {
             </div>
 
             {/* Quantity controller */}
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full p-1 shadow-sm shrink-0">
+            <div className="flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-800 p-1 border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xs">
               <button
-                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
-                className="flex h-8 w-8 items-center justify-center text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                onClick={() => {
+                  if (item.quantity === 1) {
+                    removeItem(item.product.id, item.product.name)
+                  } else {
+                    updateQuantity(item.product.id, item.product.name, item.quantity - 1)
+                  }
+                }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer active:scale-90"
                 aria-label="Decrease quantity"
               >
-                <Minus size={14} className="stroke-[2.5]" />
+                <Minus size={13} strokeWidth={2.5} />
               </button>
-              <span className="w-6 text-center text-xs font-black text-zinc-850 dark:text-zinc-100">
+              <span className="w-5 text-center text-xs font-black text-zinc-800 dark:text-zinc-200">
                 {item.quantity}
               </span>
               <button
-                onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-                disabled={isStoreClosed || item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product)}
-                className="flex h-8 w-8 items-center justify-center text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                disabled={item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product) || isStoreClosed}
+                onClick={() => {
+                  const limit = getProductLimit(item.product)
+                  if (item.quantity >= limit) {
+                    toast.error(`Maximum order limit for ${item.product.name} is ${limit} units`)
+                    return
+                  }
+                  if (item.quantity < item.product.stock) {
+                    updateQuantity(item.product.id, item.product.name, item.quantity + 1)
+                  } else {
+                    toast.error(`Only ${item.product.stock} units available in stock!`)
+                  }
+                }}
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white hover:bg-primary/95 transition-colors cursor-pointer active:scale-90 shadow-2xs",
+                  (item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product) || isStoreClosed) && "opacity-50 cursor-not-allowed bg-zinc-200 dark:bg-zinc-700 text-zinc-400"
+                )}
                 aria-label="Increase quantity"
               >
-                <Plus size={14} className="stroke-[2.5]" />
+                <Plus size={13} strokeWidth={2.5} />
               </button>
             </div>
           </div>
 
-          {/* Cooking Instructions Notes for Cafe Items */}
+          {/* Cooking instruction field (Only for restaurant / cafe items) */}
           {isCafe && (
-            <div className="mt-1 border-t border-zinc-100/50 dark:border-zinc-850/10 pt-2 shrink-0">
+            <div className="mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
               <input
                 type="text"
-                value={item.notes || ''}
-                onChange={(e) => updateItemNotes(item.product.id, e.target.value)}
+                defaultValue={item.notes || ''}
+                onBlur={(e) => updateItemNotes(item.product.id, e.target.value)}
                 placeholder="Cooking instruction (e.g. less sugar, extra spicy)..."
                 className="w-full px-3 py-1.5 border border-zinc-200/60 dark:border-zinc-800 rounded-xl text-[10px] bg-white/50 dark:bg-zinc-900/50 focus:outline-none focus:border-primary/45 font-bold"
               />
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
     )
   }
 

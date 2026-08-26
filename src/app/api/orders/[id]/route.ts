@@ -165,7 +165,7 @@ export async function GET(
             id: o.id,
             readableId: o.readableId,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
-            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Grocery'),
+            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
             status: o.status,
             subtotal: o.subtotal,
             total: o.total,
@@ -250,17 +250,18 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { id } = await params
-    const { status, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy } = await request.json()
+    const body = await request.json()
+    const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy } = body
 
-    if (!status || !VALID_STATUSES.includes(status)) {
-      return NextResponse.json({ error: 'Invalid order status' }, { status: 400 })
+    if ((!status || !VALID_STATUSES.includes(status)) && !paymentStatus) {
+      return NextResponse.json({ error: 'Invalid order status or payment status' }, { status: 400 })
     }
 
     // Check order exists and ownership
@@ -274,10 +275,38 @@ export async function PATCH(
 
     const existingOrder = existingOrders[0]
     const userRole = session.user.role
+    const isAdmin = userRole === 'ADMIN'
+
+    // If only paymentStatus is being updated
+    if (paymentStatus && (!status || status === existingOrder.status)) {
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Unauthorized to update payment status' }, { status: 403 })
+      }
+      const pm = (paymentMethod || (paymentStatus === 'PAID' ? 'UPI' : existingOrder.paymentMethod) || 'COD').toUpperCase()
+      const validPm = ['COD', 'UPI', 'CARD', 'WALLET'].includes(pm) ? pm : 'UPI'
+
+      if (existingOrder.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "paymentStatus" = ${paymentStatus}::"PaymentStatus",
+              "paymentMethod" = ${validPm}::"PaymentMethod",
+              "updatedAt" = NOW()
+          WHERE "combinedId" = ${existingOrder.combinedId}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "paymentStatus" = ${paymentStatus}::"PaymentStatus",
+              "paymentMethod" = ${validPm}::"PaymentMethod",
+              "updatedAt" = NOW()
+          WHERE id = ${existingOrder.id}
+        `
+      }
+      return NextResponse.json({ success: true, paymentStatus, paymentMethod: validPm })
+    }
     const assignedRestaurantId = (session.user as any)?.assignedRestaurantId
     const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
 
-    const isAdmin = userRole === 'ADMIN'
     const isDelivery = userRole === 'DELIVERY'
     const isPicker = userRole === 'PICKER'
     const isRestaurantStaff = (userRole === 'CHEF' || userRole === 'RESTAURANT_OWNER')

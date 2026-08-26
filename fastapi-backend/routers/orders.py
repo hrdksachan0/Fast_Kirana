@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -627,260 +627,143 @@ async def create_order(
             "rId": r_id,
             "ownerPhone": group["ownerPhone"],
             "items": group["items"],
-            "subtotal": sub,
-            "deliveryFee": 0.0
+            "subtotal": sub
         })
 
-    # Delivery Fee logic
-    grocery_delivery_fee = 0.0
-    delivery_fee_val = float(settings_map.get("delivery_fee", 30.0))
+    # 5. Determine Restaurant & Shop Context
+    restaurant_id = restaurant_data[0]["rId"] if restaurant_data else None
+    restaurant_obj = restaurant_groups.get(restaurant_id) if restaurant_id else None
+    final_shop_name = restaurant_obj["name"] if restaurant_obj else "FastKirana Grocery"
+    final_shop_phone = restaurant_obj.get("ownerPhone", default_support_phone) if restaurant_obj else default_support_phone
+
+    # Calculate unified order amounts
+    subtotal = combined_subtotal
+    discount = combined_discount
+    delivery_fee_val = float(settings_map.get("delivery_fee", 25.0))
+    delivery_fee_charge = 0.0
 
     if delivery_method == "DELIVERY" and not is_b2b:
-        default_threshold = float(settings_map.get("grocery_free_delivery_threshold", 299.0))
+        default_threshold = float(settings_map.get("grocery_free_delivery_threshold", 199.0))
         free_delivery_threshold = delivery_rules["freeDeliveryThreshold"] if delivery_rules else default_threshold
-        applies_delivery_fee = combined_subtotal < free_delivery_threshold
+        if subtotal < free_delivery_threshold:
+            delivery_fee_charge = delivery_rules["deliveryFee"] if delivery_rules else delivery_fee_val
 
-        if applies_delivery_fee:
-            fee_to_charge = delivery_rules["deliveryFee"] if delivery_rules else delivery_fee_val
-            if grocery_items:
-                grocery_delivery_fee = fee_to_charge
-            elif restaurant_data:
-                restaurant_data[0]["deliveryFee"] = fee_to_charge
+    misc_fee_charge = resolved_packaging_fee if is_premium_packaging else (server_misc_fee if delivery_method != "PICKUP" else 0.0)
+    final_total = max(0.0, subtotal - discount + delivery_fee_charge + misc_fee_charge)
 
-    orders_to_create = []
-    has_charged_misc_fee = False
-
-    if grocery_items:
-        g_discount = (grocery_subtotal / combined_subtotal) * combined_discount if combined_subtotal > 0 else 0.0
-        applied_misc_fee = server_misc_fee if (delivery_method != "PICKUP" and not has_charged_misc_fee and not is_premium_packaging) else 0.0
-        if applied_misc_fee > 0:
-            has_charged_misc_fee = True
-        
-        g_total = grocery_subtotal - g_discount + grocery_delivery_fee + applied_misc_fee
-
-        orders_to_create.append({
-            "type": "GROCERY",
-            "subtotal": grocery_subtotal,
-            "discount": g_discount,
-            "deliveryFee": grocery_delivery_fee,
-            "taxes": 0.0,
-            "miscFee": applied_misc_fee,
-            "total": g_total,
-            "items": grocery_items
-        })
-
-    for idx, r_data in enumerate(restaurant_data):
-        r_discount = (r_data["subtotal"] / combined_subtotal) * combined_discount if combined_subtotal > 0 else 0.0
-        r_packaging_fee = resolved_packaging_fee if idx == 0 else 0.0
-
-        applied_misc_fee = r_packaging_fee if r_packaging_fee > 0 else (server_misc_fee if (delivery_method != "PICKUP" and not has_charged_misc_fee and not is_premium_packaging) else 0.0)
-        if applied_misc_fee > 0:
-            has_charged_misc_fee = True
-
-        r_total = r_data["subtotal"] - r_discount + r_data["deliveryFee"] + applied_misc_fee
-
-        orders_to_create.append({
-            "type": "RESTAURANT",
-            "restaurantId": r_data["rId"],
-            "ownerPhone": r_data["ownerPhone"],
-            "subtotal": r_data["subtotal"],
-            "discount": r_discount,
-            "deliveryFee": r_data["deliveryFee"],
-            "taxes": 0.0,
-            "miscFee": applied_misc_fee,
-            "total": r_total,
-            "items": r_data["items"],
-            "notes": "✨ Premium Thermal Packaging Requested (+₹15)" if is_premium_packaging else None
-        })
-
-    # 5. Database transaction execution
+    # 6. Create 1 Single Unified Order
     created_orders = []
-    is_combined = len(orders_to_create) > 1
-    combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}" if is_combined else None
-
     try:
-        # Atomic sequence read
         seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
-        base_readable_id = str(seq_res.scalar())
+        readable_id = str(seq_res.scalar())
 
-        rest_index = 0
-        for order_info in orders_to_create:
-            order_readable_id = base_readable_id
-            if is_combined:
-                if order_info["type"] == "RESTAURANT":
-                    rest_index += 1
-                    order_readable_id = f"{base_readable_id}-R" if rest_index == 1 else f"{base_readable_id}-R{rest_index}"
-                else:
-                    order_readable_id = f"{base_readable_id}-G"
+        est_mins = 30 if restaurant_id else 10
+        estimated_delivery = datetime.utcnow() + timedelta(minutes=est_mins)
 
-            # Calculate delivery time
-            est_mins = 30 if order_info["type"] == "RESTAURANT" else 10
-            estimated_delivery = datetime.utcnow() + timedelta(minutes=est_mins)
+        order_address_id = final_address_id
+        if delivery_method == "PICKUP":
+            label = "STORE_PICKUP"
+            p_address_text = settings_map.get("grocery_pickup_address", "Vikas Medical Store, NH34, Ghatampur, 209206")
+            p_phone = default_support_phone
 
-            order_address_id = final_address_id
-            if delivery_method == "PICKUP":
-                label = f"STORE_PICKUP_{order_info.get('restaurantId')}" if order_info["type"] == "RESTAURANT" else "STORE_PICKUP"
-                p_address_text = settings_map.get("grocery_pickup_address", "Vikas Medical Store, Ghatampur") if order_info["type"] == "GROCERY" else settings_map.get("restaurant_pickup_address", "Dark Store Kitchens")
-                p_phone = default_support_phone if order_info["type"] == "GROCERY" else order_info.get("ownerPhone", default_support_phone)
+            addr_exist_stmt = select(Address).where(Address.userId == user_id, Address.label == label)
+            addr_exist_res = await db.execute(addr_exist_stmt)
+            pickup_address = addr_exist_res.scalars().first()
 
+            if not pickup_address:
                 parts = [pt.strip() for pt in p_address_text.split(",")]
-                h_no = parts[0] if len(parts) > 0 else "Store Pickup"
-                strt = parts[1] if len(parts) > 1 else "Ghatampur"
-                ara = parts[2] if len(parts) > 2 else "Kanpur Nagar"
-                ct = parts[3] if len(parts) > 3 else "Kanpur"
-                pcode = parts[4] if len(parts) > 4 else "209206"
-
-                addr_exist_stmt = select(Address).where(Address.userId == user_id, Address.label == label)
-                addr_exist_res = await db.execute(addr_exist_stmt)
-                pickup_address = addr_exist_res.scalars().first()
-
-                if not pickup_address:
-                    pickup_address = Address(
-                        id=f"addr_{uuid.uuid4().hex[:16]}",
-                        userId=user_id,
-                        label=label,
-                        houseNo=h_no,
-                        street=strt,
-                        area=ara,
-                        city=ct,
-                        pincode=pcode,
-                        phone=p_phone
-                    )
-                    db.add(pickup_address)
-                else:
-                    pickup_address.houseNo = h_no
-                    pickup_address.street = strt
-                    pickup_address.area = ara
-                    pickup_address.city = ct
-                    pickup_address.pincode = pcode
-                    pickup_address.phone = p_phone
-                
-                await db.commit()
-                order_address_id = pickup_address.id
-
-            # Sync address phone number to user profile if currently missing in system
-            if address and address.phone:
-                if not user_obj.phone or user_obj.phone.strip() == "":
-                    user_obj.phone = address.phone.strip()
-
-            new_order = Order(
-                id=generate_id("ord_"),
-                readableId=order_readable_id,
-                userId=user_id,
-                addressId=order_address_id,
-                combinedId=combined_id,
-                orderType=OrderType.RESTAURANT if order_info["type"] == "RESTAURANT" else OrderType.GROCERY,
-                status=OrderStatus.PENDING,
-                subtotal=round(order_info["subtotal"], 2),
-                discount=round(order_info["discount"], 2),
-                deliveryFee=round(order_info["deliveryFee"], 2),
-                taxes=0.0,
-                miscFee=round(order_info["miscFee"], 2),
-                total=round(order_info["total"], 2),
-                paymentMethod=PaymentMethod(payment_method),
-                paymentStatus=PaymentStatus.PENDING,
-                estimatedDelivery=estimated_delivery,
-                deliveryMethod=delivery_method,
-                isB2B=is_b2b,
-                storeId=store_id,
-                couponCode=coupon_code.strip().upper() if coupon_code else None,
-                shopName="Restaurant" if order_info["type"] == "RESTAURANT" else "FastKirana Grocery",
-                shopPhone=order_info.get("ownerPhone", default_support_phone) if order_info["type"] == "RESTAURANT" else default_support_phone,
-                restaurantId=order_info.get("restaurantId"),
-                notes=order_info.get("notes")
-            )
-
-            db.add(new_order)
-            await db.commit()
-            await db.refresh(new_order)
-
-            # Insert Items & deduct stock
-            for item in order_info["items"]:
-                prod = item["dbProduct"]
-                is_var = "_" in item["product"]["id"]
-                var_name = item["product"]["id"].split("_")[1] if is_var else None
-
-                cost_price = prod.costPrice or 0.0
-                if is_var and prod.variants:
-                    variant = next((v for v in prod.variants if v.get("name") == var_name), None)
-                    if variant and "costPrice" in variant:
-                        cost_price = float(variant["costPrice"])
-
-                order_item = OrderItem(
-                    id=generate_id("oi_"),
-                    orderId=new_order.id,
-                    productId=prod.id,
-                    name=prod.name,
-                    price=prod.price if not is_var else float(variant["price"]),
-                    quantity=int(item["quantity"]),
-                    imageUrl=prod.imageUrl,
-                    selectedVariant=var_name,
-                    costPrice=cost_price,
-                    variants=prod.variants,
-                    notes=item.get("notes")
+                pickup_address = Address(
+                    id=f"addr_{uuid.uuid4().hex[:16]}",
+                    userId=user_id,
+                    label=label,
+                    houseNo=parts[0] if len(parts) > 0 else "Store Pickup",
+                    street=parts[1] if len(parts) > 1 else "NH34",
+                    area=parts[2] if len(parts) > 2 else "Ghatampur",
+                    city=parts[3] if len(parts) > 3 else "Kanpur",
+                    pincode=parts[4] if len(parts) > 4 else "209206",
+                    phone=p_phone
                 )
-                db.add(order_item)
+                db.add(pickup_address)
+                await db.flush()
+            order_address_id = pickup_address.id
 
-                # Deduct stock (Grocery only)
-                if not prod.restaurantId:
-                    qty = int(item["quantity"])
-                    prev_stock = prod.stock
-                    
-                    if is_var and prod.variants:
-                        updated_variants = []
-                        for v in prod.variants:
-                            if v.get("name") == var_name:
-                                v["stock"] = max(0, v.get("stock", 0) - qty)
-                            updated_variants.append(v)
-                        new_total_stock = sum(v.get("stock", 0) for v in updated_variants)
-                        
-                        prod.variants = updated_variants
-                        prod.stock = new_total_stock
-                        
-                        log = StockLog(
-                            id=generate_id("sl_"),
-                            productId=prod.id,
-                            quantity=-qty,
-                            type="ONLINE_ORDER",
-                            prevStock=prev_stock,
-                            newStock=new_total_stock
-                        )
-                        db.add(log)
-                    else:
-                        # Batch inward deductions
-                        batch_stmt = select(ProductBatch).where(ProductBatch.productId == prod.id, ProductBatch.quantity > 0).order_by(ProductBatch.expiryDate.asc())
-                        batch_res = await db.execute(batch_stmt)
-                        batches = batch_res.scalars().all()
+        new_order = Order(
+            id=generate_id("ord_"),
+            readableId=readable_id,
+            userId=user_id,
+            addressId=order_address_id,
+            orderType=OrderType.RESTAURANT if restaurant_id else OrderType.GROCERY,
+            status=OrderStatus.PENDING,
+            subtotal=round(subtotal, 2),
+            discount=round(discount, 2),
+            deliveryFee=round(delivery_fee_charge, 2),
+            taxes=0.0,
+            miscFee=round(misc_fee_charge, 2),
+            total=round(final_total, 2),
+            paymentMethod=PaymentMethod(payment_method),
+            paymentStatus=PaymentStatus.PENDING,
+            estimatedDelivery=estimated_delivery,
+            deliveryMethod=delivery_method,
+            isB2B=is_b2b,
+            storeId=store_id,
+            couponCode=coupon_code.strip().upper() if coupon_code else None,
+            shopName=final_shop_name,
+            shopPhone=final_shop_phone,
+            restaurantId=restaurant_id,
+            notes="✨ Premium Thermal Packaging Requested (+₹15)" if is_premium_packaging else None
+        )
 
-                        remaining = qty
-                        for batch in batches:
-                            if remaining <= 0:
-                                break
-                            deduct = min(batch.quantity, remaining)
-                            batch.quantity -= deduct
-                            remaining -= deduct
+        db.add(new_order)
+        await db.commit()
+        await db.refresh(new_order)
 
-                        active_stmt = select(ProductBatch).where(ProductBatch.productId == prod.id, ProductBatch.quantity > 0).order_by(ProductBatch.expiryDate.asc())
-                        active_res = await db.execute(active_stmt)
-                        active_batches = active_res.scalars().all()
+        # Attach all items & decrement stock for grocery
+        for item in items:
+            prod = item["dbProduct"]
+            is_var = "_" in item["product"]["id"]
+            var_name = item["product"]["id"].split("_")[1] if is_var else None
 
-                        new_total_stock = sum(b.quantity for b in active_batches) if active_batches else max(0, prev_stock - qty)
-                        new_expiry = active_batches[0].expiryDate if active_batches else None
+            cost_price = prod.costPrice or 0.0
+            item_price = prod.price
+            if is_var and prod.variants:
+                variant = next((v for v in prod.variants if v.get("name") == var_name), None)
+                if variant:
+                    item_price = float(variant.get("price", item_price))
+                    cost_price = float(variant.get("costPrice", cost_price))
 
-                        prod.stock = new_total_stock
-                        prod.expiryDate = new_expiry
+            order_item = OrderItem(
+                id=generate_id("oi_"),
+                orderId=new_order.id,
+                productId=prod.id,
+                name=prod.name,
+                price=item_price,
+                quantity=int(item["quantity"]),
+                imageUrl=prod.imageUrl,
+                selectedVariant=var_name,
+                costPrice=cost_price,
+                variants=prod.variants,
+                notes=item.get("notes")
+            )
+            db.add(order_item)
 
-                        log = StockLog(
-                            id=generate_id("sl_"),
-                            productId=prod.id,
-                            quantity=-qty,
-                            type="ONLINE_ORDER",
-                            prevStock=prev_stock,
-                            newStock=new_total_stock
-                        )
-                        db.add(log)
+            # Stock deduction for grocery items
+            if not prod.restaurantId and prod.stock > 0:
+                qty = int(item["quantity"])
+                prev_stock = prod.stock
+                new_stock = max(0, prev_stock - qty)
+                prod.stock = new_stock
 
-            created_orders.append(new_order)
+                log = StockLog(
+                    id=generate_id("sl_"),
+                    productId=prod.id,
+                    quantity=-qty,
+                    type="ONLINE_ORDER",
+                    prevStock=prev_stock,
+                    newStock=new_stock
+                )
+                db.add(log)
+
+        created_orders.append(new_order)
 
         # Update coupon usage
         if coupon_id:
@@ -937,19 +820,49 @@ async def create_order(
                 admin_text = f"New Order #{order.readableId} for [{order.shopName}] of ₹{order.total} from {user_obj.name or 'Customer'} ({address.phone or 'N/A'}). Manage: {app_url}/admin"
                 background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
 
-        # Return main order or first created order
-        main_order = next((o for o in created_orders if o.orderType == OrderType.GROCERY), created_orders[0])
-        
-        # Format response matching Next.js Order response
+        # Return full order object matching Flutter Order.fromJson expectations
         return {
             "id": main_order.id,
             "readableId": main_order.readableId,
             "userId": main_order.userId,
             "addressId": main_order.addressId,
+            "restaurantId": main_order.restaurantId,
             "status": main_order.status.value,
-            "total": float(main_order.total),
+            "subtotal": float(main_order.subtotal or 0),
+            "discount": float(main_order.discount or 0),
+            "deliveryFee": float(main_order.deliveryFee or 0),
+            "taxes": float(main_order.taxes or 0),
+            "miscFee": float(main_order.miscFee or 0),
+            "total": float(main_order.total or 0),
             "paymentMethod": main_order.paymentMethod.value,
-            "createdAt": main_order.createdAt
+            "paymentStatus": main_order.paymentStatus.value,
+            "estimatedDelivery": main_order.estimatedDelivery.isoformat() if main_order.estimatedDelivery else None,
+            "deliveryMethod": main_order.deliveryMethod,
+            "isB2B": main_order.isB2B,
+            "shopName": main_order.shopName,
+            "shopPhone": main_order.shopPhone,
+            "notes": main_order.notes,
+            "couponCode": main_order.couponCode,
+            "customerName": user_obj.name,
+            "customerPhone": user_obj.phone or (address.phone if address else None),
+            "customerAddress": f"{address.houseNo or ''}, {address.street or ''}, {address.area or ''}, {address.city or ''}, {address.pincode or ''}" if address else None,
+            "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
+            "updatedAt": main_order.updatedAt.isoformat() if main_order.updatedAt else None,
+            "confirmedAt": main_order.confirmedAt.isoformat() if main_order.confirmedAt else None,
+            "packedAt": main_order.packedAt.isoformat() if main_order.packedAt else None,
+            "shippedAt": main_order.shippedAt.isoformat() if main_order.shippedAt else None,
+            "deliveredAt": main_order.deliveredAt.isoformat() if main_order.deliveredAt else None,
+            "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl, "selectedVariant": i.selectedVariant} for i in main_order.items],
+            "address": {
+                "id": address.id,
+                "houseNo": address.houseNo,
+                "street": address.street,
+                "area": address.area,
+                "city": address.city,
+                "pincode": address.pincode,
+                "phone": address.phone,
+                "label": address.label,
+            } if address else None,
         }
 
     except Exception as e:
@@ -1678,20 +1591,30 @@ async def update_order(
 
     return {
         "id": order.id,
+        "readableId": order.readableId,
         "status": order.status.value,
         "total": float(order.total),
-        "createdAt": order.createdAt,
-        "updatedAt": order.updatedAt,
+        "paymentMethod": order.paymentMethod.value,
+        "paymentStatus": order.paymentStatus.value,
+        "estimatedDelivery": order.estimatedDelivery.isoformat() if order.estimatedDelivery else None,
+        "createdAt": order.createdAt.isoformat() if order.createdAt else None,
+        "updatedAt": order.updatedAt.isoformat() if order.updatedAt else None,
         "deliveryPhoto": order.deliveryPhoto,
         "deliveryLat": order.deliveryLat,
         "deliveryLng": order.deliveryLng,
+        "deliveryMethod": order.deliveryMethod,
+        "deliveryUserId": order.deliveryUserId,
         "assignedPickerId": order.assignedPickerId,
         "assignedChefId": order.assignedChefId,
-        "deliveryUserId": order.deliveryUserId,
-        "confirmedAt": order.confirmedAt,
-        "packedAt": order.packedAt,
-        "shippedAt": order.shippedAt,
-        "deliveredAt": order.deliveredAt
+        "confirmedAt": order.confirmedAt.isoformat() if order.confirmedAt else None,
+        "packedAt": order.packedAt.isoformat() if order.packedAt else None,
+        "shippedAt": order.shippedAt.isoformat() if order.shippedAt else None,
+        "deliveredAt": order.deliveredAt.isoformat() if order.deliveredAt else None,
+        "shopName": order.shopName,
+        "shopPhone": order.shopPhone,
+        "notes": order.notes,
+        "couponCode": order.couponCode,
+        "deliveryUser": delivery_user,
     }
 
 

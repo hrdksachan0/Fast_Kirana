@@ -71,8 +71,11 @@ class ComboBuilderScreen extends StatelessWidget {
                 final product = Product(
                   id: 'combo_$index',
                   name: names[index],
+                  slug: names[index].toLowerCase().replaceAll(' ', '-'),
                   price: prices[index],
                   mrp: prices[index] * 1.3,
+                  discount: 0,
+                  isAvailable: true,
                   categoryId: 'cat_1',
                   unit: '1 pc',
                   stock: 50,

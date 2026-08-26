@@ -3,6 +3,7 @@ import '../data/models/cart.dart';
 import '../data/models/product.dart';
 import '../data/repositories/cart_repository.dart';
 import '../core/network/api_client.dart';
+import '../core/utils/restaurant_utils.dart';
 
 final cartRepoProvider = Provider<CartRepository>((ref) {
   return CartRepository(ref.read(dioProvider));
@@ -59,6 +60,62 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     return item?.quantity ?? 0;
   }
 
+  /// Check if adding this product causes a conflict with dishes already in cart from another restaurant.
+  /// Returns the name of the conflicting restaurant if conflict exists, otherwise null.
+  String? checkRestaurantConflict(Product product) {
+    // 1. Grocery items can mix freely with anything
+    if (!isCafeProduct(product)) {
+      return null;
+    }
+
+    final currentCart = state.value;
+    if (currentCart == null || currentCart.items.isEmpty) {
+      return null;
+    }
+
+    final newOutlet = getOutletName(product);
+
+    // 2. Look for any existing restaurant items
+    for (final item in currentCart.items) {
+      if (isCafeProduct(item.product)) {
+        final existOutlet = getOutletName(item.product);
+        if (newOutlet != existOutlet) {
+          return existOutlet;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Get current restaurant name from items in cart, if any
+  String? get currentRestaurantName {
+    final currentCart = state.value;
+    if (currentCart == null) return null;
+    final restaurantItem = currentCart.items.cast<CartItem?>().firstWhere(
+      (i) => i != null && isCafeProduct(i.product),
+      orElse: () => null,
+    );
+    if (restaurantItem != null) {
+      return getOutletName(restaurantItem.product);
+    }
+    return null;
+  }
+
+  /// Get number of grocery items in cart
+  int get groceryItemsCount {
+    final currentCart = state.value;
+    if (currentCart == null) return 0;
+    return currentCart.items.where((i) => !isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
+  }
+
+  /// Get number of restaurant dishes in cart
+  int get restaurantItemsCount {
+    final currentCart = state.value;
+    if (currentCart == null) return 0;
+    return currentCart.items.where((i) => isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
+  }
+
   /// Add real Product to cart with instant UI update
   Future<void> addProduct(Product product, [int quantity = 1, String? selectedVariant]) async {
     final currentCart = state.value ?? _buildCartFromItems([]);
@@ -87,7 +144,51 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     }
 
     // Instant optimistic state update
-    state = AsyncValue.data(_buildCartFromItems(items));
+    state = AsyncValue.data(_buildCartFromItems(
+      items,
+      couponCode: currentCart.appliedCouponCode,
+      discount: currentCart.couponDiscount,
+    ));
+    await repository.saveLocalCart(items);
+    repository.syncCart(items);
+  }
+
+  /// Clear ONLY dishes from the previous restaurant — keep all grocery items intact!
+  Future<void> clearRestaurantItems() async {
+    final currentCart = state.value;
+    if (currentCart == null) return;
+
+    final groceryItems = currentCart.items.where((i) => !isCafeProduct(i.product)).toList();
+    state = AsyncValue.data(_buildCartFromItems(
+      groceryItems,
+      couponCode: currentCart.appliedCouponCode,
+      discount: currentCart.couponDiscount,
+    ));
+    await repository.saveLocalCart(groceryItems);
+    repository.syncCart(groceryItems);
+  }
+
+  /// Atomically clear old restaurant items and add the new restaurant product
+  Future<void> replaceRestaurantItemsWith(Product product, [int quantity = 1, String? selectedVariant]) async {
+    final currentCart = state.value ?? _buildCartFromItems([]);
+    // Keep only grocery items
+    final items = currentCart.items.where((i) => !isCafeProduct(i.product)).toList();
+
+    // Add new restaurant item
+    items.add(CartItem(
+      id: 'item_${product.id}_${DateTime.now().millisecondsSinceEpoch}',
+      cartId: 'cart_active',
+      productId: product.id,
+      product: product,
+      quantity: quantity,
+      selectedVariant: selectedVariant,
+    ));
+
+    state = AsyncValue.data(_buildCartFromItems(
+      items,
+      couponCode: currentCart.appliedCouponCode,
+      discount: currentCart.couponDiscount,
+    ));
     await repository.saveLocalCart(items);
     repository.syncCart(items);
   }
@@ -120,7 +221,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         );
       }
 
-      state = AsyncValue.data(_buildCartFromItems(items));
+      state = AsyncValue.data(_buildCartFromItems(
+        items,
+        couponCode: currentCart.appliedCouponCode,
+        discount: currentCart.couponDiscount,
+      ));
       await repository.saveLocalCart(items);
       repository.syncCart(items);
     }
@@ -145,7 +250,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
           quantity: quantity,
           selectedVariant: item.selectedVariant,
         );
-        state = AsyncValue.data(_buildCartFromItems(items));
+        state = AsyncValue.data(_buildCartFromItems(
+          items,
+          couponCode: currentCart.appliedCouponCode,
+          discount: currentCart.couponDiscount,
+        ));
         await repository.saveLocalCart(items);
         repository.syncCart(items);
       }
@@ -158,7 +267,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     if (currentCart == null) return;
 
     final items = currentCart.items.where((i) => i.productId != productId && i.id != productId && i.product.id != productId).toList();
-    state = AsyncValue.data(_buildCartFromItems(items));
+    state = AsyncValue.data(_buildCartFromItems(
+      items,
+      couponCode: currentCart.appliedCouponCode,
+      discount: currentCart.couponDiscount,
+    ));
     await repository.saveLocalCart(items);
     repository.syncCart(items);
   }
@@ -172,7 +285,6 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
   /// Backward compatible addItem
   Future<void> addItem(String productId, int quantity) async {
-    // If only productId provided without Product model
     final currentCart = state.value;
     if (currentCart != null) {
       final existing = currentCart.items.cast<CartItem?>().firstWhere((i) => i?.productId == productId, orElse: () => null);

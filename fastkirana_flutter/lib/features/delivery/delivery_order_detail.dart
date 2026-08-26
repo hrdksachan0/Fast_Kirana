@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../widgets/brand_button.dart';
 
 class DeliveryOrderDetailScreen extends StatelessWidget {
   final String orderId;
@@ -78,7 +79,7 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
           // Items
           Text('Items (4)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
           const SizedBox(height: 8),
-          ['Tomatoes 1kg', 'Milk 1L', 'Bread', 'Eggs 6pc'].asMap().entries.map((e) {
+          ...['Tomatoes 1kg', 'Milk 1L', 'Bread', 'Eggs 6pc'].asMap().entries.map((e) {
             final qty = [2, 1, 1, 1][e.key];
             final price = [45, 28, 35, 60][e.key];
             return Container(

@@ -18,8 +18,9 @@ export async function POST(request: NextRequest) {
   const limited = await authLimiter.check(request)
   if (limited) return limited
 
-  try {
-    const { email: rawEmail, otp } = await request.json()
+    const body = await request.json()
+    const rawEmail = (body.email || body.phone || '').toString()
+    const otp = body.otp?.toString()?.trim()
 
     if (!rawEmail || !otp) {
       return NextResponse.json({ error: 'Email/phone and OTP are required' }, { status: 400 })

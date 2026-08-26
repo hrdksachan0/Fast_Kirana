@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
@@ -23,38 +24,56 @@ class ProductsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
-        title: Text('All Products', style: GoogleFonts.inter(
-          fontWeight: FontWeight.w700, color: Colors.white,
-        )),
-        backgroundColor: AppDesignSystem.primary,
+        title: Text(
+          'All Products',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+        ),
+        backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: productsAsync.when(
-        data: (products) {
-          if (products.isEmpty) {
-            return Center(child: Text('No products found', style: GoogleFonts.inter(color: AppDesignSystem.textSecondary)));
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: products.length,
-            itemBuilder: (context, index) => ProductCard(
-              product: products[index],
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProductDetailScreen(product: products[index])),
-              ),
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: productsAsync.when(
+          data: (products) {
+            if (products.isEmpty) {
+              return Center(
+                child: Text('No products found', style: GoogleFonts.inter(color: AppDesignSystem.textSecondary)),
+              );
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = (constraints.maxWidth / 155).floor().clamp(2, 6);
+                final itemAspect = constraints.maxWidth < 360 ? 0.58 : (columns > 2 ? 0.66 : 0.62);
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    childAspectRatio: itemAspect,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: products.length,
+                  itemBuilder: (context, index) => ProductCard(
+                    product: products[index],
+                    onTap: () => Navigator.push(
+                      context,
+                      FadeSlideRoute(page: ProductDetailScreen(product: products[index])),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator(color: AppDesignSystem.primary)),
+          error: (e, _) => Center(
+            child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
+          ),
         ),
       ),
     );

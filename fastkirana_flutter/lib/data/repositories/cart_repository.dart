@@ -38,9 +38,14 @@ class CartRepository {
     } catch (_) {}
   }
 
-  Future<void> applyCoupon(String code) async {
+  Future<Map<String, dynamic>> applyCoupon(String code, {double? subtotal, List<Map<String, dynamic>>? items}) async {
     try {
-      await dio.post('/api/coupons/apply', data: {'code': code});
+      final response = await dio.post('/api/coupons/validate', data: {
+        'code': code.toUpperCase(),
+        if (subtotal != null) 'subtotal': subtotal,
+        if (items != null) 'items': items,
+      });
+      return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _handleError(e);
     }

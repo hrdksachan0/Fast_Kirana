@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../data/models/category.dart';
 import 'category_products_screen.dart';
 
 class CategoriesScreen extends StatelessWidget {
@@ -12,7 +14,7 @@ class CategoriesScreen extends StatelessWidget {
     {'name': 'Dairy & Eggs', 'emoji': '🥛', 'count': '45', 'color': '#3B82F6'},
     {'name': 'Bakery', 'emoji': '🍞', 'count': '32', 'color': '#FBBC05'},
     {'name': 'Snacks', 'emoji': '🍿', 'count': '67', 'color': '#8B5CF6'},
-    {'name': 'Cafe', 'emoji': '☕', 'count': '24', 'color': '#FC8019'},
+    {'name': 'Restaurant', 'emoji': '🍽️', 'count': '48', 'color': '#FC8019'},
     {'name': 'Atta & Rice', 'emoji': '🌾', 'count': '38', 'color': '#84CC16'},
     {'name': 'Oils & Ghee', 'emoji': '🫒', 'count': '21', 'color': '#06B6D4'},
     {'name': 'Personal Care', 'emoji': '🧴', 'count': '55', 'color': '#F97316'},
@@ -42,8 +44,14 @@ class CategoriesScreen extends StatelessWidget {
           final cat = _categories[index];
           return GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => CategoryProductsScreen(categoryId: 'cat_$index', categoryName: cat['name']!),
+              final catObj = Category(
+                id: 'cat_$index',
+                name: cat['name']!,
+                slug: cat['name']!.toLowerCase().replaceAll(' ', '-').replaceAll('&', 'and'),
+                sortOrder: index,
+              );
+              Navigator.push(context, FadeSlideRoute(
+                page: CategoryProductsScreen(category: catObj),
               ));
             },
             child: Container(

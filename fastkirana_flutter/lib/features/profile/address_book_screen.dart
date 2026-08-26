@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
@@ -48,9 +49,12 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          // 1. Delivery Zone Banner
+      body: ResponsiveContainer(
+        maxWidth: Responsive.formMaxContentWidth,
+        fillHeight: true,
+        child: Column(
+          children: [
+            // 1. Delivery Zone Banner
           Container(
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -381,7 +385,8 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildEmptyState() {

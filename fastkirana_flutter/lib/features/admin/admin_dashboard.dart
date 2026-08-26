@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
 import 'admin_products.dart';
 import 'admin_orders_list.dart';
 import 'admin_customers.dart';
@@ -43,7 +44,7 @@ class AdminDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded, color: AppDesignSystem.textPrimary),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen())),
+            onPressed: () => Navigator.push(context, FadeSlideRoute(page: const AdminSettingsScreen())),
           ),
         ],
       ),
@@ -109,28 +110,28 @@ class AdminDashboard extends StatelessWidget {
               childAspectRatio: 0.85,
               children: [
                 _actionBtn(context, 'Products', Icons.inventory_2_rounded, AppDesignSystem.primary, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminProductsScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminProductsScreen()));
                 }),
                 _actionBtn(context, 'Orders', Icons.shopping_bag_rounded, AppDesignSystem.success, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminOrdersScreen()));
                 }),
                 _actionBtn(context, 'Customers', Icons.people_rounded, AppDesignSystem.info, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminCustomersScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminCustomersScreen()));
                 }),
                 _actionBtn(context, 'Coupons', Icons.local_offer_rounded, AppDesignSystem.warning, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminCouponsScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminCouponsScreen()));
                 }),
                 _actionBtn(context, 'Banners', Icons.image_rounded, AppDesignSystem.cafeAccent, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminBannersScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminBannersScreen()));
                 }),
                 _actionBtn(context, 'Reports', Icons.bar_chart_rounded, AppDesignSystem.primary, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminReportsScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminReportsScreen()));
                 }),
                 _actionBtn(context, 'Orders Pipeline', Icons.delivery_dining_rounded, AppDesignSystem.accent, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminOrdersScreen()));
                 }),
                 _actionBtn(context, 'Settings', Icons.settings_rounded, AppDesignSystem.textSecondary, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen()));
+                  Navigator.push(context, FadeSlideRoute(page: const AdminSettingsScreen()));
                 }),
               ],
             ),

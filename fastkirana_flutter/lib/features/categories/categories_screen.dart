@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import 'category_products_screen.dart';
@@ -404,8 +405,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         HapticFeedback.lightImpact();
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => CategoryProductsScreen(category: category),
+          FadeSlideRoute(
+            page: CategoryProductsScreen(category: category),
           ),
         );
       },

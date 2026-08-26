@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
+import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -368,9 +370,12 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
           // 1. Premium Brand Header
           SliverToBoxAdapter(
             child: Container(
@@ -412,7 +417,7 @@ class ProfileScreen extends ConsumerWidget {
                     emoji: '📦',
                     title: 'Orders',
                     subtitle: ordersCount > 0 ? '$ordersCount Placed' : 'Live Track',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen())),
+                    onTap: () => Navigator.push(context, FadeSlideRoute(page: const OrdersScreen())),
                   ),
                   const SizedBox(width: 10),
                   _buildShortcutCard(
@@ -420,7 +425,7 @@ class ProfileScreen extends ConsumerWidget {
                     emoji: '❤️',
                     title: 'Wishlist',
                     subtitle: wishlist.isNotEmpty ? '${wishlist.length} Items' : 'Saved Items',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen())),
+                    onTap: () => Navigator.push(context, FadeSlideRoute(page: const WishlistScreen())),
                   ),
                   const SizedBox(width: 10),
                   _buildShortcutCard(
@@ -428,7 +433,7 @@ class ProfileScreen extends ConsumerWidget {
                     emoji: '📍',
                     title: 'Addresses',
                     subtitle: addresses.isNotEmpty ? '${addresses.length} Saved' : 'Add New',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressBookScreen())),
+                    onTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
                   ),
                 ],
               ),
@@ -536,7 +541,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                          FadeSlideRoute(page: const OrdersScreen()),
                         );
                       },
                     ),
@@ -552,7 +557,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                          FadeSlideRoute(page: const AddressBookScreen()),
                         );
                       },
                     ),
@@ -568,7 +573,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const WishlistScreen()),
+                          FadeSlideRoute(page: const WishlistScreen()),
                         );
                       },
                     ),
@@ -583,7 +588,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                          FadeSlideRoute(page: const NotificationsScreen()),
                         );
                       },
                     ),
@@ -618,7 +623,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildGuestHeader(BuildContext context) {
@@ -680,7 +686,7 @@ class ProfileScreen extends ConsumerWidget {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              FadeSlideRoute(page: const LoginScreen()),
             );
           },
           child: Container(
