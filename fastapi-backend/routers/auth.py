@@ -159,11 +159,13 @@ class LoginRequest(BaseModel):
 
 
 class OTPRequest(BaseModel):
-    phone: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
 
 
 class OTPVerifyRequest(BaseModel):
-    phone: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
     otp: str
 
 
@@ -197,6 +199,8 @@ def generate_otp() -> str:
 
 def normalize_phone(phone: str) -> str:
     """Strip non-digits, keep last 10 digits."""
+    if not phone:
+        return ""
     digits = "".join(c for c in phone if c.isdigit())
     if len(digits) > 10:
         digits = digits[-10:]
@@ -207,7 +211,6 @@ async def send_whatsapp_otp(phone: str, otp: str) -> bool:
     """Send OTP using Meta WhatsApp Cloud API."""
     token = os.getenv("WHATSAPP_TOKEN")
     phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-    template_name = os.getenv("WHATSAPP_TEMPLATE_NAME")
 
     if not token or not phone_id:
         return False
@@ -218,42 +221,15 @@ async def send_whatsapp_otp(phone: str, otp: str) -> bool:
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-
-    if template_name:
-        components = [
-            {
-                "type": "body",
-                "parameters": [{"type": "text", "text": otp}],
-            }
-        ]
-        if template_name == "verify_otp":
-            components.append({
-                "type": "button",
-                "sub_type": "url",
-                "index": 0,
-                "parameters": [{"type": "text", "text": otp}],
-            })
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": clean_phone,
-            "type": "template",
-            "template": {
-                "name": template_name,
-                "language": {"code": os.getenv("WHATSAPP_TEMPLATE_LANG", "en")},
-                "components": components,
-            },
-        }
-    else:
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": clean_phone,
-            "type": "text",
-            "text": {
-                "body": f"Your FastKirana verification code is: {otp}. Valid for 5 minutes.",
-            },
-        }
+    body = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "text",
+        "text": {
+            "body": f"Your FastKirana verification code is: {otp}. Valid for 5 minutes.",
+        },
+    }
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -502,17 +478,40 @@ _otp_cache: Dict[str, tuple[str, float]] = {}
 
 
 @router.post("/otp/send", response_model=MessageResponse)
-async def send_otp(body: OTPRequest):
+async def send_otp(
+    body: OTPRequest,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Send real OTP to phone number via WhatsApp Cloud API or Fast2SMS.
+    Also syncs to Supabase PostgreSQL otp_tokens table.
     """
-    phone = normalize_phone(body.phone)
+    raw_ident = body.phone or body.email or ""
+    phone = normalize_phone(raw_ident)
 
     if not phone or len(phone) != 10 or phone[0] < '6':
         raise HTTPException(status_code=400, detail="Invalid Indian phone number")
 
     otp = generate_otp()
     _otp_cache[phone] = (otp, datetime.now(timezone.utc).timestamp() + 300)
+
+    # Persist OTP in database otp_tokens table for multi-worker / multi-backend verification
+    try:
+        from models import OTPToken
+        from sqlalchemy import delete
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        phone_patterns = [phone, f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com"]
+        await db.execute(delete(OTPToken).where(OTPToken.email.in_(phone_patterns)))
+        db_otp = OTPToken(
+            id=f"otp_{uuid.uuid4().hex[:20]}",
+            email=phone,
+            token=otp,
+            expiresAt=expires_at
+        )
+        db.add(db_otp)
+        await db.commit()
+    except Exception as e:
+        print(f"Error persisting OTPToken to database: {e}")
 
     # 1. Try Meta WhatsApp Cloud API
     whatsapp_sent = await send_whatsapp_otp(phone, otp)
@@ -535,20 +534,44 @@ async def verify_otp(
 ):
     """
     Verify OTP and create/login user via WhatsApp / Phone.
+    Checks in-memory cache, PostgreSQL otp_tokens table, and backup bypass code.
     """
-    phone = normalize_phone(body.phone)
+    raw_ident = body.phone or body.email or ""
+    phone = normalize_phone(raw_ident)
     entered_otp = body.otp.strip()
 
     cached = _otp_cache.get(phone)
     is_valid = False
 
+    # Check 1: In-memory cache
     if cached:
         code, expiry = cached
         if datetime.now(timezone.utc).timestamp() <= expiry and entered_otp == code:
             is_valid = True
             _otp_cache.pop(phone, None)
 
-    if entered_otp in ["123456"]:  # Backup/dev bypass
+    # Check 2: Database otp_tokens table (shared between Next.js & FastAPI)
+    if not is_valid:
+        try:
+            from models import OTPToken
+            now_naive = datetime.utcnow()
+            phone_patterns = [phone, f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com"]
+            stmt = select(OTPToken).where(
+                OTPToken.token == entered_otp,
+                OTPToken.expiresAt > now_naive,
+                OTPToken.email.in_(phone_patterns)
+            )
+            res = await db.execute(stmt)
+            db_token = res.scalars().first()
+            if db_token:
+                is_valid = True
+                await db.delete(db_token)
+                await db.commit()
+        except Exception as e:
+            print(f"Error checking OTPToken in DB: {e}")
+
+    # Check 3: Dev/Backup Bypass code
+    if entered_otp in ["123456"]:
         is_valid = True
 
     if not is_valid:
