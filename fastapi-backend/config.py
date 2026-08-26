@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_live_TRvyzlqHiRGWbr")
     RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "4C54O0N5q841qdmQ8N1MTTiU")
 
+    # Google Maps API Key
+    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyBA-OzFRbcw89zAZeELDWOiRl_Ce0uQYrc")
+
     model_config = SettingsConfigDict(case_sensitive=True)
 
 settings = Settings()
