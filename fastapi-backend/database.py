@@ -6,17 +6,21 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
 
 def clean_async_db_url(raw_url: str) -> str:
-    url = raw_url or os.getenv("DATABASE_URL", "")
+    url = (raw_url or os.getenv("DATABASE_URL", "")).strip()
     if not url:
-        return url
+        return ""
 
-    # Force driver scheme
+    # Strip surrounding single or double quotes if present
+    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+        url = url[1:-1].strip()
+
+    # Force asyncpg driver scheme
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-    # Strip ALL query parameters from URL string to prevent asyncpg keyword argument crashes
+    # Strip query parameters to prevent asyncpg keyword crashes
     if "?" in url:
         url = url.split("?")[0]
 
