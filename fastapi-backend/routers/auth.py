@@ -209,8 +209,10 @@ def normalize_phone(phone: str) -> str:
 
 async def send_whatsapp_otp(phone: str, otp: str) -> bool:
     """Send OTP using Meta WhatsApp Cloud API."""
-    token = os.getenv("WHATSAPP_TOKEN")
-    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+    token = (os.getenv("WHATSAPP_TOKEN") or "").strip().strip('"').strip("'")
+    phone_id = (os.getenv("WHATSAPP_PHONE_NUMBER_ID") or "").strip().strip('"').strip("'")
+    template_name = (os.getenv("WHATSAPP_TEMPLATE_NAME") or "verify_otp").strip().strip('"').strip("'")
+    template_lang = (os.getenv("WHATSAPP_TEMPLATE_LANG") or "en").strip().strip('"').strip("'")
 
     if not token or not phone_id:
         return False
@@ -221,13 +223,31 @@ async def send_whatsapp_otp(phone: str, otp: str) -> bool:
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
+
+    components = [
+        {
+            "type": "body",
+            "parameters": [{"type": "text", "text": otp}],
+        }
+    ]
+
+    if template_name == "verify_otp":
+        components.append({
+            "type": "button",
+            "sub_type": "url",
+            "index": 0,
+            "parameters": [{"type": "text", "text": otp}],
+        })
+
     body = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": clean_phone,
-        "type": "text",
-        "text": {
-            "body": f"Your FastKirana verification code is: {otp}. Valid for 5 minutes.",
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": template_lang},
+            "components": components,
         },
     }
 
@@ -565,34 +585,65 @@ async def verify_otp(
         except Exception as e:
             print(f"Error checking OtpToken in DB: {e}")
 
-    # Check 3: Dev/Backup Bypass code
-    if entered_otp in ["123456"]:
-        is_valid = True
-
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP code")
 
-    # Find or create user
-    result = await db.execute(select(User).where(User.phone == phone))
+    # Find or create user matching any phone pattern (+91, 10-digits, wa- email)
+    from sqlalchemy import or_
+    phone_patterns = [phone, f"+91{phone}", f"91{phone}"]
+    email_patterns = [f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.in", f"wa-{phone}@fastkirana.in"]
+
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.phone.in_(phone_patterns),
+                User.email.in_(email_patterns)
+            )
+        )
+    )
     user = result.scalars().first()
 
     if not user:
-        # Create new user
-        wa_email = f"wa-91{phone}@fastkirana.in"
+        try:
+            wa_email = f"wa-{phone}@fastkirana.com"
+            user = User(
+                id=f"c{uuid.uuid4().hex[:24]}",
+                email=wa_email,
+                phone=f"+91{phone}",
+                name="",
+                role=Role.USER.value,
+                passwordHash=None,
+                isBlocked=False,
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        except Exception:
+            await db.rollback()
+            res_retry = await db.execute(
+                select(User).where(
+                    or_(
+                        User.phone.in_(phone_patterns),
+                        User.email.in_(email_patterns)
+                    )
+                )
+            )
+            user = res_retry.scalars().first()
+
+    if not user:
+        # Ultimate fail-safe fallback user
         user = User(
             id=f"c{uuid.uuid4().hex[:24]}",
-            email=wa_email,
-            phone=phone,
+            email=f"wa-{phone}@fastkirana.com",
+            phone=f"+91{phone}",
             name="",
             role=Role.USER.value,
-            passwordHash=None,
-            isBlocked=False,
+            isBlocked=False
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    clean_email = user.email if (user.email and not user.email.startswith("wa-")) else ""
+
     token = create_access_token({
         "id": user.id,
         "email": user.email,
@@ -604,7 +655,7 @@ async def verify_otp(
 
     return SessionResponse(
         id=user.id,
-        email=user.email,
+        email=clean_email,
         name=user.name,
         role=role_val,
         phone=user.phone,
