@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:convert';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -94,7 +94,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         }
 
         await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', response.token);
+        if (response.token != null && response.token!.isNotEmpty) {
+          await prefs.setString('auth_token', response.token!);
+        }
 
         // Update auth provider so all screens see the logged-in user
         ref.read(authProvider.notifier).setUser(user);
@@ -309,7 +311,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.danger,
+        backgroundColor: AppDesignSystem.danger,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -319,7 +321,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.accent,
+        backgroundColor: AppDesignSystem.accent,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -390,7 +392,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppDesignSystem.textPrimary,
                 ),
               ).animate().fadeIn(duration: 400.ms, delay: 150.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 150.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 8),
@@ -399,7 +401,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: AppDesignSystem.textSecondary,
                 ),
               ).animate().fadeIn(duration: 400.ms, delay: 250.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 250.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 32),
@@ -449,7 +451,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     "Didn't receive the code? ",
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: AppColors.textSecondary,
+                      color: AppDesignSystem.textSecondary,
                     ),
                   ),
                   TextButton(
@@ -462,7 +464,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                        color: AppDesignSystem.primary,
                       ),
                     ),
                   ),

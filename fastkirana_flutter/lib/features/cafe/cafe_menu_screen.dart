@@ -7,7 +7,6 @@ import 'package:shimmer/shimmer.dart';
 import '../../data/models/product.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/theme/responsive.dart';
-import '../../core/theme/systematic_tokens.dart';
 import '../../data/models/restaurant.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';

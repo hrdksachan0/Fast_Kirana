@@ -10,7 +10,6 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
-import '../../core/theme/systematic_tokens.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';

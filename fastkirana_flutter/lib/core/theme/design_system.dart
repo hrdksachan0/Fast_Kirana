@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// FastKirana Design System — the single source of truth for all colors, spacing, radii, shadows.
+/// AppColors (in core/constants/) is a legacy alias; migrate to AppDesignSystem over time.
 class AppDesignSystem {
   // FastKirana Brand Colors (Matching Web App globals.css: Red #E20A22)
   static const Color primary = Color(0xFFE20A22);
