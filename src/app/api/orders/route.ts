@@ -1037,6 +1037,65 @@ export async function POST(request: NextRequest) {
             data: { orderId: order.id }
           }).catch((err: any) => console.error('Error sending push notification to workers:', err))
 
+          // Send FCM Push Notification directly to Customer Phone & User Topic
+          try {
+            const customerPhone = order.address?.phone || order.user?.phone || body.phone || ''
+            const cleanPhone = getLast10Digits(customerPhone)
+            const { fcmMessaging } = await import('@/lib/firebase-admin')
+            if (fcmMessaging) {
+              const custPayload: any = {
+                notification: {
+                  title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
+                  body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
+                },
+                data: {
+                  title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
+                  body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
+                  orderId: order.id,
+                  status: order.status,
+                  screen: 'order-tracking',
+                  url: `/orders/${order.id}`,
+                  timestamp: Date.now().toString(),
+                },
+                android: {
+                  priority: 'high',
+                  notification: {
+                    channelId: 'fastkirana_alerts',
+                    sound: 'default',
+                    defaultSound: true,
+                    defaultVibrateTimings: true,
+                    visibility: 'PUBLIC',
+                    priority: 'HIGH',
+                    clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+                  },
+                },
+                apns: {
+                  headers: { 'apns-priority': '10' },
+                  payload: {
+                    aps: {
+                      alert: {
+                        title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
+                        body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
+                      },
+                      sound: 'default',
+                      badge: 1,
+                      contentAvailable: true,
+                    },
+                  },
+                },
+              }
+
+              if (cleanPhone && cleanPhone.length === 10) {
+                await fcmMessaging.send({ topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
+              }
+              if (order.userId) {
+                await fcmMessaging.send({ topic: `user_${order.userId}`, ...custPayload }).catch(() => {})
+              }
+            }
+          } catch (fcmErr) {
+            console.error('Customer order placement FCM error:', fcmErr)
+          }
+
           const whatsappPromises: Promise<any>[] = []
 
           // 2. WhatsApp Alert to Admins/Staff
