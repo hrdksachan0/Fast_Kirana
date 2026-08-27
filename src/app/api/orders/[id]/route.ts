@@ -705,20 +705,30 @@ export async function PATCH(
               status: status || '',
               screen: 'order-tracking',
               url: `/orders/${id}`,
+              timestamp: Date.now().toString(),
             },
             android: {
               priority: 'high',
               notification: {
                 channelId: 'fastkirana_alerts',
                 sound: 'default',
+                defaultSound: true,
+                defaultVibrateTimings: true,
+                visibility: 'PUBLIC',
+                priority: 'HIGH',
                 clickAction: 'FLUTTER_NOTIFICATION_CLICK',
               },
             },
             apns: {
+              headers: {
+                'apns-priority': '10',
+              },
               payload: {
                 aps: {
+                  alert: { title: statusTitle, body: statusBody },
                   sound: 'default',
                   badge: 1,
+                  contentAvailable: true,
                 },
               },
             },
