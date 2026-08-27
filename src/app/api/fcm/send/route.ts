@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and body are required' }, { status: 400 })
     }
 
-    const payload: admin.messaging.Message = {
+    const payload: any = {
       notification: { title, body: notificationBody },
       data: {
         ...data,
@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
     let failureCount = 0
 
     if (target === 'token' && fcmToken) {
-      // Send to a single token
       tokens = [fcmToken]
       payload.token = fcmToken
     } else if (target === 'userId' && userId) {
@@ -71,25 +70,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const payload: any = {
-      notification: { title, body: notificationBody },
-      data: {
-        ...data,
-        title,
-        body: notificationBody,
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          channelId: 'fastkirana_alerts',
-          sound: 'default',
-        },
-      },
-    }
-
-    let successCount = 0
-    let failureCount = 0
 
     if (!fcmMessaging) {
       return NextResponse.json({ error: 'Firebase Admin messaging is not initialized' }, { status: 500 })
