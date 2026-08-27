@@ -1,4 +1,4 @@
-package com.example.fastkirana_flutter
+package com.fastkirana.app
 
 import io.flutter.embedding.android.FlutterActivity
 

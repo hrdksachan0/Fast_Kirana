@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.fastkirana_flutter"
+    namespace = "com.fastkirana.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

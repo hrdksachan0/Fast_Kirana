@@ -9,14 +9,11 @@ export async function GET(request: Request) {
   const session = adminResult.session
 
   try {
-    // Fetch active carts that have at least one item, updated in the last 12 hours
+    // Fetch all active carts that have at least one item
     const carts = await prisma.cart.findMany({
       where: {
         items: {
           some: {} // has at least one item
-        },
-        updatedAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // last 24 hours
         }
       },
       include: {
@@ -95,16 +92,23 @@ export async function GET(request: Request) {
       const userAddresses = cart.user?.addresses || []
       const defaultAddress = userAddresses.find((a: any) => a.isDefault) || userAddresses[0] || null
 
+      let formattedName = 'Guest Shopper'
+      if (cart.user?.name) {
+        formattedName = cart.user.name.includes('Guest') ? cart.user.name : cart.user.name
+      } else {
+        formattedName = `Guest Shopper (${cart.id.slice(-6)})`
+      }
+
       return {
         id: cart.id,
         userId: cart.userId,
-        userName: cart.user?.name || 'Customer',
-        userEmail: cart.user?.email || null,
-        userPhone: cart.user?.phone || 'N/A',
+        userName: formattedName,
+        userEmail: cart.user?.email || 'guest@fastkirana.in',
+        userPhone: cart.user?.phone || 'Guest Shopper',
         updatedAt: cart.updatedAt,
         items,
         subtotal,
-        address: defaultAddress ? `${defaultAddress.houseNo || ''}, ${defaultAddress.street || ''}, ${defaultAddress.area || ''}, ${defaultAddress.city || ''} - ${defaultAddress.pincode || ''}` : null,
+        address: defaultAddress ? `${defaultAddress.houseNo || ''}, ${defaultAddress.street || ''}, ${defaultAddress.area || ''}, ${defaultAddress.city || ''} - ${defaultAddress.pincode || ''}` : 'Location Pending (Browsing In-App Cart)',
         lat: defaultAddress ? defaultAddress.lat : null,
         lng: defaultAddress ? defaultAddress.lng : null
       }
