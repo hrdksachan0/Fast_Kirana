@@ -5,6 +5,7 @@ import { requireOrderAccess } from '@/lib/auth-guard'
 import { sendPushNotification, sendPushNotificationToRoles } from '@/lib/push-notification'
 import { Role } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'
+import { getLast10Digits } from '@/lib/phone'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
