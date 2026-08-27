@@ -85,11 +85,12 @@ export async function GET(request: NextRequest) {
 
     // Filter by restaurant — strictly by restaurantId or restaurant.slug
     const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
+    const includeRestaurants = searchParams.get('all') === 'true' || searchParams.get('includeRestaurants') === 'true' || searchParams.get('type') === 'all'
     if (restaurantId) {
       where.restaurantId = restaurantId
     } else if (restaurantSlug) {
       where.restaurant = { slug: restaurantSlug }
-    } else if (excludeRestaurant || (!isWorker && !includeUnavailable && !category && !normalizedSearch)) {
+    } else if (excludeRestaurant || (!includeRestaurants && !isWorker && !includeUnavailable && !category && !normalizedSearch)) {
       // In grocery context (no restaurant, no category, NO search query), exclude restaurant products
       where.restaurantId = null
     }
