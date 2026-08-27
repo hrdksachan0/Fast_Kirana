@@ -672,27 +672,20 @@ export async function PATCH(
         data: { orderId: id }
       }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
 
-      // FCM push notification for mobile app customers
+      // FCM push notification for mobile app customers (Universal Multi-Topic Broadcast)
       try {
-        const customer = await prisma.user.findUnique({
-          where: { id: existingOrder.userId },
-          select: { phone: true }
+        const fullOrder = await prisma.order.findUnique({
+          where: { id: existingOrder.id },
+          include: { user: true, address: true },
         })
-        const cleanPhone = customer?.phone ? getLast10Digits(customer.phone) : ''
-        
-        let userIds = [existingOrder.userId]
-        if (cleanPhone && cleanPhone.length === 10) {
-          const matchingUsers = await prisma.user.findMany({
-            where: { phone: { contains: cleanPhone } },
-            select: { id: true },
-          })
-          userIds = Array.from(new Set([...userIds, ...matchingUsers.map(u => u.id)]))
-        }
 
-        const fcmTokens = await prisma.fcmToken.findMany({
-          where: { userId: { in: userIds } },
-          select: { token: true },
-        })
+        const candidatePhones = [
+          fullOrder?.user?.phone,
+          fullOrder?.address?.phone,
+          (fullOrder as any)?.customerPhone,
+        ].filter(Boolean).map(p => getLast10Digits(String(p))).filter(p => p && p.length === 10)
+
+        const uniquePhones = Array.from(new Set(candidatePhones))
 
         const { fcmMessaging } = await import('@/lib/firebase-admin')
         if (fcmMessaging) {
@@ -701,10 +694,11 @@ export async function PATCH(
             data: {
               title: statusTitle,
               body: statusBody,
-              orderId: id,
+              orderId: existingOrder.id,
+              readableId: baseOrderNo,
               status: status || '',
               screen: 'order-tracking',
-              url: `/orders/${id}`,
+              url: `/orders/${existingOrder.id}`,
               timestamp: Date.now().toString(),
             },
             android: {
@@ -720,9 +714,7 @@ export async function PATCH(
               },
             },
             apns: {
-              headers: {
-                'apns-priority': '10',
-              },
+              headers: { 'apns-priority': '10' },
               payload: {
                 aps: {
                   alert: { title: statusTitle, body: statusBody },
@@ -734,54 +726,59 @@ export async function PATCH(
             },
           }
 
-          // A. Send directly to all registered tokens
-          if (fcmTokens.length > 0) {
-            const tokens = fcmTokens.map(t => t.token)
-            const fcmResult = await fcmMessaging.sendEachForMulticast({
-              tokens,
-              notification: fcmPayload.notification,
-              data: fcmPayload.data as Record<string, string>,
-              android: fcmPayload.android,
-              apns: fcmPayload.apns,
-            })
+          const broadcastPromises: Promise<any>[] = []
 
-            // Clean up invalid tokens
-            const invalidTokens: string[] = []
-            fcmResult.responses.forEach((resp, idx) => {
-              if (!resp.success) {
-                const errCode = resp.error?.code
-                if (errCode === 'messaging/registration-token-not-registered' || errCode === 'messaging/invalid-argument') {
-                  invalidTokens.push(tokens[idx])
-                }
-              }
-            })
-            if (invalidTokens.length > 0) {
-              await prisma.fcmToken.deleteMany({ where: { token: { in: invalidTokens } } })
+          // 1. Broadcast to all matched phone topics
+          for (const phone of uniquePhones) {
+            broadcastPromises.push(
+              fcmMessaging.send({ topic: `phone_${phone}`, ...fcmPayload }).catch(() => {})
+            )
+          }
+
+          // 2. Broadcast to user topic
+          if (existingOrder.userId) {
+            broadcastPromises.push(
+              fcmMessaging.send({ topic: `user_${existingOrder.userId}`, ...fcmPayload }).catch(() => {})
+            )
+          }
+
+          // 3. Broadcast to order topic
+          broadcastPromises.push(
+            fcmMessaging.send({ topic: `order_${existingOrder.id}`, ...fcmPayload }).catch(() => {})
+          )
+          if (baseOrderNo) {
+            broadcastPromises.push(
+              fcmMessaging.send({ topic: `order_${baseOrderNo}`, ...fcmPayload }).catch(() => {})
+            )
+          }
+
+          // 4. Universal all_users broadcast for instant sync
+          broadcastPromises.push(
+            fcmMessaging.send({ topic: 'all_users', ...fcmPayload }).catch(() => {})
+          )
+
+          // 5. Multicast to all registered FCM device tokens in the system
+          const allDeviceTokens = await prisma.fcmToken.findMany({ select: { token: true } })
+          if (allDeviceTokens.length > 0) {
+            const tokens = allDeviceTokens.map(t => t.token)
+            for (let i = 0; i < tokens.length; i += 500) {
+              const chunk = tokens.slice(i, i + 500)
+              broadcastPromises.push(
+                fcmMessaging.sendEachForMulticast({
+                  tokens: chunk,
+                  notification: fcmPayload.notification,
+                  data: fcmPayload.data as Record<string, string>,
+                  android: fcmPayload.android,
+                  apns: fcmPayload.apns,
+                }).catch(() => {})
+              )
             }
           }
 
-          // B. Broadcast to phone topic for instant fallback
-          if (cleanPhone && cleanPhone.length === 10) {
-            await fcmMessaging.send({
-              topic: `phone_${cleanPhone}`,
-              ...fcmPayload
-            }).catch(() => {})
-          }
-
-          // C. Broadcast to user topic
-          await fcmMessaging.send({
-            topic: `user_${existingOrder.userId}`,
-            ...fcmPayload
-          }).catch(() => {})
-
-          // D. Broadcast to order topic
-          await fcmMessaging.send({
-            topic: `order_${id}`,
-            ...fcmPayload
-          }).catch(() => {})
+          await Promise.allSettled(broadcastPromises)
         }
       } catch (fcmErr) {
-        console.error('FCM notification error:', fcmErr)
+        console.error('Universal FCM notification error:', fcmErr)
       }
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
