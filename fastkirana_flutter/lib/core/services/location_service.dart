@@ -30,7 +30,27 @@ class LocationDetails {
 }
 
 class LocationService {
-  static const double maxDeliveryRadiusKm = 15.0; // FastKirana delivery zone radius
+  static const double maxDeliveryRadiusKm = 5.0; // FastKirana delivery zone radius (Strict 5.0 km)
+
+  /// Distance-tiered delivery fee & free delivery threshold calculation
+  /// • 0 to 2 km: ₹25 fee — FREE above ₹199
+  /// • 2 to 3 km: ₹35 fee — FREE above ₹299
+  /// • 3 to 5 km: ₹50 fee — FREE above ₹399
+  /// • > 5 km: Unserviceable
+  static ({double deliveryFee, double freeDeliveryThreshold, bool isServiceable, String tierName}) getDeliveryTier(double distanceKm, double subtotal) {
+    if (distanceKm <= 2.0) {
+      final fee = subtotal >= 199.0 ? 0.0 : 25.0;
+      return (deliveryFee: fee, freeDeliveryThreshold: 199.0, isServiceable: true, tierName: '0 to 2 km (Local Zone)');
+    } else if (distanceKm <= 3.0) {
+      final fee = subtotal >= 299.0 ? 0.0 : 35.0;
+      return (deliveryFee: fee, freeDeliveryThreshold: 299.0, isServiceable: true, tierName: '2 to 3 km (Suburban Area)');
+    } else if (distanceKm <= 5.0) {
+      final fee = subtotal >= 399.0 ? 0.0 : 50.0;
+      return (deliveryFee: fee, freeDeliveryThreshold: 399.0, isServiceable: true, tierName: '3 to 5 km (Extended Area)');
+    } else {
+      return (deliveryFee: 0.0, freeDeliveryThreshold: 499.0, isServiceable: false, tierName: 'Outside 5.0 km (Out of Zone)');
+    }
+  }
 
   /// Check & request location permission, then fetch current GPS location
   static Future<Position?> getCurrentPosition() async {
