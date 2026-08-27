@@ -698,25 +698,27 @@ export async function PATCH(
             fcmPayload.tokens = fcmTokens.map(t => t.token)
           }
 
-          const fcmResult = await fcmMessaging.sendEachForMulticast({
-            tokens: (fcmPayload.tokens || [fcmPayload.token]) as string[],
-            notification: fcmPayload.notification,
-            data: fcmPayload.data as Record<string, string>,
-            android: fcmPayload.android,
-          })
+          if (fcmMessaging) {
+            const fcmResult = await fcmMessaging.sendEachForMulticast({
+              tokens: (fcmPayload.tokens || [fcmPayload.token]) as string[],
+              notification: fcmPayload.notification,
+              data: fcmPayload.data as Record<string, string>,
+              android: fcmPayload.android,
+            })
 
-          // Clean up invalid tokens
-          const invalidTokens: string[] = []
-          fcmResult.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-              const errCode = resp.error?.code
-              if (errCode === 'messaging/registration-token-not-registered' || errCode === 'messaging/invalid-argument') {
-                invalidTokens.push(fcmTokens[idx].token)
+            // Clean up invalid tokens
+            const invalidTokens: string[] = []
+            fcmResult.responses.forEach((resp, idx) => {
+              if (!resp.success) {
+                const errCode = resp.error?.code
+                if (errCode === 'messaging/registration-token-not-registered' || errCode === 'messaging/invalid-argument') {
+                  invalidTokens.push(fcmTokens[idx].token)
+                }
               }
+            })
+            if (invalidTokens.length > 0) {
+              await prisma.fcmToken.deleteMany({ where: { token: { in: invalidTokens } } })
             }
-          })
-          if (invalidTokens.length > 0) {
-            await prisma.fcmToken.deleteMany({ where: { token: { in: invalidTokens } } })
           }
         }
       } catch (fcmErr) {
