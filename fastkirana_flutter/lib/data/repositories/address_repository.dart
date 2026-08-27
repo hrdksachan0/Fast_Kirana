@@ -10,26 +10,36 @@ class AddressRepository {
 
   AddressRepository(this.dio);
 
-  static Address get defaultGhatampurAddress => Address(
+  static Address defaultAddressWithPhone(String phone) => Address(
     id: 'addr_default_ghatampur',
     userId: 'default_user',
     label: 'Home',
-    houseNo: 'Main Market',
-    street: 'Station Road',
+    houseNo: 'Delivery Address',
+    street: 'Main Road',
     area: 'Ghatampur Express Zone',
     city: 'Ghatampur, Kanpur Nagar',
     pincode: '209206',
-    phone: '7054470303',
+    phone: phone.replaceAll('+91', '').replaceAll(' ', '').trim(),
     latitude: 26.1534185,
     longitude: 80.1714024,
     isDefault: true,
   );
 
+  static Address get defaultGhatampurAddress => defaultAddressWithPhone('');
+
+  Future<String> _getCacheKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return 'user_saved_addresses_cache_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+  }
+
   Future<List<Address>> getAddresses() async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCacheKey();
     List<Address> localAddresses = [];
 
-    final rawJson = prefs.getString(_cacheKey);
+    final rawJson = prefs.getString(cacheKey);
     if (rawJson != null && rawJson.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
@@ -183,7 +193,8 @@ class AddressRepository {
 
   Future<void> _saveToCache(List<Address> addresses) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCacheKey();
     final jsonList = addresses.map((a) => a.toJson()).toList();
-    await prefs.setString(_cacheKey, jsonEncode(jsonList));
+    await prefs.setString(cacheKey, jsonEncode(jsonList));
   }
 }

@@ -639,16 +639,17 @@ export async function PATCH(
         DELIVERED: 'Delivered Successfully 🎉',
         CANCELLED: 'Cancelled ❌',
       }
-      
+
       const baseOrderNo = existingOrder.readableId
         ? String(existingOrder.readableId).replace(/-[GR\d]+$/i, '')
         : id.slice(-6).toUpperCase()
 
       const statusTitle = `Order #${baseOrderNo}: ${statusLabels[status] || status}`
       const statusBody = `Your FastKirana order #${baseOrderNo} is now ${statusLabels[status] || status}.`
-      
+
       const origin = request.headers.get('origin') || 'https://fastkirana.com'
-      
+
+      // Web push notification for PWA / web subscribers
       sendPushNotification(existingOrder.userId, {
         title: statusTitle,
         body: statusBody,
@@ -670,6 +671,57 @@ export async function PATCH(
         data: { orderId: id }
       }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
 
+      // FCM push notification for mobile app customers
+      try {
+        const fcmTokens = await prisma.fcmToken.findMany({
+          where: { userId: existingOrder.userId },
+          select: { token: true },
+        })
+
+        if (fcmTokens.length > 0) {
+          const { fcmMessaging } = await import('@/lib/firebase-admin')
+          const fcmPayload: admin.messaging.Message = {
+            notification: { title: statusTitle, body: statusBody },
+            data: { orderId: id, status: status || '', screen: 'order-tracking' },
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'fastkirana_alerts',
+                sound: 'default',
+                clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+              },
+            },
+          }
+          if (fcmTokens.length === 1) {
+            fcmPayload.token = fcmTokens[0].token
+          } else {
+            fcmPayload.tokens = fcmTokens.map(t => t.token)
+          }
+
+          const fcmResult = await fcmMessaging.sendEachForMulticast({
+            tokens: fcmPayload.tokens as string[],
+            notification: fcmPayload.notification as admin.messaging.Notification,
+            data: fcmPayload.data as Record<string, string>,
+            android: fcmPayload.android as admin.messaging.AndroidConfig,
+          })
+
+          // Clean up invalid tokens
+          const invalidTokens: string[] = []
+          fcmResult.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              const errCode = resp.error?.code
+              if (errCode === 'messaging/registration-token-not-registered' || errCode === 'messaging/invalid-argument') {
+                invalidTokens.push(fcmTokens[idx].token)
+              }
+            }
+          })
+          if (invalidTokens.length > 0) {
+            await prisma.fcmToken.deleteMany({ where: { token: { in: invalidTokens } } })
+          }
+        }
+      } catch (fcmErr) {
+        console.error('FCM notification error:', fcmErr)
+      }
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
     }

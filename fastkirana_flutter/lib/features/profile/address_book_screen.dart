@@ -8,6 +8,7 @@ import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/empty_state.dart';
 
 class AddressBookScreen extends ConsumerStatefulWidget {
   const AddressBookScreen({super.key});
@@ -18,11 +19,107 @@ class AddressBookScreen extends ConsumerStatefulWidget {
 
 class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
   static const Color primaryRed = Color(0xFFDC2626);
+  bool _isFetchingGps = false;
+  Address? _currentGpsAddress;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(addressesProvider.notifier).loadAddresses());
+  }
+
+  Future<void> _fetchAndUseGpsLocation() async {
+    HapticFeedback.lightImpact();
+    setState(() => _isFetchingGps = true);
+
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      if (pos == null) {
+        if (mounted) {
+          setState(() => _isFetchingGps = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFE11D48),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Please enable GPS / Location permission on your device.',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final details = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+      final user = ref.read(authProvider).value;
+
+      final prefs = await SharedPreferences.getInstance();
+      final currentPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
+
+      final gpsAddress = Address(
+        id: 'addr_gps_live',
+        userId: user?.id ?? prefs.getString('user_id') ?? '',
+        label: '📍 Current Location',
+        houseNo: details.houseNo.isNotEmpty ? details.houseNo : 'Near Pinpoint',
+        street: details.street.isNotEmpty ? details.street : 'GPS Detected Road',
+        area: details.area.isNotEmpty ? details.area : 'Ghatampur Market',
+        city: details.city.isNotEmpty ? details.city : 'Kanpur Nagar',
+        pincode: details.pincode.isNotEmpty ? details.pincode : '209206',
+        phone: currentPhone,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        isDefault: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isFetchingGps = false;
+          _currentGpsAddress = gpsAddress;
+        });
+
+        ref.read(selectedAddressProvider.notifier).state = gpsAddress;
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF047857),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '📍 Set to Current Location: ${details.formattedAddress}',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isFetchingGps = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Failed to fetch GPS location: $e',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -100,6 +197,95 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ─── 1-TAP GPS AUTO-DETECT CARD ───
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selectedAddress?.id == 'addr_gps_live'
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFFE2E8F0),
+                width: selectedAddress?.id == 'addr_gps_live' ? 1.4 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: _isFetchingGps
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(color: Color(0xFF16A34A), strokeWidth: 2.2),
+                        )
+                      : const Icon(Icons.my_location_rounded, color: Color(0xFF16A34A), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isFetchingGps ? 'Detecting Live GPS Pinpoint...' : '📍 Deliver to Current GPS Location',
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _currentGpsAddress != null
+                            ? _currentGpsAddress!.fullAddress
+                            : 'Auto-detect exact house & street in Ghatampur',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _isFetchingGps ? null : _fetchAndUseGpsLocation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedAddress?.id == 'addr_gps_live' ? const Color(0xFF16A34A) : const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    selectedAddress?.id == 'addr_gps_live' ? 'SELECTED' : 'FETCH',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -390,43 +576,16 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFECDD3)),
-              ),
-              child: const Icon(Icons.location_off_rounded, size: 48, color: primaryRed),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'No Saved Addresses Yet',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add your delivery address in Ghatampur for fast grocery and food deliveries.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF64748B),
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      emoji: '📍',
+      title: 'No Saved Addresses Yet',
+      subtitle: 'Add your delivery address in Ghatampur\nfor fast grocery and food deliveries.',
+      ctaLabel: 'Add Address',
+      bgTint: const Color(0xFFFFF0F0),
+      onCta: () {
+        HapticFeedback.lightImpact();
+        _showMapLocationPicker(context);
+      },
     );
   }
 
@@ -726,10 +885,11 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                         return;
                                       }
 
-                                      if (phone.isEmpty) {
-                                        final user = ref.read(currentUserProvider);
-                                        phone = user?.phone ?? '7054470303';
-                                      }
+                                       if (phone.isEmpty) {
+                                         final user = ref.read(currentUserProvider);
+                                         final prefs = await SharedPreferences.getInstance();
+                                         phone = user?.phone ?? prefs.getString('user_phone') ?? '';
+                                       }
 
                                       setSheetState(() => isSaving = true);
                                       HapticFeedback.heavyImpact();

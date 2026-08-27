@@ -21,6 +21,7 @@ class ProductCard extends ConsumerStatefulWidget {
   final VoidCallback? onTap;
   final double? width;
   final bool isCompact;
+  final bool showOutlet;
 
   const ProductCard({
     super.key,
@@ -28,6 +29,7 @@ class ProductCard extends ConsumerStatefulWidget {
     this.onTap,
     this.width,
     this.isCompact = false,
+    this.showOutlet = true,
   });
 
   @override
@@ -81,11 +83,13 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         ? ((startingMrp - startingPrice) / startingMrp * 100).round()
         : product.discountPercentage;
 
-    // Time Slot / Dish Timing Availability
-    final timingStatus = checkDishTimeAvailability(
-      product.availableStartTime,
-      product.availableEndTime,
-    );
+    // Time Slot / Dish Timing Availability (Food only, if explicitly set)
+    final timingStatus = isFood && (product.availableStartTime != null && product.availableStartTime!.trim().isNotEmpty)
+        ? checkDishTimeAvailability(
+            product.availableStartTime,
+            product.availableEndTime,
+          )
+        : const DishTimingStatus(isAvailableNow: true);
 
     // Live Web App Store & Restaurant Open/Close Sync
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
@@ -159,12 +163,15 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             children: [
               // 1. PRODUCT IMAGE SHOWCASE BOX WITH ALL WEB APP BADGES
               Container(
-                height: widget.isCompact ? 100 : 118,
+                height: widget.isCompact ? 100 : (isFood ? 126 : 116),
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFF1F5F9), width: 0.8),
+                  border: Border.all(
+                    color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
+                    width: 0.8,
+                  ),
                 ),
                 child: Stack(
                   children: [
@@ -276,42 +283,68 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ),
                     ),
 
-                    // Bottom Left: Bestseller / Chef Special Badge
-                    if (product.isBestSeller || product.tags.contains('popular'))
+                    // Respected Restaurant Tag Pinned on Photo (for Food items)
+                    if (isFood && widget.showOutlet && outletName.isNotEmpty)
+                      Positioned(
+                        bottom: 5,
+                        left: 5,
+                        right: isLowStock ? 60 : 5,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 0.6,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('👨‍🍳', style: TextStyle(fontSize: 9.5)),
+                              const SizedBox(width: 3.5),
+                              Flexible(
+                                child: Text(
+                                  outletName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: -0.1,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (product.isBestSeller || product.tags.contains('popular'))
                       Positioned(
                         bottom: 5,
                         left: 5,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
                           decoration: BoxDecoration(
-                            gradient: isFood
-                                ? const LinearGradient(
-                                    colors: [Color(0xFFDC2626), Color(0xFFD97706)],
-                                  )
-                                : null,
-                            color: isFood ? null : const Color(0xFFFFFBEB),
+                            color: const Color(0xFFFFFBEB),
                             borderRadius: BorderRadius.circular(6),
-                            border: isFood
-                                ? null
-                                : Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                            border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
                             boxShadow: [
                               BoxShadow(
-                                color: isFood
-                                    ? const Color(0xFFDC2626).withValues(alpha: 0.25)
-                                    : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
                               ),
                             ],
                           ),
                           child: Text(
-                            isFood
-                                ? '👨‍🍳 ${outletName.split(" ").first} Special'
-                                : '⭐ Bestseller',
+                            '⭐ Bestseller',
                             style: GoogleFonts.inter(
                               fontSize: 8,
                               fontWeight: FontWeight.w900,
-                              color: isFood ? Colors.white : const Color(0xFFB45309),
+                              color: const Color(0xFFB45309),
                             ),
                           ),
                         ),
@@ -547,8 +580,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               ),
 
               // 5. RESTAURANT OUTLET IDENTIFIER CHIP
-              if (isFood) ...[
-                const SizedBox(height: 4),
+              if (isFood && widget.showOutlet) ...[
+                const SizedBox(height: 3),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                   decoration: BoxDecoration(

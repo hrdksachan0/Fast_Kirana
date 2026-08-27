@@ -189,8 +189,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     final statusStep = _getStatusStep(_order?.status);
     final isDelivered = _order?.status == OrderStatus.delivered || statusStep >= 4;
     final isPaid = _order?.paymentStatus == 'PAID';
-    final readableId = _order?.readableId ?? widget.orderId;
-    final cleanDisplayId = readableId.startsWith('#') ? readableId : '#$readableId';
+    final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
+    final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -628,16 +628,42 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   Widget _buildDeliveryExecutiveCard(String riderName, String cleanPhone) {
+    const defaultRiderName = 'Delivery Partner (FastKirana Express)';
+    const defaultRiderPhone = '+91 96965 03759';
+    const defaultRiderTel = '+919696503759';
+
+    final effectiveName = riderName.isNotEmpty && riderName != 'Delivery Partner Assigned'
+        ? riderName
+        : defaultRiderName;
+    final effectivePhone = cleanPhone.isNotEmpty && cleanPhone != '7054470303'
+        ? cleanPhone
+        : defaultRiderTel;
+    final displayPhone = effectivePhone.startsWith('+91')
+        ? '+91 ${effectivePhone.replaceFirst('+91', '').trim()}'
+        : '+91 $effectivePhone';
+
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFDCFCE7))),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFDCFCE7)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(width: 36, height: 36, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFDCFCE7)),
-                child: const Center(child: Text('', style: TextStyle(fontSize: 18))),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFDCFCE7),
+                ),
+                child: const Center(
+                  child: Text('🛵', style: TextStyle(fontSize: 18)),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -646,13 +672,36 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                   children: [
                     Row(
                       children: [
-                        Text('DELIVERY PARTNER ASSIGNED',
-                            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFF15803D), letterSpacing: 0.4)),
+                        Text(
+                          'DELIVERY PARTNER ASSIGNED',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF15803D),
+                            letterSpacing: 0.4,
+                          ),
+                        ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: Color(0xFF15803D)),
+                        const Icon(Icons.verified_rounded, size: 11, color: Color(0xFF15803D)),
                       ],
                     ),
-                    Text(riderName, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: slateDark)),
+                    const SizedBox(height: 2),
+                    Text(
+                      effectiveName,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: slateDark,
+                      ),
+                    ),
+                    Text(
+                      'Official FastKirana Rider • $displayPhone',
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF16A34A),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -660,16 +709,39 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           const SizedBox(height: 10),
           GestureDetector(
-            onTap: () => launchUrl(Uri.parse('tel:$cleanPhone')),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              launchUrl(Uri.parse('tel:$effectivePhone'));
+            },
             child: Container(
-              height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF00A344), borderRadius: BorderRadius.circular(10)),
+              height: 38,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00A344), Color(0xFF008736)],
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00A344).withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.phone_rounded, color: Colors.white, size: 14),
                   const SizedBox(width: 6),
-                  Text('Call Rider', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
+                  Text(
+                    'Call Rider ($displayPhone)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -680,11 +752,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   Widget _buildDeliveryDestinationCard() {
-    final destination = _order?.customerAddress ?? 'Main Market, Station Road, Ghatampur, 209206';
+    final destination = (_order?.customerAddress != null && _order!.customerAddress!.trim().isNotEmpty)
+        ? _order!.customerAddress!
+        : 'Ghatampur Delivery Zone, Kanpur Nagar - 209206';
+
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -692,28 +777,55 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
             children: [
               const Icon(Icons.location_on_rounded, color: primaryRed, size: 16),
               const SizedBox(width: 6),
-              Text('Delivery Destination',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark)),
+              Text(
+                'Delivery Destination',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: slateDark,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(destination, style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF475569), height: 1.35)),
+          Text(
+            destination,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+              height: 1.35,
+            ),
+          ),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () {
               final query = Uri.encodeComponent(destination);
-              launchUrl(Uri.parse('https://www.google.com/maps/search/?api=1&query=$query'), mode: LaunchMode.externalApplication);
+              launchUrl(
+                Uri.parse('https://www.google.com/maps/search/?api=1&query=$query'),
+                mode: LaunchMode.externalApplication,
+              );
             },
             child: Container(
               height: 36,
-              decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFA7F3D0))),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.navigation_outlined, size: 14, color: Color(0xFF047857)),
                   const SizedBox(width: 6),
-                  Text('Locate Delivery Address on Google Maps',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF047857))),
+                  Text(
+                    'Locate Delivery Address on Google Maps',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF047857),
+                    ),
+                  ),
                 ],
               ),
             ),

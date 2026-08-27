@@ -22,7 +22,7 @@ from models import (
 )
 from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
-from utils.firebase import send_fcm_notification
+from utils.firebase import send_fcm_notification, send_fcm_topic_notification
 from routers.orders_service import generate_id, get_last_10_digits, get_distance_km, validate_order_status_transition
 
 logger = logging.getLogger("orders")
@@ -169,14 +169,14 @@ async def upload_to_cloudinary(base64_image: str, cloud_name: str, upload_preset
     file_data = base64_image
     if not file_data.startswith("data:"):
         file_data = f"data:image/jpeg;base64,{base64_image}"
+async def send_whatsapp_alert(phone: str, message: str):
+    logger.info(f"[WHATSAPP MOCK] To {phone}: {message}")
 
+
+async def upload_to_cloudinary(base64_data: str, cloud_name: str, upload_preset: str) -> str:
     url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
-    data = {
-        "file": file_data,
-        "upload_preset": upload_preset
-    }
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, data=data)
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(url, data={"file": base64_data, "upload_preset": upload_preset})
         if resp.status_code != 200:
             raise Exception(f"Cloudinary upload failed: {resp.status_code} - {resp.text}")
         res_json = resp.json()
@@ -185,6 +185,11 @@ async def upload_to_cloudinary(base64_image: str, cloud_name: str, upload_preset
 
 async def send_pwa_notification_to_roles(roles: list, title: str, body: str, data: dict, db: AsyncSession = None):
     try:
+        # 1. Send to broad staff topic
+        await send_fcm_topic_notification("staff_orders", title, body, data)
+        await send_fcm_topic_notification("all_users", title, body, data)
+
+        # 2. Also send to individual registered tokens
         async with AsyncSessionLocal() as session:
             stmt = select(FcmToken.token).join(User).where(User.role.in_(roles))
             res = await session.execute(stmt)
@@ -195,14 +200,36 @@ async def send_pwa_notification_to_roles(roles: list, title: str, body: str, dat
         logger.error(f"Failed to dispatch FCM push notification to roles: {str(e)}")
 
 
-async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession = None):
+async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession = None, phone: str = None):
     try:
-        async with AsyncSessionLocal() as session:
-            stmt = select(FcmToken.token).where(FcmToken.userId == user_id)
-            res = await session.execute(stmt)
-            tokens = list(res.scalars().all())
-            if tokens:
-                await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
+        # 1. Send direct to user topic
+        if user_id:
+            await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
+
+        # 2. Look up user phone if not provided
+        target_phone = phone
+        if not target_phone and user_id:
+            async with AsyncSessionLocal() as session:
+                user_stmt = select(User).where(User.id == user_id)
+                user_res = await session.execute(user_stmt)
+                user = user_res.scalars().first()
+                if user and user.phone:
+                    target_phone = user.phone
+
+        # 3. Send to phone topic (e.g. phone_8112849854)
+        if target_phone:
+            clean_phone = str(target_phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
+            if clean_phone:
+                await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
+
+        # 4. Also send to registered device tokens if any
+        if user_id:
+            async with AsyncSessionLocal() as session:
+                stmt = select(FcmToken.token).where(FcmToken.userId == user_id)
+                res = await session.execute(stmt)
+                tokens = list(res.scalars().all())
+                if tokens:
+                    await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
 
@@ -806,7 +833,20 @@ async def create_order(
                 "restaurantId": order.restaurantId,
             })
 
-            # FCM Push notifications to workers
+            # 1. FCM Push Notification directly to Customer
+            customer_title = "🎉 Order Placed Successfully!"
+            customer_body = f"Your order #{order.readableId} of ₹{order.total:.2f} has been placed with FastKirana Express! ⚡"
+            background_tasks.add_task(
+                send_pwa_notification_to_user,
+                order.userId,
+                customer_title,
+                customer_body,
+                {"orderId": order.id, "status": order.status.value, "type": "ORDER_PLACED"},
+                None,
+                address.phone if address else None
+            )
+
+            # 2. FCM Push notifications to workers
             title = "New Order Placed 🍲" if order.restaurantId else "New Grocery Order 📦"
             body = f"Order #{order.readableId} of ₹{order.total:.2f} has been placed."
             background_tasks.add_task(

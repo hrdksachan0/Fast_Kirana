@@ -51,16 +51,25 @@ class CartRepository {
     }
   }
 
-  // Local cart persistence
+  Future<String> _getCartCacheKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+  }
+
+  // Local cart persistence (isolated per user phone)
   Future<void> saveLocalCart(List<CartItem> items) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCartCacheKey();
     final data = items.map((item) => item.toJson()).toList();
-    await prefs.setString('local_cart', jsonEncode(data));
+    await prefs.setString(cacheKey, jsonEncode(data));
   }
 
   Future<List<CartItem>> getLocalCart() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString('local_cart');
+    final cacheKey = await _getCartCacheKey();
+    final data = prefs.getString(cacheKey);
     if (data == null) return [];
     try {
       final list = jsonDecode(data) as List;

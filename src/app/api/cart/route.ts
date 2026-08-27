@@ -48,7 +48,32 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     const guestId = request.headers.get('x-guest-id')
 
-    let userId = session?.user?.id
+    let userId = session?.user?.id || request.headers.get('x-user-id')
+    const headerPhone = request.headers.get('x-user-phone')
+
+    if (!userId && headerPhone) {
+      const cleanPhone = headerPhone.replace('+91', '').replaceAll(' ', '').trim()
+      let dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: { contains: cleanPhone } },
+          ]
+        }
+      })
+      if (!dbUser && cleanPhone.length === 10) {
+        dbUser = await prisma.user.create({
+          data: {
+            phone: `+91${cleanPhone}`,
+            name: `Customer ${cleanPhone.slice(-4)}`,
+            email: `customer_${cleanPhone}@fastkirana.in`,
+            role: 'USER',
+          }
+        })
+      }
+      if (dbUser) userId = dbUser.id
+    }
 
     if (!userId && guestId) {
       const guestUser = await getOrCreateGuestUser(guestId)
@@ -128,7 +153,16 @@ export async function POST(request: NextRequest) {
 
     const { items: itemsData } = validation.data
 
-    let userId = session?.user?.id
+    let userId = session?.user?.id || request.headers.get('x-user-id')
+    const headerPhone = request.headers.get('x-user-phone')
+
+    if (!userId && headerPhone) {
+      const cleanPhone = headerPhone.replace('+91', '').trim()
+      const dbUser = await prisma.user.findFirst({
+        where: { phone: { contains: cleanPhone } }
+      })
+      if (dbUser) userId = dbUser.id
+    }
 
     if (!userId && guestId) {
       const guestUser = await getOrCreateGuestUser(guestId)

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +9,8 @@ import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
+import '../../core/network/api_client.dart';
+import '../../core/services/notification_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -14,11 +18,65 @@ import '../profile/profile_screen.dart';
 
 final selectedTabProvider = StateProvider<int>((ref) => 0);
 
-class MainShell extends ConsumerWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  bool _isBottomNavVisible = true;
+  Timer? _autoShowTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        NotificationService().registerDeviceToken(ref.read(dioProvider));
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoShowTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onUserScroll(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      // User scrolling DOWN -> Hide bottom nav bar
+      _autoShowTimer?.cancel();
+      if (_isBottomNavVisible) {
+        setState(() => _isBottomNavVisible = false);
+      }
+      // Re-appear automatically after 1 second of pausing/stopping
+      _autoShowTimer = Timer(const Duration(milliseconds: 1000), () {
+        if (mounted && !_isBottomNavVisible) {
+          setState(() => _isBottomNavVisible = true);
+        }
+      });
+    } else if (notification.direction == ScrollDirection.forward) {
+      // User scrolling UP -> Show bottom nav bar immediately
+      _autoShowTimer?.cancel();
+      if (!_isBottomNavVisible) {
+        setState(() => _isBottomNavVisible = true);
+      }
+    } else if (notification.direction == ScrollDirection.idle) {
+      // Idle -> Bring it back after 1 second
+      _autoShowTimer?.cancel();
+      _autoShowTimer = Timer(const Duration(milliseconds: 1000), () {
+        if (mounted && !_isBottomNavVisible) {
+          setState(() => _isBottomNavVisible = true);
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedTabProvider);
 
     // 4 Standard Tabs matching Web: Home · Search · Category · Account
@@ -30,33 +88,47 @@ class MainShell extends ConsumerWidget {
     ];
 
     final cartAsync = ref.watch(cartProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       body: ResponsiveContainer(
         maxWidth: Responsive.wideMaxContentWidth,
         fillHeight: true,
-        child: Stack(
-          children: [
-            IndexedStack(
-              index: selectedIndex,
-              children: screens,
-            ),
-
-            // Slim Modern Floating Sticky Cart Bar (Shared across all pages)
-            FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 76),
-              
-            // Liquid Flow Glass Bottom Navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.of(context).padding.bottom + 12,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _buildLiquidBottomNav(context, ref, selectedIndex),
+        child: NotificationListener<UserScrollNotification>(
+          onNotification: (notification) {
+            _onUserScroll(notification);
+            return false;
+          },
+          child: Stack(
+            children: [
+              IndexedStack(
+                index: selectedIndex,
+                children: screens,
               ),
-            ),
-          ],
+
+              // Slim Modern Floating Sticky Cart Bar (Shared across all pages)
+              FloatingCartBar(bottomOffset: _isBottomNavVisible ? (bottomPadding + 76) : (bottomPadding + 16)),
+
+              // Liquid Flow Glass Bottom Navigation (Auto Hide & Auto Reveal in 1s)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeOutCubic,
+                left: 0,
+                right: 0,
+                bottom: _isBottomNavVisible ? (bottomPadding + 12) : -(bottomPadding + 90),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeInOut,
+                  opacity: _isBottomNavVisible ? 1.0 : 0.0,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _buildLiquidBottomNav(context, ref, selectedIndex),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

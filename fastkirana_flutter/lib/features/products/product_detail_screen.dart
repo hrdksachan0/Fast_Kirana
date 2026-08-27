@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
@@ -27,6 +29,7 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   ProductVariant? _selectedVariant;
   bool _isFavorite = false;
+  bool _isNotified = false;
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color successGreen = Color(0xFF10B981);
 
@@ -79,6 +82,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
 
+  void _shareProduct(Product p, double activePrice) {
+    HapticFeedback.lightImpact();
+    final priceStr = '₹${activePrice.toStringAsFixed(0)}';
+    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Instant 10-Min Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/${p.slug ?? p.id}''';
+    Share.share(shareText, subject: 'Buy ${p.name} on FastKirana');
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
@@ -94,6 +104,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ? (((activeMrp - activePrice) / activeMrp) * 100).toInt()
         : p.discount.toInt();
 
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: ResponsiveContainer(
@@ -104,7 +116,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             // Scrollable Content
             ListView(
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.zero,
+            padding: EdgeInsets.fromLTRB(0, 0, 0, 100 + bottomInset),
             children: [
               // 1. Product Image Carousel with Discount Badge
               Stack(
@@ -451,13 +463,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              FadeSlideRoute(page: const CartScreen()),
-                            );
-                          },
+                        Bounceable(
+                          onTap: () => _shareProduct(p, activePrice),
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -470,7 +477,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.shopping_bag_outlined, size: 20, color: Color(0xFF111827)),
+                            child: const Icon(Icons.share_outlined, size: 20, color: Color(0xFF111827)),
                           ),
                         ),
                       ],
@@ -487,7 +494,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomInset),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -522,7 +529,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 20),
                   Expanded(
                     child: Builder(
                       builder: (context) {
@@ -534,26 +541,68 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
                         final isOutOfStock = p.stock <= 0 || !p.isAvailable;
-                        final timingStatus = checkDishTimeAvailability(
-                          p.availableStartTime,
-                          p.availableEndTime,
-                        );
+                        final timingStatus = isFood && (p.availableStartTime != null && p.availableStartTime!.trim().isNotEmpty)
+                            ? checkDishTimeAvailability(
+                                p.availableStartTime,
+                                p.availableEndTime,
+                              )
+                            : const DishTimingStatus(isAvailableNow: true);
 
                         if (isOutOfStock) {
-                          return Container(
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'Out of Stock',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF94A3B8),
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              setState(() => _isNotified = true);
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.notifications_active_rounded, color: Color(0xFFF59E0B), size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          '🔔 We will notify you instantly when ${p.name} is back in stock!',
+                                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: _isNotified ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _isNotified ? const Color(0xFFA7F3D0) : const Color(0xFFFCD34D),
+                                  width: 1.2,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _isNotified ? Icons.check_circle_rounded : Icons.notifications_active_outlined,
+                                    size: 17,
+                                    color: _isNotified ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                  ),
+                                  const SizedBox(width: 7),
+                                  Text(
+                                    _isNotified ? 'Notification Enabled ✓' : 'Notify When Available',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: _isNotified ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );

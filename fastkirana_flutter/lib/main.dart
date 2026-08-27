@@ -7,6 +7,7 @@ import 'core/theme/design_system.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/services/notification_service.dart';
+import 'firebase_options.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -49,7 +50,9 @@ void main() async {
   // Initialize Firebase and Notification Manager Services safely
   if (!kIsWeb) {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       final notificationService = NotificationService();
       await notificationService.init();
       await notificationService.requestPermissions();

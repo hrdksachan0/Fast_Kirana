@@ -4,16 +4,46 @@ import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone
 import { prisma } from '@/lib/prisma'
 import { createAddressSchema, updateAddressSchema, patchAddressSchema, deleteAddressSchema, validateBody, validateBodyLegacy } from '@/lib/validation'
 
-export async function GET() {
+async function resolveUserId(request: NextRequest | Request, session: any) {
+  let userId = session?.user?.id || (request.headers as any).get?.('x-user-id')
+  const headerPhone = (request.headers as any).get?.('x-user-phone')
+  if (!userId && headerPhone) {
+    const cleanPhone = headerPhone.replace('+91', '').replaceAll(' ', '').trim()
+    let dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: cleanPhone },
+          { phone: `+91${cleanPhone}` },
+          { phone: { contains: cleanPhone } },
+        ]
+      }
+    })
+    if (!dbUser && cleanPhone.length === 10) {
+      dbUser = await prisma.user.create({
+        data: {
+          phone: `+91${cleanPhone}`,
+          name: `Customer ${cleanPhone.slice(-4)}`,
+          email: `customer_${cleanPhone}@fastkirana.in`,
+          role: 'USER',
+        }
+      })
+    }
+    if (dbUser) userId = dbUser.id
+  }
+  return userId
+}
+
+export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await resolveUserId(request, session)
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const addresses = await prisma.address.findMany({
       where: {
-        userId: session.user.id,
+        userId,
         label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
       },
       orderBy: { isDefault: 'desc' },
@@ -25,9 +55,10 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await resolveUserId(request, session)
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -45,14 +76,14 @@ export async function POST(request: Request) {
 
     if (isDefault) {
       await prisma.address.updateMany({
-        where: { userId: session.user.id },
+        where: { userId },
         data: { isDefault: false },
       })
     }
 
     const address = await prisma.address.create({
       data: {
-        userId: session.user.id,
+        userId,
         label,
         houseNo,
         street,

@@ -10,11 +10,19 @@ class OrderRepository {
 
   OrderRepository(this.dio);
 
+  Future<String> _getCacheKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return 'user_placed_orders_cache_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+  }
+
   Future<List<Order>> getOrders(String userId) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCacheKey();
     List<Order> localOrders = [];
 
-    final rawJson = prefs.getString(_cacheKey);
+    final rawJson = prefs.getString(cacheKey);
     if (rawJson != null && rawJson.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
@@ -68,9 +76,10 @@ class OrderRepository {
 
   Future<void> savePlacedOrderLocally(Order newOrder) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCacheKey();
     List<Order> localOrders = [];
 
-    final rawJson = prefs.getString(_cacheKey);
+    final rawJson = prefs.getString(cacheKey);
     if (rawJson != null && rawJson.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
@@ -235,8 +244,9 @@ class OrderRepository {
 
   Future<void> _saveToCache(List<Order> orders) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheKey = await _getCacheKey();
     final jsonList = orders.map((o) => o.toJson()).toList();
-    await prefs.setString(_cacheKey, jsonEncode(jsonList));
+    await prefs.setString(cacheKey, jsonEncode(jsonList));
   }
 
   Exception _handleError(DioException e) {

@@ -60,37 +60,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
     }
 
-    // 2. Check if user exists and check if real name is needed
+    // 2. Check if user exists, create in database if new
     let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: normalizedEmail },
-          isValidIndianPhone(trimmed) ? { phone: normalizePhone(trimmed) } : null
+          isValidIndianPhone(trimmed) ? { phone: normalizePhone(trimmed) } : null,
+          isValidIndianPhone(trimmed) ? { phone: { contains: getLast10Digits(trimmed) } } : null,
         ].filter(Boolean) as any
       }
     })
 
-    const isNewOrUnnamedUser = !user || !user.name || user.name.startsWith('User ') || user.name === 'Customer' || user.name.trim() === ''
+    if (!user) {
+      const phoneDigits = isValidIndianPhone(trimmed) ? getLast10Digits(trimmed) : ''
+      const phoneFormatted = phoneDigits ? `+91${phoneDigits}` : null
+      user = await prisma.user.create({
+        data: {
+          phone: phoneFormatted,
+          email: normalizedEmail,
+          name: phoneDigits ? `Customer ${phoneDigits.slice(-4)}` : 'Customer',
+          role: 'USER',
+        }
+      })
+    }
+
+    const isNewOrUnnamedUser = !user.name || user.name.startsWith('User ') || user.name.startsWith('Customer ') || user.name === 'Customer' || user.name.trim() === ''
     const needsProfileSetup = isNewOrUnnamedUser
 
-    const cleanEmail = (user?.email && !user.email.startsWith('wa-') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
+    const cleanEmail = (user.email && !user.email.startsWith('wa-') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
 
     return NextResponse.json({
       success: true,
       needsProfileSetup,
-      token: `token_${user?.id || 'new'}_${Date.now()}`,
-      id: user?.id || `user_${trimmed}`,
-      name: user?.name || '',
+      token: `token_${user.id}_${Date.now()}`,
+      id: user.id,
+      name: user.name || '',
       email: cleanEmail,
-      phone: user?.phone || trimmed,
-      role: user?.role || 'USER',
+      phone: user.phone || trimmed,
+      role: user.role || 'USER',
       user: {
-        id: user?.id || `user_${trimmed}`,
-        name: user?.name || '',
+        id: user.id,
+        name: user.name || '',
         email: cleanEmail,
-        phone: user?.phone || trimmed,
-        role: user?.role || 'USER',
-        isBlocked: user?.isBlocked || false,
+        phone: user.phone || trimmed,
+        role: user.role || 'USER',
+        isBlocked: user.isBlocked || false,
       }
     })
   } catch (error: any) {

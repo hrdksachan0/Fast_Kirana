@@ -135,11 +135,21 @@ class Order {
 
   String get displayId {
     if (readableId != null && readableId!.trim().isNotEmpty) {
-      return readableId!.replaceFirst('FK-', '').trim();
+      final clean = readableId!.replaceAll('FK-', '').replaceAll('#', '').trim();
+      if (clean.isNotEmpty) return clean;
     }
-    if (id.startsWith('FK-')) return id.replaceFirst('FK-', '');
-    if (id.length > 6) {
-      return id.substring(id.length - 6).toUpperCase();
+    if (id.startsWith('FK-')) {
+      final clean = id.replaceFirst('FK-', '').trim();
+      final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 4) return digits.substring(digits.length - 4);
+      return clean;
+    }
+    final digits = id.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length >= 4) {
+      return digits.substring(digits.length - 4);
+    }
+    if (id.length > 4) {
+      return id.substring(id.length - 4).toUpperCase();
     }
     return id;
   }

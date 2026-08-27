@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/design_system.dart';
 
-/// Pure Native Vector FastKirana Logo (100% Exact Web Vector Replica)
+/// Ultra-Crisp Pure Native Vector FastKirana Brand Logo
 class FastKiranaLogoWidget extends StatelessWidget {
   final double size;
 
@@ -11,9 +10,11 @@ class FastKiranaLogoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size * (140 / 120),
+      width: size * (135 / 110),
       height: size,
       child: CustomPaint(
+        isComplex: true,
+        willChange: false,
         painter: FastKiranaLogoPainter(),
       ),
     );
@@ -23,11 +24,15 @@ class FastKiranaLogoWidget extends StatelessWidget {
 class FastKiranaLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final double scale = size.height / 120.0;
+    final double scale = size.height / 110.0;
     canvas.scale(scale);
 
     final Paint redPaint = Paint()
-      ..color = const Color(0xFFE20A22)
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFE20A22), Color(0xFFFF1E3C)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(const Rect.fromLTWH(0, 0, 135, 110))
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
@@ -36,42 +41,59 @@ class FastKiranaLogoPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
-    // 1. Left Speed Lines
-    canvas.drawRRect(
-      RRect.fromLTRBR(8, 44, 30, 50.5, const Radius.circular(3.25)),
-      redPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromLTRBR(0.5, 58, 30, 64.5, const Radius.circular(3.25)),
-      redPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromLTRBR(8, 72, 30, 78.5, const Radius.circular(3.25)),
-      redPaint,
-    );
-    canvas.drawCircle(const Offset(2, 61.25), 3, redPaint);
-
-    // 2. Main Red Solid Rounded Square Container
+    // 1. Left Speed Lines (3 dynamic sleek pills)
+    // Top Line
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        const Rect.fromLTWH(25, 10, 100, 100),
-        const Radius.circular(28),
+        const Rect.fromLTWH(6, 38, 22, 6.5),
+        const Radius.circular(3.25),
+      ),
+      redPaint,
+    );
+    // Middle Line (Longest)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(0, 52, 28, 7.5),
+        const Radius.circular(3.75),
+      ),
+      redPaint,
+    );
+    // Bottom Line
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(8, 66, 20, 6.5),
+        const Radius.circular(3.25),
       ),
       redPaint,
     );
 
-    // 3. Clean Bold Italic Sans-Serif Block 'F' in White
+    // 2. Main Red Squircle with soft shadow & rounded corners
+    final RRect squircle = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(24, 5, 100, 100),
+      const Radius.circular(26),
+    );
+
+    // Soft Shadow
+    final Paint shadowPaint = Paint()
+      ..color = const Color(0xFFE20A22).withValues(alpha: 0.30)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawRRect(squircle.shift(const Offset(0, 4)), shadowPaint);
+
+    // Main Body
+    canvas.drawRRect(squircle, redPaint);
+
+    // 3. Bold Dynamic Italic 'F'
     final Path fPath = Path()
-      ..moveTo(62, 32)
-      ..lineTo(98, 32)
-      ..lineTo(95, 46)
-      ..lineTo(75.5, 46)
-      ..lineTo(73.4, 56)
-      ..lineTo(89, 56)
-      ..lineTo(86.5, 68)
-      ..lineTo(71, 68)
-      ..lineTo(66.8, 88)
-      ..lineTo(50.2, 88)
+      ..moveTo(63, 26) // Top Left
+      ..lineTo(98, 26) // Top Right
+      ..lineTo(94.5, 41) // Top Bar bottom right
+      ..lineTo(76.5, 41) // Top Bar inner corner
+      ..lineTo(74.2, 51.5) // Middle Bar top left
+      ..lineTo(90, 51.5) // Middle Bar right
+      ..lineTo(87, 64) // Middle Bar bottom right
+      ..lineTo(71.5, 64) // Middle Bar inner corner
+      ..lineTo(66.5, 85) // Bottom right
+      ..lineTo(51.5, 85) // Bottom left
       ..close();
 
     canvas.drawPath(fPath, whitePaint);
@@ -81,19 +103,17 @@ class FastKiranaLogoPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Legacy BrandLogo Wrapper for backward compatibility
+/// Brand Logo with optional Brand Text
 class BrandLogo extends StatelessWidget {
   final double size;
   final bool withText;
-  final bool variant;
-  final bool useImageLogo;
+  final Color? textColor;
 
   const BrandLogo({
     super.key,
     this.size = 36,
     this.withText = false,
-    this.variant = false,
-    this.useImageLogo = true,
+    this.textColor,
   });
 
   @override
@@ -104,32 +124,34 @@ class BrandLogo extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         FastKiranaLogoWidget(size: size),
-        const SizedBox(width: 8),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: 'Fast',
-                style: GoogleFonts.inter(
-                  fontSize: size * 0.55,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFFE20A22),
-                  letterSpacing: -0.5,
-                ),
+        const SizedBox(width: 10),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'FastKirana',
+              style: GoogleFonts.inter(
+                fontSize: size * 0.58,
+                fontWeight: FontWeight.w900,
+                color: textColor ?? const Color(0xFF0F172A),
+                letterSpacing: -0.5,
+                height: 1.1,
               ),
-              TextSpan(
-                text: 'Kirana',
-                style: GoogleFonts.inter(
-                  fontSize: size * 0.55,
-                  fontWeight: FontWeight.w900,
-                  color: variant ? AppDesignSystem.textPrimary : const Color(0xFF7C0617),
-                  letterSpacing: -0.5,
-                ),
+            ),
+            Text(
+              'EXPRESS DELIVERY',
+              style: GoogleFonts.inter(
+                fontSize: size * 0.22,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFE20A22),
+                letterSpacing: 1.2,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

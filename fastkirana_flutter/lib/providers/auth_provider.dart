@@ -58,8 +58,22 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? '';
+    final userId = prefs.getString('user_id') ?? '';
+
+    // Unsubscribe from customer-specific topics on logout
+    if (phone.isNotEmpty) {
+      final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
+      NotificationService().unsubscribeFromTopic('phone_$cleanPhone');
+    }
+    if (userId.isNotEmpty) {
+      NotificationService().unsubscribeFromTopic('user_$userId');
+    }
+
     await prefs.remove('user_data');
     await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('user_phone');
     state = const AsyncValue.data(null);
   }
 }

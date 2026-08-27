@@ -12,6 +12,7 @@ import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/services/notification_service.dart';
 import '../../widgets/brand_logo.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   bool _isLoading = false;
   int _resendCooldown = 0;
   String? _errorMessage;
+  String? _clipboardOtp;
 
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color primaryRedLight = Color(0xFFFF2D4B);
@@ -41,6 +43,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   void initState() {
     super.initState();
     _startResendCooldown();
+    _checkClipboard();
     for (int i = 0; i < 6; i++) {
       _otpControllers[i].addListener(() {
         if (mounted) setState(() {});
@@ -48,6 +51,32 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       _focusNodes[i].addListener(() {
         if (mounted) setState(() {});
       });
+    }
+  }
+
+  void _checkClipboard() async {
+    try {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = clipboardData?.text?.trim() ?? '';
+      final digits = text.replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 6 && digits != _clipboardOtp) {
+        if (mounted) {
+          setState(() => _clipboardOtp = digits);
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _fillOtp(String code) {
+    final clean = code.replaceAll(RegExp(r'\D'), '');
+    if (clean.length >= 6) {
+      final target = clean.substring(0, 6);
+      for (int i = 0; i < 6; i++) {
+        _otpControllers[i].text = target[i];
+      }
+      _focusNodes[5].requestFocus();
+      HapticFeedback.mediumImpact();
+      _handleVerifyOtp();
     }
   }
 
@@ -112,10 +141,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           }
         }
 
+        await prefs.setString('user_id', user.id);
+        await prefs.setString('user_phone', widget.identifier);
         await prefs.setString('user_data', jsonEncode(user.toJson()));
         if (response.token != null && response.token!.isNotEmpty) {
           await prefs.setString('auth_token', response.token!);
         }
+
+        try {
+          NotificationService().registerDeviceToken(ref.read(dioProvider));
+        } catch (_) {}
 
         ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();
@@ -514,72 +549,118 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   ),
                 ],
 
-                // 6 Clean, Modern Unified OTP Cells
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(6, (index) {
-                    final isBoxFilled = _otpControllers[index].text.isNotEmpty;
-                    final isBoxFocused = _focusNodes[index].hasFocus;
-
-                    return Container(
-                      width: 44,
-                      height: 52,
-                      margin: EdgeInsets.only(
-                        right: index == 5 ? 0 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isBoxFocused ? Colors.white : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isBoxFocused
-                              ? primaryRed
-                              : (isBoxFilled ? const Color(0xFF94A3B8) : const Color(0xFFE2E8F0)),
-                          width: isBoxFocused ? 1.8 : 1.2,
-                        ),
-                        boxShadow: [
-                          if (isBoxFocused)
+                // Smart Clipboard One-Tap Autofill Pill
+                if (_clipboardOtp != null && _otpControllers.any((c) => c.text.isEmpty)) ...[
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => _fillOtp(_clipboardOtp!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                          boxShadow: [
                             BoxShadow(
-                              color: primaryRed.withOpacity(0.12),
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
-                        ],
-                      ),
-                      child: Center(
-                        child: TextField(
-                          controller: _otpControllers[index],
-                          focusNode: _focusNodes[index],
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          textAlign: TextAlign.center,
-                          autofocus: index == 0,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: slateDark,
-                          ),
-                          decoration: const InputDecoration(
-                            counterText: '',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onChanged: (value) {
-                            if (value.length == 1 && index < 5) {
-                              _focusNodes[index + 1].requestFocus();
-                            }
-                            if (value.isEmpty && index > 0) {
-                              _focusNodes[index - 1].requestFocus();
-                            }
-                            final all = _otpControllers.map((c) => c.text).join();
-                            if (all.length == 6) {
-                              _handleVerifyOtp();
-                            }
-                          },
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('📋', style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tap to paste code $_clipboardOtp',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1D4ED8),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ).animate().fadeIn(duration: 300.ms, delay: (100 + index * 30).ms);
-                  }),
+                    ),
+                  ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.95, 0.95)),
+                ],
+
+                // 6 Clean, Modern Unified OTP Cells with Native Autofill
+                AutofillGroup(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(6, (index) {
+                      final isBoxFilled = _otpControllers[index].text.isNotEmpty;
+                      final isBoxFocused = _focusNodes[index].hasFocus;
+
+                      return Container(
+                        width: 44,
+                        height: 52,
+                        margin: EdgeInsets.only(
+                          right: index == 5 ? 0 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isBoxFocused ? Colors.white : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isBoxFocused
+                                ? primaryRed
+                                : (isBoxFilled ? const Color(0xFF94A3B8) : const Color(0xFFE2E8F0)),
+                            width: isBoxFocused ? 1.8 : 1.2,
+                          ),
+                          boxShadow: [
+                            if (isBoxFocused)
+                              BoxShadow(
+                                color: primaryRed.withValues(alpha: 0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                          ],
+                        ),
+                        child: Center(
+                          child: TextField(
+                            controller: _otpControllers[index],
+                            focusNode: _focusNodes[index],
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            autofocus: index == 0,
+                            autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: slateDark,
+                            ),
+                            decoration: const InputDecoration(
+                              counterText: '',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (value) {
+                              if (value.length > 1) {
+                                _fillOtp(value);
+                                return;
+                              }
+                              if (value.length == 1 && index < 5) {
+                                _focusNodes[index + 1].requestFocus();
+                              }
+                              if (value.isEmpty && index > 0) {
+                                _focusNodes[index - 1].requestFocus();
+                              }
+                              final all = _otpControllers.map((c) => c.text).join();
+                              if (all.length == 6) {
+                                _handleVerifyOtp();
+                              }
+                            },
+                          ),
+                        ),
+                      ).animate().fadeIn(duration: 300.ms, delay: (100 + index * 30).ms);
+                    }),
+                  ),
                 ),
 
                 const SizedBox(height: 20),

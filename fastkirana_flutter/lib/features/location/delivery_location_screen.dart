@@ -121,7 +121,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
               'area': detectedAddress.area,
               'city': detectedAddress.city,
               'pincode': detectedAddress.pincode,
-              'phone': user.phone ?? '7054470303',
+              'phone': user.phone ?? '',
               'lat': detectedAddress.latitude,
               'lng': detectedAddress.longitude,
               'isDefault': true,

@@ -797,17 +797,6 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         '($totalReviews reviews)',
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF6B7280)),
                       ),
-                      const SizedBox(width: 14),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF9CA3AF)),
-                          const SizedBox(width: 4),
-                          Text(
-                            deliveryTime,
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF374151)),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -943,7 +932,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, tablet: 3, desktop: 4),
-                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.74, mobile: 0.76, tablet: 0.80, desktop: 0.84),
+                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.68, mobile: 0.70, tablet: 0.76, desktop: 0.80),
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
                       ),
@@ -951,6 +940,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         (context, index) => ProductCard(
                           product: section.products[index],
                           isCompact: true,
+                          showOutlet: false,
                           onTap: () {
                             HapticFeedback.lightImpact();
                             Navigator.push(

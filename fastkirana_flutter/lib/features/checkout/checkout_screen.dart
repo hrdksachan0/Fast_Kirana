@@ -12,6 +12,7 @@ import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
+import '../../data/models/address.dart';
 import '../../data/models/order.dart';
 import '../../data/models/store_settings.dart';
 import '../../data/repositories/order_repository.dart';
@@ -24,7 +25,9 @@ import '../profile/address_book_screen.dart';
 import '../orders/orders_screen.dart';
 import '../checkout/order_success_screen.dart';
 import '../../core/services/admin_notification_service.dart';
+import '../../core/services/location_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../widgets/empty_state.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -49,6 +52,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int _selectedAddressIndex = 0;
   String _deliveryInstruction = '🔔 Ring Bell';
   bool _isPlacingOrder = false;
+  bool _isFetchingGps = false;
+  Address? _currentGpsAddress;
   String? _pendingOrderId;
   Razorpay? _razorpay;
 
@@ -122,6 +127,100 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  Future<void> _fetchAndApplyCurrentLocation() async {
+    HapticFeedback.lightImpact();
+    setState(() => _isFetchingGps = true);
+
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      if (pos == null) {
+        if (mounted) {
+          setState(() => _isFetchingGps = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFE11D48),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Please enable GPS / Location permission on your device.',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final details = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+      final user = ref.read(authProvider).value;
+
+      final prefs = await SharedPreferences.getInstance();
+      final currentPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
+
+      final gpsAddress = Address(
+        id: 'addr_gps_live',
+        userId: user?.id ?? prefs.getString('user_id') ?? '',
+        label: '📍 Current Location',
+        houseNo: details.houseNo.isNotEmpty ? details.houseNo : 'Near Pinpoint',
+        street: details.street.isNotEmpty ? details.street : 'GPS Detected Road',
+        area: details.area.isNotEmpty ? details.area : 'Ghatampur Market',
+        city: details.city.isNotEmpty ? details.city : 'Kanpur Nagar',
+        pincode: details.pincode.isNotEmpty ? details.pincode : '209206',
+        phone: currentPhone,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        isDefault: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isFetchingGps = false;
+          _currentGpsAddress = gpsAddress;
+        });
+
+        ref.read(selectedAddressProvider.notifier).state = gpsAddress;
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF047857),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '📍 Set to Current Location: ${details.formattedAddress}',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isFetchingGps = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Failed to fetch GPS location: $e',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   /// Show Razorpay & UPI Online Payment Sheet (Web / Mobile Fallback)
@@ -428,7 +527,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // On Mobile, open direct Razorpay SDK Gateway
       if (_razorpay != null) {
         final user = ref.read(authProvider).value;
-        final phone = user?.phone ?? '7054470303';
+        final prefs = await SharedPreferences.getInstance();
+        final phone = user?.phone ?? prefs.getString('user_phone') ?? '';
         final email = user?.email ?? 'customer@fastkirana.in';
 
         final options = {
@@ -480,9 +580,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             : 'Ghatampur Express Zone');
 
     final user = ref.read(authProvider).value;
-    final userId = user?.id ?? '';
+    final prefs = await SharedPreferences.getInstance();
+    final userId = user?.id ?? prefs.getString('user_id') ?? '';
     final customerName = user?.name?.isNotEmpty == true ? user!.name! : (selectedAddress?.label ?? 'FastKirana Customer');
-    final customerPhone = user?.phone ?? selectedAddress?.phone ?? '7054470303';
+    final customerPhone = user?.phone ?? prefs.getString('user_phone') ?? selectedAddress?.phone ?? '';
 
     // Extract real restaurant or store fulfillment dynamically from cart items
     String shopName = 'FastKirana Dark Store';
@@ -549,6 +650,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'customerPhone': customerPhone,
         'phone': customerPhone,
         'customerAddress': selectedAddr,
+        'latitude': selectedAddress?.latitude,
+        'longitude': selectedAddress?.longitude,
         'shopName': shopName,
         'packagingOption': _selectedPackaging,
         'packagingFee': packagingFee,
@@ -627,9 +730,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     if (!_isPlacingOrder && (cart == null || cart.items.isEmpty)) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
-        body: const Center(child: Text('Your cart is empty')),
+        backgroundColor: AppDesignSystem.background,
+        appBar: AppBar(backgroundColor: AppDesignSystem.background, elevation: 0),
+        body: const EmptyState(
+          emoji: '🛒',
+          title: 'Your cart is empty',
+          subtitle: 'Add some items to your cart\nbefore proceeding to checkout.',
+          bgTint: Color(0xFFFFF5F6),
+          ctaLabel: 'Start Shopping',
+        ),
       );
     }
 
@@ -1225,25 +1334,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _buildScrollableAddressSection() {
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
-    final selectedAddress = ref.watch(selectedAddressProvider);
+    final selectedAddress = ref.watch(selectedAddressProvider) ??
+        (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
+
+    final isGpsActive = selectedAddress?.id == 'addr_gps_live';
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: slateBorder, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Header: Delivery Address + Change / Add New
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1261,7 +1374,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Text(
                     'Delivery Address',
                     style: GoogleFonts.inter(
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: slateDark,
                     ),
@@ -1270,26 +1383,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               GestureDetector(
                 onTap: () {
+                  HapticFeedback.lightImpact();
                   Navigator.push(
                     context,
                     FadeSlideRoute(page: const AddressBookScreen()),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.add_rounded, size: 13, color: Color(0xFF0F172A)),
-                      const SizedBox(width: 3),
+                      const Icon(Icons.edit_location_alt_outlined, size: 13, color: Color(0xFF0F172A)),
+                      const SizedBox(width: 4),
                       Text(
-                        'Add New',
+                        'Change',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
                         ),
@@ -1301,136 +1415,207 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (addresses.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+
+          // 2. Active Selected Delivery Address Card (Un-truncated & Spacious)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: isGpsActive ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isGpsActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                width: isGpsActive ? 1.4 : 1.0,
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.home_outlined, color: slateMuted, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Ghatampur Express Market Zone (Default)',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: slateDark),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isGpsActive ? const Color(0xFFDCFCE7) : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isGpsActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            SizedBox(
-              height: 76,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: addresses.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == addresses.length) {
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen()));
-                      },
-                      child: Container(
-                        width: 80,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_location_alt_outlined, color: slateMuted, size: 18),
-                            const SizedBox(height: 3),
-                            Text(
-                              '+ Add',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateDark),
+                  child: Icon(
+                    isGpsActive ? Icons.my_location_rounded : (selectedAddress?.label.toLowerCase() == 'home' ? Icons.home_rounded : Icons.location_on_rounded),
+                    size: 18,
+                    color: isGpsActive ? const Color(0xFF16A34A) : primaryRed,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isGpsActive
+                                  ? 'Current GPS Location'
+                                  : (selectedAddress?.label ?? 'Ghatampur Express Zone'),
+                              style: GoogleFonts.inter(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w900,
+                                color: isGpsActive ? const Color(0xFF14532D) : slateDark,
+                              ),
                             ),
-                          ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isGpsActive ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isGpsActive ? '⚡ LIVE GPS' : 'SELECTED',
+                              style: GoogleFonts.inter(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w900,
+                                color: isGpsActive ? Colors.white : slateDark,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        selectedAddress != null
+                            ? selectedAddress.fullAddress
+                            : (_currentGpsAddress?.fullAddress ?? 'NH34, Ghatampur, Kanpur Nagar - 209206'),
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: isGpsActive ? const Color(0xFF15803D) : slateMuted,
+                          height: 1.35,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // 3. 1-Tap Live GPS Auto-Detect Button (When GPS is not active)
+          if (!isGpsActive)
+            GestureDetector(
+              onTap: _isFetchingGps ? null : _fetchAndApplyCurrentLocation,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF86EFAC)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isFetchingGps) ...[
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(color: Color(0xFF16A34A), strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Detecting Exact GPS Location...',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF15803D),
                         ),
                       ),
-                    );
-                  }
+                    ] else ...[
+                      const Icon(Icons.my_location_rounded, size: 15, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Auto-Detect Current GPS Location (1-Tap)',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF15803D),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
 
-                  final addr = addresses[index];
-                  final isSelected = selectedAddress?.id == addr.id ||
-                      (selectedAddress == null && index == _selectedAddressIndex);
-
+          // 4. Quick Saved Addresses Horizontal Strip (If user has multiple addresses)
+          if (addresses.length > 1) ...[
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: addresses.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final addr = entry.value;
+                  final isItemActive = selectedAddress?.id == addr.id;
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
                       ref.read(selectedAddressProvider.notifier).state = addr;
-                      setState(() => _selectedAddressIndex = index);
+                      setState(() => _selectedAddressIndex = idx);
                     },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 170,
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(9),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        color: isItemActive ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.4 : 1.0,
+                          color: isItemActive ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                addr.label.toLowerCase() == 'home' ? '🏠' : '🏢',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(width: 5),
-                              Expanded(
-                                child: Text(
-                                  addr.label,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                    color: isSelected ? const Color(0xFF065F46) : slateDark,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (isSelected)
-                                const Icon(Icons.check_circle_rounded, color: Color(0xFF00A344), size: 14),
-                            ],
+                          Icon(
+                            addr.label.toLowerCase() == 'home' ? Icons.home_rounded : Icons.location_city_rounded,
+                            size: 12,
+                            color: isItemActive ? const Color(0xFF16A34A) : slateMuted,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(width: 4),
                           Text(
-                            addr.fullAddress,
+                            addr.label,
                             style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: isSelected ? const Color(0xFF047857) : slateMuted,
-                              height: 1.2,
+                              fontSize: 11,
+                              fontWeight: isItemActive ? FontWeight.w900 : FontWeight.w600,
+                              color: isItemActive ? const Color(0xFF14532D) : slateDark,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                   );
-                },
+                }).toList(),
               ),
             ),
-          const SizedBox(height: 10),
+          ],
+
+          const SizedBox(height: 12),
+
+          // 5. Delivery Instructions
           Text(
             'Delivery Instructions',
-            style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: slateMuted),
+            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateMuted),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),

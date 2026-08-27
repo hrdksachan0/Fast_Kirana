@@ -38,10 +38,11 @@ final dioProvider = Provider<Dio>((ref) {
         if (!isAuthRoute && !isPublicGetRoute) {
           final rawUserData = prefs.getString('user_data');
           String? userId = prefs.getString('user_id');
+          String? directPhone = prefs.getString('user_phone');
           String? userEmail;
           String? userName;
           String? userRole;
-          String? userPhone;
+          String? userPhone = directPhone;
 
           if (rawUserData != null && rawUserData.isNotEmpty) {
             try {
@@ -50,16 +51,24 @@ final dioProvider = Provider<Dio>((ref) {
               userEmail = json['email']?.toString();
               userName = json['name']?.toString();
               userRole = json['role']?.toString();
-              userPhone = json['phone']?.toString();
+              userPhone ??= json['phone']?.toString();
             } catch (_) {}
           }
 
           if (userId != null && userId.isNotEmpty) {
             options.headers['x-user-id'] = userId;
-            if (userEmail != null) options.headers['x-user-email'] = userEmail;
-            if (userName != null) options.headers['x-user-name'] = userName;
-            if (userRole != null) options.headers['x-user-role'] = userRole;
-            if (userPhone != null) options.headers['x-user-phone'] = userPhone;
+          }
+          if (userPhone != null && userPhone.isNotEmpty) {
+            options.headers['x-user-phone'] = userPhone;
+          }
+          if (userEmail != null && userEmail.isNotEmpty) {
+            options.headers['x-user-email'] = userEmail;
+          }
+          if (userName != null && userName.isNotEmpty) {
+            options.headers['x-user-name'] = userName;
+          }
+          if (userRole != null && userRole.isNotEmpty) {
+            options.headers['x-user-role'] = userRole;
           }
         }
       } catch (_) {}

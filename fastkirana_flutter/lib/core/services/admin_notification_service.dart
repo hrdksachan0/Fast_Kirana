@@ -7,7 +7,7 @@ class AdminNotificationService {
   static String formatOrderWhatsAppMessage(Order order) {
     final orderId = order.readableId ?? (order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id);
     final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'FastKirana Customer';
-    final custPhone = order.customerPhone?.isNotEmpty == true ? order.customerPhone! : '7054470303';
+    final custPhone = order.customerPhone?.isNotEmpty == true ? order.customerPhone! : 'Not Provided';
     final custAddr = order.customerAddress?.isNotEmpty == true ? order.customerAddress! : 'Ghatampur Market, UP 209206';
     final items = order.items ?? [];
 

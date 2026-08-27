@@ -8,6 +8,7 @@ import '../../core/network/api_client.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/empty_state.dart';
 import '../products/product_detail_screen.dart';
 
 final productsProvider = FutureProvider<List<Product>>((ref) {
@@ -41,8 +42,13 @@ class ProductsScreen extends ConsumerWidget {
         child: productsAsync.when(
           data: (products) {
             if (products.isEmpty) {
-              return Center(
-                child: Text('No products found', style: GoogleFonts.inter(color: AppDesignSystem.textSecondary)),
+              return EmptyState(
+                emoji: '📦',
+                title: 'No products found',
+                subtitle: 'Check back later — new products are added every day!',
+                bgTint: const Color(0xFFFFF7ED),
+                ctaLabel: 'Go Back',
+                onCta: () => Navigator.pop(context),
               );
             }
             return LayoutBuilder(

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "100000000000",
-    "project_id": "fastkirana-app",
-    "storage_bucket": "fastkirana-app.appspot.com"
+    "project_number": "538637022333",
+    "project_id": "fastkirana-98a68",
+    "storage_bucket": "fastkirana-98a68.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:100000000000:android:a1b2c3d4e5f67890",
+        "mobilesdk_app_id": "1:538637022333:android:c802bb4fe04d8eaa8bed14",
         "android_client_info": {
           "package_name": "com.fastkirana.app"
         }
@@ -15,12 +15,12 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyFastKirana2026ApiKeySample"
+          "current_key": "AIzaSyDQWQfnvR5gb97DnXMgB0Cvp30g7W3TLrg"
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": 1
+        "appinvite_service": {
+          "other_platform_oauth_client": []
         }
       }
     }

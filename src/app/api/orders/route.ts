@@ -29,15 +29,22 @@ export async function POST(request: NextRequest) {
 
   // If mobile app request without NextAuth cookie, resolve or create customer by phone / userId
   if (!userId) {
-    const rawPhone = body.phone || body.customerPhone || '7054470303'
-    const cleanPhone = getLast10Digits(rawPhone.toString()) || '7054470303'
-    const userName = body.userName || body.customerName || 'FastKirana Customer'
+    const rawPhone = body.phone || body.customerPhone || request.headers.get('x-user-phone')
+    if (!rawPhone) {
+      return NextResponse.json({ error: 'Customer phone or identification is required' }, { status: 400 })
+    }
+    const cleanPhone = getLast10Digits(rawPhone.toString())
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return NextResponse.json({ error: 'Valid 10-digit customer phone is required' }, { status: 400 })
+    }
+    const userName = body.userName || body.customerName || `Customer ${cleanPhone.slice(-4)}`
 
     let dbUser = await prisma.user.findFirst({
       where: {
         OR: [
           { phone: cleanPhone },
           { phone: `+91${cleanPhone}` },
+          { phone: { contains: cleanPhone } },
           ...(body.userId ? [{ id: body.userId }] : []),
         ]
       }
@@ -1074,15 +1081,25 @@ export async function GET(request: NextRequest) {
   if (limited) return limited
 
   const session = await auth()
-  const userId = session?.user?.id
-  if (!userId) {
+  let userId = session?.user?.id || request.headers.get('x-user-id')
+  const headerPhone = request.headers.get('x-user-phone')
+  let sessionPhone = (session?.user as any)?.phone ? getLast10Digits((session.user as any).phone) : (headerPhone ? getLast10Digits(headerPhone) : '')
+
+  if (!userId && sessionPhone) {
+    const dbUser = await prisma.user.findFirst({
+      where: { phone: { contains: sessionPhone } }
+    })
+    if (dbUser) userId = dbUser.id
+  }
+
+  if (!userId && !sessionPhone) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === 'true'
-    const isStaff = session.user?.role === 'ADMIN' || session.user?.role === 'CHEF' || session.user?.role === 'PICKER' || session.user?.role === 'DELIVERY'
+    const isStaff = session?.user?.role === 'ADMIN' || session?.user?.role === 'CHEF' || session?.user?.role === 'PICKER' || session?.user?.role === 'DELIVERY'
 
     let orders: any[] = []
 
@@ -1104,8 +1121,7 @@ export async function GET(request: NextRequest) {
       `
     } else {
       // Normal user queries their orders by userId, email, or phone match
-      const sessionEmail = session.user.email ? session.user.email.toLowerCase().trim() : ''
-      const sessionPhone = (session.user as any).phone ? getLast10Digits((session.user as any).phone) : ''
+      const sessionEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : ''
 
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
@@ -1117,7 +1133,7 @@ export async function GET(request: NextRequest) {
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
                o."combinedId"
         FROM orders o 
-        WHERE o."userId" = ${userId}
+        WHERE (o."userId" = ${userId || ''})
            OR (${sessionEmail} != '' AND o."userId" IN (SELECT id FROM users WHERE LOWER(email) = ${sessionEmail}))
            OR (${sessionPhone} != '' AND o."userId" IN (SELECT id FROM users WHERE REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ${'%' + sessionPhone}))
         ORDER BY o."createdAt" DESC
