@@ -447,21 +447,12 @@ export function AdminDashboard({
       console.warn('SSE connection failed:', e)
     }
 
-    // Lightweight safety polling every 5 seconds (when tab is visible)
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchLiveOrdersList()
-        setOrderRefreshKey(prev => prev + 1)
-      }
-    }, 5000)
-
-    // Initial load of live orders list
+    // Initial load of live orders list (100% WebSockets driven - ZERO HTTP polling load on Vercel)
     fetchLiveOrdersList()
 
     return () => {
       supabase.removeChannel(channel)
       if (sseSource) sseSource.close()
-      clearInterval(interval)
       if (updateTimeout) clearTimeout(updateTimeout)
     }
   }, [isChimeMuted])
@@ -953,12 +944,10 @@ export function AdminDashboard({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 3000) // Fast 3-second refresh for Live Ops Tracker
     }
 
     return () => {
       active = false
-      if (intervalId) clearInterval(intervalId)
     }
   }, [activeTab, cartsRefreshKey])
 
