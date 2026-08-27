@@ -706,9 +706,9 @@ export async function PATCH(
 
           const broadcastPromises: Promise<any>[] = []
 
-          // 1. Direct device token push to customer's active devices (Instant 0-delay delivery)
+          // 1. Direct device token push to customer's active devices (Deduplicated)
           const targetUserIds = [existingOrder.userId, fullOrder?.userId].filter(Boolean) as string[]
-          const customerTokens = await prisma.fcmToken.findMany({
+          const customerTokenRecords = await prisma.fcmToken.findMany({
             where: {
               OR: [
                 ...(targetUserIds.length > 0 ? [{ userId: { in: targetUserIds } }] : []),
@@ -723,47 +723,32 @@ export async function PATCH(
             },
             select: { token: true },
             orderBy: { createdAt: 'desc' },
-            take: 10,
+            take: 5,
           })
 
-          for (const t of customerTokens) {
-            broadcastPromises.push(
-              fcmMessaging.send({
-                token: t.token,
-                notification: fcmPayload.notification,
-                data: dataPayload,
-                android: fcmPayload.android,
-                apns: fcmPayload.apns,
-              }).catch((err: any) => console.error('Customer direct token push error:', t.token.slice(0, 15), err?.message))
-            )
-          }
+          const uniqueTokens = Array.from(new Set(customerTokenRecords.map(t => t.token)))
 
-          // 2. Broadcast to all matched phone topics
-          for (const phone of uniquePhones) {
-            broadcastPromises.push(
-              sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
-                .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
-            )
-          }
-
-          // 3. Broadcast to user topic
-          if (existingOrder.userId) {
-            broadcastPromises.push(
-              sendTopicWithRetry(fcmMessaging, { topic: `user_${existingOrder.userId}`, ...fcmPayload })
-                .catch((err: any) => console.error(`Topic user_${existingOrder.userId} push error:`, err?.message))
-            )
-          }
-
-          // 4. Broadcast to order topics
-          broadcastPromises.push(
-            sendTopicWithRetry(fcmMessaging, { topic: `order_${existingOrder.id}`, ...fcmPayload })
-              .catch(() => {})
-          )
-          if (baseOrderNo) {
-            broadcastPromises.push(
-              sendTopicWithRetry(fcmMessaging, { topic: `order_${baseOrderNo}`, ...fcmPayload })
-                .catch(() => {})
-            )
+          if (uniqueTokens.length > 0) {
+            // Direct delivery to active device tokens (Exact 1 push per device)
+            for (const token of uniqueTokens) {
+              broadcastPromises.push(
+                fcmMessaging.send({
+                  token,
+                  notification: fcmPayload.notification,
+                  data: dataPayload,
+                  android: fcmPayload.android,
+                  apns: fcmPayload.apns,
+                }).catch((err: any) => console.error('Customer direct token push error:', token.slice(0, 15), err?.message))
+              )
+            }
+          } else {
+            // Fallback to topic broadcast only if no registered tokens found
+            for (const phone of uniquePhones) {
+              broadcastPromises.push(
+                sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
+                  .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
+              )
+            }
           }
 
           // Removed global 'all_users' broadcast — only the order's customer should be notified
