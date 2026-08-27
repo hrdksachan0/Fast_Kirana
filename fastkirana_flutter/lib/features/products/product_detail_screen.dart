@@ -365,7 +365,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           const Divider(height: 16, color: Color(0xFFF3F4F6)),
                           _buildQualityRow('🛡️ 100% Genuine & Quality assured by FastKirana'),
                           const Divider(height: 16, color: Color(0xFFF3F4F6)),
-                          _buildQualityRow('🔄 Hassle-free instant return at doorstep'),
+                          _buildQualityRow('🔄 Hassle-free instant replacement at doorstep'),
                         ],
                       ),
                     ),

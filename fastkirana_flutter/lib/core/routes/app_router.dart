@@ -36,7 +36,7 @@ class AppRouter {
       case '/admin/login':
         return FadeSlideRoute(page: const AdminLoginScreen());
       case '/otp':
-        final identifier = (settings.arguments as String?) ?? '+91 70544 70303';
+        final identifier = (settings.arguments as String?) ?? '';
         return FadeSlideRoute(page: OtpScreen(identifier: identifier));
       case '/products':
         return FadeSlideRoute(page: const ProductsScreen());

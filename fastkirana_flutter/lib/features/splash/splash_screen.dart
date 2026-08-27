@@ -19,6 +19,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _logoScale;
   late Animation<double> _contentFade;
   late Animation<double> _slideUp;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -26,7 +27,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1000),
     );
 
     _logoScale = CurvedAnimation(
@@ -36,19 +37,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _contentFade = CurvedAnimation(
       parent: _mainController,
-      curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
     );
 
-    _slideUp = Tween<double>(begin: 20.0, end: 0.0).animate(
+    _slideUp = Tween<double>(begin: 16.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.3, 0.85, curve: Curves.easeOutCubic),
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
       ),
     );
 
     _mainController.forward();
     _requestAppPermissions();
-    Future.delayed(const Duration(milliseconds: 1400), _navigateToNextScreen);
+
+    // Fast, reliable 1.1s splash exit
+    Future.delayed(const Duration(milliseconds: 1100), _safeNavigate);
   }
 
   Future<void> _requestAppPermissions() async {
@@ -57,21 +60,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     } catch (_) {}
   }
 
-  Future<void> _navigateToNextScreen() async {
-    if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
+  Future<void> _safeNavigate() async {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
 
-    if (token == null || token.isEmpty) {
-      // 1. First Gate: Login with Mobile Number & OTP (like Zepto / Blinkit)
-      Navigator.pushReplacementNamed(context, '/login');
-    } else if (!hasChosenLocation) {
-      // 2. Second Gate: Select Delivery Location
-      Navigator.pushReplacementNamed(context, '/location');
-    } else {
-      // 3. Final: Main Storefront
-      Navigator.pushReplacementNamed(context, '/home');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('user_id');
+      final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
+
+      if (!mounted) return;
+
+      if (token == null || token.isEmpty) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      } else if (!hasChosenLocation) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    } catch (e) {
+      debugPrint('Splash navigation error: $e');
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     }
   }
 
@@ -212,7 +223,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'GHATAMPUR EXPRESS STORE',
+                      'FASTKIRANA EXPRESS STORE',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,

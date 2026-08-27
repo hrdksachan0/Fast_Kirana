@@ -235,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const Text('⚡', style: TextStyle(fontSize: 12)),
                           const SizedBox(width: 5),
                           Text(
-                            "Ghatampur's Fast Grocery & Food Delivery",
+                            "Superfast Grocery & Food Delivery",
                             style: GoogleFonts.inter(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -305,33 +305,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         const SizedBox(height: 14),
 
-                        // Input Box with Flag, Country Code, Number, and Checkmark
+                        // Single Seamless Luxury Input Card (No ugly inner nested borders)
                         Container(
-                          height: 56,
+                          height: 54,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: _isFocused || isValidPhone
+                              color: _isFocused
                                   ? primaryRed
-                                  : const Color(0xFFE2E8F0),
-                              width: _isFocused || isValidPhone ? 1.5 : 1,
+                                  : (isValidPhone ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0)),
+                              width: _isFocused ? 1.8 : 1.2,
                             ),
+                            boxShadow: [
+                              if (_isFocused)
+                                BoxShadow(
+                                  color: primaryRed.withValues(alpha: 0.12),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                            ],
                           ),
                           child: Row(
                             children: [
-                              // Country Code Pill
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                height: double.infinity,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    right: BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
-                                  ),
-                                ),
+                              // Clean Country Code Badge
+                              Padding(
+                                padding: const EdgeInsets.only(left: 14, right: 10),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text('🇮🇳', style: TextStyle(fontSize: 17)),
+                                    const Text('🇮🇳', style: TextStyle(fontSize: 16)),
                                     const SizedBox(width: 6),
                                     Text(
                                       '+91',
@@ -345,42 +348,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
 
-                              // Text Input Area
+                              // Subtle Vertical Divider
+                              Container(
+                                width: 1,
+                                height: 22,
+                                color: const Color(0xFFE2E8F0),
+                              ),
+
+                              // Pure Seamless Text Input Area
                               Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  child: TextField(
-                                    controller: _phoneController,
-                                    focusNode: _focusNode,
-                                    keyboardType: TextInputType.phone,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(10),
-                                    ],
-                                    style: GoogleFonts.inter(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A),
-                                      letterSpacing: 1.2,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: '7054470303',
-                                      hintStyle: GoogleFonts.inter(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF94A3B8),
-                                        letterSpacing: 1.2,
-                                      ),
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    onSubmitted: (_) => _handleContinue(),
+                                child: TextField(
+                                  controller: _phoneController,
+                                  focusNode: _focusNode,
+                                  keyboardType: TextInputType.phone,
+                                  cursorColor: primaryRed,
+                                  cursorWidth: 2,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(10),
+                                  ],
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF0F172A),
+                                    letterSpacing: 0.8,
                                   ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter 10-digit number',
+                                    hintStyle: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.2,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                  ),
+                                  onSubmitted: (_) => _handleContinue(),
                                 ),
                               ),
 
-                              // Valid Green Checkmark Icon
+                              // Animated Valid Green Checkmark Badge
                               if (isValidPhone)
                                 Padding(
                                   padding: const EdgeInsets.only(right: 12),
@@ -397,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: Colors.white,
                                     ),
                                   ),
-                                ),
+                                ).animate().scale(duration: 200.ms),
                             ],
                           ),
                         ),
