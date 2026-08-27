@@ -2914,6 +2914,7 @@ export function AdminDashboard({
           categories={categories}
           settingsMap={settingsMap}
           editProductVariants={editProductVariants}
+          hasVariantsEdit={hasVariantsEdit}
           newCustomTag={newCustomTag}
           RESTAURANT_MENU_SECTIONS={RESTAURANT_MENU_SECTIONS}
           PRESET_KITCHEN_PHOTOS={PRESET_KITCHEN_PHOTOS}

@@ -258,7 +258,7 @@ export async function PATCH(
 
   try {
     const body = await request.json()
-    const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy } = body
+    const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy, cashAmount } = body
 
     if ((!status || !VALID_STATUSES.includes(status)) && !paymentStatus) {
       return NextResponse.json({ error: 'Invalid order status or payment status' }, { status: 400 })
@@ -450,32 +450,40 @@ export async function PATCH(
         WHERE id = ${id}
       `
 
-      // If COD and assigned to a delivery rider, update RiderWallet ONLY if cash was collected by rider
-      const isRiderCashCollected = !isOwnerOrOnlinePayment && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)
-      if (existingOrder.status !== 'DELIVERED' && existingOrder.paymentMethod === 'COD' && isRiderCashCollected && existingOrder.deliveryUserId) {
+      // If order assigned to a delivery rider, update RiderWallet for cash collected or change given (-/+)
+      if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId) {
         try {
           const riderId = existingOrder.deliveryUserId
           const orderTotal = parseFloat(existingOrder.total) || 0
-          
-          const wallet = await prisma.riderWallet.findUnique({ where: { userId: riderId } })
-          if (wallet) {
-            await prisma.riderWallet.update({
-              where: { userId: riderId },
-              data: {
-                cashInHand: { increment: orderTotal },
-                totalCollected: { increment: orderTotal }
-              }
-            })
-          } else {
-            await prisma.riderWallet.create({
-              data: {
-                userId: riderId,
-                cashInHand: orderTotal,
-                cashLimit: 2000,
-                totalCollected: orderTotal,
-                totalDeposited: 0
-              }
-            })
+
+          let actualCashChange = 0
+          if (cashAmount !== undefined && cashAmount !== null && !isNaN(parseFloat(cashAmount))) {
+            actualCashChange = parseFloat(cashAmount)
+          } else if (!isOwnerOrOnlinePayment && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
+            actualCashChange = orderTotal
+          }
+
+          if (actualCashChange !== 0) {
+            const wallet = await prisma.riderWallet.findUnique({ where: { userId: riderId } })
+            if (wallet) {
+              await prisma.riderWallet.update({
+                where: { userId: riderId },
+                data: {
+                  cashInHand: { increment: actualCashChange },
+                  totalCollected: { increment: Math.max(0, actualCashChange) }
+                }
+              })
+            } else {
+              await prisma.riderWallet.create({
+                data: {
+                  userId: riderId,
+                  cashInHand: actualCashChange,
+                  cashLimit: 2000,
+                  totalCollected: Math.max(0, actualCashChange),
+                  totalDeposited: 0
+                }
+              })
+            }
           }
         } catch (wErr) {
           console.error('[API orders] Error updating rider wallet on delivery:', wErr)

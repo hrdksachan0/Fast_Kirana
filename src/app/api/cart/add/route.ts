@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { addToCartSchema, validateBody } from '@/lib/validation'
 
 const FASTAPI = process.env.NEXT_PUBLIC_FASTAPI_URL || ''
 
-/**
- * POST /api/cart/add - Proxy to FastAPI
- * Body: { productId, quantity, selectedVariant, notes }
- */
 export async function POST(request: NextRequest) {
+  const validation = await validateBody(request, addToCartSchema)
+  if (!validation.success) return validation.error
+
+  const { productId, quantity, selectedVariant, notes } = validation.data
+
   const auth = request.headers.get('authorization') ?? ''
-  const body = await request.json()
 
   try {
     const res = await fetch(`${FASTAPI}/api/cart/add`, {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
         Authorization: auth,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ productId, quantity, selectedVariant, notes }),
     })
     const data = await res.json().catch(() => ({}))
     return NextResponse.json(data, { status: res.status })

@@ -140,20 +140,61 @@ export default function CodPaymentModal({
             </div>
           ) : (
             <div className="space-y-3.5 pt-1">
-              <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-2.5">
                 <label className="text-[11px] font-black uppercase text-purple-700 dark:text-purple-300 block">
-                  Amount Collected in Cash (₹):
+                  Cash Collected / Change Given (₹):
                 </label>
                 <input
                   type="number"
-                  placeholder={`Max ${orderTotal}`}
+                  placeholder="e.g. 200, 0, or -50 if change given"
                   value={cashAmountInput}
                   onChange={(e) => setCashAmountInput(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm font-black outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                 />
-                <div className="flex justify-between text-[11px] font-bold text-text-secondary pt-1">
-                  <span>Cash Handed: <strong className="text-amber-600">{formatPrice(parsedCash)}</strong></span>
-                  <span>UPI Balance: <strong className="text-emerald-600">{formatPrice(onlineBalance)}</strong></span>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setCashAmountInput(String(orderTotal))}
+                    className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 transition-all cursor-pointer"
+                  >
+                    Full Cash ({formatPrice(orderTotal)})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCashAmountInput('0')}
+                    className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition-all cursor-pointer"
+                  >
+                    ₹0 (Full Online)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCashAmountInput('-50')}
+                    className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/20 hover:bg-rose-500/25 transition-all cursor-pointer"
+                  >
+                    -₹50 Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCashAmountInput('-100')}
+                    className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/20 hover:bg-rose-500/25 transition-all cursor-pointer"
+                  >
+                    -₹100 Change
+                  </button>
+                </div>
+
+                <div className="flex justify-between text-[11px] font-bold text-text-secondary pt-1.5 border-t border-purple-500/20">
+                  <span>
+                    Rider Wallet Cash:{' '}
+                    <strong className={parsedCash < 0 ? 'text-rose-600' : 'text-amber-600'}>
+                      {parsedCash >= 0 ? `+${formatPrice(parsedCash)}` : `-${formatPrice(Math.abs(parsedCash))}`}
+                    </strong>
+                  </span>
+                  <span>
+                    Online Received:{' '}
+                    <strong className="text-emerald-600">{formatPrice(onlineBalance)}</strong>
+                  </span>
                 </div>
               </div>
 
@@ -170,7 +211,7 @@ export default function CodPaymentModal({
                   onClick={handleConfirmSplit}
                   className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-md cursor-pointer active:scale-95"
                 >
-                  Confirm Split
+                  Confirm Amount
                 </button>
               </div>
             </div>

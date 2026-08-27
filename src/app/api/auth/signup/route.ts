@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { authLimiter } from '@/lib/rate-limit'
+import { signupSchema, validateBody } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   const limited = await authLimiter.check(request)
   if (limited) return limited
 
+  const validation = await validateBody(request, signupSchema)
+  if (!validation.success) return validation.error
+
+  const { name, email, password, phone } = validation.data
+
   try {
-    const { name, email: rawEmail, password, phone } = await request.json()
-
-    if (!rawEmail || !password || !name) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const email = rawEmail.toLowerCase().trim()
-
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
@@ -31,7 +29,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         passwordHash,
-        phone,
+        phone: phone || null,
         role: 'USER',
       },
     })

@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { apiReadLimiter } from '@/lib/rate-limit'
+import { validateCartSchema, validateBody } from '@/lib/validation'
 import { isCafeProduct, getProductLimit } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
-  const limited = await apiReadLimiter.check(request)
+  const limited = await (await import('@/lib/rate-limit')).apiReadLimiter.check(request)
   if (limited) return limited
 
-  try {
-    const { items } = await request.json()
-    if (!items || !Array.isArray(items)) {
-      return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
-    }
+  const validation = await validateBody(request, validateCartSchema)
+  if (!validation.success) return validation.error
 
+  const { items } = validation.data
+
+  try {
     const productIds = items.map((item: any) => item.product?.id ? item.product.id.split('_')[0] : null).filter(Boolean)
     if (productIds.length === 0) {
       return NextResponse.json({ hasChanges: false, updates: [] })
@@ -21,15 +21,8 @@ export async function POST(request: NextRequest) {
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: {
-        id: true,
-        name: true,
-        price: true,
-        mrp: true,
-        stock: true,
-        isAvailable: true,
-        variants: true,
-        category: true,
-        tags: true,
+        id: true, name: true, price: true, mrp: true, stock: true,
+        isAvailable: true, variants: true, category: true, tags: true,
       },
     })
 
@@ -43,9 +36,8 @@ export async function POST(request: NextRequest) {
       const isVariant = clientProduct.id.includes('_')
       const [productId, variantName] = isVariant ? clientProduct.id.split('_') : [clientProduct.id, null]
 
-      const dbProduct = dbProducts.find((p) => p.id === productId)
+      const dbProduct = dbProducts.find((p: any) => p.id === productId)
 
-      // 1. Check if product exists and is available
       if (!dbProduct || !dbProduct.isAvailable) {
         updates.push({
           type: 'OUT_OF_STOCK',
@@ -55,13 +47,12 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Resolve variant price, mrp, and stock
       let dbPrice = dbProduct.price
       let dbMrp = dbProduct.mrp
       let dbStock = dbProduct.stock
 
       if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
-        const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+        const variant = (dbProduct.variants as any[]).find((v: any) => v.name === variantName)
         if (variant) {
           dbPrice = variant.price
           dbMrp = variant.mrp
@@ -78,7 +69,6 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // 2. Check if requested quantity exceeds stock or dynamic limit
       const limit = getProductLimit(dbProduct)
       const maxAllowed = Math.min(dbStock, limit)
       if (clientQty > maxAllowed) {
@@ -91,7 +81,6 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 3. Check for price changes
       if (clientProduct.price !== dbPrice) {
         updates.push({
           type: 'PRICE_UPDATE',
@@ -102,7 +91,6 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 4. Check for MRP changes
       if (clientProduct.mrp !== dbMrp) {
         updates.push({
           type: 'MRP_UPDATE',

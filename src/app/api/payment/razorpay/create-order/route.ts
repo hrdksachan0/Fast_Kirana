@@ -1,17 +1,20 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createRazorpayOrderSchema, validateBody } from '@/lib/validation'
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
+  const validation = await validateBody(request, createRazorpayOrderSchema)
+  if (!validation.success) return validation.error
+
+  const { orderId, amount } = validation.data
+
   try {
-    const { orderId, amount } = await req.json()
-
     let totalAmount = 0
     let receiptId = `rcpt_${Date.now()}`
     let readableId = ''
     let resolvedOrderId = orderId || ''
 
     if (orderId) {
-      // Use raw SQL to avoid PrismaPg enum deserialization issues
       const orders: any[] = await prisma.$queryRaw`
         SELECT id, total, "readableId", "combinedId"
         FROM orders WHERE id = ${orderId} LIMIT 1
@@ -23,7 +26,6 @@ export async function POST(req: Request) {
 
       const order = orders[0]
 
-      // If this is part of a combined order, calculate the FULL combined total
       if (order.combinedId) {
         const combinedOrders: any[] = await prisma.$queryRaw`
           SELECT id, total, "readableId"
@@ -43,7 +45,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'orderId or amount is required' }, { status: 400 })
     }
 
-    // If client explicitly passed a higher amount (combined total from UI), use that
     if (amount && Number(amount) > totalAmount) {
       totalAmount = Number(amount)
     }
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     const amountInPaise = Math.round(totalAmount * 100)
 
     if (amountInPaise < 100) {
-      return NextResponse.json({ error: 'Minimum order amount for online payment is ₹1.00' }, { status: 400 })
+      return NextResponse.json({ error: 'Minimum order amount for online payment is 1.00' }, { status: 400 })
     }
 
     const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')

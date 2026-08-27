@@ -252,7 +252,16 @@ async def create_order(
         )
 
     address_id = payload.get("addressId")
-    payment_method = payload.get("paymentMethod")
+    raw_pm = str(payload.get("paymentMethod") or "COD").upper()
+    if raw_pm in ["RAZORPAY", "ONLINE", "UPI", "GPAY", "PHONEPE", "PAYTM"]:
+        payment_method = "UPI"
+    elif raw_pm in ["CARD", "DEBIT", "CREDIT"]:
+        payment_method = "CARD"
+    elif raw_pm in ["WALLET"]:
+        payment_method = "WALLET"
+    else:
+        payment_method = "COD"
+
     items = payload.get("items", [])
     coupon_code = payload.get("couponCode")
     delivery_method = payload.get("deliveryMethod", "DELIVERY")
@@ -264,7 +273,7 @@ async def create_order(
     packaging_option = payload.get("packagingOption", "NORMAL")
     packaging_fee = float(payload.get("packagingFee", 0.0))
 
-    if not payment_method or not items:
+    if not items:
         raise HTTPException(status_code=400, detail="Missing required fields")
 
     # Normalize items format so both Web {"product": {"id": ...}} and Mobile {"productId": "..."} work 100%
@@ -702,7 +711,7 @@ async def create_order(
             miscFee=round(misc_fee_charge, 2),
             total=round(final_total, 2),
             paymentMethod=PaymentMethod(payment_method),
-            paymentStatus=PaymentStatus.PENDING,
+            paymentStatus=PaymentStatus.PAID if (payload.get("paymentStatus") == "PAID" or payload.get("paymentId")) else PaymentStatus.PENDING,
             estimatedDelivery=estimated_delivery,
             deliveryMethod=delivery_method,
             isB2B=is_b2b,
@@ -815,6 +824,14 @@ async def create_order(
                 admin_phones.append("7054470303")
             if settings_map.get("whatsapp_notify_8112849854") != "false":
                 admin_phones.append("8112849854")
+            if settings_map.get("order_alert_phone"):
+                clean = re.sub(r'\D', '', str(settings_map["order_alert_phone"]))[-10:]
+                if clean and clean not in admin_phones:
+                    admin_phones.append(clean)
+            if settings_map.get("contact_phone"):
+                clean = re.sub(r'\D', '', str(settings_map["contact_phone"]))[-10:]
+                if clean and clean not in admin_phones:
+                    admin_phones.append(clean)
 
             for phone in admin_phones:
                 app_url = "fastkirana.com"

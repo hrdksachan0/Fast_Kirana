@@ -1,5 +1,5 @@
 {
-  "name": "tmp-init",
+  "name": "fastkirana",
   "version": "0.1.1",
   "private": true,
   "scripts": {
@@ -55,6 +55,7 @@
     "tailwindcss": "^4",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
+    "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

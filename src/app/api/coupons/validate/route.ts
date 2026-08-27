@@ -1,22 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { couponLimiter } from '@/lib/rate-limit'
+import { validateCouponSchema, validateBodyLegacy } from '@/lib/validation'
 
-export async function POST(request: Request) {
-  // Prevent coupon-code enumeration via brute force.
-  // Coupon codes are short and guessable; without this, an attacker can
-  // POST every 3-letter combination to find valid codes.
-  const limited = await couponLimiter.check(request as any)
+export async function POST(request: NextRequest) {
+  const limited = await couponLimiter.check(request)
   if (limited) return limited
 
+  const validation = await validateBodyLegacy(request, validateCouponSchema)
+  if (!validation.success) return validation.error
+
+  const { code, subtotal, items } = validation.data
+
   try {
-    const { code, subtotal, items } = await request.json()
-
-    if (!code) {
-      return NextResponse.json({ error: 'Coupon code is required' }, { status: 400 })
-    }
-
     const session = await auth()
 
     const coupon = await prisma.coupon.findUnique({
@@ -27,7 +24,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid or inactive coupon code' }, { status: 400 })
     }
 
-    // Check once per customer restriction
     if (coupon.oncePerCustomer) {
       if (!session?.user?.id) {
         return NextResponse.json({ error: 'Please log in to use this coupon' }, { status: 400 })
@@ -44,20 +40,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check expiration
     if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
       return NextResponse.json({ error: 'Coupon code has expired' }, { status: 400 })
     }
 
-    // Check usage limits
     if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
       return NextResponse.json({ error: 'Coupon code limit reached' }, { status: 400 })
     }
 
-    // Check category restriction
     let eligibleSubtotal = subtotal
     if (coupon.categoryId) {
-      if (!items || !Array.isArray(items) || items.length === 0) {
+      if (!items || items.length === 0) {
         return NextResponse.json({ error: 'This coupon is restricted to a category. Cart items are required.' }, { status: 400 })
       }
 
@@ -70,13 +63,13 @@ export async function POST(request: Request) {
 
       if (categorySubtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ₹${coupon.minOrder} in the restricted category is required.` },
+          { error: `Minimum order of ${coupon.minOrder} in the restricted category is required.` },
           { status: 400 }
         )
       }
       eligibleSubtotal = categorySubtotal
     } else if (coupon.restaurantId) {
-      if (!items || !Array.isArray(items) || items.length === 0) {
+      if (!items || items.length === 0) {
         return NextResponse.json({ error: 'This coupon is restricted to a restaurant. Cart items are required.' }, { status: 400 })
       }
 
@@ -97,22 +90,20 @@ export async function POST(request: Request) {
 
       if (restaurantSubtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ₹${coupon.minOrder} from ${restaurant?.name || 'the restaurant'} is required.` },
+          { error: `Minimum order of ${coupon.minOrder} from ${restaurant?.name || 'the restaurant'} is required.` },
           { status: 400 }
         )
       }
       eligibleSubtotal = restaurantSubtotal
     } else {
-      // Check minimum order value against overall subtotal
       if (subtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ₹${coupon.minOrder} required for this coupon` },
+          { error: `Minimum order of ${coupon.minOrder} required for this coupon` },
           { status: 400 }
         )
       }
     }
 
-    // Calculate discount amount
     let discountAmount = 0
     if (coupon.discountType === 'FLAT') {
       discountAmount = Math.min(coupon.value, eligibleSubtotal)
@@ -133,7 +124,6 @@ export async function POST(request: Request) {
         discountAmount,
       },
     })
-
   } catch (error: any) {
     console.error('Coupon validation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

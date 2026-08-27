@@ -5,7 +5,12 @@
       "Bash(taskkill /PID 2380 /F)",
       "Bash(cmd.exe /c \"taskkill /PID 2380 /F\")",
       "Bash(ls \"D:/Fastkirana app/app/\" && echo \"---\" && ls \"D:/FastKirana app/app/restaurants\" 2>/dev/null || echo \"no restaurants folder\")",
-      "Bash(grep -E \"scratch|\\\\.html$|\\\\.ts$|\\\\.js$|\\\\.py$|\\\\.ps1$\" D:/Fastkirana/.gitignore)"
+      "Bash(grep -E \"scratch|\\\\.html$|\\\\.ts$|\\\\.js$|\\\\.py$|\\\\.ps1$\" D:/Fastkirana/.gitignore)",
+      "Bash(npm install *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(timeout 180 npx tsc --noEmit --skipLibCheck)",
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version\\)\")"
     ]
   }
 }

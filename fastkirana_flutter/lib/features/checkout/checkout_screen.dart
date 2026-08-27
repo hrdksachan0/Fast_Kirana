@@ -378,6 +378,41 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     HapticFeedback.heavyImpact();
 
     final settings = ref.read(storeSettingsProvider).valueOrNull ?? StoreSettings();
+    final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
+    final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
+
+    if (hasGrocery && !settings.groceryMartOpen) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE11D48),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'FastKirana Grocery Darkstore is currently closed. Orders cannot be placed right now.',
+            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (hasRestaurant && !settings.restaurantOpen) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE11D48),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Restaurant Kitchen is currently closed. Orders cannot be placed right now.',
+            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
     final subtotal = cart.subtotal;
     final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
     final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
@@ -506,7 +541,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final apiPayload = {
         ...newOrder.toJson(),
         'addressId': selectedAddress?.id ?? 'addr_default',
-        'paymentMethod': _selectedPayment == 'online' ? 'RAZORPAY' : 'COD',
+        'paymentMethod': _selectedPayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
         'deliveryMethod': _deliveryMethod,
@@ -536,16 +571,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
       if (res.data != null) {
         final data = res.data;
-        final created = data['order'] ?? (data['orders'] is List && (data['orders'] as List).isNotEmpty ? data['orders'][0] : data);
+        String? serverReadableId = data['readableId']?.toString();
+        String? serverId = data['id']?.toString();
+
+        final created = data['order'] ?? (data['orders'] is List && (data['orders'] as List).isNotEmpty ? data['orders'][0] : null);
         if (created is Map) {
-          final serverReadableId = created['readableId']?.toString();
-          final serverId = created['id']?.toString();
-          if (serverReadableId != null && serverReadableId.isNotEmpty) {
-            placedOrder = placedOrder.copyWith(
-              id: serverId ?? placedOrder.id,
-              readableId: serverReadableId,
-            );
-          }
+          serverReadableId = created['readableId']?.toString() ?? serverReadableId;
+          serverId = created['id']?.toString() ?? serverId;
+        }
+
+        if (serverReadableId != null && serverReadableId.isNotEmpty) {
+          placedOrder = placedOrder.copyWith(
+            id: serverId ?? placedOrder.id,
+            readableId: serverReadableId,
+          );
         }
       }
     } catch (e) {
@@ -562,7 +601,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (!mounted) return;
 
     final successPage = OrderSuccessScreen(
-      orderId: placedOrder.readableId ?? placedOrder.id,
+      orderId: placedOrder.displayId,
       totalAmount: grandTotal,
       deliveryAddress: selectedAddr,
       paymentMethod: _selectedPayment == 'online' ? 'RAZORPAY (PAID)' : 'CASH ON DELIVERY',

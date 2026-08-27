@@ -133,6 +133,17 @@ class Order {
     this.items,
   });
 
+  String get displayId {
+    if (readableId != null && readableId!.trim().isNotEmpty) {
+      return readableId!.replaceFirst('FK-', '').trim();
+    }
+    if (id.startsWith('FK-')) return id.replaceFirst('FK-', '');
+    if (id.length > 6) {
+      return id.substring(id.length - 6).toUpperCase();
+    }
+    return id;
+  }
+
   static OrderStatus parseStatus(dynamic val) {
     if (val == null) return OrderStatus.pending;
     final str = val.toString().toLowerCase().trim();

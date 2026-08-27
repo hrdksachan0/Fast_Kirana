@@ -8,8 +8,10 @@ import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/dish_timing.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../cart/cart_screen.dart';
 
@@ -522,8 +524,85 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   const SizedBox(width: 24),
                   Expanded(
-                    child: inCartQty > 0
-                        ? Container(
+                    child: Builder(
+                      builder: (context) {
+                        final isFood = isRestaurantProduct(p);
+                        final settings = ref.watch(storeSettingsProvider).valueOrNull;
+                        final isGroceryOpen = settings?.groceryMartOpen ?? true;
+                        final isRestaurantOpen =
+                            (settings?.restaurantOpen ?? true) && (p.restaurant?.isOpen ?? true);
+                        final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
+
+                        final isOutOfStock = p.stock <= 0 || !p.isAvailable;
+                        final timingStatus = checkDishTimeAvailability(
+                          p.availableStartTime,
+                          p.availableEndTime,
+                        );
+
+                        if (isOutOfStock) {
+                          return Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Out of Stock',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!timingStatus.isAvailableNow) {
+                          return Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              timingStatus.nextAvailableTimeStr != null
+                                  ? 'Next @ ${timingStatus.nextAvailableTimeStr}'
+                                  : 'Not Available Right Now',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFD97706),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!isStoreOpen) {
+                          return Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Store Currently Closed',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (inCartQty > 0) {
+                          return Container(
                             height: 50,
                             decoration: BoxDecoration(
                               color: primaryRed,
@@ -552,7 +631,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                                 InkWell(
                                   onTap: () {
-                                    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(p);
+                                    final conflictRestaurant =
+                                        ref.read(cartProvider.notifier).checkRestaurantConflict(p);
                                     if (conflictRestaurant != null) {
                                       _promptRestaurantConflict(context, p, _selectedVariant?.name);
                                       return;
@@ -567,79 +647,86 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                               ],
                             ),
-                          )
-                        : GestureDetector(
-                            onTap: () {
-                              final productToCart = Product(
-                                id: p.id,
-                                name: p.name,
-                                slug: p.slug,
-                                description: p.description,
-                                imageUrl: p.imageUrl,
-                                categoryId: p.categoryId,
-                                restaurantId: p.restaurantId,
-                                mrp: activeMrp,
-                                price: activePrice,
-                                discount: activeMrp > activePrice ? ((activeMrp - activePrice) / activeMrp * 100) : 0,
-                                unit: activeUnit,
-                                stock: p.stock,
-                                isAvailable: p.isAvailable,
-                                tags: p.tags,
-                                variants: p.variants,
-                                minStock: p.minStock,
-                                costPrice: p.costPrice,
-                                isFlashDeal: p.isFlashDeal,
-                                isTopPick: p.isTopPick,
-                                isBestSeller: p.isBestSeller,
-                                sortOrder: p.sortOrder,
-                                createdAt: p.createdAt,
-                                category: p.category,
-                                restaurant: p.restaurant,
-                              );
+                          );
+                        }
 
-                              final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(productToCart);
-                              if (conflictRestaurant != null) {
-                                _promptRestaurantConflict(context, productToCart, _selectedVariant?.name);
-                                return;
-                              }
+                        return GestureDetector(
+                          onTap: () {
+                            final productToCart = Product(
+                              id: p.id,
+                              name: p.name,
+                              slug: p.slug,
+                              description: p.description,
+                              imageUrl: p.imageUrl,
+                              categoryId: p.categoryId,
+                              restaurantId: p.restaurantId,
+                              mrp: activeMrp,
+                              price: activePrice,
+                              discount: activeMrp > activePrice
+                                  ? ((activeMrp - activePrice) / activeMrp * 100)
+                                  : 0,
+                              unit: activeUnit,
+                              stock: p.stock,
+                              isAvailable: p.isAvailable,
+                              tags: p.tags,
+                              variants: p.variants,
+                              minStock: p.minStock,
+                              costPrice: p.costPrice,
+                              isFlashDeal: p.isFlashDeal,
+                              isTopPick: p.isTopPick,
+                              isBestSeller: p.isBestSeller,
+                              sortOrder: p.sortOrder,
+                              createdAt: p.createdAt,
+                              category: p.category,
+                              restaurant: p.restaurant,
+                            );
 
-                              HapticFeedback.mediumImpact();
-                              ref.read(cartProvider.notifier).addProduct(productToCart, 1, _selectedVariant?.name);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [primaryRed, Color(0xFFB30013)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
+                            final conflictRestaurant =
+                                ref.read(cartProvider.notifier).checkRestaurantConflict(productToCart);
+                            if (conflictRestaurant != null) {
+                              _promptRestaurantConflict(context, productToCart, _selectedVariant?.name);
+                              return;
+                            }
+
+                            HapticFeedback.mediumImpact();
+                            ref.read(cartProvider.notifier).addProduct(productToCart, 1, _selectedVariant?.name);
+                          },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [primaryRed, Color(0xFFB30013)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryRed.withOpacity(0.35),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
                                 ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryRed.withOpacity(0.35),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Add to Cart',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Add to Cart',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

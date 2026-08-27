@@ -78,6 +78,7 @@ export interface ProductEditModalProps {
   categories: Category[]
   settingsMap: Record<string, string>
   editProductVariants: ProductVariant[]
+  hasVariantsEdit: boolean
   newCustomTag: string
   RESTAURANT_MENU_SECTIONS: MenuSection[]
   PRESET_KITCHEN_PHOTOS: any[]
@@ -103,6 +104,7 @@ export function ProductEditModal({
   categories,
   settingsMap,
   editProductVariants,
+  hasVariantsEdit,
   newCustomTag,
   RESTAURANT_MENU_SECTIONS,
 }: ProductEditModalProps) {
@@ -110,8 +112,6 @@ export function ProductEditModal({
   const selectedRestaurant = useMemo(() => {
     return restaurantsList.find((r) => r.id === productEditForm.restaurantId)
   }, [productEditForm.restaurantId, restaurantsList])
-
-  const hasVariantsEdit = useMemo(() => editProductVariants.length > 0 || productEditForm.tags.includes('variant'), [editProductVariants, productEditForm])
 
   // Resolve dynamic menu sections for the specific restaurant
   const resolvedMenuSections = useMemo(() => {
@@ -702,7 +702,7 @@ export function ProductEditModal({
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-2 items-end`}>
                   <div>
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">
                       {isRestaurantMode ? 'Portion Name (e.g. Half / Full)' : 'Variant Name'}
@@ -732,6 +732,18 @@ export function ProductEditModal({
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-bold"
                     />
                   </div>
+                  {!isRestaurantMode && (
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock (Units)</label>
+                      <input
+                        type="number"
+                        id="edit-var-stock"
+                        placeholder="100"
+                        defaultValue="100"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-bold"
+                      />
+                    </div>
+                  )}
                   <div>
                     <button
                       type="button"
@@ -739,22 +751,25 @@ export function ProductEditModal({
                         const nameInput = document.getElementById('edit-var-name') as HTMLInputElement
                         const mrpInput = document.getElementById('edit-var-mrp') as HTMLInputElement
                         const priceInput = document.getElementById('edit-var-price') as HTMLInputElement
+                        const stockInput = document.getElementById('edit-var-stock') as HTMLInputElement | null
 
                         const name = nameInput.value.trim()
                         const mrp = mrpInput.value.trim() || priceInput.value.trim()
                         const price = priceInput.value.trim()
+                        const stock = stockInput ? stockInput.value.trim() || '100' : (isRestaurantMode ? '9999' : '100')
 
                         if (!name || !price) {
                           toast.error('Please enter portion name and price')
                           return
                         }
 
-                        const newVars = [...editProductVariants, { name, mrp, price, costPrice: '0', stock: isRestaurantMode ? '9999' : '100' }]
+                        const newVars = [...editProductVariants, { name, mrp, price, costPrice: '0', stock }]
                         newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
                         setEditProductVariants(newVars)
                         nameInput.value = ''
                         mrpInput.value = ''
                         priceInput.value = ''
+                        if (stockInput) stockInput.value = '100'
                       }}
                       className="w-full py-2 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
                     >

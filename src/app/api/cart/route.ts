@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { syncCartSchema, validateBody } from '@/lib/validation'
 
 async function getOrCreateCart(userId: string) {
   let cart = await prisma.cart.findUnique({
@@ -8,7 +9,6 @@ async function getOrCreateCart(userId: string) {
   })
 
   if (!cart) {
-    // Ensure user exists before creating cart to avoid FK error
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) return null
 
@@ -20,9 +20,6 @@ async function getOrCreateCart(userId: string) {
   return cart
 }
 
-/**
-  Helper to resolve or create a guest user account by guest device token
- */
 async function getOrCreateGuestUser(guestId: string) {
   const cleanId = guestId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32)
   if (!cleanId) return null
@@ -46,9 +43,6 @@ async function getOrCreateGuestUser(guestId: string) {
   return user
 }
 
-/**
- * GET /api/cart - Fetch current user or guest cart from database
- */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -72,18 +66,9 @@ export async function GET(request: NextRequest) {
           include: {
             product: {
               select: {
-                id: true,
-                name: true,
-                slug: true,
-                imageUrl: true,
-                mrp: true,
-                price: true,
-                discount: true,
-                unit: true,
-                stock: true,
-                isAvailable: true,
-                tags: true,
-                variants: true,
+                id: true, name: true, slug: true, imageUrl: true, mrp: true,
+                price: true, discount: true, unit: true, stock: true,
+                isAvailable: true, tags: true, variants: true,
               },
             },
           },
@@ -99,7 +84,7 @@ export async function GET(request: NextRequest) {
     const items = cart.items.map((item) => {
       let price = item.product.price
       if (item.selectedVariant && Array.isArray(item.product.variants)) {
-        const variant = (item.product.variants as any[]).find((v) => v.name === item.selectedVariant)
+        const variant = (item.product.variants as any[]).find((v: any) => v.name === item.selectedVariant)
         if (variant && typeof variant.price === 'number') {
           price = variant.price
         }
@@ -114,10 +99,7 @@ export async function GET(request: NextRequest) {
         quantity: item.quantity,
         selectedVariant: item.selectedVariant,
         notes: item.notes,
-        product: {
-          ...item.product,
-          price,
-        },
+        product: { ...item.product, price },
         itemTotal,
       }
     })
@@ -136,15 +118,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/cart - Sync cart items to Prisma database
- * Body: { items: [{ productId, quantity, selectedVariant, notes }] }
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     const guestId = request.headers.get('x-guest-id')
-    const body = await request.json().catch(() => ({}))
+
+    const validation = await validateBody(request, syncCartSchema)
+    if (!validation.success) return validation.error
+
+    const { items: itemsData } = validation.data
 
     let userId = session?.user?.id
 
@@ -162,15 +144,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to find or create cart' }, { status: 500 })
     }
 
-    const itemsData = Array.isArray(body.items) ? body.items : []
-
-    // Delete existing cart items
     await prisma.cartItem.deleteMany({
       where: { cartId: cart.id },
     })
 
     if (itemsData.length > 0) {
-      // Filter out products that don't exist in DB to prevent foreign key errors
       const productIds: string[] = itemsData.map((i: any) => String(i.productId || '')).filter(Boolean)
       const validProducts = await prisma.product.findMany({
         where: { id: { in: productIds } },
@@ -178,7 +156,6 @@ export async function POST(request: NextRequest) {
       })
       const validProductIdSet = new Set(validProducts.map((p) => p.id))
 
-      // Insert new valid items
       for (const item of itemsData) {
         if (!item.productId || !validProductIdSet.has(item.productId)) continue
 
@@ -186,7 +163,7 @@ export async function POST(request: NextRequest) {
           data: {
             cartId: cart.id,
             productId: item.productId,
-            quantity: Math.max(1, parseInt(item.quantity) || 1),
+            quantity: Math.max(1, parseInt(item.quantity as any) || 1),
             selectedVariant: item.selectedVariant || null,
             notes: item.notes || null,
           },
@@ -194,7 +171,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Touch cart updatedAt timestamp
     await prisma.cart.update({
       where: { id: cart.id },
       data: { updatedAt: new Date() },
@@ -211,9 +187,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * DELETE /api/cart - Clear cart in Prisma database
- */
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth()

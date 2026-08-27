@@ -695,12 +695,7 @@ export default function DeliveryDashboard() {
 
   const handleSelectOnline = (orderId: string) => {
     setPaymentChoiceOrderId(null)
-    const targetOrder = orders.find((o) => o.id === orderId)
-    if (targetOrder) {
-      setQrModalOrder(targetOrder)
-    } else {
-      executeDeliveryCompletion(orderId, false, 'ONLINE')
-    }
+    executeDeliveryCompletion(orderId, false, 'ONLINE')
   }
 
   const handleSelectCustomCash = (orderId: string, cashAmount: number) => {

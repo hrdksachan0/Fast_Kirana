@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+import { prisma } from '@/lib/prisma'
+import { createAddressSchema, updateAddressSchema, patchAddressSchema, deleteAddressSchema, validateBody, validateBodyLegacy } from '@/lib/validation'
 
 export async function GET() {
   const session = await auth()
@@ -11,7 +12,7 @@ export async function GET() {
 
   try {
     const addresses = await prisma.address.findMany({
-      where: { 
+      where: {
         userId: session.user.id,
         label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
       },
@@ -30,23 +31,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const validation = await validateBodyLegacy(request, createAddressSchema)
+  if (!validation.success) return validation.error
+
+  const { label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = validation.data
+
   try {
-    const { label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = await request.json()
-
-    if (!label || !houseNo || !street || !area || !city || !pincode || !phone) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
     let cleanPhone = getLast10Digits(phone.toString().trim())
+
     if (cleanPhone.length !== 10) {
       return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
     }
 
-    // Allow saving any address; distance/serviceability is validated during checkout/ordering
-    const cleanPincode = pincode.toString().trim()
-    const cleanCity = city.toString().trim().toLowerCase()
-
-    // If setting default, reset existing defaults
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId: session.user.id },
@@ -83,18 +79,17 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const { id } = await request.json()
-    if (!id) {
-      return NextResponse.json({ error: 'Address ID is required' }, { status: 400 })
-    }
+  const validation = await validateBodyLegacy(request, deleteAddressSchema)
+  if (!validation.success) return validation.error
 
+  const { id } = validation.data
+
+  try {
     const address = await prisma.address.findUnique({ where: { id } })
     if (!address || address.userId !== session.user.id) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
-    // Enforce: user must keep at least 1 delivery address
     const userAddressCount = await prisma.address.count({
       where: {
         userId: session.user.id,
@@ -108,7 +103,6 @@ export async function DELETE(request: Request) {
       )
     }
 
-    // Check if this address is linked to any existing orders
     const linkedOrdersCount = await prisma.order.count({
       where: { addressId: id },
     })
@@ -133,13 +127,12 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const validation = await validateBodyLegacy(request, updateAddressSchema)
+  if (!validation.success) return validation.error
+
+  const { id, label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = validation.data
+
   try {
-    const { id, label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = await request.json()
-
-    if (!id || !label || !houseNo || !street || !area || !city || !pincode || !phone) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
     const existing = await prisma.address.findUnique({ where: { id } })
     if (!existing || existing.userId !== session.user.id) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
@@ -151,7 +144,6 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
     }
 
-    // If setting default, reset existing defaults
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId: session.user.id },
@@ -188,12 +180,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const { id, lat, lng } = await request.json()
-    if (!id) {
-      return NextResponse.json({ error: 'Address ID is required' }, { status: 400 })
-    }
+  const validation = await validateBodyLegacy(request, patchAddressSchema)
+  if (!validation.success) return validation.error
 
+  const { id, lat, lng } = validation.data
+
+  try {
     const address = await prisma.address.findUnique({ where: { id } })
     if (!address || address.userId !== session.user.id) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })

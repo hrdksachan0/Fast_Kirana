@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { ApiResponder } from '@/lib/api-response'
+import { createProductSchema, validateBody } from '@/lib/validation'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
@@ -553,11 +554,13 @@ export async function POST(request: NextRequest) {
   const session = adminResult.session
 
   try {
-    const body = await request.json()
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
+    const validation = await validateBody(request, createProductSchema)
+    if (!validation.success) return validation.error
+
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = validation.data
 
     let finalCategoryId = categoryId
-    let tagsList = Array.isArray(tags) 
+    let tagsList = Array.isArray(tags)
       ? tags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0)
       : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [])
 
@@ -617,17 +620,17 @@ export async function POST(request: NextRequest) {
       finalSlug = `${slug}-${Date.now().toString().slice(-4)}`
     }
 
-    let finalMrp = parseFloat(mrp)
-    let finalPrice = parseFloat(price)
+    let finalMrp = Number(mrp)
+    let finalPrice = Number(price)
     let sortedVariants = variants
 
     if (variants && Array.isArray(variants) && variants.length > 0) {
-      sortedVariants = [...variants].sort((a: any, b: any) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
-      finalPrice = parseFloat(sortedVariants[0].price) || 0
-      finalMrp = parseFloat(sortedVariants[0].mrp) || finalPrice
+      sortedVariants = [...variants].sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
+      finalPrice = Number(sortedVariants[0].price) || 0
+      finalMrp = Number(sortedVariants[0].mrp) || finalPrice
     }
 
-    const calculatedDiscount = finalMrp > finalPrice 
+    const calculatedDiscount = finalMrp > finalPrice
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
@@ -636,8 +639,8 @@ export async function POST(request: NextRequest) {
       orderBy: { readableId: 'desc' },
       select: { readableId: true }
     })
-    const nextReadableId = lastProduct && lastProduct.readableId 
-      ? lastProduct.readableId + 1 
+    const nextReadableId = lastProduct && lastProduct.readableId
+      ? lastProduct.readableId + 1
       : 200001
 
     const product = await prisma.product.create({
@@ -653,19 +656,19 @@ export async function POST(request: NextRequest) {
         price: finalPrice,
         discount: calculatedDiscount,
         unit: finalUnit,
-        stock: restaurantId ? 999 : (parseInt(stock) || 0),
+        stock: restaurantId ? 999 : Number(stock),
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: tagsList,
-        variants: sortedVariants || null,
-        minStock: minStock !== undefined ? parseInt(minStock) : 10,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
-        costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,
-        location: location || null,
-        isFlashDeal: isFlashDeal !== undefined ? !!isFlashDeal : false,
-        isTopPick: isTopPick !== undefined ? !!isTopPick : false,
-        isBestSeller: isBestSeller !== undefined ? !!isBestSeller : false,
-        sortOrder: sortOrder !== undefined ? parseInt(sortOrder) || 0 : 0,
-        barcode: barcode && typeof barcode === 'string' ? barcode.trim() : null,
+        variants: sortedVariants || undefined,
+        minStock: Number(minStock),
+        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+        costPrice: Number(costPrice),
+        location: location || undefined,
+        isFlashDeal: !!isFlashDeal,
+        isTopPick: !!isTopPick,
+        isBestSeller: !!isBestSeller,
+        sortOrder: Number(sortOrder),
+        barcode: barcode || undefined,
       },
       include: {
         category: true,
@@ -673,7 +676,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Invalidate storefront caches on-demand
-    revalidateStorefront(product.category?.slug)
+    revalidateStorefront((product as any).category?.slug)
 
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {

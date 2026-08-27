@@ -14,7 +14,6 @@ import { getProductLimit } from '@/lib/utils'
 import { getLast10Digits } from '@/lib/phone'
 import { checkIsStoreOpen } from '@/app/api/settings/route'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
-
 export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
   if (limited) return limited
@@ -22,17 +21,18 @@ export async function POST(request: NextRequest) {
   let body: any = {}
   try {
     body = await request.json()
-  } catch (_) {}
-
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
   const session = await auth()
   let userId = session?.user?.id
 
   // If mobile app request without NextAuth cookie, resolve or create customer by phone / userId
   if (!userId) {
-    const rawPhone = (body.phone || body.customerPhone || '7054470303').toString()
-    const cleanPhone = getLast10Digits(rawPhone) || '7054470303'
-    const userName = (body.userName || body.customerName || 'FastKirana Customer').toString()
-    
+    const rawPhone = body.phone || body.customerPhone || '7054470303'
+    const cleanPhone = getLast10Digits(rawPhone.toString()) || '7054470303'
+    const userName = body.userName || body.customerName || 'FastKirana Customer'
+
     let dbUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         data: {
           phone: `+91${cleanPhone}`,
           email: body.email || `customer_${cleanPhone}@fastkirana.in`,
-          name: userName,
+          name: userName.toString(),
           role: Role.USER,
         }
       })
@@ -810,7 +810,7 @@ export async function POST(request: NextRequest) {
             paymentStatus,
             estimatedDelivery,
             deliveryMethod,
-            isB2B,
+            isB2B: Boolean(isB2B),
             storeId,
             couponCode: couponCode ? couponCode.toUpperCase() : null,
             shopName: orderInfo.type === 'RESTAURANT'
@@ -991,6 +991,14 @@ export async function POST(request: NextRequest) {
         }
         if (notifyPhone2) {
           adminPhones.push('8112849854')
+        }
+        if (settingsMap['order_alert_phone']) {
+          const clean = settingsMap['order_alert_phone'].replace(/\D/g, '').slice(-10)
+          if (clean && !adminPhones.includes(clean)) adminPhones.push(clean)
+        }
+        if (settingsMap['contact_phone']) {
+          const clean = settingsMap['contact_phone'].replace(/\D/g, '').slice(-10)
+          if (clean && !adminPhones.includes(clean)) adminPhones.push(clean)
         }
 
         for (const order of createdOrders) {

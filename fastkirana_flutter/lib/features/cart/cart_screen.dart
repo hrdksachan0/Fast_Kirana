@@ -1026,6 +1026,49 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     HapticFeedback.mediumImpact();
+
+                    final currentCart = ref.read(cartProvider).value;
+                    final settings = ref.read(storeSettingsProvider).valueOrNull;
+                    final isGroceryOpen = settings?.groceryMartOpen ?? true;
+                    final isRestaurantOpen = settings?.restaurantOpen ?? true;
+
+                    if (currentCart != null) {
+                      final hasGrocery = currentCart.items.any((i) => !isRestaurantProduct(i.product));
+                      final hasRestaurant = currentCart.items.any((i) => isRestaurantProduct(i.product));
+
+                      if (hasGrocery && !isGroceryOpen) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFE11D48),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            content: const Text(
+                              'FastKirana Grocery Darkstore is currently closed. Orders cannot be placed right now.',
+                              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (hasRestaurant && !isRestaurantOpen) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFE11D48),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            content: const Text(
+                              'Restaurant Kitchen is currently closed. Orders cannot be placed right now.',
+                              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
                     final user = ref.read(authProvider).value;
                     final prefs = await SharedPreferences.getInstance();
                     final token = prefs.getString('auth_token');
