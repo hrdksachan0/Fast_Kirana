@@ -64,24 +64,31 @@ export function buildOrderFcmPayload(
   data: Record<string, string>,
   ttlSeconds = 600,
 ) {
+  const collapseId = data.orderId ? `order_${data.orderId}` : undefined
+
   return {
     notification: { title, body },
     data,
     android: {
-      priority: 'high',
+      priority: 'high' as const,
+      ttl: ttlSeconds * 1000,
+      ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
         channelId: 'fastkirana_alerts',
         sound: 'default',
         defaultSound: true,
         defaultVibrateTimings: true,
-        visibility: 'PUBLIC',
-        priority: 'HIGH',
+        visibility: 'PUBLIC' as const,
+        priority: 'HIGH' as const,
         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
       },
-      timeToLive: ttlSeconds,
     },
     apns: {
-      headers: { 'apns-priority': '10', 'apns-expiration': String(Math.floor(Date.now() / 1000) + ttlSeconds) },
+      headers: {
+        'apns-priority': '10',
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + ttlSeconds),
+        ...(collapseId ? { 'apns-collapse-id': collapseId } : {}),
+      },
       payload: {
         aps: {
           alert: { title, body },
@@ -93,6 +100,5 @@ export function buildOrderFcmPayload(
         },
       },
     },
-    collapseKey: data.orderId ? `order_${data.orderId}` : undefined,
   }
 }

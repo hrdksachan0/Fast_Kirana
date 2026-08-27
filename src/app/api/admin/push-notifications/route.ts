@@ -4,7 +4,7 @@ import { auth } from '@/auth'
 import { broadcastPushNotification } from '@/lib/push-notification'
 import { apiWriteLimiter } from '@/lib/rate-limit'
 import { requireAdmin } from '@/lib/auth-guard'
-import { buildOrderFcmPayload, cleanupInvalidTokens } from '@/lib/fcm-utils'
+import { buildOrderFcmPayload, cleanupInvalidTokens, sendTopicWithRetry } from '@/lib/fcm-utils'
 
 export async function GET(request: NextRequest) {
   const adminResult = await requireAdmin()
