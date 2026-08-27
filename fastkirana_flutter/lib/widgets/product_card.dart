@@ -604,8 +604,9 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProductImage(Product product, bool isFood) {
     var imgUrl = product.imageUrl?.trim() ?? '';
@@ -931,3 +932,82 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return '🍽️';
   }
 }
+
+class ProductCardSkeleton extends StatelessWidget {
+  final double? width;
+  final bool isCompact;
+
+  const ProductCardSkeleton({
+    super.key,
+    this.width,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: isCompact ? 100 : 118,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 80,
+            height: 10,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            height: 14,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 50,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Container(
+                width: 55,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
