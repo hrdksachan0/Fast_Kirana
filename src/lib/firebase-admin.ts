@@ -11,14 +11,18 @@ export function getFcmMessaging(): admin.messaging.Messaging | null {
     if (admin.apps.length === 0) {
       const projectId = process.env.FIREBASE_PROJECT_ID || FALLBACK_CREDENTIALS.projectId
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || FALLBACK_CREDENTIALS.clientEmail
-      let privateKey = (process.env.FIREBASE_PRIVATE_KEY || FALLBACK_CREDENTIALS.privateKey)?.trim()
+      let privateKey = (process.env.FIREBASE_PRIVATE_KEY || FALLBACK_CREDENTIALS.privateKey || '')?.trim()
       if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.substring(1, privateKey.length - 1)
       }
       if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
         privateKey = privateKey.substring(1, privateKey.length - 1)
       }
+      // Handle all possible \n escape formats: literal \\n, escaped \\\\n, etc.
+      privateKey = privateKey.replace(/\\\\n/g, '\n')
       privateKey = privateKey.replace(/\\n/g, '\n')
+
+      console.log('[Firebase Admin] Initializing with projectId:', projectId, 'clientEmail:', clientEmail, 'keyLength:', privateKey?.length, 'keyStart:', privateKey?.substring(0, 30))
 
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -27,10 +31,11 @@ export function getFcmMessaging(): admin.messaging.Messaging | null {
           privateKey,
         }),
       })
+      console.log('[Firebase Admin] Successfully initialized!')
     }
     return admin.messaging()
-  } catch (e) {
-    console.error('Firebase Admin getFcmMessaging error:', e)
+  } catch (e: any) {
+    console.error('Firebase Admin getFcmMessaging error:', e?.message || e)
     return null
   }
 }
