@@ -706,23 +706,48 @@ export async function PATCH(
 
           const broadcastPromises: Promise<any>[] = []
 
-          // 1. Broadcast to all matched phone topics
+          // 1. Direct device token push to customer's active devices (Instant 0-delay delivery)
+          const customerTokens = await prisma.fcmToken.findMany({
+            where: {
+              OR: [
+                ...(existingOrder.userId ? [{ userId: existingOrder.userId }] : []),
+                ...uniquePhones.map(p => ({ phone: p })),
+              ],
+            },
+            select: { token: true },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          })
+
+          for (const t of customerTokens) {
+            broadcastPromises.push(
+              fcmMessaging.send({
+                token: t.token,
+                notification: fcmPayload.notification,
+                data: dataPayload,
+                android: fcmPayload.android,
+                apns: fcmPayload.apns,
+              }).catch((err: any) => console.error('Customer direct token push error:', t.token.slice(0, 15), err?.message))
+            )
+          }
+
+          // 2. Broadcast to all matched phone topics
           for (const phone of uniquePhones) {
             broadcastPromises.push(
               sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
-                .catch(() => {})
+                .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
             )
           }
 
-          // 2. Broadcast to user topic
+          // 3. Broadcast to user topic
           if (existingOrder.userId) {
             broadcastPromises.push(
               sendTopicWithRetry(fcmMessaging, { topic: `user_${existingOrder.userId}`, ...fcmPayload })
-                .catch(() => {})
+                .catch((err: any) => console.error(`Topic user_${existingOrder.userId} push error:`, err?.message))
             )
           }
 
-          // 3. Broadcast to order topics (UUID and readableId)
+          // 4. Broadcast to order topics
           broadcastPromises.push(
             sendTopicWithRetry(fcmMessaging, { topic: `order_${existingOrder.id}`, ...fcmPayload })
               .catch(() => {})
@@ -734,24 +759,11 @@ export async function PATCH(
             )
           }
 
-          // 4. Multicast to all registered FCM device tokens with stale-token cleanup
-          const allDeviceTokens = await prisma.fcmToken.findMany({ select: { token: true } })
-          if (allDeviceTokens.length > 0) {
-            const tokens = allDeviceTokens.map(t => t.token)
-            for (let i = 0; i < tokens.length; i += 500) {
-              const chunk = tokens.slice(i, i + 500)
-              broadcastPromises.push(
-                fcmMessaging.sendEachForMulticast({
-                  tokens: chunk,
-                  notification: fcmPayload.notification,
-                  data: dataPayload,
-                  android: fcmPayload.android,
-                  apns: fcmPayload.apns,
-                }).then((resp: any) => cleanupInvalidTokens(chunk, resp.responses))
-                  .catch(() => {})
-              )
-            }
-          }
+          // 5. Broadcast to global topic
+          broadcastPromises.push(
+            sendTopicWithRetry(fcmMessaging, { topic: 'all_users', ...fcmPayload })
+              .catch(() => {})
+          )
 
           await Promise.allSettled(broadcastPromises)
         }
