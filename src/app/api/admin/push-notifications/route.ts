@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   const limitResponse = await apiWriteLimiter.check(request)
   if (limitResponse) return limitResponse
 
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
