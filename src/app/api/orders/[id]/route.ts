@@ -766,11 +766,7 @@ export async function PATCH(
             )
           }
 
-          // 5. Broadcast to global topic
-          broadcastPromises.push(
-            sendTopicWithRetry(fcmMessaging, { topic: 'all_users', ...fcmPayload })
-              .catch(() => {})
-          )
+          // Removed global 'all_users' broadcast — only the order's customer should be notified
 
           const fcmResults = await Promise.allSettled(broadcastPromises)
           const fcmDebug = {
@@ -817,7 +813,7 @@ export async function PATCH(
       console.error('Failed to emit SSE order update:', sseErr)
     }
 
-    return NextResponse.json({ ...updated[0], _fcmDebug: (globalThis as any).__fcmDebug || null })
+    return NextResponse.json(updated[0])
   } catch (error) {
     console.error('Order status update error:', error)
     return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 })
