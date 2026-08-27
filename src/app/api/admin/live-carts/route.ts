@@ -16,7 +16,7 @@ export async function GET(request: Request) {
           some: {} // has at least one item
         },
         updatedAt: {
-          gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // last 12 hours
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // last 24 hours
         }
       },
       include: {
@@ -92,18 +92,19 @@ export async function GET(request: Request) {
         }
       })
 
-      const defaultAddress = cart.user.addresses.find((a: any) => a.isDefault) || cart.user.addresses[0] || null
+      const userAddresses = cart.user?.addresses || []
+      const defaultAddress = userAddresses.find((a: any) => a.isDefault) || userAddresses[0] || null
 
       return {
         id: cart.id,
         userId: cart.userId,
-        userName: cart.user.name || 'Customer',
-        userEmail: cart.user.email,
-        userPhone: cart.user.phone || 'N/A',
+        userName: cart.user?.name || 'Customer',
+        userEmail: cart.user?.email || null,
+        userPhone: cart.user?.phone || 'N/A',
         updatedAt: cart.updatedAt,
         items,
         subtotal,
-        address: defaultAddress ? `${defaultAddress.houseNo}, ${defaultAddress.street}, ${defaultAddress.area}, ${defaultAddress.city} - ${defaultAddress.pincode}` : null,
+        address: defaultAddress ? `${defaultAddress.houseNo || ''}, ${defaultAddress.street || ''}, ${defaultAddress.area || ''}, ${defaultAddress.city || ''} - ${defaultAddress.pincode || ''}` : null,
         lat: defaultAddress ? defaultAddress.lat : null,
         lng: defaultAddress ? defaultAddress.lng : null
       }
