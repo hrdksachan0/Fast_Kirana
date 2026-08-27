@@ -17,6 +17,7 @@ import '../../providers/product_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/admin_login.dart';
 import '../admin/admin_dashboard.dart';
+import 'package:share_plus/share_plus.dart';
 import '../orders/orders_screen.dart';
 import 'address_book_screen.dart';
 import 'wishlist_screen.dart';
@@ -551,6 +552,22 @@ class ProfileScreen extends ConsumerWidget {
                       title: 'Help & 24x7 Support',
                       subtitle: '+91 70544 70303 · Ghatampur Care Team',
                       onTap: () => _showSupportModal(context),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.share_rounded,
+                      iconBg: const Color(0xFFFFFBEB),
+                      iconColor: const Color(0xFFD97706),
+                      title: 'Share FastKirana App',
+                      subtitle: 'Share 10-min delivery app with friends & family',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Share.share(
+                          '⚡ Order Groceries, Daily Essentials & Restaurant Food in Ghatampur delivered in 10-15 mins with FastKirana!\n\nDownload app now: https://www.fastkirana.in',
+                          subject: 'Download FastKirana App',
+                        );
+                      },
                     ),
 
                     // LOGOUT BUTTON (Only when logged in)

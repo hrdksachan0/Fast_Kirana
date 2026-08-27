@@ -447,12 +447,33 @@ export function AdminDashboard({
       console.warn('SSE connection failed:', e)
     }
 
-    // Initial load of live orders list (100% WebSockets driven - ZERO HTTP polling load on Vercel)
+    // Railway FastAPI Native WebSocket Connection
+    let railwayWs: WebSocket | null = null
+    try {
+      railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
+      railwayWs.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data)
+          if (payload.event === 'NEW_ORDER' || payload.event === 'ORDER_CREATED') {
+            toast.success(`🛎️ New Order Received!`)
+            playNewOrderChime()
+            debouncedRefresh()
+          } else if (payload.event === 'CART_UPDATE' || payload.event === 'CART_ITEM_ADDED') {
+            setCartsRefreshKey(prev => prev + 1)
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Railway WebSocket connection error:', e)
+    }
+
+    // Initial load of live orders list
     fetchLiveOrdersList()
 
     return () => {
       supabase.removeChannel(channel)
       if (sseSource) sseSource.close()
+      if (railwayWs) railwayWs.close()
       if (updateTimeout) clearTimeout(updateTimeout)
     }
   }, [isChimeMuted])
@@ -944,10 +965,12 @@ export function AdminDashboard({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
+      intervalId = setInterval(fetchCartsDetail, 3000) // Fast 3-second live refresh when viewing Live Ops Tracker
     }
 
     return () => {
       active = false
+      if (intervalId) clearInterval(intervalId)
     }
   }, [activeTab, cartsRefreshKey])
 
