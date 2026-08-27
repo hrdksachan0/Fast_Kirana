@@ -680,7 +680,7 @@ export async function PATCH(
 
         if (fcmTokens.length > 0) {
           const { fcmMessaging } = await import('@/lib/firebase-admin')
-          const fcmPayload: admin.messaging.Message = {
+          const fcmPayload: any = {
             notification: { title: statusTitle, body: statusBody },
             data: { orderId: id, status: status || '', screen: 'order-tracking' },
             android: {
@@ -699,10 +699,10 @@ export async function PATCH(
           }
 
           const fcmResult = await fcmMessaging.sendEachForMulticast({
-            tokens: fcmPayload.tokens as string[],
-            notification: fcmPayload.notification as admin.messaging.Notification,
+            tokens: (fcmPayload.tokens || [fcmPayload.token]) as string[],
+            notification: fcmPayload.notification,
             data: fcmPayload.data as Record<string, string>,
-            android: fcmPayload.android as admin.messaging.AndroidConfig,
+            android: fcmPayload.android,
           })
 
           // Clean up invalid tokens

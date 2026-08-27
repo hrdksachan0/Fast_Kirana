@@ -55,20 +55,16 @@ export async function POST(request: NextRequest) {
       tokens = [fcmToken]
       payload.token = fcmToken
     } else if (target === 'userId' && userId) {
-      // Send to all tokens of a specific user
       const fcmRecords = await prisma.fcmToken.findMany({
         where: { userId },
         select: { token: true },
       })
       tokens = fcmRecords.map((r) => r.token)
-      payload.tokens = tokens
     } else if (target === 'all') {
-      // Broadcast to all FCM tokens
       const allTokens = await prisma.fcmToken.findMany({
         select: { token: true },
       })
       tokens = allTokens.map((r) => r.token)
-      payload.tokens = tokens
     } else {
       return NextResponse.json(
         { error: 'Invalid target. Use "all", "userId", or "token"' },
@@ -76,17 +72,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const payload: any = {
+      notification: { title, body: notificationBody },
+      data: {
+        ...data,
+        title,
+        body: notificationBody,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'fastkirana_alerts',
+          sound: 'default',
+        },
+      },
+    }
+
+    let successCount = 0
+    let failureCount = 0
+
+    if (!fcmMessaging) {
+      return NextResponse.json({ error: 'Firebase Admin messaging is not initialized' }, { status: 500 })
+    }
+
     if (tokens.length === 0) {
       return NextResponse.json({ success: true, successCount: 0, failureCount: 0, message: 'No tokens found' })
     }
 
-    // Firebase Admin SDK v12 uses sendAll() for multicasting
     const response = await fcmMessaging.sendEachForMulticast({
       tokens,
-      notification: payload.notification as admin.messaging.Notification,
+      notification: payload.notification,
       data: payload.data as Record<string, string>,
-      android: payload.android as admin.messaging.AndroidConfig,
-      apns: payload.apns as admin.messaging.ApnsConfig,
+      android: payload.android,
+      apns: payload.apns,
     })
 
     successCount = response.successCount
