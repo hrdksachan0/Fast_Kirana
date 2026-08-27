@@ -206,21 +206,34 @@ class Order {
     }
 
     String? parseCustomerAddress() {
+      String rawAddr = '';
       if (json['customerAddress'] != null && json['customerAddress'].toString().isNotEmpty) {
-        return json['customerAddress'].toString();
-      }
-      if (json['address'] is Map) {
+        rawAddr = json['customerAddress'].toString();
+      } else if (json['address'] is Map) {
         final addr = json['address'] as Map;
         final parts = [
           addr['houseNo'],
           addr['street'],
           addr['area'],
+          addr['landmark'],
           addr['city'],
           addr['pincode'],
         ].where((p) => p != null && p.toString().trim().isNotEmpty).map((p) => p.toString().trim()).toList();
-        if (parts.isNotEmpty) return parts.join(', ');
+        rawAddr = parts.join(', ');
+      } else if (json['address'] != null) {
+        rawAddr = json['address'].toString();
       }
-      return json['address']?.toString();
+
+      if (rawAddr.isEmpty) return null;
+
+      // Clean up stray dots, commas, and empty placeholders (e.g. '.,', ' . ', 'null')
+      final cleaned = rawAddr
+          .split(',')
+          .map((part) => part.replaceAll(RegExp(r'^[.\s,\-]+|[.\s,\-]+$'), '').trim())
+          .where((part) => part.isNotEmpty && part != '.' && part != '..' && part != 'null' && part != 'undefined')
+          .join(', ');
+
+      return cleaned.isNotEmpty ? cleaned : rawAddr;
     }
 
     DateTime parseDate(dynamic val) {

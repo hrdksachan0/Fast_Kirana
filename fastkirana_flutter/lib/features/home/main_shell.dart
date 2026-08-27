@@ -116,6 +116,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     }
   }
 
+  DateTime? _lastBackPressTime;
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedTabProvider);
@@ -131,17 +133,53 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     final cartAsync = ref.watch(cartProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
-      backgroundColor: AppDesignSystem.background,
-      body: ResponsiveContainer(
-        maxWidth: Responsive.wideMaxContentWidth,
-        fillHeight: true,
-        child: NotificationListener<UserScrollNotification>(
-          onNotification: (notification) {
-            _onUserScroll(notification);
-            return false;
-          },
-          child: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final currentTab = ref.read(selectedTabProvider);
+        if (currentTab != 0) {
+          // If on Search, Categories, or Account -> jump back to Home tab
+          HapticFeedback.lightImpact();
+          ref.read(selectedTabProvider.notifier).state = 0;
+          return;
+        }
+
+        // On Home tab -> require double back press to exit app
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Press back again to exit FastKirana',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+          return;
+        }
+
+        // User confirmed exit
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: AppDesignSystem.background,
+        body: ResponsiveContainer(
+          maxWidth: Responsive.wideMaxContentWidth,
+          fillHeight: true,
+          child: NotificationListener<UserScrollNotification>(
+            onNotification: (notification) {
+              _onUserScroll(notification);
+              return false;
+            },
+            child: Stack(
             children: [
               IndexedStack(
                 index: selectedIndex,
@@ -172,8 +210,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildLiquidBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
     final navItems = [

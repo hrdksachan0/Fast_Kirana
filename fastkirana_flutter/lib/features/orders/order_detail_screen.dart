@@ -324,8 +324,8 @@ class OrderDetailScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     isPickupOrder
-                        ? 'Ghatampur Darkstore Hub, Main Market Road, Ghatampur, UP 209206'
-                        : 'Ghatampur Market, Kanpur Nagar, UP - 209206',
+                        ? 'FastKirana Express Darkstore Hub'
+                        : (order.customerAddress ?? 'Express Delivery Address'),
                     style: GoogleFonts.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,

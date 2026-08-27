@@ -8,7 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/responsive.dart';
+import '../../core/config/app_config.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
@@ -31,6 +34,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   bool _sseConnected = false;
   Timer? _sseReconnectTimer;
   StreamSubscription<String>? _sseLineSubscription;
+  Razorpay? _razorpay;
+  bool _isProcessingPayment = false;
 
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color brandGreen = Color(0xFF00A344);
@@ -46,6 +51,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   @override
   void initState() {
     super.initState();
+    _initRazorpay();
     _fetchLiveOrder();
     _connectSSE();
     _pollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
@@ -53,11 +59,127 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     });
   }
 
+  void _initRazorpay() {
+    try {
+      _razorpay = Razorpay();
+      _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay?.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    } catch (e) {
+      debugPrint('Razorpay init error: $e');
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    HapticFeedback.heavyImpact();
+    setState(() => _isProcessingPayment = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch('/api/orders/${widget.orderId}', data: {
+        'paymentStatus': 'PAID',
+        'paymentMethod': 'UPI',
+      });
+      await _fetchLiveOrder();
+      if (mounted) {
+        setState(() => _isProcessingPayment = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: brandGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '🎉 Payment Received! Order #${widget.orderId} is now PAID.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating paid status on backend: $e');
+      if (mounted) setState(() => _isProcessingPayment = false);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    HapticFeedback.lightImpact();
+    if (mounted) {
+      setState(() => _isProcessingPayment = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: primaryRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text(
+            'Payment Incomplete: ${response.message ?? "Transaction cancelled"}',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Wallet Selected: ${response.walletName}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _payOrderOnline() async {
+    final grandTotal = _order?.total ?? 0.0;
+    if (grandTotal <= 0) return;
+
+    HapticFeedback.lightImpact();
+    final prefs = await SharedPreferences.getInstance();
+    final phone = _order?.customerPhone ?? prefs.getString('user_phone') ?? '';
+    final email = prefs.getString('user_email') ?? 'customer@fastkirana.in';
+
+    final options = {
+      'key': AppConfig.razorpayKeyId,
+      'amount': (grandTotal * 100).toInt(),
+      'name': 'FastKirana Express',
+      'description': 'Order Payment #${_order?.readableId ?? widget.orderId}',
+      'prefill': {
+        'contact': phone,
+        'email': email,
+      },
+      'theme': {
+        'color': '#00A344',
+      },
+    };
+
+    try {
+      _razorpay?.open(options);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: primaryRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text('Could not open Razorpay gateway: $e'),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _pollTimer?.cancel();
     _sseReconnectTimer?.cancel();
     _closeSSE();
+    _razorpay?.clear();
     super.dispose();
   }
 
@@ -366,17 +488,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: brandGreen,
-                  content: const Text('Opening secure Razorpay UPI payment gateway...'),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              );
-            },
+            onTap: _isProcessingPayment ? null : _payOrderOnline,
             child: Container(
               height: 40,
               decoration: BoxDecoration(
@@ -384,17 +496,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [BoxShadow(color: const Color(0xFF00A344).withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.payment_rounded, color: Colors.white, size: 15),
-                  const SizedBox(width: 6),
-                  Text('Pay ₹${grandTotal.toInt()} Online Now',
-                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.2)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
-                ],
-              ),
+              child: _isProcessingPayment
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.payment_rounded, color: Colors.white, size: 15),
+                        const SizedBox(width: 6),
+                        Text('Pay ₹${grandTotal.toInt()} Online Now',
+                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.2)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -585,9 +705,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       statusBadgeText = 'PACKED';
     }
 
-    final destination = _order?.customerAddress ?? 'Ghatampur Express Zone';
-    final riderName = _order?.deliveryBoyName ?? 'Delivery Partner Assigned';
-    final riderPhone = _order?.deliveryBoyPhone ?? '+917054470303';
+    final destination = _order?.customerAddress ?? 'Express Delivery Address';
+    final riderName = _order?.deliveryBoyName ?? 'Delivery Executive';
+    final riderPhone = _order?.deliveryBoyPhone ?? '+919696503759';
     final cleanPhone = riderPhone.replaceAll(RegExp(r'[^0-9+]'), '');
 
     return Container(
@@ -620,17 +740,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(6), border: Border.all(color: const Color(0xFFE2E8F0))),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('', style: TextStyle(fontSize: 11)),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text('Delivery to: $destination',
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(Icons.location_on_rounded, size: 13, color: primaryRed),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Delivery to: $destination',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                      height: 1.3,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -767,19 +900,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   Widget _buildDeliveryExecutiveCard(String riderName, String cleanPhone) {
-    const defaultRiderName = 'Delivery Partner (FastKirana Express)';
-    const defaultRiderPhone = '+91 96965 03759';
+    const defaultRiderName = 'Delivery Executive (FastKirana)';
     const defaultRiderTel = '+919696503759';
 
-    final effectiveName = riderName.isNotEmpty && riderName != 'Delivery Partner Assigned'
+    final effectiveName = (riderName.isNotEmpty && riderName != 'Delivery Partner Assigned')
         ? riderName
         : defaultRiderName;
-    final effectivePhone = cleanPhone.isNotEmpty && cleanPhone != '7054470303'
-        ? cleanPhone
-        : defaultRiderTel;
-    final displayPhone = effectivePhone.startsWith('+91')
-        ? '+91 ${effectivePhone.replaceFirst('+91', '').trim()}'
-        : '+91 $effectivePhone';
+    final rawDigits = cleanPhone.replaceAll(RegExp(r'\D'), '');
+    final last10 = (rawDigits.length >= 10 && !rawDigits.contains('7054470303'))
+        ? rawDigits.substring(rawDigits.length - 10)
+        : '9696503759';
+    final displayPhone = '+91 $last10';
+    final telUri = 'tel:+91$last10';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -850,7 +982,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              launchUrl(Uri.parse('tel:$effectivePhone'));
+              launchUrl(Uri.parse(telUri));
             },
             child: Container(
               height: 38,
@@ -893,7 +1025,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   Widget _buildDeliveryDestinationCard() {
     final destination = (_order?.customerAddress != null && _order!.customerAddress!.trim().isNotEmpty)
         ? _order!.customerAddress!
-        : 'Ghatampur Delivery Zone, Kanpur Nagar - 209206';
+        : 'FastKirana Express Delivery Zone';
 
     return Container(
       padding: const EdgeInsets.all(14),
