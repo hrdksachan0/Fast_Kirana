@@ -10,6 +10,7 @@ import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/battery_optimization_service.dart';

@@ -436,25 +436,24 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                 // Hero Brand Icon
                 Center(
                   child: Container(
-                    width: 64,
-                    height: 64,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF1F2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFFE4E6), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryRed.withValues(alpha: 0.15),
+                          blurRadius: 18,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        child: const FastKiranaLogoWidget(size: 44),
-                      ),
+                      child: const BrandLogo(size: 38, radius: 10),
                     ),
                   ),
-                ).animate().fadeIn(duration: 350.ms).scale(
-                      begin: const Offset(0.9, 0.9),
-                      end: const Offset(1, 1),
-                      curve: Curves.easeOutBack,
-                    ),
+                ).animate().fadeIn(duration: 350.ms),
 
                 const SizedBox(height: 18),
 
@@ -467,7 +466,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         style: GoogleFonts.inter(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
-                          color: slateDark,
+                          color: const Color(0xFF0F172A),
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -477,15 +476,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: slateMuted,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: Row(
@@ -498,7 +497,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: slateDark,
+                                color: const Color(0xFF0F172A),
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -508,7 +507,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                               child: Text(
                                 'Change',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF2563EB),
                                 ),
@@ -592,12 +591,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                   ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.95, 0.95)),
                 ],
 
-                // 6 Clean, Modern Tactile Pin Cells backed by Unified Input
+                // 6 Clean Tactile Pin Cells
                 AutofillGroup(
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Visual 6-Cell Row (IgnorePointer so all taps land directly on the full-size native TextField)
+                      // Visual 6-Cell Row
                       IgnorePointer(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -607,8 +606,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                             final isCurrent = index == text.length && _otpFocusNode.hasFocus;
 
                             return Container(
-                              width: 48,
-                              height: 56,
+                              width: 46,
+                              height: 58,
                               margin: EdgeInsets.only(
                                 right: index == 5 ? 0 : 8,
                               ),
@@ -616,24 +615,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                 color: isCurrent
                                     ? Colors.white
                                     : (hasChar ? Colors.white : const Color(0xFFF8FAFC)),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isCurrent
                                       ? primaryRed
                                       : (hasChar ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0)),
-                                  width: isCurrent ? 2.0 : (hasChar ? 1.5 : 1.2),
+                                  width: isCurrent ? 1.8 : (hasChar ? 1.5 : 1.0),
                                 ),
                                 boxShadow: [
                                   if (isCurrent)
                                     BoxShadow(
-                                      color: primaryRed.withValues(alpha: 0.18),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  if (hasChar && !isCurrent)
-                                    BoxShadow(
-                                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                                      blurRadius: 6,
+                                      color: primaryRed.withValues(alpha: 0.16),
+                                      blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
                                 ],
@@ -645,7 +638,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                         style: GoogleFonts.inter(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w900,
-                                          color: slateDark,
+                                          color: const Color(0xFF0F172A),
                                         ),
                                       )
                                     : (isCurrent
@@ -662,15 +655,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                                 end: 1.0,
                                               )
                                         : Container(
-                                            width: 7,
-                                            height: 7,
+                                            width: 6,
+                                            height: 6,
                                             decoration: const BoxDecoration(
                                               color: Color(0xFFCBD5E1),
                                               shape: BoxShape.circle,
                                             ),
                                           )),
                               ),
-                            ).animate().fadeIn(duration: 250.ms, delay: (80 + index * 25).ms);
+                            ).animate().fadeIn(duration: 250.ms, delay: (60 + index * 20).ms);
                           }),
                         ),
                       ),
