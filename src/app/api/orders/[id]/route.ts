@@ -751,28 +751,10 @@ export async function PATCH(
             }
           }
 
-          // Removed global 'all_users' broadcast — only the order's customer should be notified
-
-          const fcmResults = await Promise.allSettled(broadcastPromises)
-          const fcmDebug = {
-            tokensFound: customerTokens.length,
-            tokensSent: customerTokens.map((t: any) => t.token.slice(0, 15)),
-            phones: uniquePhones,
-            userId: existingOrder.userId,
-            results: fcmResults.map((r: any, i: number) => ({
-              idx: i,
-              status: r.status,
-              value: r.status === 'fulfilled' ? String(r.value)?.slice(0, 60) : undefined,
-              error: r.status === 'rejected' ? r.reason?.message?.slice(0, 100) : undefined,
-            })),
-          }
-          console.log('[FCM DEBUG]', JSON.stringify(fcmDebug))
-          // Store for response
-          ;(globalThis as any).__fcmDebug = fcmDebug
+          await Promise.allSettled(broadcastPromises)
         }
       } catch (fcmErr: any) {
         console.error('Universal FCM notification error:', fcmErr)
-        ;(globalThis as any).__fcmDebug = { error: fcmErr?.message }
       }
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
