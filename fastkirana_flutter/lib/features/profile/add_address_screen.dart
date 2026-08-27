@@ -458,7 +458,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        _isServiceable ? 'Order Delivers Here • 10-15 Min' : 'Outside Service Zone',
+                        _isServiceable ? 'Order Delivers Here' : 'Outside Service Zone',
                         style: GoogleFonts.inter(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
