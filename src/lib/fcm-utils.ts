@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { prisma } from '@/lib/prisma'
 
 /**
  * Retry wrapper for FCM sends. Retries on network/server errors only.
