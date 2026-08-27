@@ -278,7 +278,6 @@ export async function PATCH(
     }
 
     const existingOrder = existingOrders[0]
-    const userRole = session.user.role
     const isAdmin = userRole === 'ADMIN'
 
     // If only paymentStatus is being updated
@@ -308,13 +307,13 @@ export async function PATCH(
       }
       return NextResponse.json({ success: true, paymentStatus, paymentMethod: validPm })
     }
-    const assignedRestaurantId = (session.user as any)?.assignedRestaurantId
+    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
     const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
 
     const isDelivery = userRole === 'DELIVERY'
     const isPicker = userRole === 'PICKER'
     const isRestaurantStaff = (userRole === 'CHEF' || userRole === 'RESTAURANT_OWNER')
-    const isOwner = existingOrder.userId === session.user.id
+    const isOwner = existingOrder.userId === userId
 
     if (!isOwner && !isAdmin && !isDelivery && !isPicker && !isRestaurantStaff) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -351,18 +350,18 @@ export async function PATCH(
     // Claim checks / locking mechanisms
     if (status === 'CONFIRMED') {
       if (isRestaurantOrder) {
-        if (existingOrder.assignedChefId && existingOrder.assignedChefId !== session.user.id) {
+        if (existingOrder.assignedChefId && existingOrder.assignedChefId !== userId) {
           return NextResponse.json({ error: 'Order is already claimed by another chef' }, { status: 409 })
         }
       } else {
-        if (existingOrder.assignedPickerId && existingOrder.assignedPickerId !== session.user.id) {
+        if (existingOrder.assignedPickerId && existingOrder.assignedPickerId !== userId) {
           return NextResponse.json({ error: 'Order is already claimed by another picker' }, { status: 409 })
         }
       }
     }
 
     if (status === 'SHIPPED') {
-      if (existingOrder.deliveryUserId && existingOrder.deliveryUserId !== session.user.id) {
+      if (existingOrder.deliveryUserId && existingOrder.deliveryUserId !== userId) {
         return NextResponse.json({ error: 'Order is already claimed by another delivery rider' }, { status: 409 })
       }
     }
@@ -512,7 +511,7 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "deliveryUserId" = ${session.user.id},
+              "deliveryUserId" = ${userId},
               "shippedAt" = COALESCE("shippedAt", NOW()),
               "updatedAt" = NOW() 
           WHERE id = ${id}
@@ -532,11 +531,11 @@ export async function PATCH(
         estimatedDeliveryVal = new Date(Date.now() + parseInt(prepTime) * 60 * 1000)
       }
 
-      if (session.user.role === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
+      if (userRole === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "assignedChefId" = ${session.user.id},
+              "assignedChefId" = ${userId},
               "confirmedAt" = NOW(),
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
@@ -546,7 +545,7 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "assignedPickerId" = ${session.user.id},
+              "assignedPickerId" = ${userId},
               "confirmedAt" = NOW(),
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
