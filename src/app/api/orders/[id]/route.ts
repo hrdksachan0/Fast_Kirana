@@ -707,11 +707,18 @@ export async function PATCH(
           const broadcastPromises: Promise<any>[] = []
 
           // 1. Direct device token push to customer's active devices (Instant 0-delay delivery)
+          const targetUserIds = [existingOrder.userId, fullOrder?.userId].filter(Boolean) as string[]
           const customerTokens = await prisma.fcmToken.findMany({
             where: {
               OR: [
-                ...(existingOrder.userId ? [{ userId: existingOrder.userId }] : []),
-                ...(uniquePhones.length > 0 ? [{ user: { phone: { in: uniquePhones } } }] : []),
+                ...(targetUserIds.length > 0 ? [{ userId: { in: targetUserIds } }] : []),
+                ...(uniquePhones.length > 0
+                  ? [
+                      { user: { phone: { in: uniquePhones } } },
+                      { user: { phone: { in: uniquePhones.map(p => `+91${p}`) } } },
+                      { user: { phone: { in: uniquePhones.map(p => `+91 ${p}`) } } },
+                    ]
+                  : []),
               ],
             },
             select: { token: true },

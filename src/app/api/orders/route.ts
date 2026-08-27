@@ -1059,6 +1059,43 @@ export async function POST(request: NextRequest) {
                 dataPayload,
               )
 
+              // 1. Direct device token push to customer's active devices
+              const customerTokens = await prisma.fcmToken.findMany({
+                where: {
+                  OR: [
+                    ...(order.userId ? [{ userId: order.userId }] : []),
+                    ...(cleanPhone ? [{ user: { phone: { contains: cleanPhone } } }] : []),
+                  ],
+                },
+                select: { token: true },
+              })
+              for (const t of customerTokens) {
+                fcmMessaging.send({ token: t.token, ...custPayload }).catch(() => {})
+              }
+
+              // 2. Direct device token push to Admin & Staff workers
+              const staffPayload = buildOrderFcmPayload(
+                isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
+                `New order #${displayId} of ₹${order.total} has been placed.`,
+                {
+                  title: isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
+                  body: `New order #${displayId} of ₹${order.total} has been placed.`,
+                  orderId: order.id,
+                  readableId: displayId,
+                  status: order.status,
+                  screen: 'admin-orders',
+                  timestamp: Date.now().toString(),
+                }
+              )
+              const staffTokens = await prisma.fcmToken.findMany({
+                where: { user: { role: { in: ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF'] } } },
+                select: { token: true },
+              })
+              for (const t of staffTokens) {
+                fcmMessaging.send({ token: t.token, ...staffPayload }).catch(() => {})
+              }
+
+              // 3. Topic broadcasts
               if (cleanPhone && cleanPhone.length === 10) {
                 await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
               }

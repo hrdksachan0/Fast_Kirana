@@ -71,7 +71,7 @@ export function buildOrderFcmPayload(
     data,
     android: {
       priority: 'high' as const,
-      ttl: ttlSeconds * 1000,
+      ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
         channelId: 'fastkirana_alerts',
