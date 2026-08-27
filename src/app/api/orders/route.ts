@@ -1059,7 +1059,7 @@ export async function POST(request: NextRequest) {
                 dataPayload,
               )
 
-              // 1. Direct device token push to customer's active devices
+              // 1. Direct device token push to customer's latest active device (Exact 1 push)
               const customerTokens = await prisma.fcmToken.findMany({
                 where: {
                   OR: [
@@ -1068,9 +1068,17 @@ export async function POST(request: NextRequest) {
                   ],
                 },
                 select: { token: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
               })
-              for (const t of customerTokens) {
-                fcmMessaging.send({ token: t.token, ...custPayload }).catch(() => {})
+
+              if (customerTokens.length > 0) {
+                fcmMessaging.send({ token: customerTokens[0].token, ...custPayload }).catch(() => {})
+              } else {
+                // Fallback to topic only if no active token found in DB
+                if (cleanPhone && cleanPhone.length === 10) {
+                  await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
+                }
               }
 
               // 2. Direct device token push to Admin & Staff workers
@@ -1090,17 +1098,12 @@ export async function POST(request: NextRequest) {
               const staffTokens = await prisma.fcmToken.findMany({
                 where: { user: { role: { in: ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF'] } } },
                 select: { token: true },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
               })
-              for (const t of staffTokens) {
-                fcmMessaging.send({ token: t.token, ...staffPayload }).catch(() => {})
-              }
-
-              // 3. Topic broadcasts
-              if (cleanPhone && cleanPhone.length === 10) {
-                await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
-              }
-              if (order.userId) {
-                await sendTopicWithRetry(fcmMessaging, { topic: `user_${order.userId}`, ...custPayload }).catch(() => {})
+              const uniqueStaffTokens = Array.from(new Set(staffTokens.map(t => t.token)))
+              for (const token of uniqueStaffTokens) {
+                fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
               }
             }
           } catch (fcmErr) {

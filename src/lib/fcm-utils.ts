@@ -81,6 +81,7 @@ export function buildOrderFcmPayload(
         visibility: 'PUBLIC' as const,
         priority: 'HIGH' as const,
         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+        ...(collapseId ? { tag: collapseId } : {}),
       },
     },
     apns: {

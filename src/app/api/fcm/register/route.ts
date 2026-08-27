@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Clean up old stale tokens for this user so only 1 active device token remains
+    await prisma.fcmToken.deleteMany({
+      where: {
+        userId: resolvedUserId,
+        token: { not: token },
+      },
+    }).catch(() => {})
+
     // Mirror to PushSubscription table so admin panel alert checks always pass
     const existingSub = await prisma.pushSubscription.findFirst({
       where: { endpoint: token }

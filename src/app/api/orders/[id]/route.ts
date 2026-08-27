@@ -723,7 +723,7 @@ export async function PATCH(
             },
             select: { token: true },
             orderBy: { createdAt: 'desc' },
-            take: 5,
+            take: 1,
           })
 
           const uniqueTokens = Array.from(new Set(customerTokenRecords.map(t => t.token)))
