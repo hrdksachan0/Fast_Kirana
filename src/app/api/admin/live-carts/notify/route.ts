@@ -67,9 +67,18 @@ export async function POST(request: NextRequest) {
           },
         }
 
-        // A. Send to user's registered FCM tokens
+        // A. Send to user's registered FCM tokens (including any matching phone records)
+        let userIds = [userId]
+        if (cleanPhone.length === 10) {
+          const matchingUsers = await prisma.user.findMany({
+            where: { phone: { contains: cleanPhone } },
+            select: { id: true },
+          })
+          userIds = Array.from(new Set([...userIds, ...matchingUsers.map(u => u.id)]))
+        }
+
         const fcmRecords = await prisma.fcmToken.findMany({
-          where: { userId },
+          where: { userId: { in: userIds } },
           select: { token: true }
         })
 

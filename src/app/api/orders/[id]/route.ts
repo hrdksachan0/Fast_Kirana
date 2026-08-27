@@ -673,16 +673,38 @@ export async function PATCH(
 
       // FCM push notification for mobile app customers
       try {
+        const customer = await prisma.user.findUnique({
+          where: { id: existingOrder.userId },
+          select: { phone: true }
+        })
+        const cleanPhone = customer?.phone ? getLast10Digits(customer.phone) : ''
+        
+        let userIds = [existingOrder.userId]
+        if (cleanPhone && cleanPhone.length === 10) {
+          const matchingUsers = await prisma.user.findMany({
+            where: { phone: { contains: cleanPhone } },
+            select: { id: true },
+          })
+          userIds = Array.from(new Set([...userIds, ...matchingUsers.map(u => u.id)]))
+        }
+
         const fcmTokens = await prisma.fcmToken.findMany({
-          where: { userId: existingOrder.userId },
+          where: { userId: { in: userIds } },
           select: { token: true },
         })
 
-        if (fcmTokens.length > 0) {
-          const { fcmMessaging } = await import('@/lib/firebase-admin')
+        const { fcmMessaging } = await import('@/lib/firebase-admin')
+        if (fcmMessaging) {
           const fcmPayload: any = {
             notification: { title: statusTitle, body: statusBody },
-            data: { orderId: id, status: status || '', screen: 'order-tracking' },
+            data: {
+              title: statusTitle,
+              body: statusBody,
+              orderId: id,
+              status: status || '',
+              screen: 'order-tracking',
+              url: `/orders/${id}`,
+            },
             android: {
               priority: 'high',
               notification: {
@@ -691,19 +713,25 @@ export async function PATCH(
                 clickAction: 'FLUTTER_NOTIFICATION_CLICK',
               },
             },
-          }
-          if (fcmTokens.length === 1) {
-            fcmPayload.token = fcmTokens[0].token
-          } else {
-            fcmPayload.tokens = fcmTokens.map(t => t.token)
+            apns: {
+              payload: {
+                aps: {
+                  sound: 'default',
+                  badge: 1,
+                },
+              },
+            },
           }
 
-          if (fcmMessaging) {
+          // A. Send directly to all registered tokens
+          if (fcmTokens.length > 0) {
+            const tokens = fcmTokens.map(t => t.token)
             const fcmResult = await fcmMessaging.sendEachForMulticast({
-              tokens: (fcmPayload.tokens || [fcmPayload.token]) as string[],
+              tokens,
               notification: fcmPayload.notification,
               data: fcmPayload.data as Record<string, string>,
               android: fcmPayload.android,
+              apns: fcmPayload.apns,
             })
 
             // Clean up invalid tokens
@@ -712,7 +740,7 @@ export async function PATCH(
               if (!resp.success) {
                 const errCode = resp.error?.code
                 if (errCode === 'messaging/registration-token-not-registered' || errCode === 'messaging/invalid-argument') {
-                  invalidTokens.push(fcmTokens[idx].token)
+                  invalidTokens.push(tokens[idx])
                 }
               }
             })
@@ -720,6 +748,26 @@ export async function PATCH(
               await prisma.fcmToken.deleteMany({ where: { token: { in: invalidTokens } } })
             }
           }
+
+          // B. Broadcast to phone topic for instant fallback
+          if (cleanPhone && cleanPhone.length === 10) {
+            await fcmMessaging.send({
+              topic: `phone_${cleanPhone}`,
+              ...fcmPayload
+            }).catch(() => {})
+          }
+
+          // C. Broadcast to user topic
+          await fcmMessaging.send({
+            topic: `user_${existingOrder.userId}`,
+            ...fcmPayload
+          }).catch(() => {})
+
+          // D. Broadcast to order topic
+          await fcmMessaging.send({
+            topic: `order_${id}`,
+            ...fcmPayload
+          }).catch(() => {})
         }
       } catch (fcmErr) {
         console.error('FCM notification error:', fcmErr)
