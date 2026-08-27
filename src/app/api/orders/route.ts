@@ -175,12 +175,14 @@ export async function POST(request: NextRequest) {
     if (deliveryMethod === 'DELIVERY') {
       const p = (address.pincode || '').trim().replace(/\s+/g, '')
       const serviceablePincode = (resolvePincode(settingsMap) || '209206').replace(/\s+/g, '')
-      if (!p || p !== serviceablePincode) {
-        return NextResponse.json({ error: `Selected address is outside our delivery zone. FastKirana delivers strictly to Ghatampur (Pincode: ${serviceablePincode}).` }, { status: 400 })
+      const allowedPincodes = [serviceablePincode, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+      if (p && !allowedPincodes.includes(p) && !/^\d{6}$/.test(p)) {
+        return NextResponse.json({ error: `Selected address pincode (${p}) is outside our delivery zone.` }, { status: 400 })
       }
       const c = (address.city || '').trim().toLowerCase()
-      if (!c.includes('ghatampur')) {
-        return NextResponse.json({ error: 'Selected address city is outside our delivery zone. Delivery is available in Ghatampur only.' }, { status: 400 })
+      const allowedCities = ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+      if (c && !allowedCities.some(cityKeyword => c.includes(cityKeyword))) {
+        return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
       }
 
       // Calculate distance if address has GPS coordinates

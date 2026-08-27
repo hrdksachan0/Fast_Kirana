@@ -385,7 +385,7 @@ class ProfileScreen extends ConsumerWidget {
                   end: Alignment.bottomRight,
                   colors: [Color(0xFFE11D48), Color(0xFFDC2626), Color(0xFF991B1B)],
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x33DC2626),
@@ -397,7 +397,7 @@ class ProfileScreen extends ConsumerWidget {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
                   child: user == null
                       ? _buildGuestHeader(context)
                       : _buildUserHeader(context, ref, user),
@@ -409,7 +409,7 @@ class ProfileScreen extends ConsumerWidget {
           // 2. Quick 3-Column Shortcut Strip (Connected to Real DB & Stores)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Row(
                 children: [
                   _buildShortcutCard(
@@ -440,90 +440,19 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
-          // 3. FastClub / Benefits Banner
+          // 3. Grouped Settings & Action Menu (World-Class Clean Tiles)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF59E0B),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.electric_bolt_rounded, color: Colors.white, size: 16),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'FastKirana Express Club',
-                            style: GoogleFonts.inter(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF92400E),
-                            ),
-                          ),
-                          Text(
-                            'Free Express Delivery on orders above ₹199',
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFB45309),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD97706),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'ACTIVE',
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 4. Grouped Settings & Action Menu (World-Class Clean Tiles)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 140),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 12,
+                      color: const Color(0xFF0F172A).withOpacity(0.04),
+                      blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
                   ],
@@ -628,92 +557,108 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildGuestHeader(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(Icons.person_rounded, size: 26, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome to FastKirana',
+                      style: GoogleFonts.inter(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Log in for express delivery & best offers',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          child: const Center(
-            child: Icon(Icons.person_rounded, size: 30, color: Colors.white),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Welcome to FastKirana',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.2,
-                    ),
+          const SizedBox(height: 14),
+          Bounceable(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                FadeSlideRoute(page: const LoginScreen()),
+              );
+            },
+            child: Container(
+              height: 44,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
-                  const SizedBox(width: 4),
-                  const Text('🛍️', style: TextStyle(fontSize: 15)),
                 ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                'Log in for express fast delivery',
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Bounceable(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              FadeSlideRoute(page: const LoginScreen()),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8.5),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Text(
-              'LOGIN',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFFDC2626),
-                letterSpacing: 0.6,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Login / Sign Up',
+                    style: GoogleFonts.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      color: primaryRed,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_rounded, color: primaryRed, size: 16),
+                ],
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

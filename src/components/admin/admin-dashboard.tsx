@@ -433,21 +433,12 @@ export function AdminDashboard({
       console.warn('SSE connection failed:', e)
     }
 
-    // Fallback polling every 10 seconds (only if tab is visible)
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchLiveOrdersList()
-        setOrderRefreshKey(prev => prev + 1)
-      }
-    }, 10000)
-
-    // Initial load of live orders list
+    // Initial load of live orders list (No HTTP polling loop - 100% WebSocket/SSE driven)
     fetchLiveOrdersList()
 
     return () => {
       supabase.removeChannel(channel)
       if (sseSource) sseSource.close()
-      clearInterval(interval)
       if (updateTimeout) clearTimeout(updateTimeout)
     }
   }, [isChimeMuted])
@@ -939,12 +930,10 @@ export function AdminDashboard({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 30000) // Poll every 30 seconds
     }
 
     return () => {
       active = false
-      if (intervalId) clearInterval(intervalId)
     }
   }, [activeTab, cartsRefreshKey])
 
