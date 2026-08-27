@@ -77,16 +77,16 @@ export const syncCartSchema = z.object({
   items: z.array(z.object({
     productId: z.string().min(1),
     quantity: z.union([z.number(), z.string()]).optional(),
-    selectedVariant: z.string().optional(),
-    notes: z.string().optional(),
+    selectedVariant: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
   })).optional().default([]),
 })
 
 export const addToCartSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
   quantity: z.coerce.number().int().positive().optional().default(1),
-  selectedVariant: z.string().optional(),
-  notes: z.string().optional(),
+  selectedVariant: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 // ── Product Schemas ─────────────────────────────────────────────────

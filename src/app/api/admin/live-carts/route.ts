@@ -9,11 +9,14 @@ export async function GET(request: Request) {
   const session = adminResult.session
 
   try {
-    // Fetch all active carts that have at least one item
+    // Fetch active carts that have at least one item, updated in the past 12 hours
     const carts = await prisma.cart.findMany({
       where: {
         items: {
           some: {} // has at least one item
+        },
+        updatedAt: {
+          gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours only
         }
       },
       include: {
