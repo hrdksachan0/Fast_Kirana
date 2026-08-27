@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     // 1. Send Firebase FCM Push Notification to Flutter mobile app
     if (fcmMessaging) {
       try {
+        const collapseTag = `cart_${cleanPhone || userId}`
         const fcmPayload = {
           notification: { title, body: contentBody },
           data: {
@@ -48,16 +49,22 @@ export async function POST(request: NextRequest) {
             body: contentBody,
             type: 'CART_ALERT',
             url: '/cart',
+            timestamp: Date.now().toString(),
           },
           android: {
             priority: 'high' as const,
+            collapseKey: collapseTag,
             notification: {
               channelId: 'fastkirana_alerts',
               sound: 'default',
               clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+              tag: collapseTag,
             },
           },
           apns: {
+            headers: {
+              'apns-collapse-id': collapseTag,
+            },
             payload: {
               aps: {
                 sound: 'default',
@@ -67,7 +74,7 @@ export async function POST(request: NextRequest) {
           },
         }
 
-        // A. Send to user's registered FCM tokens (including any matching phone records)
+        // Find user's latest active FCM token
         let userIds = [userId]
         if (cleanPhone.length === 10) {
           const matchingUsers = await prisma.user.findMany({
@@ -79,27 +86,20 @@ export async function POST(request: NextRequest) {
 
         const fcmRecords = await prisma.fcmToken.findMany({
           where: { userId: { in: userIds } },
-          select: { token: true }
+          select: { token: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
         })
 
         if (fcmRecords.length > 0) {
-          const tokens = fcmRecords.map(r => r.token)
-          await fcmMessaging.sendEachForMulticast({
-            tokens,
+          // Direct 1-push delivery to active device
+          await fcmMessaging.send({
+            token: fcmRecords[0].token,
             ...fcmPayload
           })
           fcmDispatched = true
-        }
-
-        // B. Send to user topic (user_<userId>)
-        await fcmMessaging.send({
-          topic: `user_${userId}`,
-          ...fcmPayload
-        }).catch(() => {})
-        fcmDispatched = true
-
-        // C. Send to phone topic (phone_<cleanPhone>)
-        if (cleanPhone.length === 10) {
+        } else if (cleanPhone.length === 10) {
+          // Fallback to topic only if no registered token in DB
           await fcmMessaging.send({
             topic: `phone_${cleanPhone}`,
             ...fcmPayload

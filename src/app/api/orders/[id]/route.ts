@@ -61,9 +61,9 @@ export async function GET(
         let phone = riders[0].phone
 
         // If order was picked up by Admin, fetch active delivery rider phone so internal admin phone is never exposed
-        if (riders[0].role === 'ADMIN' || name === 'Admin') {
+        if (riders[0].role === 'ADMIN' || name === 'Admin' || String(phone || '').includes('7054470303')) {
           const mainRider: any[] = await prisma.$queryRaw`
-            SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
+            SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
           `
           if (mainRider.length > 0) {
             name = mainRider[0].name || 'FastKirana Delivery Executive'
@@ -81,6 +81,16 @@ export async function GET(
         if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
           order.deliveryLat = riders[0].liveLat
           order.deliveryLng = riders[0].liveLng
+        }
+      }
+    } else if (['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'].includes(String(order.status || ''))) {
+      const mainRider: any[] = await prisma.$queryRaw`
+        SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
+      `
+      if (mainRider.length > 0) {
+        deliveryUser = {
+          name: mainRider[0].name || 'FastKirana Delivery Executive',
+          phone: mainRider[0].phone || '+919696503759'
         }
       }
     }
@@ -508,10 +518,15 @@ export async function PATCH(
           WHERE id = ${id}
         `
       } else {
+        const defaultDeliveryRider = await prisma.user.findFirst({
+          where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
+          select: { id: true }
+        })
+        const targetRiderId = defaultDeliveryRider?.id || userId
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "deliveryUserId" = ${userId},
+              "deliveryUserId" = ${targetRiderId},
               "shippedAt" = COALESCE("shippedAt", NOW()),
               "updatedAt" = NOW() 
           WHERE id = ${id}

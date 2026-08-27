@@ -68,24 +68,13 @@ export async function POST(request: NextRequest) {
         }
         const fcmPayload = buildOrderFcmPayload(title, contentBody, dataPayload)
 
-        // 1. Broadcast to all_users topic
-        await sendTopicWithRetry(fcmMessaging, {
-          topic: 'all_users',
-          ...fcmPayload,
-        }).catch((err) => console.error('FCM broadcast to all_users failed:', err))
-
-        // 2. Broadcast to ghatampur_alerts topic
-        await sendTopicWithRetry(fcmMessaging, {
-          topic: 'ghatampur_alerts',
-          ...fcmPayload,
-        }).catch((err) => console.error('FCM broadcast to ghatampur_alerts failed:', err))
-
-        // 3. Multicast to all stored FCM device tokens with stale-token cleanup
+        // 1. Multicast to all stored FCM device tokens with stale-token cleanup
         const allTokens = await prisma.fcmToken.findMany({ select: { token: true } })
-        if (allTokens.length > 0) {
-          const tokens = allTokens.map((t) => t.token)
-          for (let i = 0; i < tokens.length; i += 500) {
-            const chunk = tokens.slice(i, i + 500)
+        const uniqueTokens = Array.from(new Set(allTokens.map((t) => t.token)))
+
+        if (uniqueTokens.length > 0) {
+          for (let i = 0; i < uniqueTokens.length; i += 500) {
+            const chunk = uniqueTokens.slice(i, i + 500)
             await fcmMessaging.sendEachForMulticast({
               tokens: chunk,
               notification: fcmPayload.notification,
@@ -95,6 +84,12 @@ export async function POST(request: NextRequest) {
             }).then((resp: any) => cleanupInvalidTokens(chunk, resp.responses))
               .catch(() => {})
           }
+        } else {
+          // Fallback to all_users topic broadcast only if no device tokens exist
+          await sendTopicWithRetry(fcmMessaging, {
+            topic: 'all_users',
+            ...fcmPayload,
+          }).catch((err) => console.error('FCM broadcast to all_users failed:', err))
         }
       }
     } catch (fcmErr) {
