@@ -182,7 +182,18 @@ class NotificationService {
     }
   }
 
+  final Set<String> _recentMessageIds = {};
+
   void _handleForegroundMessage(RemoteMessage message) {
+    final msgId = message.messageId ?? '${message.sentTime?.millisecondsSinceEpoch}_${message.data['orderId']}';
+    if (_recentMessageIds.contains(msgId)) {
+      return; // Dedup across simultaneous topic and token multicast
+    }
+    _recentMessageIds.add(msgId);
+    if (_recentMessageIds.length > 50) {
+      _recentMessageIds.remove(_recentMessageIds.first);
+    }
+
     final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastKirana Express';
     final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
@@ -215,6 +226,7 @@ class NotificationService {
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
         payload: message.data.toString(),

@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { requireOrderAccess } from '@/lib/auth-guard'
 import { sendPushNotification, sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendTopicWithRetry, cleanupInvalidTokens, buildOrderFcmPayload } from '@/lib/fcm-utils'
 import { Role } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { getLast10Digits } from '@/lib/phone'
@@ -691,75 +692,50 @@ export async function PATCH(
 
         const { fcmMessaging } = await import('@/lib/firebase-admin')
         if (fcmMessaging) {
-          const fcmPayload: any = {
-            notification: { title: statusTitle, body: statusBody },
-            data: {
-              title: statusTitle,
-              body: statusBody,
-              orderId: existingOrder.id,
-              readableId: baseOrderNo,
-              status: status || '',
-              screen: 'order-tracking',
-              url: `/orders/${existingOrder.id}`,
-              timestamp: Date.now().toString(),
-            },
-            android: {
-              priority: 'high',
-              notification: {
-                channelId: 'fastkirana_alerts',
-                sound: 'default',
-                defaultSound: true,
-                defaultVibrateTimings: true,
-                visibility: 'PUBLIC',
-                priority: 'HIGH',
-                clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-              },
-            },
-            apns: {
-              headers: { 'apns-priority': '10' },
-              payload: {
-                aps: {
-                  alert: { title: statusTitle, body: statusBody },
-                  sound: 'default',
-                  badge: 1,
-                  contentAvailable: true,
-                },
-              },
-            },
+          const dataPayload: Record<string, string> = {
+            title: statusTitle,
+            body: statusBody,
+            orderId: existingOrder.id,
+            readableId: baseOrderNo,
+            status: status || '',
+            screen: 'order-tracking',
+            url: `/orders/${existingOrder.id}`,
+            timestamp: Date.now().toString(),
           }
+
+          const fcmPayload = buildOrderFcmPayload(statusTitle, statusBody, dataPayload)
 
           const broadcastPromises: Promise<any>[] = []
 
           // 1. Broadcast to all matched phone topics
           for (const phone of uniquePhones) {
             broadcastPromises.push(
-              fcmMessaging.send({ topic: `phone_${phone}`, ...fcmPayload }).catch(() => {})
+              sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
+                .catch(() => {})
             )
           }
 
           // 2. Broadcast to user topic
           if (existingOrder.userId) {
             broadcastPromises.push(
-              fcmMessaging.send({ topic: `user_${existingOrder.userId}`, ...fcmPayload }).catch(() => {})
+              sendTopicWithRetry(fcmMessaging, { topic: `user_${existingOrder.userId}`, ...fcmPayload })
+                .catch(() => {})
             )
           }
 
-          // 3. Broadcast to order topic
+          // 3. Broadcast to order topics (UUID and readableId)
           broadcastPromises.push(
-            fcmMessaging.send({ topic: `order_${existingOrder.id}`, ...fcmPayload }).catch(() => {})
+            sendTopicWithRetry(fcmMessaging, { topic: `order_${existingOrder.id}`, ...fcmPayload })
+              .catch(() => {})
           )
           if (baseOrderNo) {
             broadcastPromises.push(
-              fcmMessaging.send({ topic: `order_${baseOrderNo}`, ...fcmPayload }).catch(() => {})
+              sendTopicWithRetry(fcmMessaging, { topic: `order_${baseOrderNo}`, ...fcmPayload })
+                .catch(() => {})
             )
           }
 
-          // 4. Universal all_users broadcast for instant sync
-          broadcastPromises.push(
-            fcmMessaging.send({ topic: 'all_users', ...fcmPayload }).catch(() => {})
-          )
-
-          // 5. Multicast to all registered FCM device tokens in the system
+          // 4. Multicast to all registered FCM device tokens with stale-token cleanup
           const allDeviceTokens = await prisma.fcmToken.findMany({ select: { token: true } })
           if (allDeviceTokens.length > 0) {
             const tokens = allDeviceTokens.map(t => t.token)
@@ -769,10 +745,11 @@ export async function PATCH(
                 fcmMessaging.sendEachForMulticast({
                   tokens: chunk,
                   notification: fcmPayload.notification,
-                  data: fcmPayload.data as Record<string, string>,
+                  data: dataPayload,
                   android: fcmPayload.android,
                   apns: fcmPayload.apns,
-                }).catch(() => {})
+                }).then((resp: any) => cleanupInvalidTokens(chunk, resp.responses))
+                  .catch(() => {})
               )
             }
           }

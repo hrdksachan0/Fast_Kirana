@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { broadcastPushNotification } from '@/lib/push-notification'
 import { apiWriteLimiter } from '@/lib/rate-limit'
 import { requireAdmin } from '@/lib/auth-guard'
+import { buildOrderFcmPayload, cleanupInvalidTokens } from '@/lib/fcm-utils'
 
 export async function GET(request: NextRequest) {
   const adminResult = await requireAdmin()
@@ -58,71 +59,41 @@ export async function POST(request: NextRequest) {
     try {
       const { fcmMessaging } = await import('@/lib/firebase-admin')
       if (fcmMessaging) {
-        const fcmPayload: any = {
-          notification: {
-            title,
-            body: contentBody,
-            ...(imageUrl ? { imageUrl } : {}),
-          },
-          data: {
-            title,
-            body: contentBody,
-            url: linkUrl || '/',
-            category: 'offer',
-            timestamp: Date.now().toString(),
-          },
-          android: {
-            priority: 'high',
-            notification: {
-              channelId: 'fastkirana_alerts',
-              sound: 'default',
-              defaultSound: true,
-              defaultVibrateTimings: true,
-              visibility: 'PUBLIC',
-              priority: 'HIGH',
-              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-              ...(imageUrl ? { imageUrl } : {}),
-            },
-          },
-          apns: {
-            headers: { 'apns-priority': '10' },
-            payload: {
-              aps: {
-                alert: { title, body: contentBody },
-                sound: 'default',
-                badge: 1,
-                contentAvailable: true,
-              },
-            },
-          },
+        const dataPayload: Record<string, string> = {
+          title,
+          body: contentBody,
+          url: linkUrl || '/',
+          category: 'offer',
+          timestamp: Date.now().toString(),
         }
+        const fcmPayload = buildOrderFcmPayload(title, contentBody, dataPayload)
 
         // 1. Broadcast to all_users topic
-        await fcmMessaging.send({
+        await sendTopicWithRetry(fcmMessaging, {
           topic: 'all_users',
           ...fcmPayload,
         }).catch((err) => console.error('FCM broadcast to all_users failed:', err))
 
         // 2. Broadcast to ghatampur_alerts topic
-        await fcmMessaging.send({
+        await sendTopicWithRetry(fcmMessaging, {
           topic: 'ghatampur_alerts',
           ...fcmPayload,
         }).catch((err) => console.error('FCM broadcast to ghatampur_alerts failed:', err))
 
-        // 3. Multicast to all stored FCM device tokens
+        // 3. Multicast to all stored FCM device tokens with stale-token cleanup
         const allTokens = await prisma.fcmToken.findMany({ select: { token: true } })
         if (allTokens.length > 0) {
           const tokens = allTokens.map((t) => t.token)
-          // Send in chunks of 500
           for (let i = 0; i < tokens.length; i += 500) {
             const chunk = tokens.slice(i, i + 500)
             await fcmMessaging.sendEachForMulticast({
               tokens: chunk,
               notification: fcmPayload.notification,
-              data: fcmPayload.data as Record<string, string>,
+              data: dataPayload,
               android: fcmPayload.android,
               apns: fcmPayload.apns,
-            }).catch(() => {})
+            }).then((resp: any) => cleanupInvalidTokens(chunk, resp.responses))
+              .catch(() => {})
           }
         }
       }

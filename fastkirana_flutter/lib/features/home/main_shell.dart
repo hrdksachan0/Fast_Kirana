@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -11,6 +12,7 @@ import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/battery_optimization_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -25,18 +27,56 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
   bool _isBottomNavVisible = true;
   Timer? _autoShowTimer;
+  bool _batteryCheckDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         NotificationService().registerDeviceToken(ref.read(dioProvider));
       } catch (_) {}
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Re-register any pending FCM token when the app comes to foreground
+      _reRegisterPendingToken();
+
+      // Prompt battery optimization exemption once (Android only)
+      if (!_batteryCheckDone) {
+        _batteryCheckDone = true;
+        BatteryOptimizationService.ensureExempt();
+      }
+    }
+  }
+
+  Future<void> _reRegisterPendingToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pending = prefs.getString('pending_fcm_token');
+      if (pending == null || pending.isEmpty) return;
+
+      final authToken = prefs.getString('auth_token');
+      if (authToken == null) return;
+
+      final dio = ref.read(dioProvider);
+      final deviceType = Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web');
+      final response = await dio.post(
+        '/api/fcm/register',
+        data: {'token': pending, 'deviceType': deviceType},
+      );
+      if (response.statusCode == 200) {
+        await prefs.remove('pending_fcm_token');
+      }
+    } catch (_) {}
   }
 
   @override

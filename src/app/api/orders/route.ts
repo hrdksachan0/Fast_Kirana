@@ -9,6 +9,7 @@ import { revalidateStorefront } from '@/lib/revalidate'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
+import { buildOrderFcmPayload, sendTopicWithRetry } from '@/lib/fcm-utils'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
 import { getProductLimit } from '@/lib/utils'
 import { getLast10Digits } from '@/lib/phone'
@@ -1043,53 +1044,26 @@ export async function POST(request: NextRequest) {
             const cleanPhone = getLast10Digits(customerPhone)
             const { fcmMessaging } = await import('@/lib/firebase-admin')
             if (fcmMessaging) {
-              const custPayload: any = {
-                notification: {
-                  title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
-                  body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
-                },
-                data: {
-                  title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
-                  body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
-                  orderId: order.id,
-                  status: order.status,
-                  screen: 'order-tracking',
-                  url: `/orders/${order.id}`,
-                  timestamp: Date.now().toString(),
-                },
-                android: {
-                  priority: 'high',
-                  notification: {
-                    channelId: 'fastkirana_alerts',
-                    sound: 'default',
-                    defaultSound: true,
-                    defaultVibrateTimings: true,
-                    visibility: 'PUBLIC',
-                    priority: 'HIGH',
-                    clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-                  },
-                },
-                apns: {
-                  headers: { 'apns-priority': '10' },
-                  payload: {
-                    aps: {
-                      alert: {
-                        title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
-                        body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
-                      },
-                      sound: 'default',
-                      badge: 1,
-                      contentAvailable: true,
-                    },
-                  },
-                },
+              const dataPayload: Record<string, string> = {
+                title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
+                body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
+                orderId: order.id,
+                status: order.status,
+                screen: 'order-tracking',
+                url: `/orders/${order.id}`,
+                timestamp: Date.now().toString(),
               }
+              const custPayload = buildOrderFcmPayload(
+                isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
+                `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
+                dataPayload,
+              )
 
               if (cleanPhone && cleanPhone.length === 10) {
-                await fcmMessaging.send({ topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
+                await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
               }
               if (order.userId) {
-                await fcmMessaging.send({ topic: `user_${order.userId}`, ...custPayload }).catch(() => {})
+                await sendTopicWithRetry(fcmMessaging, { topic: `user_${order.userId}`, ...custPayload }).catch(() => {})
               }
             }
           } catch (fcmErr) {
