@@ -10,7 +10,7 @@
  *   const user = await fastApi.post("/auth/login", { email, password });
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_FASTAPI_URL || "https://fastkirana-production-a4b8.up.railway.app";
 
 export interface FastApiOptions extends Omit<RequestInit, "body"> {
     body?: unknown;
