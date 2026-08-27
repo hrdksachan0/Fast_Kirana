@@ -421,7 +421,11 @@ export function AdminDashboard({
         toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
         debouncedRefresh()
       })
-      .subscribe()
+      .subscribe((status) => {
+        if (typeof window !== 'undefined') {
+          console.log('📡 Supabase Realtime WebSocket Status:', status)
+        }
+      })
 
     // Dual-channel real-time fallback: SSE EventSource listener
     let sseSource: EventSource | null = null

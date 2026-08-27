@@ -397,7 +397,7 @@ class ProfileScreen extends ConsumerWidget {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
                   child: user == null
                       ? _buildGuestHeader(context)
                       : _buildUserHeader(context, ref, user),
@@ -414,7 +414,14 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   _buildShortcutCard(
                     context,
-                    emoji: '📦',
+                    iconWidget: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF2563EB), size: 20),
+                    ),
                     title: 'Orders',
                     subtitle: ordersCount > 0 ? '$ordersCount Placed' : 'Live Track',
                     onTap: () => Navigator.push(context, FadeSlideRoute(page: const OrdersScreen())),
@@ -422,7 +429,14 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: 10),
                   _buildShortcutCard(
                     context,
-                    emoji: '❤️',
+                    iconWidget: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Color(0xFFDC2626), size: 20),
+                    ),
                     title: 'Wishlist',
                     subtitle: wishlist.isNotEmpty ? '${wishlist.length} Items' : 'Saved Items',
                     onTap: () => Navigator.push(context, FadeSlideRoute(page: const WishlistScreen())),
@@ -430,7 +444,14 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: 10),
                   _buildShortcutCard(
                     context,
-                    emoji: '📍',
+                    iconWidget: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.location_on_rounded, color: Color(0xFF059669), size: 20),
+                    ),
                     title: 'Addresses',
                     subtitle: addresses.isNotEmpty ? '${addresses.length} Saved' : 'Add New',
                     onTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
@@ -663,7 +684,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildUserHeader(BuildContext context, WidgetRef ref, User user) {
-    final name = (user.name != null && user.name!.isNotEmpty) ? user.name! : 'Customer';
+    final name = (user.name != null && user.name!.isNotEmpty) ? user.name! : 'FastKirana Customer';
     String phoneDisplay;
     if (user.phone != null && user.phone!.isNotEmpty) {
       final raw = user.phone!.trim();
@@ -673,134 +694,147 @@ class ProfileScreen extends ConsumerWidget {
     }
     final isAdmin = user.role == 'ADMIN';
 
-    return Row(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFEF08A), Color(0xFFFACC15)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(2.5),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFDC2626),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      name,
-                      style: GoogleFonts.inter(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFEF08A), Color(0xFFFDE047)],
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isAdmin ? '👑 ADMIN' : '⭐ VIP',
-                      style: GoogleFonts.inter(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF854D0E),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                phoneDisplay,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.92),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Bounceable(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            _showEditProfileModal(context, ref, user);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFEF08A), Color(0xFFFACC15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Row(
+            child: Padding(
+              padding: const EdgeInsets.all(2.5),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDC2626),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.edit_rounded, size: 13, color: Colors.white),
-                const SizedBox(width: 4),
                 Text(
-                  'Edit',
+                  name,
                   style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w900,
                     color: Colors.white,
+                    letterSpacing: -0.3,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFEF08A), Color(0xFFFDE047)],
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isAdmin ? '👑 ADMIN' : '⭐ VIP',
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF854D0E),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        phoneDisplay,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Bounceable(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _showEditProfileModal(context, ref, user);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.edit_rounded, size: 13, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Edit',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildShortcutCard(
     BuildContext context, {
-    required String emoji,
+    required Widget iconWidget,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -815,33 +849,33 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF0F172A).withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Column(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 22)),
-              const SizedBox(height: 6),
+              iconWidget,
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(height: 1),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: GoogleFonts.inter(
-                  fontSize: 10,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF64748B),
                 ),
