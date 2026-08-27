@@ -711,7 +711,7 @@ export async function PATCH(
             where: {
               OR: [
                 ...(existingOrder.userId ? [{ userId: existingOrder.userId }] : []),
-                ...uniquePhones.map(p => ({ phone: p })),
+                ...(uniquePhones.length > 0 ? [{ user: { phone: { in: uniquePhones } } }] : []),
               ],
             },
             select: { token: true },
