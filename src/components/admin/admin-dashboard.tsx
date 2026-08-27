@@ -407,6 +407,16 @@ export function AdminDashboard({
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'carts' },
+        () => setCartsRefreshKey(prev => prev + 1)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cart_items' },
+        () => setCartsRefreshKey(prev => prev + 1)
+      )
       .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
         toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
         debouncedRefresh()
@@ -939,10 +949,12 @@ export function AdminDashboard({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
+      intervalId = setInterval(fetchCartsDetail, 3000) // Fast 3-second refresh for Live Ops Tracker
     }
 
     return () => {
       active = false
+      if (intervalId) clearInterval(intervalId)
     }
   }, [activeTab, cartsRefreshKey])
 
