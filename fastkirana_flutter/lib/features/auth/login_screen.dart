@@ -198,7 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ],
                           ),
                         ),
-                        const BrandLogo(size: 72, radius: 18),
+                        const BrandLogo(size: 72),
                       ],
                     ),
                   ),
@@ -488,5 +488,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
   }
 }

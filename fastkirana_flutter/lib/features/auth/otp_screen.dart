@@ -450,7 +450,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       ],
                     ),
                     child: Center(
-                      child: const BrandLogo(size: 38, radius: 10),
+                      child: const BrandLogo(size: 38),
                     ),
                   ),
                 ).animate().fadeIn(duration: 350.ms),
