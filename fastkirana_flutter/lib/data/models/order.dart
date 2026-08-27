@@ -223,6 +223,20 @@ class Order {
       return json['address']?.toString();
     }
 
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      final parsed = DateTime.tryParse(val.toString());
+      if (parsed == null) return DateTime.now();
+      return parsed.isUtc ? parsed.toLocal() : parsed;
+    }
+
+    DateTime? parseNullableDate(dynamic val) {
+      if (val == null) return null;
+      final parsed = DateTime.tryParse(val.toString());
+      if (parsed == null) return null;
+      return parsed.isUtc ? parsed.toLocal() : parsed;
+    }
+
     return Order(
       id: json['id']?.toString() ?? '',
       readableId: json['readableId']?.toString(),
@@ -238,7 +252,7 @@ class Order {
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: _parsePaymentMethod(json['paymentMethod']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
-      estimatedDelivery: json['estimatedDelivery'] != null ? DateTime.tryParse(json['estimatedDelivery'].toString()) : null,
+      estimatedDelivery: parseNullableDate(json['estimatedDelivery']),
       deliveryPhoto: json['deliveryPhoto']?.toString(),
       deliveryMethod: json['deliveryMethod']?.toString(),
       shopName: json['shopName']?.toString(),
@@ -250,11 +264,11 @@ class Order {
       customerName: json['customerName']?.toString() ?? json['userName']?.toString(),
       customerPhone: json['customerPhone']?.toString() ?? json['phone']?.toString(),
       customerAddress: parseCustomerAddress(),
-      createdAt: json['createdAt'] != null ? (DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()) : DateTime.now(),
-      confirmedAt: json['confirmedAt'] != null ? DateTime.tryParse(json['confirmedAt'].toString()) : null,
-      packedAt: json['packedAt'] != null ? DateTime.tryParse(json['packedAt'].toString()) : null,
-      shippedAt: json['shippedAt'] != null ? DateTime.tryParse(json['shippedAt'].toString()) : null,
-      deliveredAt: json['deliveredAt'] != null ? DateTime.tryParse(json['deliveredAt'].toString()) : null,
+      createdAt: parseDate(json['createdAt']),
+      confirmedAt: parseNullableDate(json['confirmedAt']),
+      packedAt: parseNullableDate(json['packedAt']),
+      shippedAt: parseNullableDate(json['shippedAt']),
+      deliveredAt: parseNullableDate(json['deliveredAt']),
       items: itemsList,
     );
   }

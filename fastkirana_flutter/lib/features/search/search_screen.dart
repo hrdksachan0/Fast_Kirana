@@ -11,11 +11,13 @@ import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/voice_search_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../products/product_detail_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -497,23 +499,72 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return productsAsync.when(
       data: (products) {
-        final queryLower = _query.toLowerCase();
+        final queryClean = _query.toLowerCase().trim();
+        final queryWords = queryClean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+
+        final isRestaurantQuery = ['wedson', 'bal udyan', 'baludyan', 'a.s', 'as restaurant', 'as cafe'].any((r) => queryClean.contains(r));
+
         final filtered = products.where((p) {
-          final nameMatch = p.name.toLowerCase().contains(queryLower);
-          final descMatch = p.description?.toLowerCase().contains(queryLower) ?? false;
-          final catMatch = p.category?.name.toLowerCase().contains(queryLower) ?? false;
-          final tagMatch = p.tags.any((t) => t.toLowerCase().contains(queryLower));
+          final pName = p.name.toLowerCase();
           final outlet = getOutletName(p).toLowerCase();
-          final restaurantMatch = (p.restaurant?.name.toLowerCase().contains(queryLower) ?? false) ||
-              outlet.contains(queryLower);
-          return nameMatch || descMatch || catMatch || tagMatch || restaurantMatch;
+          final isFood = isRestaurantProduct(p);
+
+          // 1. If user typed restaurant name specifically (e.g. "wedson")
+          if (isRestaurantQuery) {
+            return outlet.contains(queryClean) || pName.contains(queryClean);
+          }
+
+          // 2. Strict Category / Dish Type Exclusion
+          // If searching "burger", product MUST contain "burger"
+          if (queryWords.any((w) => w == 'burger' || w == 'burgers') && !pName.contains('burger')) {
+            return false;
+          }
+          // If searching "pizza", product MUST contain "pizza"
+          if (queryWords.any((w) => w == 'pizza' || w == 'pizzas') && !pName.contains('pizza')) {
+            return false;
+          }
+          // If searching "sandwich", product MUST contain "sandwich"
+          if (queryWords.any((w) => w.contains('sandwich')) && !pName.contains('sandwich')) {
+            return false;
+          }
+          // If searching "roll", product MUST contain "roll" or "wrap"
+          if (queryWords.any((w) => w == 'roll' || w == 'rolls' || w == 'wrap') && !pName.contains('roll') && !pName.contains('wrap')) {
+            return false;
+          }
+          // If searching "momo" / "momos"
+          if (queryWords.any((w) => w.startsWith('momo')) && !pName.contains('momo')) {
+            return false;
+          }
+          // If searching "noodle" / "maggi" / "chowmein"
+          if (queryWords.any((w) => w.contains('noodle') || w == 'maggi' || w.contains('chowmein')) &&
+              !pName.contains('noodle') && !pName.contains('maggi') && !pName.contains('chowmein') && !pName.contains('pasta')) {
+            return false;
+          }
+
+          // 3. Multi-word match in name
+          final isVeg = !p.tags.any((t) => t.toLowerCase().contains('non-veg') || t.toLowerCase() == 'egg') &&
+              !pName.contains('chicken') && !pName.contains('egg') && !pName.contains('mutton');
+
+          final matchesWords = queryWords.every((word) {
+            if (word == 'veg' || word == 'veggie') {
+              return pName.contains('veg') || isVeg;
+            }
+            return pName.contains(word);
+          });
+
+          if (matchesWords) return true;
+
+          // 4. Exact substring match in name
+          if (pName.contains(queryClean)) return true;
+
+          return false;
         }).toList();
 
         if (filtered.isEmpty) {
           return EmptyState(
             emoji: '🔍',
             title: 'No results found for "$_query"',
-            subtitle: 'Try searching for milk, bread, butter, burger or check your spelling.',
+            subtitle: 'Try searching for veg burger, pizza, cheese roll, milk or check your spelling.',
             ctaLabel: 'Clear Search',
             onCta: () {
               _controller.clear();
@@ -523,30 +574,297 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         }
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
+            // Results count
             Text(
               'Showing ${filtered.length} results for "$_query"',
               style: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppDesignSystem.textSecondary,
+                color: const Color(0xFF64748B),
               ),
             ),
             const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.60,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+
+            // White Container List with Restaurant Badges on Each Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: filtered[index]);
-              },
+              child: Column(
+                children: filtered.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final product = entry.value;
+                  final isLast = index == filtered.length - 1;
+
+                  final isFood = isRestaurantProduct(product);
+                  final outletName = isFood ? getOutletName(product) : null;
+
+                  Color chipColor = const Color(0xFFD97706);
+                  Color chipBg = const Color(0xFFFFFBEB);
+                  if (outletName != null) {
+                    if (outletName.contains('Wedson')) {
+                      chipColor = const Color(0xFFEA580C);
+                      chipBg = const Color(0xFFFFF7ED);
+                    } else if (outletName.contains('Bal Udyan')) {
+                      chipColor = const Color(0xFF7C3AED);
+                      chipBg = const Color(0xFFF5F3FF);
+                    } else if (outletName.contains('A.S')) {
+                      chipColor = const Color(0xFF0284C7);
+                      chipBg = const Color(0xFFF0F9FF);
+                    }
+                  }
+
+                  final settings = ref.watch(storeSettingsProvider).valueOrNull;
+                  final isGroceryOpen = settings?.groceryMartOpen ?? true;
+                  final isRestaurantOpen = (settings?.restaurantOpen ?? true) && (product.restaurant?.isOpen ?? true);
+                  final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
+                  final isOutOfStock = product.stock <= 0 || !product.isAvailable;
+                  final isClosed = !isStoreOpen || isOutOfStock;
+
+                  // Veg / Non-veg
+                  final tags = product.tags.map((t) => t.toLowerCase()).toList();
+                  final nameLower = product.name.toLowerCase();
+                  final isVeg = !tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken')) &&
+                      !nameLower.contains('chicken') && !nameLower.contains('egg') && !nameLower.contains('mutton');
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: isLast ? null : const Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+                      ),
+                      child: Row(
+                        children: [
+                          // 1. Thumbnail
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: 58,
+                              height: 58,
+                              color: const Color(0xFFF8FAFC),
+                              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                                  ? Image.network(
+                                      product.imageUrl!.startsWith('/')
+                                          ? 'https://www.fastkirana.in${product.imageUrl}'
+                                          : product.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Center(
+                                        child: Icon(isFood ? Icons.restaurant_rounded : Icons.shopping_bag_outlined, color: const Color(0xFF94A3B8), size: 22),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Icon(isFood ? Icons.restaurant_rounded : Icons.shopping_bag_outlined, color: const Color(0xFF94A3B8), size: 22),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // 2. Info Column
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (isFood) ...[
+                                      Container(
+                                        width: 11,
+                                        height: 11,
+                                        margin: const EdgeInsets.only(right: 5),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                            width: 1.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                        child: Center(
+                                          child: Container(
+                                            width: 4.5,
+                                            height: 4.5,
+                                            decoration: BoxDecoration(
+                                              shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                                              color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        product.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF0F172A),
+                                          letterSpacing: -0.2,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+
+                                // Respective Restaurant Badge on Card
+                                if (outletName != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: chipBg,
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(color: chipColor.withValues(alpha: 0.35)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.storefront_rounded, size: 10, color: chipColor),
+                                        const SizedBox(width: 3.5),
+                                        Text(
+                                          outletName,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: chipColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else if (product.category != null)
+                                  Text(
+                                    product.category!.name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                const SizedBox(height: 4),
+
+                                // Price
+                                Row(
+                                  children: [
+                                    Text(
+                                      '₹${product.price.toInt()}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF0F172A),
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                    if (product.mrp > product.price) ...[
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '₹${product.mrp.toInt()}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                          decoration: TextDecoration.lineThrough,
+                                          color: const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // 3. Action
+                          const SizedBox(width: 8),
+                          if (isClosed)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                isOutOfStock ? 'Sold Out' : 'Closed',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            )
+                          else
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final cart = ref.watch(cartProvider).valueOrNull;
+                                final inCart = cart?.items.any((i) => i.productId == product.id || i.product.id == product.id) ?? false;
+
+                                if (inCart) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+                                  );
+                                }
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.mediumImpact();
+                                    ref.read(cartProvider.notifier).addProduct(product);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: chipColor, width: 1.2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: chipColor.withValues(alpha: 0.12),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      'ADD',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        color: chipColor,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ],
         );

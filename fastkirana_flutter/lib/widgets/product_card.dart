@@ -433,86 +433,69 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 6),
 
-              // 2. PACK SIZE / OPTIONS PILL + ADD BUTTON ROW
+              // 2. VEG / NON-VEG + PRODUCT TITLE (moved up for prominence)
+              SizedBox(
+                height: 32,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isFood) ...[
+                      Container(
+                        margin: const EdgeInsets.only(top: 2.5, right: 4.5),
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            width: 1.3,
+                          ),
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                              color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Text(
+                        product.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                          height: 1.22,
+                          letterSpacing: -0.15,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // 3. PRICE & PACK SIZE ROW
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left: Pack Size or Options ▾ Pill
-                  Expanded(
-                    child: hasVariants
-                        ? GestureDetector(
-                            onTap: () {
-                              if (!isOutOfStock) {
-                                VariantSelectorSheet.show(context, product);
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
-                              ),
-                              child: Text(
-                                '${variants.length} Options ▾',
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF059669),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            product.unit.isNotEmpty
-                                ? product.unit
-                                : (isFood ? 'Freshly Prepared' : '1 unit'),
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF64748B),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Right: Premium ADD Button / Stepper
-                  _buildAddButton(
-                    context,
-                    product,
-                    inCartQty,
-                    hasVariants,
-                    isOutOfStock,
-                    !timingStatus.isAvailableNow,
-                    timingStatus.nextAvailableTimeStr,
-                    isStoreOpen,
-                    isFood,
-                    gradientColors,
-                    primaryColor,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-
-              // 3. PRICE & STRIKETHROUGH MRP
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
+                  // Price
                   Text(
                     '₹${startingPrice.toInt()}',
                     style: GoogleFonts.inter(
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF0F172A),
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   if (startingMrp > startingPrice) ...[
@@ -527,112 +510,61 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ),
                     ),
                   ],
+                  const Spacer(),
+                  // Pack size / unit pill
+                  if (hasVariants)
+                    GestureDetector(
+                      onTap: () {
+                        if (!isOutOfStock) {
+                          VariantSelectorSheet.show(context, product);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Text(
+                          '${variants.length} Options ▾',
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      product.unit.isNotEmpty && product.unit != '1 unit'
+                          ? product.unit
+                          : (isFood ? 'Serves 1' : '1 pc'),
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 6),
 
-              // 4. VEG / NON-VEG + PRODUCT TITLE
-              SizedBox(
-                height: 30,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isFood) ...[
-                      Container(
-                        margin: const EdgeInsets.only(top: 2.5, right: 4.5),
-                        width: 11,
-                        height: 11,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
-                            width: 1.2,
-                          ),
-                          borderRadius: BorderRadius.circular(2.5),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 4.5,
-                            height: 4.5,
-                            decoration: BoxDecoration(
-                              shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
-                              color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    Expanded(
-                      child: Text(
-                        product.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
-                          height: 1.22,
-                          letterSpacing: -0.1,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+              // 4. ADD BUTTON (full width)
+              _buildAddButton(
+                context,
+                product,
+                inCartQty,
+                hasVariants,
+                isOutOfStock,
+                !timingStatus.isAvailableNow,
+                timingStatus.nextAvailableTimeStr,
+                isStoreOpen,
+                isFood,
+                gradientColors,
+                primaryColor,
               ),
-
-              // 5. RESTAURANT OUTLET IDENTIFIER CHIP
-              if (isFood && widget.showOutlet) ...[
-                const SizedBox(height: 3),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    color: outletName.contains('Wedson')
-                        ? const Color(0xFFECFDF5)
-                        : outletName.contains('Bal Udyan')
-                            ? const Color(0xFFF3E8FF)
-                            : const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: outletName.contains('Wedson')
-                          ? const Color(0xFFA7F3D0)
-                          : outletName.contains('Bal Udyan')
-                              ? const Color(0xFFE9D5FF)
-                              : const Color(0xFFFDE68A),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.storefront_rounded,
-                        size: 9,
-                        color: outletName.contains('Wedson')
-                            ? const Color(0xFF059669)
-                            : outletName.contains('Bal Udyan')
-                                ? const Color(0xFF7E22CE)
-                                : const Color(0xFFB45309),
-                      ),
-                      const SizedBox(width: 2.5),
-                      Flexible(
-                        child: Text(
-                          outletName,
-                          style: GoogleFonts.inter(
-                            fontSize: 8,
-                            fontWeight: FontWeight.w800,
-                            color: outletName.contains('Wedson')
-                                ? const Color(0xFF059669)
-                                : outletName.contains('Bal Udyan')
-                                    ? const Color(0xFF7E22CE)
-                                    : const Color(0xFFB45309),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),

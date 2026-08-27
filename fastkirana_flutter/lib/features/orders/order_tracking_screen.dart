@@ -403,6 +403,162 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   Widget _buildTrackingHeroCard(int statusStep, bool isDelivered, String cleanDisplayId) {
+    final isCancelled = _order?.status == OrderStatus.cancelled || statusStep == -1;
+
+    if (isCancelled) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: slateDark, borderRadius: BorderRadius.circular(6)),
+                  child: Text(cleanDisplayId,
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cancel_rounded, size: 13, color: Color(0xFFDC2626)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'CANCELLED',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFFDC2626),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFECDD3)),
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Color(0xFFDC2626), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order Cancelled',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: slateDark,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'This order has been cancelled by store/customer.',
+                        style: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _order?.paymentStatus == 'PAID'
+                          ? 'Refund status: Paid online. Your refund of ₹${(_order?.total ?? 0).toInt()} has been initiated and will be credited to your original payment method in 2-4 business days.'
+                          : 'No amount was charged since this was a Cash on Delivery order.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        color: const Color(0xFF475569),
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse('tel:+917054470303')),
+                    icon: const Icon(Icons.headset_mic_rounded, size: 15, color: slateDark),
+                    label: Text('Call Support', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: slateDark)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryRed,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: 0,
+                    ),
+                    child: Text('Order Again', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     String statusTitle = 'Order Confirmed';
     String statusDesc = 'Your order has been received and is being prepared fresh.';
     Color statusBadgeColor = const Color(0xFF2563EB);
@@ -483,24 +639,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           Text(statusTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: slateDark, letterSpacing: -0.3)),
           const SizedBox(height: 3),
           Text(statusDesc, style: GoogleFonts.inter(fontSize: 12, color: slateMuted, height: 1.3)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(6)),
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 12, color: primaryRed),
-                    const SizedBox(width: 4),
-                    Text(isDelivered ? 'Delivered' : 'Estimated: 10-15 min',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: primaryRed)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _buildHorizontalStepper(statusStep, isDelivered),
           const SizedBox(height: 14),
           Container(
@@ -876,20 +1015,48 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('', style: TextStyle(fontSize: 14)),
+                  const Icon(Icons.receipt_long_rounded, size: 16, color: slateDark),
                   const SizedBox(width: 6),
-                  Text('ORDER RECEIPT',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark, letterSpacing: 0.3)),
+                  Text(
+                    'ORDER RECEIPT',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: slateDark,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(6)),
-                child: Text(isPaid ? 'PAYMENT: ONLINE (PAID)' : 'PAYMENT: COD (CASH ON DELIVERY)',
-                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: isPaid ? const Color(0xFF15803D) : const Color(0xFFB45309))),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isPaid ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    isPaid ? 'PAID • ONLINE' : 'COD • PAY ON DELIVERY',
+                    style: GoogleFonts.inter(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      color: isPaid ? const Color(0xFF15803D) : const Color(0xFF92400E),
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
             ],
           ),

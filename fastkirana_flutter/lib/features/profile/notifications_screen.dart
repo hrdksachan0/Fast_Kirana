@@ -53,13 +53,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   String _formatTimeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 2) return 'Just now';
+    final localDt = dt.isUtc ? dt.toLocal() : dt;
+    final diff = DateTime.now().difference(localDt);
+    if (diff.isNegative || diff.inMinutes < 2) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
+    if (diff.inHours == 1) return '1 hour ago';
     if (diff.inHours < 24) return '${diff.inHours} hours ago';
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
-    return '${dt.day}/${dt.month}/${dt.year}';
+    return '${localDt.day.toString().padLeft(2, '0')}/${localDt.month.toString().padLeft(2, '0')}/${localDt.year}';
   }
 
   @override

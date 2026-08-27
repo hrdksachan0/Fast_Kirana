@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart';
 // import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // Removed: unused, web-unsafe
 // import 'package:flutter_animate/flutter_animate.dart'; // Removed: unused, web-unsafe
 import '../../core/theme/design_system.dart';
@@ -368,7 +369,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         bottom: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 150 + MediaQuery.of(context).padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -508,7 +509,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
               // Horizontal Dynamic Carousel
               SizedBox(
-                height: 114,
+                height: 192,
                 child: ref.watch(trendingProductsProvider).when(
                   data: (products) {
                     final displayList = products.isNotEmpty
@@ -1156,140 +1157,230 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       name: product.name,
       unit: product.unit,
       price: product.price,
+      mrp: product.mrp,
       imageUrl: product.imageUrl ?? '',
+      product: product,
     );
   }
 
-  Widget _buildUpsellCard(WidgetRef ref, {required String id, required String name, required String unit, required double price, required String imageUrl}) {
+  Widget _buildUpsellCard(
+    WidgetRef ref, {
+    required String id,
+    required String name,
+    required String unit,
+    required double price,
+    double? mrp,
+    required String imageUrl,
+    Product? product,
+  }) {
+    final cart = ref.watch(cartProvider).valueOrNull;
+    final cartItem = cart?.items.firstWhereOrNull((i) => i.productId == id || i.product.id == id);
+    final p = product ??
+        Product.fromJson({
+          'id': id,
+          'name': name,
+          'slug': id,
+          'price': price,
+          'mrp': mrp ?? (price + 10),
+          'imageUrl': imageUrl,
+          'categoryId': 'snacks',
+          'unit': unit,
+          'stock': 50,
+        });
+
     return Container(
-      width: 146,
-      height: 114,
+      width: 132,
       margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: slateBorder, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: imageUrl.isNotEmpty
-                      ? (kIsWeb
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.grey),
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.grey),
-                            ))
-                      : const Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: slateDark),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(unit, style: GoogleFonts.inter(fontSize: 9.5, color: const Color(0xFF94A3B8))),
-                  ],
-                ),
-              ),
-            ],
+          // Centered Product Image
+          Container(
+            width: double.infinity,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: imageUrl.isNotEmpty
+                  ? (kIsWeb
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.contain,
+                          errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+                        ))
+                  : const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+
+          // Product Title (2 lines max)
+          Text(
+            name,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: slateDark,
+              height: 1.25,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 3),
+
+          // Unit text
+          Text(
+            unit,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: slateMuted,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const Spacer(),
+
+          // Bottom Price & Add/Stepper Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('₹${price.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900, color: slateDark)),
-              GestureDetector(
-                onTap: () {
-                  final p = Product.fromJson({
-                    'id': id,
-                    'name': name,
-                    'slug': id,
-                    'price': price,
-                    'mrp': price + 10,
-                    'imageUrl': imageUrl,
-                    'categoryId': 'snacks',
-                    'unit': unit,
-                    'stock': 50,
-                  });
-
-                  final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(p);
-                  if (conflictRestaurant != null) {
-                    final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
-                    final newOutlet = getOutletName(p);
-                    CartConflictDialog.show(
-                      context,
-                      product: p,
-                      existingOutletName: conflictRestaurant,
-                      groceryItemsCount: groceryCount,
-                      onConfirm: () {
-                        ref.read(cartProvider.notifier).replaceRestaurantItemsWith(p, 1);
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF047857),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            content: Row(
-                              children: [
-                                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    groceryCount > 0
-                                        ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
-                                        : 'Switched to $newOutlet! 🍽️',
-                                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                    return;
-                  }
-
-                  HapticFeedback.lightImpact();
-                  ref.read(cartProvider.notifier).addProduct(p);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFFD1D8)),
-                  ),
-                  child: Text(
-                    '+ Add',
-                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w900, color: primaryRed),
-                  ),
+              Text(
+                '₹${price.toInt()}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: slateDark,
                 ),
               ),
+
+              if (cartItem != null)
+                Container(
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: primaryRed,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(cartProvider.notifier).updateQuantity(cartItem.productId, cartItem.quantity - 1);
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5),
+                          child: Icon(Icons.remove_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                      Text(
+                        '${cartItem.quantity}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(cartProvider.notifier).updateQuantity(cartItem.productId, cartItem.quantity + 1);
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5),
+                          child: Icon(Icons.add_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: () {
+                    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(p);
+                    if (conflictRestaurant != null) {
+                      final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
+                      final newOutlet = getOutletName(p);
+                      CartConflictDialog.show(
+                        context,
+                        product: p,
+                        existingOutletName: conflictRestaurant,
+                        groceryItemsCount: groceryCount,
+                        onConfirm: () {
+                          ref.read(cartProvider.notifier).replaceRestaurantItemsWith(p, 1);
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFF047857),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      groceryCount > 0
+                                          ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
+                                          : 'Switched to $newOutlet! 🍽️',
+                                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                      return;
+                    }
+
+                    HapticFeedback.lightImpact();
+                    ref.read(cartProvider.notifier).addProduct(p);
+                  },
+                  child: Container(
+                    height: 26,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFD1D8), width: 1.2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '+ ADD',
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        color: primaryRed,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ],

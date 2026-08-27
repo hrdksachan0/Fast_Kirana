@@ -121,30 +121,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isValidPhone = _phoneController.text.trim().length == 10;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         top: false,
         child: Stack(
           children: [
-            // Top Ambient Gradient Glow
+            // Top Ambient Luxury Mesh Glow
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 380,
+              height: 440,
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFFFFECEF),
-                      Color(0xFFFFF7F8),
-                      Color(0xFFFAFAFA),
+                      Color(0xFFFFE4E6),
+                      Color(0xFFFFF1F2),
+                      Color(0xFFF8FAFC),
                     ],
                   ),
                 ),
               ),
+            ),
+
+            // Subtle Glowing Ambient Halo behind Logo
+            Positioned(
+              top: 80,
+              left: MediaQuery.of(context).size.width / 2 - 110,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primaryRed.withValues(alpha: 0.08),
+                ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+                    begin: const Offset(0.9, 0.9),
+                    end: const Offset(1.1, 1.1),
+                    duration: 3.seconds,
+                    curve: Curves.easeInOut,
+                  ),
             ),
 
             SafeArea(
@@ -152,27 +171,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 maxWidth: Responsive.formMaxContentWidth,
                 fillHeight: true,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
-                      // Top Navigation: Skip Button
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Bounceable(
-                          onTap: _handleSkipGuest,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      // Top Bar: Live Ghatampur Badge & Skip Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: slateBorder),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 8,
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
@@ -180,102 +198,138 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'Skip to Browse',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: slateDark,
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFF16A34A),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 10,
-                                  color: slateMuted,
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Ghatampur Express ⚡',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF0F172A),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
+                          Bounceable(
+                            onTap: _handleSkipGuest,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Skip',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 9.5,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ).animate().fadeIn(duration: 350.ms),
 
                       const Spacer(flex: 1),
 
-                      // 🔴 Brand Hero Logo & Typography
+                      // 🔴 Brand Hero Section
                       Center(
                         child: Column(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
+                                color: Colors.white,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: primaryRed.withValues(alpha: 0.20),
-                                    blurRadius: 35,
+                                    color: primaryRed.withValues(alpha: 0.22),
+                                    blurRadius: 36,
                                     spreadRadius: 4,
                                     offset: const Offset(0, 12),
                                   ),
                                 ],
                               ),
-                              child: const FastKiranaLogoWidget(size: 84),
+                              child: const FastKiranaLogoWidget(size: 80),
                             )
                                 .animate()
                                 .fadeIn(duration: 400.ms)
-                                .scale(begin: const Offset(0.88, 0.88), end: const Offset(1, 1), curve: Curves.easeOutBack, duration: 450.ms),
-                            const SizedBox(height: 16),
+                                .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), curve: Curves.easeOutBack, duration: 450.ms),
+                            const SizedBox(height: 14),
                             Text(
                               'FastKirana',
                               style: GoogleFonts.inter(
-                                fontSize: 30,
+                                fontSize: 34,
                                 fontWeight: FontWeight.w900,
-                                color: slateDark,
-                                letterSpacing: -0.8,
+                                color: const Color(0xFF0F172A),
+                                letterSpacing: -1.2,
                               ),
-                            ).animate().fadeIn(duration: 400.ms, delay: 150.ms),
+                            ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
                             const SizedBox(height: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFF1F2),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: const Color(0xFFFFE4E6)),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('⚡', style: TextStyle(fontSize: 12)),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'Ghatampur\'s Fast Grocery & Food Delivery',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFFBE123C),
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                '⚡ 10-15 Min Grocery & Food Express',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFBE123C),
+                                  letterSpacing: 0.1,
+                                ),
                               ),
-                            ).animate().fadeIn(duration: 400.ms, delay: 250.ms),
+                            ).animate().fadeIn(duration: 400.ms, delay: 180.ms),
                           ],
                         ),
                       ),
 
                       const Spacer(flex: 1),
 
-                      // 📱 Ultra-Clean Modern Phone Input Card (Zepto / Blinkit Style)
+                      // 📱 Modern Elevated Phone Card
                       Container(
                         padding: const EdgeInsets.all(22),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+                              blurRadius: 28,
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
@@ -285,34 +339,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Enter Mobile Number',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: slateDark,
-                                  ),
-                                ),
-                                Row(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Color(0xFF16A34A),
+                                    Text(
+                                      'Log in or Sign up',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF0F172A),
+                                        letterSpacing: -0.3,
                                       ),
                                     ),
-                                    const SizedBox(width: 5),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'OTP Verification',
+                                      'We will send a 6-digit OTP to verify',
                                       style: GoogleFonts.inter(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF16A34A),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF64748B),
                                       ),
                                     ),
                                   ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '⚡ Instant OTP',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF15803D),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -321,7 +384,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             // Error Message Banner
                             if (_errorMessage != null) ...[
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFEF2F2),
@@ -347,10 +410,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ],
 
-                            // Single Unified Input Box
+                            // Single Unified Phone Input Box
                             Container(
-                              height: 56,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              height: 58,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(16),
@@ -360,8 +423,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Country Code & Flag
+                                  // Country Code Pill
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
@@ -372,14 +436,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Text('🇮🇳', style: TextStyle(fontSize: 17)),
-                                        const SizedBox(width: 6),
+                                        const Text('🇮🇳', style: TextStyle(fontSize: 16)),
+                                        const SizedBox(width: 5),
                                         Text(
                                           '+91',
                                           style: GoogleFonts.inter(
-                                            fontSize: 15,
+                                            fontSize: 14.5,
                                             fontWeight: FontWeight.w900,
-                                            color: slateDark,
+                                            color: const Color(0xFF0F172A),
                                           ),
                                         ),
                                       ],
@@ -394,16 +458,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       focusNode: _focusNode,
                                       keyboardType: TextInputType.phone,
                                       maxLength: 10,
+                                      textAlignVertical: TextAlignVertical.center,
                                       autofocus: true,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                         LengthLimitingTextInputFormatter(10),
                                       ],
                                       style: GoogleFonts.inter(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: slateDark,
-                                        letterSpacing: 1.5,
+                                        fontSize: 16.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0F172A),
+                                        letterSpacing: 1.2,
                                       ),
                                       decoration: InputDecoration(
                                         counterText: '',
@@ -411,18 +476,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         hintStyle: GoogleFonts.inter(
                                           fontSize: 13.5,
                                           color: const Color(0xFF94A3B8),
-                                          letterSpacing: 0.2,
+                                          letterSpacing: 0,
                                           fontWeight: FontWeight.w500,
                                         ),
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,
                                         focusedBorder: InputBorder.none,
-                                        disabledBorder: InputBorder.none,
-                                        contentPadding: EdgeInsets.zero,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                       ),
                                       onSubmitted: (_) => _handleContinue(),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
 
                                   // Checkmark / Clear Suffix
                                   if (isValidPhone)
@@ -449,7 +515,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                             const SizedBox(height: 16),
 
-                            // Main CTA Button
+                            // Main Continue Button
                             Bounceable(
                               onTap: _isLoading ? () {} : _handleContinue,
                               child: Container(
@@ -504,22 +570,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                      ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic, duration: 400.ms),
+                      ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic, duration: 400.ms),
 
                       const Spacer(flex: 1),
 
-                      // 🔒 Security & Privacy Footer
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          'By continuing, you agree to our Terms & Privacy Policy',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF94A3B8),
+                      // 🔒 Trust Badges & Privacy
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildTrustBadge('🔒 100% Secure'),
+                              const SizedBox(width: 8),
+                              _buildTrustBadge('⚡ 10-15 Min Express'),
+                              const SizedBox(width: 8),
+                              _buildTrustBadge('🛵 Free ₹199+'),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'By continuing, you agree to our Terms & Privacy Policy',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ).animate().fadeIn(duration: 400.ms, delay: 350.ms),
                     ],
                   ),
@@ -527,6 +606,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrustBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF64748B),
         ),
       ),
     );

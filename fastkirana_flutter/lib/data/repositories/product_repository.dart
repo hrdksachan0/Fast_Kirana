@@ -31,6 +31,7 @@ class ProductRepository {
         '/api/products',
         queryParameters: {
           'limit': limit,
+          'includeRestaurants': 'true',
           if (search != null && search.isNotEmpty) 'search': search,
           if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
         },
@@ -199,14 +200,15 @@ class ProductRepository {
     var result = products;
 
     // 1. Restaurant vs Grocery Isolation
+    // Only filter when explicitly requested (category or restaurantId).
+    // Search screen calls with null category — must return ALL products.
     if (restaurantId != null && restaurantId.isNotEmpty) {
       result = result.where((p) => p.restaurantId == restaurantId).toList();
-    } else if (category != null && (category.contains('restaurant') || category.contains('cafe'))) {
+    } else if (category != null && category.isNotEmpty &&
+               (category.contains('restaurant') || category.contains('cafe'))) {
       result = result.where((p) => p.restaurantId != null && p.restaurantId!.isNotEmpty).toList();
-    } else {
-      // Default: Grocery only (No restaurant meals like Roti/Naan in grocery sections)
-      result = result.where((p) => p.restaurantId == null || p.restaurantId!.isEmpty).toList();
     }
+    // No default filter — return all products when no restaurantId or food-category specified
 
     // 2. Category matching
     if (category != null && category.isNotEmpty && category != 'all') {

@@ -23,11 +23,9 @@ class OtpScreen extends ConsumerStatefulWidget {
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends ConsumerState<OtpScreen> {
-  final List<TextEditingController> _otpControllers =
-      List.generate(6, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes =
-      List.generate(6, (index) => FocusNode());
+class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserver {
+  final TextEditingController _otpController = TextEditingController();
+  final FocusNode _otpFocusNode = FocusNode();
   bool _isLoading = false;
   int _resendCooldown = 0;
   String? _errorMessage;
@@ -42,15 +40,26 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startResendCooldown();
     _checkClipboard();
-    for (int i = 0; i < 6; i++) {
-      _otpControllers[i].addListener(() {
-        if (mounted) setState(() {});
-      });
-      _focusNodes[i].addListener(() {
-        if (mounted) setState(() {});
-      });
+    _otpController.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _otpFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _otpFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkClipboard();
     }
   }
 
@@ -70,13 +79,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   void _fillOtp(String code) {
     final clean = code.replaceAll(RegExp(r'\D'), '');
     if (clean.length >= 6) {
-      final target = clean.substring(0, 6);
-      for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = target[i];
-      }
-      _focusNodes[5].requestFocus();
+      _otpController.text = clean.substring(0, 6);
       HapticFeedback.mediumImpact();
       _handleVerifyOtp();
+    } else {
+      _otpController.text = clean;
     }
   }
 
@@ -91,8 +98,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   Future<void> _handleVerifyOtp() async {
-    final rawOtp = _otpControllers.map((c) => c.text).join().replaceAll(RegExp(r'\D'), '');
-    final otp = rawOtp.length > 6 ? rawOtp.substring(0, 6) : rawOtp;
+    final otp = _otpController.text.trim().replaceAll(RegExp(r'\D'), '');
     if (otp.length != 6) {
       setState(() => _errorMessage = 'Please enter all 6 digits');
       HapticFeedback.heavyImpact();
@@ -379,12 +385,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   void dispose() {
-    for (final controller in _otpControllers) {
-      controller.dispose();
-    }
-    for (final node in _focusNodes) {
-      node.dispose();
-    }
+    WidgetsBinding.instance.removeObserver(this);
+    _otpController.dispose();
+    _otpFocusNode.dispose();
     super.dispose();
   }
 
@@ -550,7 +553,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 ],
 
                 // Smart Clipboard One-Tap Autofill Pill
-                if (_clipboardOtp != null && _otpControllers.any((c) => c.text.isEmpty)) ...[
+                if (_clipboardOtp != null && _otpController.text.length < 6) ...[
                   Center(
                     child: GestureDetector(
                       onTap: () => _fillOtp(_clipboardOtp!),
@@ -589,77 +592,123 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.95, 0.95)),
                 ],
 
-                // 6 Clean, Modern Unified OTP Cells with Native Autofill
+                // 6 Clean, Modern Tactile Pin Cells backed by Unified Input
                 AutofillGroup(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(6, (index) {
-                      final isBoxFilled = _otpControllers[index].text.isNotEmpty;
-                      final isBoxFocused = _focusNodes[index].hasFocus;
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Visual 6-Cell Row (IgnorePointer so all taps land directly on the full-size native TextField)
+                      IgnorePointer(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (index) {
+                            final text = _otpController.text;
+                            final hasChar = index < text.length;
+                            final isCurrent = index == text.length && _otpFocusNode.hasFocus;
 
-                      return Container(
-                        width: 44,
-                        height: 52,
-                        margin: EdgeInsets.only(
-                          right: index == 5 ? 0 : 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isBoxFocused ? Colors.white : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isBoxFocused
-                                ? primaryRed
-                                : (isBoxFilled ? const Color(0xFF94A3B8) : const Color(0xFFE2E8F0)),
-                            width: isBoxFocused ? 1.8 : 1.2,
-                          ),
-                          boxShadow: [
-                            if (isBoxFocused)
-                              BoxShadow(
-                                color: primaryRed.withValues(alpha: 0.12),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                            return Container(
+                              width: 48,
+                              height: 56,
+                              margin: EdgeInsets.only(
+                                right: index == 5 ? 0 : 8,
                               ),
-                          ],
+                              decoration: BoxDecoration(
+                                color: isCurrent
+                                    ? Colors.white
+                                    : (hasChar ? Colors.white : const Color(0xFFF8FAFC)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isCurrent
+                                      ? primaryRed
+                                      : (hasChar ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0)),
+                                  width: isCurrent ? 2.0 : (hasChar ? 1.5 : 1.2),
+                                ),
+                                boxShadow: [
+                                  if (isCurrent)
+                                    BoxShadow(
+                                      color: primaryRed.withValues(alpha: 0.18),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  if (hasChar && !isCurrent)
+                                    BoxShadow(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                ],
+                              ),
+                              child: Center(
+                                child: hasChar
+                                    ? Text(
+                                        text[index],
+                                        style: GoogleFonts.inter(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          color: slateDark,
+                                        ),
+                                      )
+                                    : (isCurrent
+                                        ? Container(
+                                            width: 2,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color: primaryRed,
+                                              borderRadius: BorderRadius.circular(1),
+                                            ),
+                                          ).animate(onPlay: (c) => c.repeat(reverse: true)).fade(
+                                                duration: 600.ms,
+                                                begin: 0.1,
+                                                end: 1.0,
+                                              )
+                                        : Container(
+                                            width: 7,
+                                            height: 7,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFCBD5E1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          )),
+                              ),
+                            ).animate().fadeIn(duration: 250.ms, delay: (80 + index * 25).ms);
+                          }),
                         ),
-                        child: Center(
-                          child: TextField(
-                            controller: _otpControllers[index],
-                            focusNode: _focusNodes[index],
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            autofocus: index == 0,
-                            autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: slateDark,
-                            ),
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: (value) {
-                              if (value.length > 1) {
-                                _fillOtp(value);
-                                return;
-                              }
-                              if (value.length == 1 && index < 5) {
-                                _focusNodes[index + 1].requestFocus();
-                              }
-                              if (value.isEmpty && index > 0) {
-                                _focusNodes[index - 1].requestFocus();
-                              }
-                              final all = _otpControllers.map((c) => c.text).join();
-                              if (all.length == 6) {
-                                _handleVerifyOtp();
-                              }
-                            },
+                      ),
+
+                      // Full-Area Transparent Native TextField (Forces large 0-9 numeric dialpad)
+                      Positioned.fill(
+                        child: TextField(
+                          controller: _otpController,
+                          focusNode: _otpFocusNode,
+                          keyboardType: TextInputType.phone,
+                          autofocus: true,
+                          showCursor: false,
+                          cursorColor: Colors.transparent,
+                          enableInteractiveSelection: false,
+                          style: const TextStyle(
+                            color: Colors.transparent,
+                            fontSize: 20,
                           ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
+                          onChanged: (value) {
+                            if (value.length == 6) {
+                              HapticFeedback.mediumImpact();
+                              _handleVerifyOtp();
+                            }
+                          },
                         ),
-                      ).animate().fadeIn(duration: 300.ms, delay: (100 + index * 30).ms);
-                    }),
+                      ),
+                    ],
                   ),
                 ),
 

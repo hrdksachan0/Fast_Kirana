@@ -6,11 +6,62 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Top-level background message handler
+// Top-level background message handler for when app is killed or phone screen is off
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print("Handling background message: ${message.messageId}");
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {}
+
+  final notification = message.notification;
+  final data = message.data;
+  final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
+  final body = notification?.body ?? data['body'] ?? data['message'];
+
+  // If received as data-only message in background, manually trigger system notification
+  if (body != null && notification == null) {
+    try {
+      final localNotifications = FlutterLocalNotificationsPlugin();
+      const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initSettings = InitializationSettings(android: androidInit);
+      await localNotifications.initialize(initSettings);
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'fastkirana_alerts',
+        'FastKirana Alerts',
+        channelDescription: 'Notifications for order updates and tracking.',
+        icon: '@mipmap/ic_launcher',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      await localNotifications.show(
+        message.hashCode,
+        title.toString(),
+        body.toString(),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'fastkirana_alerts',
+            'FastKirana Alerts',
+            channelDescription: 'Notifications for order updates and tracking.',
+            icon: '@mipmap/ic_launcher',
+            importance: Importance.max,
+            priority: Priority.high,
+            showWhen: true,
+            when: DateTime.now().millisecondsSinceEpoch,
+            playSound: true,
+            enableVibration: true,
+          ),
+        ),
+        payload: data.toString(),
+      );
+    } catch (e) {
+      print("Background notification show error: $e");
+    }
+  }
 }
 
 class NotificationService {
@@ -44,7 +95,7 @@ class NotificationService {
       _prefs['offers_promos'] = prefs.getBool('notif_offers_promos') ?? true;
       _prefs['delivery_alerts'] = prefs.getBool('notif_delivery_alerts') ?? true;
 
-      // 3. Request runtime notification permissions explicitly
+      // 2. Request runtime notification permissions explicitly
       try {
         await _fcm.requestPermission(
           alert: true,
@@ -58,7 +109,7 @@ class NotificationService {
             ?.requestNotificationsPermission();
       } catch (_) {}
 
-      // 4. Setup local notification channel for Android
+      // 3. Setup local notification channel for Android with MAX priority
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         'fastkirana_alerts',
         'FastKirana Alerts',
@@ -66,6 +117,7 @@ class NotificationService {
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
+        showBadge: true,
       );
 
       await _localNotifications
@@ -91,7 +143,7 @@ class NotificationService {
         },
       );
 
-      // 5. Handle Foreground Messages
+      // 5. Handle Foreground Messages with exact current timestamp
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _handleForegroundMessage(message);
       });
@@ -111,6 +163,15 @@ class NotificationService {
       try {
         await _fcm.subscribeToTopic('all_users');
         await _fcm.subscribeToTopic('ghatampur_alerts');
+        final savedPhone = prefs.getString('user_phone') ?? '';
+        final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
+        if (clean.length == 10) {
+          await _fcm.subscribeToTopic('phone_$clean');
+        }
+        final savedUserId = prefs.getString('user_id');
+        if (savedUserId != null && savedUserId.isNotEmpty) {
+          await _fcm.subscribeToTopic('user_$savedUserId');
+        }
       } catch (e) {
         print("Topic subscription error: $e");
       }
@@ -126,7 +187,6 @@ class NotificationService {
     final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
     if (body != null && body.toString().trim().isNotEmpty) {
-      // Check user preferences
       final data = message.data;
       final category = data['category'] as String? ?? 'order';
       if (!_shouldShowNotification(category)) {
@@ -138,7 +198,7 @@ class NotificationService {
         message.hashCode,
         title.toString(),
         body.toString(),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             'fastkirana_alerts',
             'FastKirana Alerts',
@@ -146,10 +206,12 @@ class NotificationService {
             icon: '@mipmap/ic_launcher',
             importance: Importance.max,
             priority: Priority.high,
+            showWhen: true,
+            when: DateTime.now().millisecondsSinceEpoch,
             playSound: true,
             enableVibration: true,
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
