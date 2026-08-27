@@ -686,17 +686,75 @@ export function ProductEditModal({
             {hasVariantsEdit && (
               <div className="space-y-3 pt-2 border-t border-border">
                 {editProductVariants.length > 0 && (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {editProductVariants.map((v, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-muted/20 border border-border/50 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                        <span>{v.name} — Price: ₹{v.price}, MRP: ₹{v.mrp || v.price} {!isRestaurantMode && `(Stock: ${v.stock})`}</span>
-                        <button
-                          type="button"
-                          onClick={() => setEditProductVariants(editProductVariants.filter((_, i) => i !== idx))}
-                          className="text-[10px] text-rose-500 hover:text-rose-600 font-bold cursor-pointer"
-                        >
-                          Remove
-                        </button>
+                      <div key={idx} className="p-2.5 rounded-xl border border-border/80 bg-muted/15 space-y-1.5 shadow-2xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase text-primary tracking-wider">Option #{idx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditProductVariants(editProductVariants.filter((_, i) => i !== idx))}
+                            className="text-[10px] text-rose-500 hover:text-rose-600 font-extrabold cursor-pointer"
+                          >
+                            Remove ✕
+                          </button>
+                        </div>
+                        <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 items-center`}>
+                          <div>
+                            <label className="text-[9px] font-bold text-text-muted block mb-0.5">Name</label>
+                            <input
+                              type="text"
+                              value={v.name}
+                              onChange={(e) => {
+                                const updated = [...editProductVariants]
+                                updated[idx] = { ...updated[idx], name: e.target.value }
+                                setEditProductVariants(updated)
+                              }}
+                              className="w-full px-2 py-1 text-xs font-bold rounded-lg border bg-background focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-bold text-text-muted block mb-0.5">MRP (₹)</label>
+                            <input
+                              type="number"
+                              value={v.mrp}
+                              onChange={(e) => {
+                                const updated = [...editProductVariants]
+                                updated[idx] = { ...updated[idx], mrp: e.target.value }
+                                setEditProductVariants(updated)
+                              }}
+                              className="w-full px-2 py-1 text-xs font-semibold rounded-lg border bg-background focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-bold text-text-muted block mb-0.5">Selling Price (₹)</label>
+                            <input
+                              type="number"
+                              value={v.price}
+                              onChange={(e) => {
+                                const updated = [...editProductVariants]
+                                updated[idx] = { ...updated[idx], price: e.target.value }
+                                setEditProductVariants(updated)
+                              }}
+                              className="w-full px-2 py-1 text-xs font-extrabold text-accent rounded-lg border bg-background focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                          {!isRestaurantMode && (
+                            <div>
+                              <label className="text-[9px] font-bold text-text-muted block mb-0.5">Stock</label>
+                              <input
+                                type="number"
+                                value={v.stock}
+                                onChange={(e) => {
+                                  const updated = [...editProductVariants]
+                                  updated[idx] = { ...updated[idx], stock: e.target.value }
+                                  setEditProductVariants(updated)
+                                }}
+                                className="w-full px-2 py-1 text-xs font-bold rounded-lg border bg-background focus:outline-none focus:border-primary"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
