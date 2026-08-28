@@ -795,6 +795,8 @@ export default function CheckoutPage() {
         return
       }
 
+      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod: selectedMethod,
@@ -802,6 +804,7 @@ export default function CheckoutPage() {
         deliveryMethod,
         scheduledSlot,
         appliedCouponCode,
+        customerPhone: effectiveCustomerPhone,
         contactPhone,
         packagingOption,
         packagingFee,
@@ -874,6 +877,8 @@ export default function CheckoutPage() {
       }
 
       // 2. Pre-create DB Order in PENDING / UNPAID state BEFORE opening Razorpay
+      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod: selectedMethod,
@@ -881,6 +886,7 @@ export default function CheckoutPage() {
         deliveryMethod,
         scheduledSlot,
         appliedCouponCode,
+        customerPhone: effectiveCustomerPhone,
         contactPhone,
         packagingOption,
         packagingFee,

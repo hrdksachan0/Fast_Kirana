@@ -425,19 +425,29 @@ async def create_order(
     if delivery_method == "DELIVERY":
         p = (address.pincode or "").strip().replace(" ", "")
         serviceable_pincode = settings_map.get("serviceable_pincode", "209206").strip().replace(" ", "")
+        allowed_pincodes = [serviceable_pincode, "209206", "209201", "209214", "209208", "208001", "208002", "208011", "208012", "208020"]
         
-        if not p or p != serviceable_pincode:
+        if p and p not in allowed_pincodes and not (len(p) == 6 and p.isdigit()):
             raise HTTPException(
                 status_code=400,
-                detail=f"Selected address is outside our delivery zone. FastKirana delivers strictly to Ghatampur (Pincode: {serviceable_pincode})."
+                detail=f"Selected address pincode ({p}) is outside our delivery zone."
             )
 
         c = (address.city or "").strip().lower()
-        if "ghatampur" not in c:
+        allowed_cities = ["ghatampur", "kanpur", "nagar", "dehat", "up", "uttar pradesh"]
+        if c and not any(k in c for k in allowed_cities):
             raise HTTPException(
                 status_code=400,
-                detail="Selected address city is outside our delivery zone. Delivery is available in Ghatampur only."
+                detail="Selected address city is outside our delivery zone."
             )
+
+        # Update phone if passed
+        raw_phone = payload.get("phone") or payload.get("customerPhone")
+        if raw_phone and address:
+            clean_p = "".join(filter(str.isdigit, str(raw_phone)))[-10:]
+            if len(clean_p) == 10:
+                address.phone = f"+91{clean_p}"
+                await db.commit()
 
         # Geocode if lat/lng is missing
         target_lat = address.lat

@@ -235,7 +235,8 @@ export function buildOrderPayload(
     deliveryMethod: 'DELIVERY' | 'PICKUP'
     scheduledSlot: string
     appliedCouponCode: string | null
-    contactPhone: string
+    customerPhone?: string
+    contactPhone?: string
     packagingOption?: 'NORMAL' | 'PREMIUM'
     packagingFee?: number
   }
@@ -248,7 +249,9 @@ export function buildOrderPayload(
     isB2B: false,
     scheduledSlot: ctx.scheduledSlot,
     shopName: DEFAULT_SHOP_NAME,
-    shopPhone: ctx.contactPhone,
+    shopPhone: ctx.contactPhone || DEFAULT_CONTACT_PHONE,
+    phone: ctx.customerPhone || undefined,
+    customerPhone: ctx.customerPhone || undefined,
     couponCode: ctx.appliedCouponCode,
     packagingOption: ctx.packagingOption || 'NORMAL',
     packagingFee: ctx.packagingFee || 0,

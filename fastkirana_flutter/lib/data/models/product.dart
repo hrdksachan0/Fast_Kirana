@@ -121,9 +121,9 @@ class Product {
       expiryDate: parsedExpiry,
       costPrice: double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
       location: json['location']?.toString(),
-      isFlashDeal: json['isFlashDeal'] == true,
-      isTopPick: json['isTopPick'] == true,
-      isBestSeller: json['isBestSeller'] == true,
+      isFlashDeal: json['isFlashDeal'] == true || json['is_flash_deal'] == true,
+      isTopPick: json['isTopPick'] == true || json['is_top_pick'] == true || json['trending'] == true || json['isTrending'] == true,
+      isBestSeller: json['isBestSeller'] == true || json['is_best_seller'] == true || json['bestseller'] == true || json['isBestseller'] == true,
       sortOrder: int.tryParse(json['sortOrder']?.toString() ?? '0') ?? 0,
       availableStartTime: json['availableStartTime']?.toString(),
       availableEndTime: json['availableEndTime']?.toString(),
@@ -203,6 +203,28 @@ class Product {
     }
     return [];
   }
+
+  bool get isTrending =>
+      isTopPick ||
+      tags.any((t) =>
+          t.toLowerCase() == 'trending' ||
+          t.toLowerCase() == 'popular' ||
+          t.toLowerCase() == 'toppick' ||
+          t.toLowerCase() == 'top pick');
+
+  bool get isBestsellerProduct =>
+      isBestSeller ||
+      tags.any((t) =>
+          t.toLowerCase() == 'bestseller' ||
+          t.toLowerCase() == 'best seller' ||
+          t.toLowerCase() == 'best-seller');
+
+  bool get isFlashDealProduct =>
+      isFlashDeal ||
+      tags.any((t) =>
+          t.toLowerCase() == 'flash deal' ||
+          t.toLowerCase() == 'flashdeal' ||
+          t.toLowerCase() == 'flash-deal');
 }
 
 class ProductVariant {

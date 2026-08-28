@@ -139,22 +139,55 @@ export async function POST(request: NextRequest) {
       finalAddressId = pickupAddress.id
     }
 
-    let address = finalAddressId ? await prisma.address.findFirst({
-      where: {
-        OR: [
-          { id: finalAddressId },
-          { userId: userId },
-        ]
-      },
-    }) : null
+    let address: any = null
+    if (finalAddressId && finalAddressId !== 'addr_default' && finalAddressId !== 'STORE_PICKUP') {
+      address = await prisma.address.findUnique({
+        where: { id: finalAddressId }
+      })
+    }
 
-    if (!address) {
+    if (!address && finalAddressId && finalAddressId !== 'addr_default' && finalAddressId !== 'STORE_PICKUP') {
       address = await prisma.address.findFirst({
-        where: { userId: userId }
+        where: { id: finalAddressId }
+      })
+    }
+
+    // If still not found, check if mobile app sent customerAddress text
+    if (!address && body.customerAddress && typeof body.customerAddress === 'string' && body.customerAddress.trim().length > 0) {
+      const rawCustomerPhone = body.phone || body.customerPhone || ''
+      const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
+      const formattedPhone = cleanPhone && cleanPhone.length === 10 ? `+91${cleanPhone}` : (rawCustomerPhone || '+917054470303')
+      
+      address = await prisma.address.create({
+        data: {
+          userId,
+          label: 'DELIVERY',
+          houseNo: '.',
+          street: body.customerAddress.trim(),
+          area: '.',
+          city: 'Ghatampur',
+          pincode: '209206',
+          phone: formattedPhone,
+          lat: body.latitude ? parseFloat(body.latitude) : null,
+          lng: body.longitude ? parseFloat(body.longitude) : null,
+        }
       })
     }
 
     if (!address) {
+      address = await prisma.address.findFirst({
+        where: { userId: userId },
+        orderBy: [
+          { isDefault: 'desc' },
+        ]
+      })
+    }
+
+    if (!address) {
+      const rawCustomerPhone = body.phone || body.customerPhone || '+917054470303'
+      const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
+      const formattedPhone = cleanPhone && cleanPhone.length === 10 ? `+91${cleanPhone}` : rawCustomerPhone
+
       address = await prisma.address.create({
         data: {
           userId,
@@ -164,11 +197,35 @@ export async function POST(request: NextRequest) {
           area: 'Ghatampur',
           city: 'Ghatampur',
           pincode: '209206',
-          phone: body.phone || '+917054470303',
+          phone: formattedPhone,
         }
       })
     }
     finalAddressId = address.id
+
+    // Update phone numbers across address and user profile if customer passed a new phone in checkout
+    const rawCustomerPhone = body.phone || body.customerPhone
+    if (rawCustomerPhone) {
+      const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
+      if (cleanPhone && cleanPhone.length === 10) {
+        const formattedPhone = `+91${cleanPhone}`
+        
+        if (address && (!address.phone || address.phone.trim() === '' || address.phone !== formattedPhone)) {
+          await prisma.address.update({
+            where: { id: address.id },
+            data: { phone: formattedPhone }
+          }).catch(() => {})
+          address.phone = formattedPhone
+        }
+
+        if (userId) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { phone: formattedPhone }
+          }).catch(() => {})
+        }
+      }
+    }
 
     // Fetch store settings early (needed for pincode check, tax, misc fee, store status)
     const storeSettings = await prisma.storeSetting.findMany()

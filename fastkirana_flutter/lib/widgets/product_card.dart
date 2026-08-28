@@ -183,39 +183,148 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ),
                     ),
 
-                    // Top Left: Discount Badge
-                    if (resolvedDiscount > 0)
-                      Positioned(
-                        top: 5,
-                        left: 5,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFE11D48), Color(0xFFF97316)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFE11D48).withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                    // Top Left: Stacked Badges (Discount + Bestseller / Trending / Flash Deal)
+                    Positioned(
+                      top: 5,
+                      left: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (product.isBestsellerProduct)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            '$resolvedDiscount% OFF',
-                            style: GoogleFonts.inter(
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 0.3,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔥', style: TextStyle(fontSize: 8)),
+                                  const SizedBox(width: 2.5),
+                                  Text(
+                                    'BESTSELLER',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 7.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (product.isTrending)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('⚡', style: TextStyle(fontSize: 8)),
+                                  const SizedBox(width: 2.5),
+                                  Text(
+                                    'TRENDING',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 7.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (product.isFlashDealProduct)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFDC2626).withValues(alpha: 0.35),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '⚡ DEAL',
+                                style: GoogleFonts.inter(
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+
+                          // Discount Badge
+                          if (resolvedDiscount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFE11D48), Color(0xFFF97316)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE11D48).withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '$resolvedDiscount% OFF',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
 
                     // Top Left Time Slot Badge (if outside active timing)
                     if (!timingStatus.isAvailableNow && timingStatus.formattedTimeSlot != null)
