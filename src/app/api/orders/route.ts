@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
     finalAddressId = address.id
 
-    // Update phone numbers across address and user profile ONLY for regular USER accounts (never Admin/Staff)
+    // Update address recipient phone number if customer entered a phone for this delivery address (account phone remains untouched)
     const rawCustomerPhone = body.phone || body.customerPhone
     if (rawCustomerPhone) {
       const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
@@ -218,19 +218,6 @@ export async function POST(request: NextRequest) {
             data: { phone: formattedPhone }
           }).catch(() => {})
           address.phone = formattedPhone
-        }
-
-        if (userId) {
-          const targetUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, role: true }
-          })
-          if (targetUser && targetUser.role === Role.USER) {
-            await prisma.user.update({
-              where: { id: userId },
-              data: { phone: formattedPhone }
-            }).catch(() => {})
-          }
         }
       }
     }
@@ -851,19 +838,6 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
-        // Sync address phone number to user profile only if user is a regular customer
-        if (address && address.phone) {
-          const userObj = await tx.user.findUnique({
-            where: { id: userId },
-            select: { phone: true, role: true }
-          })
-          if (userObj && userObj.role === Role.USER && (!userObj.phone || userObj.phone.trim() === '')) {
-            await tx.user.update({
-              where: { id: userId },
-              data: { phone: address.phone.trim() }
-            })
-          }
-        }
 
         // Create order
         const newOrder = await tx.order.create({
