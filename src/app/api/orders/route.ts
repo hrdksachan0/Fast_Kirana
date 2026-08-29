@@ -27,41 +27,43 @@ export async function POST(request: NextRequest) {
   }
   const session = await auth()
   let userId = session?.user?.id
+  const isStaffSession = Boolean(session?.user?.role && session.user.role !== Role.USER)
 
-  // If mobile app request without NextAuth cookie, resolve or create customer by phone / userId
-  if (!userId) {
-    const rawPhone = body.phone || body.customerPhone || request.headers.get('x-user-phone')
-    if (!rawPhone) {
-      return NextResponse.json({ error: 'Customer phone or identification is required' }, { status: 400 })
-    }
-    const cleanPhone = getLast10Digits(rawPhone.toString())
+  // If mobile app request without NextAuth cookie OR admin placing order on behalf of customer:
+  const rawPhone = body.phone || body.customerPhone || request.headers.get('x-user-phone')
+  const cleanPhone = rawPhone ? getLast10Digits(rawPhone.toString()) : ''
+
+  if (!userId || (isStaffSession && cleanPhone && cleanPhone.length === 10)) {
     if (!cleanPhone || cleanPhone.length < 10) {
-      return NextResponse.json({ error: 'Valid 10-digit customer phone is required' }, { status: 400 })
-    }
-    const userName = body.userName || body.customerName || `Customer ${cleanPhone.slice(-4)}`
-
-    let dbUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { phone: cleanPhone },
-          { phone: `+91${cleanPhone}` },
-          { phone: { contains: cleanPhone } },
-          ...(body.userId ? [{ id: body.userId }] : []),
-        ]
+      if (!userId) {
+        return NextResponse.json({ error: 'Valid 10-digit customer phone is required' }, { status: 400 })
       }
-    })
+    } else {
+      const userName = body.userName || body.customerName || `Customer ${cleanPhone.slice(-4)}`
 
-    if (!dbUser) {
-      dbUser = await prisma.user.create({
-        data: {
-          phone: `+91${cleanPhone}`,
-          email: body.email || `customer_${cleanPhone}@fastkirana.in`,
-          name: userName.toString(),
-          role: Role.USER,
+      let dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: { contains: cleanPhone } },
+            ...(body.userId ? [{ id: body.userId }] : []),
+          ]
         }
       })
+
+      if (!dbUser) {
+        dbUser = await prisma.user.create({
+          data: {
+            phone: `+91${cleanPhone}`,
+            email: body.email || `customer_${cleanPhone}@fastkirana.in`,
+            name: userName.toString(),
+            role: Role.USER,
+          }
+        })
+      }
+      userId = dbUser.id
     }
-    userId = dbUser.id
   }
 
   // Check if account is blocked
@@ -203,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
     finalAddressId = address.id
 
-    // Update phone numbers across address and user profile if customer passed a new phone in checkout
+    // Update phone numbers across address and user profile ONLY for regular USER accounts (never Admin/Staff)
     const rawCustomerPhone = body.phone || body.customerPhone
     if (rawCustomerPhone) {
       const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
@@ -219,10 +221,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          await prisma.user.update({
+          const targetUser = await prisma.user.findUnique({
             where: { id: userId },
-            data: { phone: formattedPhone }
-          }).catch(() => {})
+            select: { id: true, role: true }
+          })
+          if (targetUser && targetUser.role === Role.USER) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: { phone: formattedPhone }
+            }).catch(() => {})
+          }
         }
       }
     }
@@ -843,13 +851,13 @@ export async function POST(request: NextRequest) {
           orderAddressId = pickupAddress.id
         }
 
-        // Sync address phone number to user profile if currently missing in system
+        // Sync address phone number to user profile only if user is a regular customer
         if (address && address.phone) {
           const userObj = await tx.user.findUnique({
             where: { id: userId },
-            select: { phone: true }
+            select: { phone: true, role: true }
           })
-          if (userObj && (!userObj.phone || userObj.phone.trim() === '')) {
+          if (userObj && userObj.role === Role.USER && (!userObj.phone || userObj.phone.trim() === '')) {
             await tx.user.update({
               where: { id: userId },
               data: { phone: address.phone.trim() }
