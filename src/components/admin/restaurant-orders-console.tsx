@@ -465,14 +465,25 @@ export function RestaurantOrdersConsole() {
       .on(
         'broadcast',
         { event: 'reprint-kot' },
-        (payload) => {
+        async (payload) => {
           const { orderId } = payload.payload || {}
           if (orderId) {
-            const orderToPrint = ordersRef.current.find((o) => o.id === orderId)
+            let orderToPrint = ordersRef.current.find((o) => o.id === orderId)
+            if (!orderToPrint) {
+              try {
+                const res = await fetch(`/api/orders/${orderId}`)
+                if (res.ok) {
+                  const data = await res.json()
+                  orderToPrint = data.order || data
+                }
+              } catch (e) {
+                console.error('Failed to fetch remote order for KOT print:', e)
+              }
+            }
             if (orderToPrint) {
               console.log('Received remote reprint request for Order ID:', orderId)
               printKOTReceiptRef.current?.(orderToPrint)
-              toast.info(`Remote reprint requested for KOT #${orderToPrint.readableId || orderId.slice(0, 8)}`)
+              toast.info(`🖨️ KOT #${orderToPrint.readableId || orderId.slice(0, 8)} printed on kitchen printer!`)
             }
           }
         }

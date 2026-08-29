@@ -232,12 +232,7 @@ export function OrdersTab({
     markOrderKotPrinted(targetOrder.id)
     if (o.id !== targetOrder.id) markOrderKotPrinted(o.id)
 
-    // Trigger local / silent thermal receipt print
-    try {
-      printKOTReceipt(targetOrder)
-    } catch {}
-
-    const toastId = toast.loading(`Sending KOT to Kitchen PC (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
+    const toastId = toast.loading(`Sending KOT to Kitchen (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
     try {
       const channel = supabase.channel('restaurant-orders-live')
       channel.subscribe((status) => {
@@ -248,18 +243,18 @@ export function OrdersTab({
             payload: { orderId: targetOrder.id }
           }).then((resp) => {
             toast.dismiss(toastId)
-            toast.success(`KOT Printed & Marked ✓ 🖨️`)
+            toast.success(`KOT Sent to Kitchen ✓ 📲`)
             supabase.removeChannel(channel)
           }).catch(() => {
             toast.dismiss(toastId)
-            toast.success(`KOT Print Triggered & Marked ✓ 🖨️`)
+            toast.success(`KOT Sent to Kitchen ✓ 📲`)
             supabase.removeChannel(channel)
           })
         }
       })
     } catch (err) {
       toast.dismiss(toastId)
-      toast.success(`KOT Print Triggered & Marked ✓ 🖨️`)
+      toast.success(`KOT Sent to Kitchen ✓ 📲`)
     }
   }
 

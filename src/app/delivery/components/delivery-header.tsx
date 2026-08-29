@@ -15,9 +15,9 @@ function LiveClock() {
   }, [])
   if (!time) return null
   return (
-    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/10 backdrop-blur-md">
-      <Clock className="h-3 w-3 text-emerald-400" />
-      <span className="text-[10px] font-mono font-semibold text-slate-300 tracking-wider">
+    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 border border-white/30 backdrop-blur-md shadow-xs">
+      <Clock className="h-3 w-3 text-white" />
+      <span className="text-[10px] font-mono font-bold text-white tracking-wider">
         {time}
       </span>
     </div>
@@ -65,28 +65,28 @@ export default function DeliveryHeader({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-white/10 px-4 pt-4 pb-3 sm:rounded-b-3xl shadow-2xl"
+      className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 px-4 pt-4 pb-3 sm:rounded-b-3xl shadow-xl text-white"
     >
-      {/* Ambient background glows */}
-      <div className="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-teal-500/10 blur-2xl pointer-events-none" />
+      {/* Decorative ambient glass bubbles */}
+      <div className="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
 
       {/* Top Bar: Status & Live Clock & Refresh */}
-      <div className="relative flex justify-between items-center pb-3 border-b border-white/[0.06]">
+      <div className="relative flex justify-between items-center pb-3 border-b border-white/20">
         {/* Status Pill */}
         <div className="flex items-center gap-2">
           {isOffline ? (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider animate-pulse shadow-sm">
               <WifiOff className="h-3 w-3" />
               <span>Offline Mode</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold tracking-wide shadow-xs">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 border border-white/30 text-white text-[10px] font-bold tracking-wide shadow-xs backdrop-blur-md">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-200" />
               </span>
-              <span className="font-semibold text-slate-200">Online</span>
+              <span className="font-bold">Online & Active</span>
             </div>
           )}
         </div>
@@ -98,9 +98,9 @@ export default function DeliveryHeader({
             onClick={onRefresh}
             disabled={isRefreshing}
             aria-label="Refresh orders"
-            className="h-8 w-8 min-h-[44px] min-w-[44px] rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 flex items-center justify-center text-slate-200 hover:text-white transition-all disabled:opacity-50 active:scale-90 cursor-pointer shadow-xs"
+            className="h-8 w-8 min-h-[44px] min-w-[44px] rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-all disabled:opacity-50 active:scale-90 cursor-pointer shadow-xs"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -109,33 +109,31 @@ export default function DeliveryHeader({
       <div className="relative pt-3 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-[1.5px] shadow-lg shadow-emerald-500/20">
-              <div className="h-full w-full rounded-[14px] bg-slate-950 flex items-center justify-center">
-                <Truck className="h-5 w-5 text-emerald-400" />
-              </div>
+            <div className="h-11 w-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-md">
+              <Truck className="h-5 w-5 text-white" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-slate-950 flex items-center justify-center">
-              <Sparkles className="h-2 w-2 text-slate-950" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs">
+              <Sparkles className="h-2 w-2" />
             </div>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block leading-none">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-100 block leading-none">
               FastKirana Partner
             </span>
             <h1 className="text-base font-black text-white tracking-tight flex items-center gap-1.5 mt-0.5">
-              {greeting}, <span className="text-emerald-300">{userName || 'Rider'}</span> 👋
+              {greeting}, <span className="underline decoration-white/40">{userName || 'Rider'}</span> 👋
             </h1>
           </div>
         </div>
 
         {/* Auto Refresh Progress Tag */}
         <div className="text-right">
-          <span className="text-[9px] font-mono text-slate-400 block">
-            Sync in <strong className="text-emerald-400 font-bold">{autoRefreshCountdown}s</strong>
+          <span className="text-[9px] font-mono text-emerald-100 font-bold block">
+            Sync in <strong className="text-white font-extrabold">{autoRefreshCountdown}s</strong>
           </span>
-          <div className="mt-1 w-16 h-1 rounded-full bg-white/10 overflow-hidden ml-auto">
+          <div className="mt-1 w-16 h-1 rounded-full bg-black/20 overflow-hidden ml-auto">
             <motion.div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+              className="h-full bg-white rounded-full"
               animate={{ width: `${((30 - autoRefreshCountdown) / 30) * 100}%` }}
               transition={{ duration: 0.5, ease: 'linear' }}
             />
@@ -148,15 +146,15 @@ export default function DeliveryHeader({
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="mb-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl p-2.5 text-[10px] font-bold text-amber-200 flex items-center justify-between"
+          className="mb-2.5 bg-amber-500 text-amber-950 font-bold rounded-xl p-2.5 text-[10px] flex items-center justify-between shadow-sm"
         >
           <span>⚠️ {offlineQueueCount} unsynced offline updates</span>
-          <span className="animate-pulse text-amber-400 font-semibold">Auto-syncing...</span>
+          <span className="animate-pulse font-extrabold">Auto-syncing...</span>
         </motion.div>
       )}
 
-      {/* Modern Glassmorphic Pill Tab Navigation */}
-      <div className="relative mt-1 bg-black/40 backdrop-blur-xl rounded-2xl p-1 border border-white/10 grid grid-cols-3 gap-1 shadow-inner">
+      {/* Modern Light Clean Tab Navigation */}
+      <div className="relative mt-1 bg-black/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 grid grid-cols-3 gap-1 shadow-inner">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -166,18 +164,18 @@ export default function DeliveryHeader({
               onClick={() => setActiveTab(tab.id)}
               className={`relative py-2.5 px-2 rounded-xl text-xs font-black tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer z-10 select-none ${
                 isActive
-                  ? 'text-emerald-950 font-black'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                  ? 'text-emerald-800 font-black shadow-md'
+                  : 'text-white/90 hover:text-white hover:bg-white/10'
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="activeRiderTabIndicator"
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-xl shadow-md shadow-emerald-500/25 -z-10"
+                  className="absolute inset-0 bg-white rounded-xl shadow-md -z-10"
                 />
               )}
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-emerald-950' : 'text-slate-400'}`} />
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-emerald-700' : 'text-white'}`} />
               <span className="truncate">{tab.label}</span>
             </button>
           )
