@@ -16,8 +16,25 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val VOICE_CHANNEL = "com.fastkirana.app/voice_search"
     private val BATTERY_CHANNEL = "com.fastkirana.app/battery"
+    private val DEEP_LINK_CHANNEL = "com.fastkirana.app/deep_link"
     private var speechRecognizer: SpeechRecognizer? = null
     private var methodChannel: MethodChannel? = null
+    private var deepLinkChannel: MethodChannel? = null
+    private var initialDeepLink: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Capture deep link that launched the app
+        initialDeepLink = intent?.data?.toString()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Handle deep link while app is running
+        intent.data?.let { uri ->
+            deepLinkChannel?.invokeMethod("onDeepLink", uri.toString())
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -57,6 +74,18 @@ class MainActivity : FlutterActivity() {
                     } catch (e: Exception) {
                         result.success(false)
                     }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Deep link channel
+        deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEP_LINK_CHANNEL)
+        deepLinkChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialLink" -> {
+                    result.success(initialDeepLink)
+                    initialDeepLink = null
                 }
                 else -> result.notImplemented()
             }

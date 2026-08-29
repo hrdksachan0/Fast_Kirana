@@ -1,0 +1,6 @@
+# Keystore configuration — DO NOT commit this file
+# Copy key.template.properties to key.properties and fill in real values
+storeFile=
+storePassword=
+keyAlias=
+keyPassword=

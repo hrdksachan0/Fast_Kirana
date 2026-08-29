@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import 'privacy_policy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -85,6 +86,31 @@ class SettingsScreen extends StatelessWidget {
                   _navTile(Icons.lock_rounded, 'Change Password', '', () {}),
                   _divider(),
                   _navTile(Icons.delete_outline_rounded, 'Delete Account', '', () {}, isDanger: true),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Legal
+            _sectionHeader('Legal'),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppDesignSystem.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppDesignSystem.borderLight),
+                boxShadow: AppDesignSystem.shadowSm,
+              ),
+              child: Column(
+                children: [
+                  _navTile(Icons.privacy_tip_rounded, 'Privacy Policy', 'How we handle your data', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()));
+                  }),
+                  _divider(),
+                  _navTile(Icons.description_rounded, 'Terms & Conditions', 'Usage terms', () {}),
+                  _divider(),
+                  _navTile(Icons.info_outline_rounded, 'About', 'FastKirana v1.0.0', () {}),
                 ],
               ),
             ),

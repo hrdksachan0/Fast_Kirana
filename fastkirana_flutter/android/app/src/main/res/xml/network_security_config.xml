@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Production: HTTPS-only -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow cleartext only for local development (emulator + localhost) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+    <!-- FastKirana domains (HTTPS-enforced) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">fastkirana.in</domain>
+        <domain includeSubdomains="true">www.fastkirana.in</domain>
+        <domain includeSubdomains="true">fastkirana-production-a4b8.up.railway.app</domain>
+    </domain-config>
+</network-security-config>
