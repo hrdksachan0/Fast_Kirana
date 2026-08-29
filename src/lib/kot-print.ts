@@ -115,7 +115,7 @@ async function processPrintQueue() {
  */
 function formatKOTDate(dateValue?: string | Date | number | null): string {
   if (!dateValue) {
-    return new Date().toLocaleString('en-IN', {
+    return new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
@@ -123,27 +123,33 @@ function formatKOTDate(dateValue?: string | Date | number | null): string {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
-    })
+    }).format(new Date())
   }
 
   let d: Date
-  if (typeof dateValue === 'string') {
-    const s = dateValue.trim()
-    if (!s.endsWith('Z') && !s.includes('+') && s.includes('-')) {
-      d = new Date(s.replace(' ', 'T') + 'Z')
-      if (isNaN(d.getTime())) d = new Date(s)
+  if (dateValue instanceof Date) {
+    d = dateValue
+  } else if (typeof dateValue === 'number') {
+    d = new Date(dateValue)
+  } else {
+    const s = String(dateValue).trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      if (s.endsWith('Z') || s.includes('+') || (s.includes('T') && s.slice(10).includes('-'))) {
+        d = new Date(s)
+      } else {
+        d = new Date(s.replace(' ', 'T') + 'Z')
+        if (isNaN(d.getTime())) d = new Date(s)
+      }
     } else {
       d = new Date(s)
     }
-  } else {
-    d = new Date(dateValue)
   }
 
   if (isNaN(d.getTime())) {
     d = new Date()
   }
 
-  return d.toLocaleString('en-IN', {
+  return new Intl.DateTimeFormat('en-IN', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
@@ -151,22 +157,28 @@ function formatKOTDate(dateValue?: string | Date | number | null): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
-  })
+  }).format(d)
 }
 
 function getElapsedText(createdAt?: string | Date | number | null): string {
   if (!createdAt) return 'Just now'
   let d: Date
-  if (typeof createdAt === 'string') {
-    const s = createdAt.trim()
-    if (!s.endsWith('Z') && !s.includes('+') && s.includes('-')) {
-      d = new Date(s.replace(' ', 'T') + 'Z')
-      if (isNaN(d.getTime())) d = new Date(s)
+  if (createdAt instanceof Date) {
+    d = createdAt
+  } else if (typeof createdAt === 'number') {
+    d = new Date(createdAt)
+  } else {
+    const s = String(createdAt).trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      if (s.endsWith('Z') || s.includes('+') || (s.includes('T') && s.slice(10).includes('-'))) {
+        d = new Date(s)
+      } else {
+        d = new Date(s.replace(' ', 'T') + 'Z')
+        if (isNaN(d.getTime())) d = new Date(s)
+      }
     } else {
       d = new Date(s)
     }
-  } else {
-    d = new Date(createdAt)
   }
   if (isNaN(d.getTime())) return 'Just now'
 

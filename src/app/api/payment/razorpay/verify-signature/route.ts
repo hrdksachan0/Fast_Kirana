@@ -47,23 +47,21 @@ export async function POST(req: Request) {
 
     // Update ALL sub-orders in the combined group (or just this one if standalone)
     // Each sub-order keeps its own status progression, but paymentStatus + paymentMethod are set to PAID/UPI
-    // Only PENDING orders get auto-advanced to CONFIRMED
+    // Update ALL sub-orders in the combined group (or just this one if standalone)
+    // Mark paymentStatus = PAID and paymentMethod = UPI, while keeping order status (e.g. PENDING) for admin confirmation
     if (order.combinedId) {
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE "combinedId" = ${order.combinedId}
       `
     } else {
-      const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            status = ${nextStatus}::"OrderStatus",
             "updatedAt" = NOW()
         WHERE id = ${orderId}
       `

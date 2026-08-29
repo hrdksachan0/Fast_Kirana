@@ -315,6 +315,23 @@ export default function OrderTrackingModal({
             )}
           </div>
 
+          {/* ── Recipient Details Badge if ordered for someone else ── */}
+          {order.notes?.includes('Order for:') && (
+            <div className="p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/25 rounded-xl flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base shrink-0">🎁</span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
+                    Ordering For Other Person
+                  </div>
+                  <div className="text-xs font-bold text-text-primary truncate">
+                    {order.notes.split('|')[0].replace('🎁 Order for:', '').trim()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Delivery Address ── */}
           {!isPickup && (
             <div className="flex items-start gap-2.5 p-3 bg-muted/40 rounded-xl">

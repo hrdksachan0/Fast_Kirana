@@ -263,6 +263,7 @@ export default function CheckoutPage() {
   }, [])
   const [isAddressesLoading, setIsAddressesLoading] = useState(true)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [activePendingOrderId, setActivePendingOrderId] = useState<string | null>(null)
   const [cookingInstruction, setCookingInstruction] = useState('')
 
   // New Address Form State
@@ -813,7 +814,11 @@ export default function CheckoutPage() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, notes: cookingInstruction.trim() || undefined }),
+        body: JSON.stringify({
+          ...payload,
+          existingOrderId: activePendingOrderId || undefined,
+          notes: cookingInstruction.trim() || undefined
+        }),
       })
 
       const data = await res.json()
@@ -876,7 +881,7 @@ export default function CheckoutPage() {
         return
       }
 
-      // 2. Pre-create DB Order in PENDING / UNPAID state BEFORE opening Razorpay
+      // 2. Pre-create DB Order in PENDING / UNPAID state BEFORE opening Razorpay (reuses existing pending order on retry)
       const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
 
       const payload = buildOrderPayload({
@@ -895,7 +900,11 @@ export default function CheckoutPage() {
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, notes: cookingInstruction.trim() || undefined }),
+        body: JSON.stringify({
+          ...payload,
+          existingOrderId: activePendingOrderId || undefined,
+          notes: cookingInstruction.trim() || undefined
+        }),
       })
 
       const orderData = await orderRes.json()
@@ -905,6 +914,9 @@ export default function CheckoutPage() {
         setIsPlacingOrder(false)
         return
       }
+
+      // Save pending order ID to reuse if customer retries or switches payment method
+      setActivePendingOrderId(orderData.id)
 
       // 3. Create Razorpay Payment Order ID linked to DB order.id
       const rzpRes = await fetch('/api/payment/razorpay/create-order', {

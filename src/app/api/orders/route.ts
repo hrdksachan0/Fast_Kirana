@@ -839,58 +839,129 @@ export async function POST(request: NextRequest) {
         }
 
 
-        // Create order
-        const newOrder = await tx.order.create({
-          data: {
-            userId: userId,
-            readableId: orderReadableId,
-            addressId: orderAddressId,
-            combinedId: combinedId,
-            orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
-            status: paymentStatus === PaymentStatus.PAID ? OrderStatus.CONFIRMED : OrderStatus.PENDING,
+        // Check if there is an existing PENDING & UNPAID order to reuse (Prevents duplicate ghost orders on payment retry)
+        const targetExistingId = body.existingOrderId || body.orderId
+        let existingPendingOrder: any = null
 
-            subtotal: orderInfo.subtotal,
-            discount: orderInfo.discount,
-            deliveryFee: orderInfo.deliveryFee,
-            taxes: orderInfo.taxes,
-            miscFee: orderInfo.miscFee || 0,
-            total: orderInfo.total,
-            paymentMethod: resolvedPaymentMethod,
-            paymentStatus,
-            estimatedDelivery,
-            deliveryMethod,
-            isB2B: Boolean(isB2B),
-            storeId,
-            couponCode: couponCode ? couponCode.toUpperCase() : null,
-            shopName: orderInfo.type === 'RESTAURANT'
-              ? (orderInfo.restaurant?.name || 'Restaurant')
-              : (shopName || 'FastKirana Dark Store'),
-            shopPhone: orderInfo.type === 'RESTAURANT'
-              ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
-              : shopPhone,
-            restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
-            deliveryLat: address.lat,
-            deliveryLng: address.lng,
-            items: {
-              create: orderItemsData.map((item: any) => ({
-                productId: item.productId,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                imageUrl: item.imageUrl,
-                selectedVariant: item.selectedVariant,
-                costPrice: item.costPrice,
-                variants: item.variants,
-                notes: item.notes,
-              })),
+        if (targetExistingId) {
+          existingPendingOrder = await tx.order.findFirst({
+            where: {
+              id: targetExistingId,
+              userId: userId,
+              status: OrderStatus.PENDING,
+              paymentStatus: PaymentStatus.PENDING,
             },
-          },
-          include: {
-            items: true,
-            address: true,
-            user: true,
-          },
-        })
+            include: { items: true, address: true, user: true }
+          })
+        } else if (userId && orderInfo.total > 0) {
+          const threeMinutesAgo = new Date(Date.now() - 180 * 1000)
+          existingPendingOrder = await tx.order.findFirst({
+            where: {
+              userId: userId,
+              status: OrderStatus.PENDING,
+              paymentStatus: PaymentStatus.PENDING,
+              createdAt: { gte: threeMinutesAgo },
+              total: orderInfo.total,
+              orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
+            },
+            orderBy: { createdAt: 'desc' },
+            include: { items: true, address: true, user: true }
+          })
+        }
+
+        let newOrder: any
+        if (existingPendingOrder) {
+          // Delete old order items before re-attaching updated snapshot
+          await tx.orderItem.deleteMany({
+            where: { orderId: existingPendingOrder.id }
+          })
+
+          newOrder = await tx.order.update({
+            where: { id: existingPendingOrder.id },
+            data: {
+              addressId: orderAddressId,
+              paymentMethod: resolvedPaymentMethod,
+              paymentStatus,
+              notes: body.notes || orderInfo.notes || null,
+              deliveryMethod,
+              deliveryLat: address.lat,
+              deliveryLng: address.lng,
+              updatedAt: new Date(),
+              items: {
+                create: orderItemsData.map((item: any) => ({
+                  productId: item.productId,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  imageUrl: item.imageUrl,
+                  selectedVariant: item.selectedVariant,
+                  costPrice: item.costPrice,
+                  variants: item.variants,
+                  notes: item.notes,
+                })),
+              },
+            },
+            include: {
+              items: true,
+              address: true,
+              user: true,
+            },
+          })
+        } else {
+          // Create new order
+          newOrder = await tx.order.create({
+            data: {
+              userId: userId,
+              readableId: orderReadableId,
+              addressId: orderAddressId,
+              combinedId: combinedId,
+              orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
+              status: OrderStatus.PENDING,
+
+              subtotal: orderInfo.subtotal,
+              discount: orderInfo.discount,
+              deliveryFee: orderInfo.deliveryFee,
+              taxes: orderInfo.taxes,
+              miscFee: orderInfo.miscFee || 0,
+              total: orderInfo.total,
+              paymentMethod: resolvedPaymentMethod,
+              paymentStatus,
+              estimatedDelivery,
+              deliveryMethod,
+              isB2B: Boolean(isB2B),
+              storeId,
+              couponCode: couponCode ? couponCode.toUpperCase() : null,
+              shopName: orderInfo.type === 'RESTAURANT'
+                ? (orderInfo.restaurant?.name || 'Restaurant')
+                : (shopName || 'FastKirana Dark Store'),
+              shopPhone: orderInfo.type === 'RESTAURANT'
+                ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
+                : shopPhone,
+              notes: body.notes || orderInfo.notes || null,
+              restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
+              deliveryLat: address.lat,
+              deliveryLng: address.lng,
+              items: {
+                create: orderItemsData.map((item: any) => ({
+                  productId: item.productId,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  imageUrl: item.imageUrl,
+                  selectedVariant: item.selectedVariant,
+                  costPrice: item.costPrice,
+                  variants: item.variants,
+                  notes: item.notes,
+                })),
+              },
+            },
+            include: {
+              items: true,
+              address: true,
+              user: true,
+            },
+          })
+        }
 
         results.push(newOrder)
 

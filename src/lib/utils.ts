@@ -91,7 +91,13 @@ export function formatAddress(
   includeCityAndPincode = true
 ): string {
   if (!addr) return ''
-  if (typeof addr === 'string') return addr
+  if (typeof addr === 'string') {
+    return addr
+      .replace(/^📍?\s*Current Location,?\s*/i, '')
+      .replace(/,\s*,+/g, ', ')
+      .replace(/^[\s,]+|[\s,]+$/g, '')
+      .trim()
+  }
   const parts: string[] = []
   
   if (addr.houseNo && addr.houseNo !== '.' && String(addr.houseNo).toLowerCase() !== 'n/a' && String(addr.houseNo).toLowerCase() !== 'ghatampur') {

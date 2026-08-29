@@ -85,7 +85,8 @@ export async function GET(request: NextRequest) {
             where: {
               id: { in: coOccurredProductIds },
               isAvailable: true,
-              stock: { gt: 0 }
+              stock: { gt: 0 },
+              ...typeFilter
             },
             include: { category: true }
           })

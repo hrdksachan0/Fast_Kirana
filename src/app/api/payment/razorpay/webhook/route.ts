@@ -104,22 +104,20 @@ export async function POST(req: Request) {
       }
 
       // Update order and all companion sub-orders (combinedId) atomically via Raw SQL
+      // Mark paymentStatus = PAID and paymentMethod = UPI without auto-confirming order status
       if (order.combinedId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = 'UPI'::"PaymentMethod",
-              status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
               "updatedAt" = NOW()
           WHERE "combinedId" = ${order.combinedId}
         `
       } else {
-        const nextStatus = order.status === 'PENDING' ? 'CONFIRMED' : order.status
         await prisma.$executeRaw`
           UPDATE orders 
           SET "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = 'UPI'::"PaymentMethod",
-              status = ${nextStatus}::"OrderStatus",
               "updatedAt" = NOW()
           WHERE id = ${order.id}
         `

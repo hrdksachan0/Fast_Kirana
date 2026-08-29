@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.status::text = ${status}
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
         FROM orders o
         WHERE o.status::text = ${status}
         ORDER BY o."createdAt" DESC
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.id ILIKE ${searchLike}
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId"
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
         FROM orders o
         ORDER BY o."createdAt" DESC
         LIMIT ${limit} OFFSET ${skip}
@@ -173,6 +173,7 @@ export async function GET(request: Request) {
         userName: user.name,
         userEmail: user.email,
         userPhone: address?.phone || user.phone || o.shopPhone || null,
+        notes: o.notes,
         isB2B: o.isB2B,
         deliveryMethod: o.deliveryMethod,
         shopName: o.restaurantId ? (restaurant?.name || o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
