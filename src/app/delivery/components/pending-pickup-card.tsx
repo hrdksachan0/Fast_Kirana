@@ -58,27 +58,39 @@ export default function PendingPickupCard({
           </div>
         )}
 
-        {/* ID & Status */}
-        <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
-          <div>
-            <span className="text-[9px] font-bold text-text-muted flex items-center gap-1.5">
-              Order ID
+        {/* ID, Customer Name & Status */}
+        <div className="flex justify-between items-start border-b border-border/40 pb-2.5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9px] font-bold text-text-muted">Order ID:</span>
+              <span className="text-xs font-mono font-black text-text-primary">
+                #{order.readableId || order.id.slice(0, 8)}
+              </span>
               {isRestaurant && (
                 <span className="bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider">
                   🥘 food
                 </span>
               )}
-            </span>
-            <span className="text-xs font-mono font-black text-text-primary flex items-center gap-1.5 flex-wrap">
-              #{order.readableId || order.id.slice(0, 8)}
               {order.companionOrder && (
                 <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
                   🛒 + 🍽️ Combined
                 </span>
               )}
-            </span>
+            </div>
+
+            {/* Customer Name & Phone Badge */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-text-primary flex-wrap pt-0.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-extrabold border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
+                👤 {order.user?.name || order.userName || 'Customer'}
+              </span>
+              {(order.address?.phone || order.user?.phone) && (
+                <span className="text-[10px] font-semibold text-text-muted">
+                  📞 {formatPhone(order.address?.phone || order.user?.phone)}
+                </span>
+              )}
+            </div>
           </div>
-          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 ${
             order.status === 'PACKED'
               ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-500/10 dark:to-teal-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20'
               : order.status === 'PREPARING'
@@ -135,7 +147,7 @@ export default function PendingPickupCard({
             </div>
             <div>
               <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
-                Deliver To <span className="text-[7px] text-emerald-600 font-black ml-1 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-0.2 rounded">NAV 🗺️</span>
+                Deliver To: <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold">{order.user?.name || order.userName || 'Customer'}</strong> <span className="text-[7px] text-emerald-600 font-black ml-1 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-0.2 rounded">NAV 🗺️</span>
               </span>
               <span className="text-text-primary font-bold group-hover:underline">{formatAddress(order.address, false)}</span>
             </div>
