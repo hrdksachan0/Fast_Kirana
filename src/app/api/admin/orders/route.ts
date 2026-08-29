@@ -43,7 +43,8 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.status::text = ${status}
@@ -61,7 +62,8 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
         FROM orders o
         WHERE o.status::text = ${status}
         ORDER BY o."createdAt" DESC
@@ -72,7 +74,8 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
         FROM orders o
         LEFT JOIN users u ON o."userId" = u.id
         WHERE o.id ILIKE ${searchLike}
@@ -87,7 +90,8 @@ export async function GET(request: Request) {
       ordersRaw = await prisma.$queryRaw`
         SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes
+               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
         FROM orders o
         ORDER BY o."createdAt" DESC
         LIMIT ${limit} OFFSET ${skip}
@@ -109,22 +113,22 @@ export async function GET(request: Request) {
           ` as Promise<any[]>)
         : [],
       addressIds.length > 0
-        ? prisma.address.findMany({ where: { id: { in: addressIds } } })
+        ? prisma.address.findMany({ where: { id: { in: addressIds as string[] } } })
         : [],
       orderIds.length > 0
         ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
         : [],
       restaurantIds.length > 0
-        ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds } }, select: { id: true, name: true, address: true, logoUrl: true } })
+        ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } }, select: { id: true, name: true, slug: true, address: true, logoUrl: true } })
         : [],
       prisma.order.count({ where }),
-      prisma.order.count({ where: whereForCounts }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'PENDING' } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'CONFIRMED' } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'PACKED' } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'SHIPPED' } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'DELIVERED' } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED' } }),
+      prisma.order.count({ where: { deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'PENDING', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'CONFIRMED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'PACKED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'SHIPPED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'DELIVERED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { status: 'CANCELLED', deliveryMethod: { not: 'RETAIL' } } }),
       prisma.order.aggregate({
         where: {
           createdAt: { gte: startOfToday },
@@ -164,6 +168,10 @@ export async function GET(request: Request) {
       return {
         id: o.id,
         readableId: o.readableId,
+        combinedId: o.combinedId || null,
+        orderType: o.orderType || (o.restaurantId ? 'RESTAURANT' : 'GROCERY'),
+        deliveryLat: o.deliveryLat || address?.lat || null,
+        deliveryLng: o.deliveryLng || address?.lng || null,
         status: o.status,
         paymentStatus: o.paymentStatus || 'PENDING',
         paymentMethod: o.paymentMethod || 'COD',
@@ -188,6 +196,8 @@ export async function GET(request: Request) {
           area: address.area,
           city: address.city,
           phone: address.phone,
+          lat: address.lat,
+          lng: address.lng,
         } : null,
       }
     })

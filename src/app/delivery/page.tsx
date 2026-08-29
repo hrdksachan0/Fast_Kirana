@@ -738,21 +738,22 @@ export default function DeliveryDashboard() {
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
       {/* Rider Delivery Confirmation Dialog (Prevents accidental clicks) */}
       {confirmDeliveryOrder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-card border border-border w-full max-w-sm rounded-3xl p-5 space-y-4 text-center shadow-2xl"
+            initial={{ scale: 0.92, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-card border border-border/80 w-full max-w-sm rounded-3xl p-6 space-y-4 text-center shadow-2xl relative overflow-hidden"
           >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center text-2xl">
+            <div className="absolute -top-12 -right-12 h-28 w-28 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white mx-auto flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/25">
               📦
             </div>
             <div>
               <h3 className="text-base font-black text-text-primary">Confirm Parcel Handover</h3>
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                 Order #{confirmDeliveryOrder.readableId || confirmDeliveryOrder.id.slice(0, 8)} • ₹{confirmDeliveryOrder.total}
               </p>
-              <p className="text-xs font-medium text-text-secondary mt-2 bg-secondary/50 p-2.5 rounded-xl border border-border/50">
+              <p className="text-xs font-medium text-text-secondary mt-2.5 bg-secondary/50 p-3 rounded-2xl border border-border/50 leading-relaxed">
                 Kya aapne customer ko parcel safely handover kar diya hai?
               </p>
             </div>
@@ -760,7 +761,7 @@ export default function DeliveryDashboard() {
               <button
                 type="button"
                 onClick={() => setConfirmDeliveryOrder(null)}
-                className="w-full py-3 px-3 rounded-2xl border border-border text-xs font-bold text-text-secondary hover:bg-secondary transition-colors"
+                className="w-full py-3.5 px-3 min-h-[44px] rounded-2xl border border-border text-xs font-bold text-text-secondary hover:bg-secondary transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -775,7 +776,7 @@ export default function DeliveryDashboard() {
                     executeDeliveryCompletion(target.id, false, 'ONLINE')
                   }
                 }}
-                className="w-full py-3 px-3 rounded-2xl bg-emerald-600 text-white text-xs font-black shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition-colors"
+                className="w-full py-3.5 px-3 min-h-[44px] rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white text-xs font-black shadow-lg shadow-emerald-500/30 hover:from-emerald-600 hover:to-teal-700 transition-all active:scale-95 cursor-pointer"
               >
                 Yes, Delivered ✅
               </button>
@@ -792,6 +793,7 @@ export default function DeliveryDashboard() {
           onSelectCash={handleSelectCash}
           onSelectOnline={handleSelectOnline}
           onSelectCustomCash={handleSelectCustomCash}
+          walletInfo={walletInfo}
         />
       )}
 
@@ -822,38 +824,39 @@ export default function DeliveryDashboard() {
         }}
       />
 
-      <div className="px-4 py-5 space-y-5">
+      <div className="px-4 py-5 space-y-6">
         {activeTab === 'deliveries' && (
           <>
             {/* Out for Delivery Section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm shadow-emerald-500/20">
-                    <Truck className="h-3 w-3 text-white" />
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20">
+                    <Truck className="h-3.5 w-3.5 text-white" />
                   </div>
                   <h2 className="text-xs font-black text-text-primary uppercase tracking-wider">
                     Out for Delivery
                   </h2>
                 </div>
                 {outForDeliveryOrders.length > 0 && (
-                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    {outForDeliveryOrders.length}
+                  <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-2.5 py-0.5 rounded-full shadow-2xs">
+                    {outForDeliveryOrders.length} {outForDeliveryOrders.length === 1 ? 'Order' : 'Orders'}
                   </span>
                 )}
-                <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
               </div>
 
               <AnimatePresence mode="popLayout">
                 {outForDeliveryOrders.length === 0 ? (
                   <motion.div
                     key="empty-active"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    className="bg-card/50 border border-dashed border-border/80 p-6 rounded-2xl text-center text-xs text-text-muted"
+                    className="bg-card/40 border border-dashed border-border/80 p-7 rounded-3xl text-center space-y-1.5"
                   >
-                    No orders currently out for delivery. Accept new orders below.
+                    <div className="text-2xl">🛵</div>
+                    <p className="text-xs font-bold text-text-primary">No orders out for delivery</p>
+                    <p className="text-[11px] text-text-muted">Accept new pickup orders from below to start delivering.</p>
                   </motion.div>
                 ) : (
                   outForDeliveryOrders.map((order, idx) => (
@@ -869,37 +872,36 @@ export default function DeliveryDashboard() {
               </AnimatePresence>
             </div>
 
-            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
             {/* Pending Pickups Section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/20">
-                    <ShoppingBag className="h-3 w-3 text-white" />
+            <div className="space-y-3.5 pt-2">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/20">
+                    <ShoppingBag className="h-3.5 w-3.5 text-white" />
                   </div>
                   <h2 className="text-xs font-black text-text-primary uppercase tracking-wider">
-                    Pending Pickups
+                    Ready for Pickup
                   </h2>
                 </div>
                 {pendingOrders.length > 0 && (
-                  <span className="text-[10px] font-black text-violet-600 bg-violet-50 dark:bg-violet-500/10 dark:text-violet-400 px-2 py-0.5 rounded-full">
-                    {pendingOrders.length}
+                  <span className="text-[10px] font-black text-violet-700 dark:text-violet-300 bg-violet-500/15 border border-violet-500/25 px-2.5 py-0.5 rounded-full shadow-2xs">
+                    {pendingOrders.length} {pendingOrders.length === 1 ? 'Order' : 'Orders'}
                   </span>
                 )}
-                <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
               </div>
 
               <AnimatePresence mode="popLayout">
                 {pendingOrders.length === 0 ? (
                   <motion.div
                     key="empty-pending"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    className="bg-card/50 border border-dashed border-border/80 p-8 rounded-2xl text-center text-xs text-text-muted"
+                    className="bg-card/40 border border-dashed border-border/80 p-7 rounded-3xl text-center space-y-1.5"
                   >
-                    All caught up! No orders pending pickup in the local store.
+                    <div className="text-2xl">✨</div>
+                    <p className="text-xs font-bold text-text-primary">All caught up!</p>
+                    <p className="text-[11px] text-text-muted">No pending pickups right now. New orders will appear automatically.</p>
                   </motion.div>
                 ) : (
                   pendingOrders.map((order) => (

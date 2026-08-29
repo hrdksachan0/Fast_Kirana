@@ -178,29 +178,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   const SizedBox(height: 36),
 
-                  // Center Hero: FastKirana Brand Logo with Red Glow
-                  Center(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 110,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryRed.withValues(alpha: 0.12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryRed.withValues(alpha: 0.25),
-                                blurRadius: 40,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const BrandLogo(size: 72),
-                      ],
-                    ),
+                  // Center Hero: FastKirana Brand Logo (Clean & Crisp, No Red Halo)
+                  const Center(
+                    child: BrandLogo(size: 76),
                   ),
 
                   const SizedBox(height: 18),
@@ -247,7 +227,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 44),
 
                   // White Card Container with Input & Button
                   Container(
@@ -255,11 +235,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 18,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -305,23 +286,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         const SizedBox(height: 14),
 
-                        // Single Seamless Luxury Input Card (No ugly inner nested borders)
+                        // Single Clean Input Card
                         Container(
-                          height: 54,
+                          height: 52,
                           decoration: BoxDecoration(
                             color: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: _isFocused
                                   ? primaryRed
-                                  : (isValidPhone ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0)),
-                              width: _isFocused ? 1.8 : 1.2,
+                                  : const Color(0xFFE2E8F0),
+                              width: _isFocused ? 1.5 : 1.2,
                             ),
                             boxShadow: [
                               if (_isFocused)
                                 BoxShadow(
-                                  color: primaryRed.withValues(alpha: 0.12),
-                                  blurRadius: 10,
+                                  color: primaryRed.withValues(alpha: 0.08),
+                                  blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
                             ],
@@ -368,7 +349,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     LengthLimitingTextInputFormatter(10),
                                   ],
                                   style: GoogleFonts.inter(
-                                    fontSize: 16,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF0F172A),
                                     letterSpacing: 0.8,
@@ -376,7 +357,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   decoration: InputDecoration(
                                     hintText: 'Enter 10-digit number',
                                     hintStyle: GoogleFonts.inter(
-                                      fontSize: 14,
+                                      fontSize: 13.5,
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF94A3B8),
                                       letterSpacing: 0.2,
@@ -486,14 +467,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   const SizedBox(height: 36),
 
-                  // Terms & Privacy Note
+                  // Clickable Terms & Privacy Policy Footer
                   Center(
-                    child: Text(
-                      'By continuing, you agree to our Terms & Privacy Policy',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF94A3B8),
+                    child: GestureDetector(
+                      onTap: () => _showTermsAndPrivacyModal(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                            children: [
+                              const TextSpan(text: 'By continuing, you agree to our '),
+                              TextSpan(
+                                text: 'Terms & Privacy Policy',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -503,6 +503,177 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showTermsAndPrivacyModal(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Terms & Conditions',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        'FastKirana Services & Privacy Policy',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF0F172A)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTncSection(
+                      '1. Service Overview',
+                      'FastKirana provides on-demand grocery, dairy, snacks, beverages, and local restaurant food express delivery across Ghatampur (UP 209206).',
+                    ),
+                    _buildTncSection(
+                      '2. User Account & OTP Verification',
+                      'To place orders, customers authenticate securely via a 6-digit OTP sent to their valid Indian mobile number. Users are responsible for keeping their account details secure.',
+                    ),
+                    _buildTncSection(
+                      '3. Orders, Pricing & Delivery Zones',
+                      'All prices listed in the FastKirana app are inclusive of applicable taxes. Delivery charges and surge fees (if applicable during extreme weather or late nights) are clearly itemized before checkout.',
+                    ),
+                    _buildTncSection(
+                      '4. Payment Options',
+                      'FastKirana supports 100% secure Online Payments (UPI - Google Pay, PhonePe, Paytm, BHIM, Net Banking, Credit/Debit Cards) and Cash on Delivery (COD). All online transactions are protected with 256-bit SSL encryption.',
+                    ),
+                    _buildTncSection(
+                      '5. Cancellation & Refund Policy',
+                      'Orders can be cancelled before store acceptance without penalty. In case of prepaid orders, cancelled order refunds will be credited back to your original payment method in 2-4 business days.',
+                    ),
+                    _buildTncSection(
+                      '6. Privacy & Data Protection',
+                      'We respect your privacy. Customer phone numbers and addresses are strictly used for order processing, delivery navigation, and customer support. We never sell personal data to third parties.',
+                    ),
+                    _buildTncSection(
+                      '7. Customer Support & Grievances',
+                      'For any queries, missing items, or delivery assistance, reach our Ghatampur Central Support directly at +91 81128 49854 or email fastkiranadelivery@gmail.com.',
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom CTA
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'I Understand & Agree',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTncSection(String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            body,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF475569),
+              height: 1.45,
+            ),
+          ),
+        ],
       ),
     );
   }

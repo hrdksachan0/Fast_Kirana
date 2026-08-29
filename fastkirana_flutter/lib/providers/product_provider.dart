@@ -3,6 +3,8 @@ import '../data/models/product.dart';
 import '../data/models/category.dart';
 import '../data/repositories/product_repository.dart';
 import '../core/network/api_client.dart';
+import '../core/utils/restaurant_utils.dart';
+import 'cart_provider.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.read(dioProvider));
@@ -25,3 +27,68 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
   final repo = ref.watch(productRepositoryProvider);
   return repo.getProducts(category: categoryId, limit: 1000);
 });
+
+final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {
+  if (productIds.isEmpty) return [];
+  final repo = ref.watch(productRepositoryProvider);
+
+  final cart = ref.watch(cartProvider).value;
+  final cartItems = cart?.items ?? [];
+  final cleanIds = productIds.map((id) => id.split('_').first).toSet();
+
+  // 1. Detect active restaurant in cart (e.g. A.S. Restaurant or Wedson)
+  String? activeOutlet;
+  String? activeRestaurantId;
+  for (final item in cartItems) {
+    if (isRestaurantProduct(item.product)) {
+      activeOutlet = getOutletName(item.product);
+      activeRestaurantId = item.product.restaurantId ?? item.product.restaurant?.id;
+      break;
+    }
+  }
+
+  // 2. Strict Filter Function:
+  // - If Cart has Restaurant 'AS': ONLY allow 'AS' dishes OR Darkstore Groceries. Ban Wedson / other restaurants!
+  // - If Cart is Pure Grocery: ONLY allow Darkstore Groceries. Ban ALL restaurant dishes!
+  bool isAllowed(Product p) {
+    if (cleanIds.contains(p.id)) return false;
+    final isRest = isRestaurantProduct(p);
+
+    if (activeOutlet != null) {
+      // Cart has a restaurant item (e.g. A.S. Restaurant)
+      if (!isRest) return true; // Darkstore groceries & beverages allowed
+      final pOutlet = getOutletName(p);
+      return pOutlet == activeOutlet ||
+          (activeRestaurantId != null && p.restaurantId == activeRestaurantId);
+    } else {
+      // Pure grocery cart: STRICTLY Darkstore Groceries only!
+      return !isRest;
+    }
+  }
+
+  // 3. Fetch from Next.js Upsell API
+  final upsells = await repo.getUpsellRecommendations(productIds);
+  final filteredUpsells = upsells.where(isAllowed).toList();
+  if (filteredUpsells.isNotEmpty) {
+    return filteredUpsells.take(8).toList();
+  }
+
+  // 4. Smart Fallback: Fetch products and filter strictly by active outlet or pure grocery
+  List<Product> all = [];
+  try {
+    if (activeRestaurantId != null || activeOutlet != null) {
+      final rId = activeRestaurantId ?? (activeOutlet?.toLowerCase().contains('wedson') == true ? outletWedsonId : outletAsRestaurantId);
+      final restaurantDishes = await repo.getProducts(restaurantId: rId, limit: 30);
+      final darkstoreItems = await repo.getProducts(category: 'beverages', limit: 20);
+      final snacks = await repo.getProducts(category: 'snacks-munchies', limit: 20);
+      all = [...restaurantDishes, ...darkstoreItems, ...snacks];
+    } else {
+      all = await repo.getProducts(limit: 60);
+    }
+  } catch (_) {
+    all = await repo.getProducts(limit: 60);
+  }
+
+  return all.where(isAllowed).take(8).toList();
+});
+

@@ -215,7 +215,7 @@ export default function CartPage() {
   const isItemClosed = (product: any) => {
     return isProductStoreClosed(
       product,
-      { groceryMartOpen, cafeOpen, restaurantOpen },
+      { groceryMartOpen, cafeOpen, restaurantOpen, ...settings },
       categoryStatus
     )
   }

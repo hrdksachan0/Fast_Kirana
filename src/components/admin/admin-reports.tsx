@@ -389,6 +389,188 @@ export function AdminReports() {
     }
   }
 
+  // ORDER-WISE Excel Exporter: Each row = 1 order with ReadableID, Customer, Payment, Items, Restaurant
+  const [orderExportLoading, setOrderExportLoading] = useState(false)
+  const handleDownloadOrderWiseXLSX = async (scope: 'all' | 'restaurant' = 'all') => {
+    try {
+      setOrderExportLoading(true)
+      toast.loading('Fetching order-wise data...', { id: 'order-excel' })
+
+      const res = await fetch(`/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`)
+      if (!res.ok) throw new Error('Failed to fetch order data')
+      const data = await res.json()
+      const orders = data.orders || []
+
+      if (orders.length === 0) {
+        toast.error('No delivered orders found in this date range', { id: 'order-excel' })
+        return
+      }
+
+      const formatDateTime = (d: string | null) => {
+        if (!d) return '-'
+        const dt = new Date(d)
+        return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+               ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+      }
+
+      const scopeLabel = scope === 'restaurant' ? 'Restaurant_OrderWise' : 'All_OrderWise'
+
+      // Filter orders based on scope
+      const targetOrders = scope === 'restaurant' 
+        ? orders.filter((o: any) => o.orderType === 'RESTAURANT' || o._restaurantNames?.length > 0)
+        : orders
+
+      // ── Sheet 1: All Orders (Order-Wise)
+      const header = [
+        'Order #', 'Customer Name', 'Phone', 'Order Date', 'Delivered At',
+        'Type', 'Delivery / Self-Pick', 'Delivered By (Rider/Admin)', 'Payment Method', 'Payment Status',
+        'Restaurant / Shop', 'Items', 'Item Count',
+        'Subtotal (₹)', 'Discount (₹)', 'Delivery Fee (₹)', 'Taxes (₹)', 'Handling Fee (₹)', 'Total (₹)',
+        'Cost (₹)', 'Profit (₹)', 'Coupon', 'Notes'
+      ]
+
+      const rows = targetOrders.map((o: any) => [
+        `#${o.readableId}`,
+        o.customerName,
+        o.customerPhone,
+        formatDateTime(o.orderDate),
+        formatDateTime(o.deliveredAt),
+        o.orderType,
+        o.fulfillmentType || o.deliveryMethod || 'Doorstep Delivery',
+        o.deliveredBy || (o.deliveredByName ? `Rider: ${o.deliveredByName}` : 'Admin / Direct'),
+        o.paymentMethod,
+        o.paymentStatus,
+        o.restaurantName || o.shopName || '-',
+        o.items,
+        o.itemCount,
+        o.subtotal,
+        o.discount,
+        o.deliveryFee,
+        o.taxes,
+        o.miscFee,
+        o.total,
+        o.totalCost,
+        o.profit,
+        o.couponCode,
+        o.notes,
+      ])
+
+      // Totals row
+      const totalRow = [
+        'TOTAL', '', '', '', '', '', '', '', '', '',
+        `${targetOrders.length} Orders`,
+        targetOrders.reduce((s: number, o: any) => s + o.itemCount, 0),
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.subtotal, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.discount, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.deliveryFee, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.taxes, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.miscFee, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.totalCost, 0) * 100) / 100,
+        Math.round(targetOrders.reduce((s: number, o: any) => s + o.profit, 0) * 100) / 100,
+        '', ''
+      ]
+
+      const wsAll = XLSX.utils.aoa_to_sheet([header, ...rows, [], totalRow])
+
+      // Set column widths for readability
+      wsAll['!cols'] = [
+        { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 20 }, { wch: 20 },
+        { wch: 12 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
+        { wch: 22 }, { wch: 45 }, { wch: 8 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
+      ]
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, wsAll, scope === 'restaurant' ? 'Restaurant Orders' : 'All Orders')
+
+      // ── Sheet 2: Payment Summary
+      const codOrders = targetOrders.filter((o: any) => o.paymentMethod === 'COD')
+      const onlineOrders = targetOrders.filter((o: any) => o.paymentMethod !== 'COD')
+      const paidOrders = targetOrders.filter((o: any) => o.paymentStatus === 'PAID')
+      const pendingPayOrders = targetOrders.filter((o: any) => o.paymentStatus === 'PENDING')
+
+      const paymentSummary = [
+        ['📊 Payment Summary', ''],
+        ['Date Range', `${startDate} to ${endDate}`],
+        ['', ''],
+        ['Payment Method', 'Orders', 'Total Amount (₹)'],
+        ['COD (Cash on Delivery)', codOrders.length, Math.round(codOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100],
+        ['Online (UPI/Card/Net Banking)', onlineOrders.length, Math.round(onlineOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100],
+        ['', '', ''],
+        ['Payment Status', 'Orders', 'Total Amount (₹)'],
+        ['PAID', paidOrders.length, Math.round(paidOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100],
+        ['PENDING', pendingPayOrders.length, Math.round(pendingPayOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100],
+        ['', '', ''],
+        ['Grand Total', targetOrders.length, Math.round(targetOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100],
+      ]
+      const wsPayment = XLSX.utils.aoa_to_sheet(paymentSummary)
+      wsPayment['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 18 }]
+      XLSX.utils.book_append_sheet(wb, wsPayment, 'Payment Summary')
+
+      // ── Sheet 3+: Per-Restaurant Sheets (only if scope is 'all' or 'restaurant')
+      const restaurantGroups: Record<string, any[]> = {}
+      for (const o of targetOrders) {
+        const rName = (o as any).restaurantName && (o as any).restaurantName !== '-' 
+          ? (o as any).restaurantName 
+          : (o as any).orderType === 'RESTAURANT' ? ((o as any).shopName || 'Unknown Restaurant') : null
+        if (rName) {
+          if (!restaurantGroups[rName]) restaurantGroups[rName] = []
+          restaurantGroups[rName].push(o)
+        }
+      }
+
+      for (const [rName, rOrders] of Object.entries(restaurantGroups)) {
+        const rHeader = [
+          'Order #', 'Customer Name', 'Phone', 'Order Date',
+          'Delivery Mode', 'Delivered By', 'Payment Method', 'Payment Status', 'Items', 'Item Count',
+          'Total (₹)', 'Cost (₹)', 'Profit (₹)'
+        ]
+        const rRows = rOrders.map((o: any) => [
+          `#${o.readableId}`,
+          o.customerName,
+          o.customerPhone,
+          formatDateTime(o.orderDate),
+          o.fulfillmentType || o.deliveryMethod || 'Doorstep Delivery',
+          o.deliveredBy || (o.deliveredByName ? `Rider: ${o.deliveredByName}` : 'Admin / Direct'),
+          o.paymentMethod,
+          o.paymentStatus,
+          o.items,
+          o.itemCount,
+          o.total,
+          o.totalCost,
+          o.profit,
+        ])
+        const rTotal = [
+          'TOTAL', '', '', '', '', '', '',
+          `${rOrders.length} Orders`,
+          rOrders.reduce((s: number, o: any) => s + o.itemCount, 0),
+          Math.round(rOrders.reduce((s: number, o: any) => s + o.total, 0) * 100) / 100,
+          Math.round(rOrders.reduce((s: number, o: any) => s + o.totalCost, 0) * 100) / 100,
+          Math.round(rOrders.reduce((s: number, o: any) => s + o.profit, 0) * 100) / 100,
+        ]
+        const wsR = XLSX.utils.aoa_to_sheet([rHeader, ...rRows, [], rTotal])
+        wsR['!cols'] = [
+          { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 20 },
+          { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 40 }, { wch: 8 },
+          { wch: 10 }, { wch: 10 }, { wch: 10 },
+        ]
+        // Sheet name max 31 chars
+        const sheetName = rName.length > 28 ? rName.slice(0, 28) + '...' : rName
+        XLSX.utils.book_append_sheet(wb, wsR, sheetName)
+      }
+
+      XLSX.writeFile(wb, `FastKirana_${scopeLabel}_${startDate}_to_${endDate}.xlsx`)
+      toast.success(`Order-wise Excel exported! (${targetOrders.length} orders)`, { id: 'order-excel' })
+    } catch (e) {
+      console.error('Error exporting order-wise Excel:', e)
+      toast.error('Failed to export order-wise Excel', { id: 'order-excel' })
+    } finally {
+      setOrderExportLoading(false)
+    }
+  }
+
   // Excel / CSV Exporter with UTF-8 BOM
   // Excel / CSV Exporter with UTF-8 BOM
   const handleDownloadCSV = (scope: 'all' | 'grocery' | 'restaurant' = 'all') => {
@@ -567,6 +749,28 @@ export function AdminReports() {
               title="Download raw CSV format instead"
             >
               CSV
+            </button>
+          </div>
+
+          {/* Order-Wise Excel Export Buttons */}
+          <div className="flex items-center gap-1.5 bg-violet-500/5 p-1 rounded-2xl border border-violet-500/20">
+            <button
+              onClick={() => handleDownloadOrderWiseXLSX('all')}
+              disabled={loading || orderExportLoading}
+              className="h-8 px-3 rounded-xl text-xs font-black bg-violet-600 hover:bg-violet-700 text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Order-Wise Excel with Payment Details & Readable ID"
+            >
+              {orderExportLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+              <span>📋 Order Wise</span>
+            </button>
+            <button
+              onClick={() => handleDownloadOrderWiseXLSX('restaurant')}
+              disabled={loading || orderExportLoading}
+              className="h-8 px-2.5 rounded-xl text-xs font-black bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Restaurant Order-Wise Excel with per-Restaurant Sheets"
+            >
+              <span>🍽️</span>
+              <span>Restaurant Orders</span>
             </button>
           </div>
         </div>

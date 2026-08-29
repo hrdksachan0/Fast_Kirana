@@ -226,27 +226,36 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: slateMuted,
-            ),
-          ),
-          if (customValue != null)
-            customValue
-          else
-            Text(
-              value,
+          SizedBox(
+            width: 95,
+            child: Text(
+              label,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: isBold || isHighlight ? FontWeight.w800 : FontWeight.w600,
-                color: isHighlight ? successGreen : slateDark,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: slateMuted,
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: customValue ??
+                  Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: isBold || isHighlight ? FontWeight.w800 : FontWeight.w600,
+                      color: isHighlight ? successGreen : slateDark,
+                      height: 1.3,
+                    ),
+                  ),
+            ),
+          ),
         ],
       ),
     );
@@ -255,29 +264,31 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
   @override
   Widget build(BuildContext context) {
     final displayId = widget.orderId ?? 'FK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    final currentStatus = _liveOrder?.status ?? OrderStatus.confirmed;
+    final currentStatus = _liveOrder?.status ?? (widget.order?.status ?? OrderStatus.confirmed);
+    final isCancelled = currentStatus == OrderStatus.cancelled;
     final stageIndex = _getStageIndex(currentStatus);
-    final badgeColor = _getBadgeColor(stageIndex);
+    final badgeColor = isCancelled ? const Color(0xFFDC2626) : _getBadgeColor(stageIndex);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Stack(
         alignment: Alignment.topCenter,
         children: [
-          ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            shouldLoop: false,
-            colors: const [
-              Color(0xFFE20A22),
-              Color(0xFF10B981),
-              Color(0xFFF59E0B),
-              Color(0xFF3B82F6),
-              Color(0xFF8B5CF6),
-            ],
-            numberOfParticles: 40,
-            gravity: 0.14,
-          ),
+          if (!isCancelled)
+            ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                Color(0xFFE20A22),
+                Color(0xFF10B981),
+                Color(0xFFF59E0B),
+                Color(0xFF3B82F6),
+                Color(0xFF8B5CF6),
+              ],
+              numberOfParticles: 40,
+              gravity: 0.14,
+            ),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -286,18 +297,22 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                 children: [
                   const SizedBox(height: 12),
 
-                  // 1. ANIMATED CHECKMARK BADGE
+                  // 1. ANIMATED TOP STATUS BADGE (Green Check / Red Cross)
                   ScaleTransition(
                     scale: _checkScaleAnim,
                     child: Container(
                       width: 96,
                       height: 96,
                       decoration: BoxDecoration(
-                        color: successGreen.withValues(alpha: 0.12),
+                        color: isCancelled
+                            ? const Color(0xFFFEF2F2)
+                            : successGreen.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: successGreen.withValues(alpha: 0.25),
+                            color: isCancelled
+                                ? const Color(0xFFEF4444).withValues(alpha: 0.2)
+                                : successGreen.withValues(alpha: 0.25),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
@@ -307,22 +322,28 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                         child: Container(
                           width: 72,
                           height: 72,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                              colors: isCancelled
+                                  ? [const Color(0xFFEF4444), const Color(0xFFDC2626)]
+                                  : [const Color(0xFF10B981), const Color(0xFF059669)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check_rounded, size: 44, color: Colors.white),
+                          child: Icon(
+                            isCancelled ? Icons.close_rounded : Icons.check_rounded,
+                            size: 44,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // 2. CELEBRATION TITLE & SUBTITLE
+                  // 2. STATUS TITLE & SUBTITLE
                   FadeTransition(
                     opacity: _titleFadeAnim,
                     child: SlideTransition(
@@ -330,18 +351,20 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                       child: Column(
                         children: [
                           Text(
-                            'Order Placed Successfully! 🎉',
+                            isCancelled ? 'Order Cancelled' : 'Order Placed Successfully! 🎉',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 21,
                               fontWeight: FontWeight.w900,
-                              color: slateDark,
+                              color: isCancelled ? const Color(0xFFDC2626) : slateDark,
                               letterSpacing: -0.5,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Your order has been received & is being synced with store.',
+                            isCancelled
+                                ? 'This order has been cancelled by store or customer.'
+                                : 'Your order has been received & is being synced with store.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 12.5,
@@ -355,94 +378,151 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                   ),
                   const SizedBox(height: 22),
 
-                  // 3. LIVE 5-STAGE PROGRESS TRACKER CARD (Synced with Admin)
+                  // 3. LIVE 5-STAGE PROGRESS TRACKER OR CANCELLED NOTICE CARD
                   FadeTransition(
                     opacity: _trackerFadeAnim,
                     child: SlideTransition(
                       position: _trackerSlideAnim,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Text('⚡', style: TextStyle(fontSize: 15)),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    _getStatusTitle(stageIndex),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                  decoration: BoxDecoration(
-                                    color: badgeColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                      child: isCancelled
+                          ? Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          color: badgeColor,
-                                          shape: BoxShape.circle,
+                                      const Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Order Status: Cancelled',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFF991B1B),
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _getBadgeText(stageIndex),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: badgeColor,
-                                          letterSpacing: 0.3,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEE2E2),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                                        ),
+                                        child: Text(
+                                          'CANCELLED',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFFDC2626),
+                                            letterSpacing: 0.3,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'No amount was charged for this order. If you paid online, your refund will be credited back in 2-4 business days.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF7F1D1D),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text('⚡', style: TextStyle(fontSize: 15)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _getStatusTitle(stageIndex),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                            color: slateDark,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                        decoration: BoxDecoration(
+                                          color: badgeColor.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: badgeColor,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _getBadgeText(stageIndex),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: badgeColor,
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
 
-                            // 5-Stage Stepper Flow
-                            Row(
-                              children: [
-                                _buildProgressStep('Placed', stageIndex >= 0),
-                                _buildProgressLine(stageIndex >= 1),
-                                _buildProgressStep('Confirmed', stageIndex >= 1),
-                                _buildProgressLine(stageIndex >= 2),
-                                _buildProgressStep('Packed', stageIndex >= 2),
-                                _buildProgressLine(stageIndex >= 3),
-                                _buildProgressStep('On Way', stageIndex >= 3),
-                                _buildProgressLine(stageIndex >= 4),
-                                _buildProgressStep('Delivered', stageIndex >= 4),
-                              ],
+                                  // 5-Stage Stepper Flow
+                                  Row(
+                                    children: [
+                                      _buildProgressStep('Placed', stageIndex >= 0),
+                                      _buildProgressLine(stageIndex >= 1),
+                                      _buildProgressStep('Confirmed', stageIndex >= 1),
+                                      _buildProgressLine(stageIndex >= 2),
+                                      _buildProgressStep('Packed', stageIndex >= 2),
+                                      _buildProgressLine(stageIndex >= 3),
+                                      _buildProgressStep('On Way', stageIndex >= 3),
+                                      _buildProgressLine(stageIndex >= 4),
+                                      _buildProgressStep('Delivered', stageIndex >= 4),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
 
@@ -524,9 +604,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             const Divider(height: 18, color: Color(0xFFF1F5F9)),
                             _buildDetailRow(
                               'Deliver To',
-                              widget.deliveryAddress.length > 25
-                                  ? '${widget.deliveryAddress.substring(0, 25)}...'
-                                  : widget.deliveryAddress,
+                              widget.deliveryAddress.isNotEmpty ? widget.deliveryAddress : 'Ghatampur Delivery Address',
                             ),
                           ],
                         ),
@@ -543,53 +621,55 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                       position: _buttonsSlideAnim,
                       child: Column(
                         children: [
-                          // Track Live Order Button
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.mediumImpact();
-                              Navigator.push(
-                                context,
-                                FadeSlideRoute(
-                                  page: OrderTrackingScreen(orderId: displayId),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryRed.withValues(alpha: 0.35),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 5),
+                          if (!isCancelled) ...[
+                            // Track Live Order Button
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.mediumImpact();
+                                Navigator.push(
+                                  context,
+                                  FadeSlideRoute(
+                                    page: OrderTrackingScreen(orderId: displayId),
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.location_searching_rounded, color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Track Live Order Status',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: -0.2,
+                                );
+                              },
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryRed.withValues(alpha: 0.35),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 5),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.location_searching_rounded, color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Track Live Order Status',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
+                            const SizedBox(height: 10),
+                          ],
 
                           // Continue Shopping Button
                           GestureDetector(
@@ -599,17 +679,17 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             child: Container(
                               height: 48,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isCancelled ? const Color(0xFFE20A22) : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(color: isCancelled ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0)),
                               ),
                               child: Center(
                                 child: Text(
-                                  'Continue Shopping 🛍️',
+                                  isCancelled ? 'Continue Shopping 🛍️' : 'Continue Shopping 🛍️',
                                   style: GoogleFonts.inter(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF334155),
+                                    color: isCancelled ? Colors.white : const Color(0xFF334155),
                                   ),
                                 ),
                               ),

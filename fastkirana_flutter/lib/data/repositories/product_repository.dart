@@ -61,6 +61,34 @@ class ProductRepository {
     }
   }
 
+  /// Exact Web App Smart Recommendation Engine:
+  /// Calls Next.js /api/products/upsell with active cart product IDs.
+  /// Recommends based on order co-occurrences, category/tag affinities, and strict restaurant/darkstore isolation.
+  Future<List<Product>> getUpsellRecommendations(List<String> productIds) async {
+    if (productIds.isEmpty) return [];
+    try {
+      final cleanIds = productIds.map((id) => id.split('_').first).toSet().join(',');
+      final response = await dio.get(
+        '/api/products/upsell',
+        queryParameters: {'productIds': cleanIds},
+      );
+
+      final data = response.data;
+      List productsJson = [];
+      if (data is List) {
+        productsJson = data;
+      } else if (data is Map && data['products'] is List) {
+        productsJson = data['products'];
+      }
+
+      return productsJson
+          .map((json) => Product.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   List<Product> _getStaticFallbackProducts() {
     final list = [
       {

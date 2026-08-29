@@ -11,7 +11,7 @@ import type { CartItem } from '@/stores/cart-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn, isCafeProduct, formatPhone, formatAddress, formatPrice } from '@/lib/utils'
+import { cn, isCafeProduct, isProductStoreClosed, formatPhone, formatAddress, formatPrice } from '@/lib/utils'
 import { getOutletName } from '@/lib/constants'
 import {
   MapPin,
@@ -1061,13 +1061,20 @@ export default function CheckoutPage() {
   }
 
   const hasCafe = items.some((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
-  const hasRestaurant = items.some((item) => item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
+  const hasRestaurant = items.some((item) => (item.product as any).restaurantId || (item.product as any).restaurant || item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant'))
   const hasGrocery = items.some((item) => {
     const isC = item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe')
-    const isR = item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
+    const isR = (item.product as any).restaurantId || (item.product as any).restaurant || item.product.category?.slug === 'restaurant' || (item.product as any).tags?.includes('restaurant')
     return !isC && !isR
   })
-  const isStoreClosed = (hasGrocery && !groceryMartOpen) || (hasCafe && !cafeOpen) || (hasRestaurant && !restaurantOpen)
+
+  const closedItems = items.filter((item) => {
+    return isProductStoreClosed(
+      item.product,
+      { groceryMartOpen, cafeOpen, restaurantOpen }
+    )
+  })
+  const isStoreClosed = closedItems.length > 0
 
   const hasInventoryIssues = items.some(
     (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
@@ -1129,24 +1136,51 @@ export default function CheckoutPage() {
 
 
   if (isStoreClosed && !isSettingsLoading) {
+    const handleRemoveClosedItems = () => {
+      let count = 0
+      closedItems.forEach(item => {
+        removeItem(item.product.id, item.product.name)
+        count++
+      })
+      if (count > 0) {
+        toast.success(`Removed closed outlet item(s) from your cart!`)
+      }
+    }
+
+    const closedOutletNames = Array.from(
+      new Set(
+        closedItems.map(
+          i => (i.product as any).restaurant?.name || (i.product as any).shopName || (isCafeProduct(i.product) ? 'Cafe' : 'Grocery Mart')
+        ).filter(Boolean)
+      )
+    )
+
     return (
       <div className="container mx-auto px-4 py-16 max-w-md text-center space-y-6 animate-fade-in">
         <div className="h-20 w-20 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner animate-pulse-gentle border border-amber-200/60 dark:border-amber-900/40">
           🏪
         </div>
-        <h1 className="text-2xl font-black text-text-primary">Store Closed Temporarily</h1>
+        <h1 className="text-2xl font-black text-text-primary">Outlet Closed Temporarily</h1>
         <p className="text-sm text-text-secondary leading-relaxed">
-          {hasGrocery && !groceryMartOpen && hasCafe && !cafeOpen && hasRestaurant && !restaurantOpen ? (
-            "Our Grocery Mart, Cafe, and Wedson Restaurant are temporarily closed. Please check back later!"
-          ) : hasGrocery && !groceryMartOpen ? (
-            "Our Grocery Mart is temporarily closed. You can proceed with other items by removing grocery items from your cart."
-          ) : hasCafe && !cafeOpen ? (
-            "Our Cafe is temporarily closed. You can proceed by removing cafe items from your cart."
-          ) : (
-            "Wedson Restaurant is temporarily closed. You can proceed by removing restaurant items from your cart."
-          )}
+          {closedOutletNames.length > 0 ? closedOutletNames.join(' & ') : 'This store'} is temporarily closed right now. You can proceed with your order by removing items from this closed outlet.
         </p>
+        <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-muted/20 rounded-xl border border-border/50">
+          {closedItems.map(item => (
+            <div key={item.product.id} className="flex items-center justify-between text-xs py-1.5 px-2 font-bold text-left">
+              <span className="truncate flex-1">{item.product.name}</span>
+              <span className="text-amber-600 dark:text-amber-400 font-black text-[10px] uppercase ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                Closed Outlet
+              </span>
+            </div>
+          ))}
+        </div>
         <div className="pt-4 flex flex-col gap-3">
+          <button
+            onClick={handleRemoveClosedItems}
+            className="w-full px-6 py-3 bg-primary text-white font-black text-xs rounded-full hover:bg-primary-dark transition-all shadow-md active:scale-98 cursor-pointer"
+          >
+            Remove Closed Items & Proceed
+          </button>
           <Link
             href="/cart"
             className="px-6 py-3 bg-primary text-white font-black text-xs rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-98 text-center"

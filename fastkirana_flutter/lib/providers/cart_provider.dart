@@ -117,10 +117,20 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   /// Add real Product to cart with instant UI update
-  Future<void> addProduct(Product product, [int quantity = 1, String? selectedVariant]) async {
+  /// Add real Product to cart with instant UI update
+  /// Returns true if added successfully, false if exceeds available stock.
+  bool addProduct(Product product, [int quantity = 1, String? selectedVariant]) {
     final currentCart = state.value ?? _buildCartFromItems([]);
     final items = List<CartItem>.from(currentCart.items);
     final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
+
+    final maxStock = product.stock > 0 ? product.stock : 999;
+    final currentQty = idx >= 0 ? items[idx].quantity : 0;
+    final targetQty = currentQty + quantity;
+
+    if (targetQty > maxStock) {
+      return false; // Reached stock limit
+    }
 
     if (idx >= 0) {
       final item = items[idx];
@@ -129,7 +139,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         cartId: item.cartId,
         productId: product.id,
         product: product,
-        quantity: item.quantity + quantity,
+        quantity: targetQty,
         selectedVariant: selectedVariant ?? item.selectedVariant,
       );
     } else {
@@ -149,8 +159,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       couponCode: currentCart.appliedCouponCode,
       discount: currentCart.couponDiscount,
     ));
-    await repository.saveLocalCart(items);
+    repository.saveLocalCart(items);
     repository.syncCart(items);
+    return true;
   }
 
   /// Clear ONLY dishes from the previous restaurant — keep all grocery items intact!
@@ -193,9 +204,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     repository.syncCart(items);
   }
 
-  /// Increment product quantity
-  Future<void> increment(Product product) async {
-    await addProduct(product, 1);
+  /// Increment product quantity (returns false if stock limit reached)
+  bool increment(Product product) {
+    return addProduct(product, 1);
   }
 
   /// Decrement product quantity (removes when reaches 0)
@@ -232,16 +243,21 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   /// Update item quantity directly
-  Future<void> updateQuantity(String productId, int quantity) async {
+  bool updateQuantity(String productId, int quantity, [int? maxStock]) {
     if (quantity <= 0) {
-      await removeItem(productId);
+      removeItem(productId);
+      return true;
     } else {
       final currentCart = state.value;
-      if (currentCart == null) return;
+      if (currentCart == null) return false;
       final items = List<CartItem>.from(currentCart.items);
-      final idx = items.indexWhere((i) => i.productId == productId || i.id == productId);
+      final idx = items.indexWhere((i) => i.productId == productId || i.id == productId || i.product.id == productId);
       if (idx >= 0) {
         final item = items[idx];
+        final effectiveStock = maxStock ?? (item.product.stock > 0 ? item.product.stock : 999);
+        if (quantity > effectiveStock) {
+          return false;
+        }
         items[idx] = CartItem(
           id: item.id,
           cartId: item.cartId,
@@ -255,9 +271,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
           couponCode: currentCart.appliedCouponCode,
           discount: currentCart.couponDiscount,
         ));
-        await repository.saveLocalCart(items);
+        repository.saveLocalCart(items);
         repository.syncCart(items);
+        return true;
       }
+      return false;
     }
   }
 

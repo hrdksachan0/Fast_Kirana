@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Top-level background message handler for when app is killed or phone screen is off
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (kIsWeb) return;
   try {
     await Firebase.initializeApp();
   } catch (_) {}
@@ -69,8 +71,23 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  FirebaseMessaging? get _fcm {
+    if (kIsWeb) return null;
+    try {
+      return FirebaseMessaging.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  FlutterLocalNotificationsPlugin? get _localNotifications {
+    if (kIsWeb) return null;
+    try {
+      return FlutterLocalNotificationsPlugin();
+    } catch (_) {
+      return null;
+    }
+  }
 
   bool _initialized = false;
 
@@ -86,7 +103,7 @@ class NotificationService {
   Stream<Map<String, bool>> get prefsStream => _prefsController.stream;
 
   Future<void> init() async {
-    if (_initialized) return;
+    if (_initialized || kIsWeb) return;
 
     try {
       // 1. Load persisted preferences
@@ -97,7 +114,7 @@ class NotificationService {
 
       // 2. Request runtime notification permissions explicitly
       try {
-        await _fcm.requestPermission(
+        await _fcm?.requestPermission(
           alert: true,
           badge: true,
           sound: true,
@@ -105,7 +122,7 @@ class NotificationService {
           provisional: false,
         );
         await _localNotifications
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
             ?.requestNotificationsPermission();
       } catch (_) {}
 
@@ -121,7 +138,7 @@ class NotificationService {
       );
 
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(channel);
 
       // 4. Initialize Local Notifications Plugin
@@ -136,7 +153,7 @@ class NotificationService {
         iOS: iosInit,
       );
 
-      await _localNotifications.initialize(
+      await _localNotifications?.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           print("Notification tapped: ${details.payload}");
@@ -161,16 +178,16 @@ class NotificationService {
 
       // 8. Auto-subscribe to broadcast topics
       try {
-        await _fcm.subscribeToTopic('all_users');
-        await _fcm.subscribeToTopic('ghatampur_alerts');
+        await _fcm?.subscribeToTopic('all_users');
+        await _fcm?.subscribeToTopic('ghatampur_alerts');
         final savedPhone = prefs.getString('user_phone') ?? '';
         final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
         if (clean.length == 10) {
-          await _fcm.subscribeToTopic('phone_$clean');
+          await _fcm?.subscribeToTopic('phone_$clean');
         }
         final savedUserId = prefs.getString('user_id');
         if (savedUserId != null && savedUserId.isNotEmpty) {
-          await _fcm.subscribeToTopic('user_$savedUserId');
+          await _fcm?.subscribeToTopic('user_$savedUserId');
         }
       } catch (e) {
         print("Topic subscription error: $e");
@@ -205,7 +222,7 @@ class NotificationService {
         return;
       }
 
-      _localNotifications.show(
+      _localNotifications?.show(
         message.hashCode,
         title.toString(),
         body.toString(),
@@ -248,26 +265,28 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
+    if (kIsWeb) return;
     try {
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
 
-      NotificationSettings settings = await _fcm.requestPermission(
+      NotificationSettings? settings = await _fcm?.requestPermission(
         alert: true,
         badge: true,
         sound: true,
         provisional: false,
       );
-      print("FCM permission status: ${settings.authorizationStatus}");
+      print("FCM permission status: ${settings?.authorizationStatus}");
     } catch (e) {
       print("Error requesting FCM permissions: $e");
     }
   }
 
   Future<String?> getFcmToken() async {
+    if (kIsWeb) return null;
     try {
-      return await _fcm.getToken();
+      return await _fcm?.getToken();
     } catch (e) {
       print("Error getting FCM token: $e");
       return null;
@@ -275,8 +294,9 @@ class NotificationService {
   }
 
   Future<void> refreshAndRegisterToken(Dio dio) async {
+    if (kIsWeb) return;
     try {
-      String? token = await _fcm.getToken();
+      String? token = await _fcm?.getToken();
       if (token == null) return;
 
       final prefs = await SharedPreferences.getInstance();
@@ -287,7 +307,7 @@ class NotificationService {
         return;
       }
 
-      String deviceType = Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web');
+      String deviceType = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web'));
 
       final response = await dio.post(
         '/api/fcm/register',
@@ -304,24 +324,25 @@ class NotificationService {
   }
 
   Future<void> registerDeviceToken(Dio dio) async {
+    if (kIsWeb) return;
     try {
       String? token = await getFcmToken();
       if (token == null) return;
 
       final prefs = await SharedPreferences.getInstance();
-      String deviceType = Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web');
+      String deviceType = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web'));
       final userId = prefs.getString('user_id');
       final phone = prefs.getString('user_phone') ?? '';
 
       // Subscribe to user and phone specific topics
       try {
         if (userId != null && userId.isNotEmpty) {
-          await _fcm.subscribeToTopic('user_$userId');
+          await _fcm?.subscribeToTopic('user_$userId');
         }
         if (phone.isNotEmpty) {
           final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
           if (cleanPhone.length == 10) {
-            await _fcm.subscribeToTopic('phone_$cleanPhone');
+            await _fcm?.subscribeToTopic('phone_$cleanPhone');
           }
         }
       } catch (e) {
@@ -348,8 +369,9 @@ class NotificationService {
   }
 
   Future<void> unsubscribeFromTopic(String topic) async {
+    if (kIsWeb) return;
     try {
-      await _fcm.unsubscribeFromTopic(topic);
+      await _fcm?.unsubscribeFromTopic(topic);
     } catch (_) {}
   }
 

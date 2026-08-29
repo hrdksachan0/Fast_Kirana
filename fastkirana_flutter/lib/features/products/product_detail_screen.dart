@@ -680,6 +680,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                                 InkWell(
                                   onTap: () {
+                                    if (inCartQty >= p.stock) {
+                                      HapticFeedback.heavyImpact();
+                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Only ${p.stock} units available in stock!',
+                                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          backgroundColor: const Color(0xFFDC2626),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     final conflictRestaurant =
                                         ref.read(cartProvider.notifier).checkRestaurantConflict(p);
                                     if (conflictRestaurant != null) {

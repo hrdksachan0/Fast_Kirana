@@ -138,4 +138,11 @@ class LocationService {
       isServiceable: isServiceable,
     );
   }
+
+  /// Convenience method to get full current location details in one call
+  static Future<LocationDetails?> fetchCurrentLocationDetails() async {
+    final pos = await getCurrentPosition();
+    if (pos == null) return null;
+    return await getAddressFromCoordinates(pos.latitude, pos.longitude);
+  }
 }

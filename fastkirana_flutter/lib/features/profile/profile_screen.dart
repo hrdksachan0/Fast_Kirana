@@ -324,7 +324,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('tel:+917054470303');
+                final uri = Uri.parse('tel:+918112849854');
                 if (await canLaunchUrl(uri)) await launchUrl(uri);
               },
               leading: Container(
@@ -333,13 +333,13 @@ class ProfileScreen extends ConsumerWidget {
                 child: const Icon(Icons.phone_rounded, color: Color(0xFF2563EB), size: 22),
               ),
               title: Text('Call Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
-              subtitle: Text('+91 70544 70303 (Instant Call)', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
             ),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('https://wa.me/917054470303?text=Hello%20FastKirana%20Support');
+                final uri = Uri.parse('https://wa.me/918112849854?text=Hello%20FastKirana%20Support');
                 if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               leading: Container(
@@ -349,6 +349,21 @@ class ProfileScreen extends ConsumerWidget {
               ),
               title: Text('WhatsApp Chat Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
               subtitle: Text('Chat with Ghatampur Support team', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+            ),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ListTile(
+              onTap: () async {
+                final uri = Uri.parse('mailto:fastkiranadelivery@gmail.com?subject=FastKirana%20Customer%20Support');
+                if (await canLaunchUrl(uri)) await launchUrl(uri);
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.email_outlined, color: Color(0xFFDC2626), size: 22),
+              ),
+              title: Text('Email Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
+              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
             ),
           ],

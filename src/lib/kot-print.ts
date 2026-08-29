@@ -198,9 +198,25 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
   const printDateStr = formatKOTDate(new Date())
   const elapsedText = getElapsedText(order.createdAt)
 
-  const orderIdText = order.readableId ? `#${order.readableId}` : `#${(order.id || '').slice(0, 8).toUpperCase()}`
+  const restSub = order.subOrders?.find((s: any) => s.type === 'RESTAURANT' || s.restaurantId)
+  
+  // Extract strictly restaurant dishes (omit any grocery items)
+  const targetItems = (order.restaurantItems && order.restaurantItems.length > 0)
+    ? order.restaurantItems
+    : (restSub?.items && restSub.items.length > 0)
+    ? restSub.items
+    : (order.items || [])
 
-  const itemsHtml = (order.items || []).map((item: any) => `
+  const outletName = restSub?.shopName || order.restaurantName || (order.restaurantId ? order.shopName : null) || shopType
+  const orderIdText = restSub?.readableId 
+    ? `#${restSub.readableId}` 
+    : (order.readableId && order.isCombined)
+    ? `#${order.readableId}-R`
+    : order.readableId 
+    ? `#${order.readableId}` 
+    : `#${(order.id || '').slice(0, 8).toUpperCase()}`
+
+  const itemsHtml = targetItems.map((item: any) => `
     <tr style="border-bottom: 1px dashed #ddd;">
       <td style="padding: 6px 0; font-weight: bold; font-size: 15px; vertical-align: top; width: 38px;">[${item.quantity}x]</td>
       <td style="padding: 6px 0; font-size: 13px;">

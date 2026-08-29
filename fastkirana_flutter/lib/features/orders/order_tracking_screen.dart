@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,7 +31,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   Order? _order;
   bool _isLoading = true;
   Timer? _pollTimer;
-  HttpClientRequest? _sseRequest;
+  dynamic _sseRequest;
   bool _sseConnected = false;
   Timer? _sseReconnectTimer;
   StreamSubscription<String>? _sseLineSubscription;
@@ -194,21 +195,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     if (mounted) setState(() {});
     try {
       final dio = ref.read(dioProvider);
-      final baseOptions = dio.options;
+      final response = await dio.get<ResponseBody>(
+        _sseUrl,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+          },
+        ),
+      );
 
-      final fullUrl = Uri.parse(baseOptions.baseUrl + _sseUrl);
-      final client = HttpClient();
-      final request = await client.getUrl(fullUrl);
-      request.headers.set('Accept', 'text/event-stream');
-      request.headers.set('Cache-Control', 'no-cache');
-      final response = await request.close();
-
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data != null) {
         _sseConnected = true;
         if (mounted) setState(() {});
 
-        _sseLineSubscription = response
-            .transform(const Utf8Decoder())
+        _sseLineSubscription = response.data!.stream
+            .cast<List<int>>()
+            .transform(utf8.decoder)
             .transform(const LineSplitter())
             .listen(
               (line) => _handleSseLine(line),
@@ -309,6 +313,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     final statusStep = _getStatusStep(_order?.status);
+    final isCancelled = _order?.status == OrderStatus.cancelled || statusStep < 0;
     final isDelivered = _order?.status == OrderStatus.delivered || statusStep >= 4;
     final isPaid = _order?.paymentStatus == 'PAID';
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
@@ -403,7 +408,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
+                    if (!isPaid && !isDelivered && !isCancelled && _order?.deliveryMethod != 'PICKUP') ...[
                       _buildPayOnlineCard(),
                       const SizedBox(height: 12),
                     ],
@@ -649,7 +654,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:+917054470303')),
+                    onPressed: () => launchUrl(Uri.parse('tel:+918112849854')),
                     icon: const Icon(Icons.headset_mic_rounded, size: 15, color: slateDark),
                     label: Text('Call Support', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: slateDark)),
                     style: OutlinedButton.styleFrom(
@@ -1309,7 +1314,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
             ],
           ),
           GestureDetector(
-            onTap: () => launchUrl(Uri.parse('tel:+917054470303')),
+            onTap: () => launchUrl(Uri.parse('tel:+918112849854')),
             child: Text('Call Support',
                 style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w900, color: brandGreen)),
           ),

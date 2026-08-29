@@ -329,11 +329,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 }
 
                 return SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.74,
+                      childAspectRatio: 0.68,
                       crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
                     ),
@@ -383,7 +383,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     );
   }
 
-  // 1:1 Replica of Category Card in Screenshot
+  // 1:1 Replica of Category Card in Screenshot with Ultra-Premium Finish
   Widget _buildReferenceCategoryCard(BuildContext context, Category category) {
     final meta = _categoryMetadata[category.slug] ??
         {
@@ -411,14 +411,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.035),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -429,11 +429,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           children: [
             // Top Image Box with Items Pill
             Container(
-              height: 124,
+              height: 118,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: const Color(0xFFF1F5F9)),
               ),
               child: Stack(
@@ -441,7 +441,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 children: [
                   // Real Image
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(14),
                     child: webUrl != null && webUrl.startsWith('http')
                         ? CachedNetworkImage(
                             imageUrl: webUrl,
@@ -463,18 +463,18 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           ),
                   ),
 
-                  // Top Left: Items Badge Pill (Exact Replica from Reference)
+                  // Top Left: Items Badge Pill
                   Positioned(
                     top: 6,
                     left: 6,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withValues(alpha: 0.96),
+                        borderRadius: BorderRadius.circular(7),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),
@@ -501,13 +501,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
 
             // Category Name
             Text(
               category.name,
               style: GoogleFonts.inter(
-                fontSize: 13.5,
+                fontSize: 13,
                 fontWeight: FontWeight.w900,
                 color: category.slug.contains('fruit')
                     ? const Color(0xFF059669)
@@ -517,31 +517,31 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1.5),
 
             // Tagline
             Text(
               tagline,
               style: GoogleFonts.inter(
-                fontSize: 10.5,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF64748B),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
 
-            // SHOP NOW Button with Chevron Circle (Exact Replica)
+            // Luxury "SHOP NOW" Action Button (Securely Contained Inside Box)
             Container(
-              height: 34,
+              height: 31,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: btnColor,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: btnColor.withOpacity(0.35),
+                    color: btnColor.withValues(alpha: 0.28),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -553,22 +553,25 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   Text(
                     'SHOP NOW',
                     style: GoogleFonts.inter(
-                      fontSize: 10.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 0.5,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(3),
+                    width: 17,
+                    height: 17,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 9,
-                      color: btnColor,
+                    child: Center(
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 8.5,
+                        color: btnColor,
+                      ),
                     ),
                   ),
                 ],

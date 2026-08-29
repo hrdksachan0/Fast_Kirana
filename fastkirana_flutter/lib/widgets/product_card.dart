@@ -733,6 +733,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   }
 
   void _handleAddToCart(BuildContext context, Product product) {
+    if (product.stock <= 0 || !product.isAvailable) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product.name} is currently out of stock.'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
     if (conflictRestaurant != null) {
       final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
@@ -750,9 +763,34 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       return;
     }
 
-    HapticFeedback.mediumImpact();
-    ref.read(cartProvider.notifier).addProduct(product, 1);
-    _triggerAddAnimation();
+    final success = ref.read(cartProvider.notifier).addProduct(product, 1);
+    if (success) {
+      HapticFeedback.mediumImpact();
+      _triggerAddAnimation();
+    } else {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Cannot add more! Only ${product.stock} units available in stock.',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _buildAddButton(
@@ -914,6 +952,31 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 if (hasVariants) {
                   VariantSelectorSheet.show(context, product);
                 } else {
+                  if (inCartQty >= product.stock) {
+                    HapticFeedback.heavyImpact();
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Only ${product.stock} units available in stock!',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFFDC2626),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
                   final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
                   if (conflict != null) {
                     _handleAddToCart(context, product);

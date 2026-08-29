@@ -36,6 +36,34 @@ class Address {
       _$AddressFromJson(json);
   Map<String, dynamic> toJson() => _$AddressToJson(this);
 
-  String get fullAddress =>
-      '$houseNo, $street, $area, $city - $pincode';
+  String get fullAddress {
+    final parts = [houseNo, street, area, city]
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty && p != '.' && p.toLowerCase() != 'n/a')
+        .toList();
+    final main = parts.join(', ');
+    final cleanPin = pincode.trim();
+    if (cleanPin.isNotEmpty && cleanPin != '.') {
+      return main.isNotEmpty ? '$main - $cleanPin' : cleanPin;
+    }
+    return main.isNotEmpty ? main : 'Ghatampur Zone';
+  }
+
+  String get displayArea {
+    final a = area.trim();
+    if (a.isNotEmpty && a != '.' && a.toLowerCase() != 'n/a') return a;
+    final s = street.trim();
+    if (s.isNotEmpty && s != '.' && s.toLowerCase() != 'n/a') return s;
+    final c = city.trim();
+    if (c.isNotEmpty && c != '.' && c.toLowerCase() != 'n/a') return c;
+    return 'Ghatampur Zone';
+  }
+
+  String get displayLabel {
+    final l = label.trim().replaceAll('📍', '').trim();
+    if (l.isNotEmpty && l != '.' && l.toLowerCase() != 'n/a' && !l.toLowerCase().contains('current location')) {
+      return l;
+    }
+    return 'Home';
+  }
 }

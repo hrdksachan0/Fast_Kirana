@@ -30,8 +30,8 @@ class AppConfig {
   static const String exactLogoAsset = 'assets/brand/fastkirana_exact_logo.png';
 
   // ─── Support & Contacts ─────────────────────────────────────────
-  static const String supportPhone = '+91 70544 70303';
-  static const String supportEmail = 'admin@fastkirana.in';
+  static const String supportPhone = '+91 81128 49854';
+  static const String supportEmail = 'fastkiranadelivery@gmail.com';
 
   // ─── Darkstore Hub Coordinates ──────────────────────────────────
   static const double darkstoreLat = 26.1534185;

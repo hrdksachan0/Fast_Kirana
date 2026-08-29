@@ -477,72 +477,61 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               }),
               const SizedBox(height: 14),
 
-              // 3. Frequently Bought Together Carousel
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              // 3. Frequently Bought Together Carousel (Web App Recommendation Engine)
+              ref.watch(cartUpsellProductsProvider(cart.items.map((i) => i.productId).toList())).when(
+                data: (products) {
+                  if (products.isEmpty) return const SizedBox.shrink();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('🛒', style: TextStyle(fontSize: 13)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Frequently bought together',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: slateDark,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('🛒', style: TextStyle(fontSize: 13)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Frequently bought together',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: slateDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Slide for more →',
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 192,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: products.length,
+                          itemBuilder: (context, idx) {
+                            final p = products[idx];
+                            return _buildUpsellCardFromProduct(ref, p);
+                          },
                         ),
                       ),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                  Text(
-                    'Slide for more →',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 10),
-
-              // Horizontal Dynamic Carousel
-              SizedBox(
-                height: 192,
-                child: ref.watch(trendingProductsProvider).when(
-                  data: (products) {
-                    final displayList = products.isNotEmpty
-                        ? products.take(6).toList()
-                        : _fallbackUpsells();
-
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: displayList.length,
-                      itemBuilder: (context, idx) {
-                        final p = displayList[idx];
-                        return _buildUpsellCardFromProduct(ref, p);
-                      },
-                    );
-                  },
-                  loading: () => ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildUpsellCard(ref, id: 'bikaji', name: 'Bikaji Bhelpuri', unit: '110 g', price: 48, imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554730/e3eq2j9dyuwaxlspl6hb.png'),
-                      _buildUpsellCard(ref, id: 'hide_seek', name: 'Parle Hide & Seek', unit: '413 g', price: 129, imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554728/mdtjwibywbkjqmo3q2sw.jpg'),
-                    ],
-                  ),
-                  error: (_, __) => ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildUpsellCard(ref, id: 'bikaji', name: 'Bikaji Bhelpuri', unit: '110 g', price: 48, imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554730/e3eq2j9dyuwaxlspl6hb.png'),
-                      _buildUpsellCard(ref, id: 'hide_seek', name: 'Parle Hide & Seek', unit: '413 g', price: 129, imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554728/mdtjwibywbkjqmo3q2sw.jpg'),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
 
               // 4. Delivery Instructions Section
               _buildDeliveryInstructions(),
@@ -1128,7 +1117,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Proceed to Pay',
+                          'Proceed to Checkout',
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
@@ -1600,8 +1589,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                 ],
                 const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 3,
                   children: [
                     Text(
                       '₹${(prod.price * qty).toInt()}',
@@ -1611,8 +1602,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         color: slateDark,
                       ),
                     ),
-                    if (mrp > prod.price) ...[
-                      const SizedBox(width: 6),
+                    if (mrp > prod.price)
                       Text(
                         '₹${(mrp * qty).toInt()}',
                         style: GoogleFonts.inter(
@@ -1622,9 +1612,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                    if (saveAmount > 0) ...[
-                      const SizedBox(width: 6),
+                    if (saveAmount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                         decoration: BoxDecoration(
@@ -1640,7 +1628,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                         ),
                       ),
-                    ],
                   ],
                 ),
               ],
@@ -1703,6 +1690,31 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: InkWell(
                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
                     onTap: () {
+                      if (qty >= prod.stock) {
+                        HapticFeedback.heavyImpact();
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Only ${prod.stock} units available in stock!',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFFDC2626),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
                       HapticFeedback.lightImpact();
                       ref.read(cartProvider.notifier).increment(prod);
                     },

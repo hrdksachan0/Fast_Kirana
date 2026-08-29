@@ -14,97 +14,170 @@ export default function DeliveryHistoryView({
   todayDeliveries,
   deliveredOrders,
 }: DeliveryHistoryViewProps) {
+  const target = 5
+  const progress = Math.min((todayDeliveries / target) * 100, 100)
+  const radius = 34
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference - (progress / 100) * circumference
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 pt-1"
+      className="space-y-5 pt-1 pb-6"
     >
       {/* Rider Achievements Milestone Widget */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden">
-        <div className="flex justify-between items-center pb-3 border-b border-slate-800/80">
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Daily Milestone Goal</span>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-xl font-black text-emerald-400">{todayDeliveries}</span>
-              <span className="text-[10px] text-slate-400 font-bold">completed today</span>
+      <div className="bg-slate-950 text-white rounded-3xl p-5 relative overflow-hidden shadow-xl border border-slate-900">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative flex items-center gap-5">
+          {/* Ring Progress */}
+          <div className="relative w-20 h-20 shrink-0">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle
+                cx="40"
+                cy="40"
+                r="34"
+                fill="transparent"
+                stroke="currentColor"
+                className="text-white/[0.06]"
+                strokeWidth="6"
+              />
+              <circle
+                cx="40"
+                cy="40"
+                r="34"
+                fill="transparent"
+                stroke="url(#emerald-gradient)"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                className="transition-all duration-1000 ease-out"
+              />
+              <defs>
+                <linearGradient id="emerald-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#10b981" />
+                  <stop offset="100%" stopColor="#34d399" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center flex-col">
+              <span className="text-2xl font-black text-white leading-none">{todayDeliveries}</span>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Target Bonus</span>
-            <p className="text-xs font-bold text-emerald-400 mt-0.5">
-              {todayDeliveries}/5 Deliveries
-            </p>
-          </div>
-        </div>
 
-        <div className="pt-3 space-y-2">
-          <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-              style={{ width: `${Math.min((todayDeliveries / 5) * 100, 100)}%` }}
-            />
-          </div>
-          <p className="text-[9px] font-bold text-slate-400">
-            {todayDeliveries >= 5 ? (
-              <span className="text-emerald-400 flex items-center gap-1">🎉 Milestone bonus target achieved today!</span>
+          {/* Text content */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Daily Goal</span>
+              {todayDeliveries >= 3 && todayDeliveries < target && (
+                <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                  🔥 Streak!
+                </span>
+              )}
+            </div>
+            
+            {todayDeliveries >= target ? (
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-emerald-400">Target Achieved!</p>
+                <div className="text-xl">🎉 🎊 🏆</div>
+              </div>
             ) : (
-              `Complete ${5 - todayDeliveries} more deliveries to reach your daily milestone bonus!`
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white/90">
+                  {target - todayDeliveries} more to reach bonus
+                </p>
+                <p className="text-[10px] text-slate-400 font-semibold">Keep pushing, you're doing great!</p>
+              </div>
             )}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pb-2 border-b border-border/40">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-            <Clock className="h-3.5 w-3.5" />
           </div>
-          <h2 className="text-xs font-black text-text-primary uppercase tracking-wider">
-            Delivered Orders ({deliveredOrders.length})
-          </h2>
         </div>
-        <span className="text-[10px] font-bold text-text-muted">Today's History</span>
       </div>
 
+      {/* Section header */}
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-black text-text-primary flex items-center gap-2">
+          Today's Deliveries
+          <span className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-500/20">
+            {deliveredOrders.length}
+          </span>
+        </h2>
+      </div>
+
+      {/* Order Timeline List */}
       {deliveredOrders.length === 0 ? (
-        <div className="bg-card/50 border border-dashed border-border/80 p-8 rounded-2xl text-center text-xs text-text-muted">
-          No completed deliveries recorded today yet.
+        <div className="bg-card/50 border border-border border-dashed p-8 rounded-3xl text-center flex flex-col items-center justify-center gap-3 mt-4">
+          <div className="text-4xl">📦</div>
+          <div>
+            <p className="text-sm font-bold text-text-primary">No deliveries yet today</p>
+            <p className="text-xs text-text-muted mt-1 font-medium">Your next order will appear here.</p>
+          </div>
         </div>
       ) : (
-        deliveredOrders.map((order) => (
-          <div
-            key={order.id}
-            className="bg-card border border-border/70 p-4 rounded-2xl shadow-xs space-y-2.5"
-          >
-            <div className="flex justify-between items-center border-b border-border/30 pb-2">
-              <div>
-                <span className="text-xs font-mono font-black text-text-primary block">
-                  #{order.readableId || order.id.slice(0, 8)}
-                </span>
-                <span className="text-[9px] text-text-muted font-semibold">
-                  Delivered: {formatOrderTime(order.deliveredAt || order.updatedAt || order.createdAt)}
-                </span>
-              </div>
-              <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                ✅ Delivered
-              </span>
-            </div>
+        <div className="relative pl-7 mt-4 pb-4">
+          {/* Vertical timeline line */}
+          <div className="absolute left-[11px] top-6 bottom-4 w-[2px] bg-gradient-to-b from-emerald-500 to-emerald-500/10 rounded-full" />
+          
+          <div className="space-y-5">
+            {deliveredOrders.map((order, i) => (
+              <motion.div
+                key={order.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ 
+                  delay: i * 0.08,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 24
+                }}
+                className="relative"
+              >
+                {/* Timeline dot */}
+                <div className="absolute -left-[30px] top-6 -translate-y-1/2 h-[10px] w-[10px] rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 z-10" />
+                
+                {/* Connecting line */}
+                <div className="absolute -left-[27px] top-6 -translate-y-1/2 h-[2px] w-[27px] bg-emerald-500/20" />
+                
+                <div className="bg-card border border-border p-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-text-primary">
+                          #{order.readableId || order.id.slice(0, 8)}
+                        </span>
+                        {/* Delivered badge as small green dot */}
+                        <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                      </div>
+                      <span className="text-[10px] text-text-muted font-bold flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatOrderTime(order.deliveredAt || order.updatedAt || order.createdAt)}
+                      </span>
+                    </div>
 
-            <div className="flex justify-between items-center text-xs">
-              <div>
-                <span className="text-text-primary font-bold block">{order.user?.name || 'Customer'}</span>
-                <span className="text-[10px] text-text-secondary font-semibold">{formatAddress(order.address, false)}</span>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="text-sm font-black text-text-primary block">{formatPrice(order.total)}</span>
-                <span className="text-[8px] font-bold text-text-muted uppercase">
-                  {order.paymentMethod === 'COD' ? '💰 COD' : '💳 Online'}
-                </span>
-              </div>
-            </div>
+                    <div className="text-right flex flex-col items-end gap-1.5">
+                      <span className="text-sm font-black text-text-primary">
+                        {formatPrice(order.total)}
+                      </span>
+                      <span className="text-[9px] font-bold text-text-primary uppercase bg-secondary px-2 py-0.5 rounded-md">
+                        {order.paymentMethod === 'COD' ? '💰 COD' : '💳 Online'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/50">
+                    <span className="text-xs text-text-primary font-bold block">
+                      {order.user?.name || 'Customer'}
+                    </span>
+                    <span className="text-[10px] text-text-secondary font-medium block truncate mt-0.5">
+                      {formatAddress(order.address, false)}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
-        ))
+        </div>
       )}
     </motion.div>
   )

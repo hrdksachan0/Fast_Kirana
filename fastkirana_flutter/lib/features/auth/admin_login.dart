@@ -19,7 +19,7 @@ class AdminLoginScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
-  final _emailController = TextEditingController(text: AppConfig.defaultAdminEmail);
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -41,8 +41,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       _errorMessage = null;
     });
 
-    if (email.toLowerCase() == AppConfig.defaultAdminEmail.toLowerCase() &&
-        (password == AppConfig.defaultAdminPassword || password == 'FastKirana@2026' || password == 'admin123')) {
+    if (email.toLowerCase() == 'admin@fastkirana.in' &&
+        (password == 'FastKirana@2026' || password == 'admin123')) {
       final prefs = await SharedPreferences.getInstance();
       final adminUser = User(
         id: 'admin_master',

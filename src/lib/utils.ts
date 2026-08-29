@@ -215,7 +215,7 @@ import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 export function isProductStoreClosed(
   p: any,
-  status: { groceryMartOpen: boolean; cafeOpen?: boolean; restaurantOpen?: boolean },
+  status: { groceryMartOpen: boolean; cafeOpen?: boolean; restaurantOpen?: boolean; [key: string]: any },
   categoryStatus?: Record<string, boolean>
 ): boolean {
   if (!p) return !status.groceryMartOpen
@@ -228,18 +228,38 @@ export function isProductStoreClosed(
   // 2. Check explicit restaurantIsOpen property if attached
   if (p.restaurantIsOpen === false || p.restaurantIsOpen === 'false') return true
 
-  // 3. Check specific restaurant / cafe operating status if product is linked to a restaurant object
+  // 3. Check specific restaurant operating status if product is linked to a restaurant object
   const restObj = p.restaurant
   if (restObj && typeof restObj === 'object') {
     const opStatus = checkStoreOperatingStatus(restObj)
-    if (!opStatus.isOpen) return true
+    return !opStatus.isOpen
+  }
+
+  const restId = p.restaurantId
+  if (restId) {
+    if (status[`outlet_open_${restId}`] !== undefined) {
+      return status[`outlet_open_${restId}`] === 'false' || status[`outlet_open_${restId}`] === false
+    }
+    const restSlug = p.restaurantSlug
+    if (restSlug && status[`outlet_open_${restSlug}`] !== undefined) {
+      return status[`outlet_open_${restSlug}`] === 'false' || status[`outlet_open_${restSlug}`] === false
+    }
   }
 
   const type = getProductType(p)
 
-  // 4. For Restaurant and Cafe items: controlled by Manage Restaurant isOpen status & Category status
-  if (type === 'RESTAURANT' || type === 'CAFE') {
-    if (status.restaurantOpen === false || status.cafeOpen === false) return true
+  // 4. Fallback checks for unassigned restaurant items vs cafe items
+  if (type === 'RESTAURANT') {
+    if (status.restaurantOpen !== undefined) {
+      return status.restaurantOpen === false || (status.restaurantOpen as any) === 'false'
+    }
+    return false
+  }
+
+  if (type === 'CAFE') {
+    if (status.cafeOpen !== undefined) {
+      return status.cafeOpen === false || (status.cafeOpen as any) === 'false'
+    }
     return false
   }
 

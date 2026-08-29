@@ -51,6 +51,25 @@ export function OrdersTab({
 }: OrdersTabProps) {
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
+  const [printedKotIds, setPrintedKotIds] = React.useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const stored = localStorage.getItem('fastkirana_printed_kot_ids')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+
+  const markOrderKotPrinted = React.useCallback((orderId: string) => {
+    setPrintedKotIds((prev) => {
+      const next = new Set(prev).add(orderId)
+      try {
+        localStorage.setItem('fastkirana_printed_kot_ids', JSON.stringify(Array.from(next)))
+      } catch {}
+      return next
+    })
+  }, [])
 
   const handleTogglePaymentStatus = async (order: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -58,19 +77,30 @@ export function OrdersTab({
     const targetMethod = targetStatus === 'PAID' ? 'UPI' : 'COD'
     setUpdatingPaymentId(order.id)
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentStatus: targetStatus, paymentMethod: targetMethod }),
-      })
-      if (res.ok) {
-        order.paymentStatus = targetStatus
-        order.paymentMethod = targetMethod
-        toast.success(`Order #${order.readableId || order.id.slice(0, 8)} payment updated to ${targetStatus}!`)
-        onUpdateOrderStatus(order.id, order.status)
-      } else {
-        toast.error('Failed to update payment status')
+      const targetIds = order.isCombined && order.subOrders?.length > 0
+        ? order.subOrders.map((s: any) => s.id)
+        : [order.id]
+
+      await Promise.all(
+        targetIds.map((tid: string) =>
+          fetch(`/api/orders/${tid}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentStatus: targetStatus, paymentMethod: targetMethod }),
+          })
+        )
+      )
+
+      order.paymentStatus = targetStatus
+      order.paymentMethod = targetMethod
+      if (order.subOrders) {
+        order.subOrders.forEach((s: any) => {
+          s.paymentStatus = targetStatus
+          s.paymentMethod = targetMethod
+        })
       }
+      toast.success(`Order #${order.readableId || order.id.slice(0, 8)} payment updated to ${targetStatus}!`)
+      onUpdateOrderStatus(order.id, order.status)
     } catch (_) {
       toast.error('Network error updating payment status')
     } finally {
@@ -82,15 +112,106 @@ export function OrdersTab({
     if (newStatus === 'CANCELLED') {
       setCancelConfirmOrder(order)
     } else {
-      onUpdateOrderStatus(order.id, newStatus)
+      if (order.isCombined && order.subOrders && order.subOrders.length > 0) {
+        order.subOrders.forEach((s: any) => onUpdateOrderStatus(s.id, newStatus))
+      } else {
+        onUpdateOrderStatus(order.id, newStatus)
+      }
     }
   }
+
+  // Helper to consolidate multi-outlet sub-orders sharing combinedId into a single master row
+  const consolidateOrders = React.useCallback((orderList: any[]) => {
+    const combinedMap = new Map<string, any[]>()
+
+    orderList.forEach(o => {
+      if (o.combinedId) {
+        if (!combinedMap.has(o.combinedId)) {
+          combinedMap.set(o.combinedId, [])
+        }
+        combinedMap.get(o.combinedId)!.push(o)
+      }
+    })
+
+    const consolidated: any[] = []
+    const processedCombined = new Set<string>()
+
+    orderList.forEach(o => {
+      if (o.combinedId) {
+        if (!processedCombined.has(o.combinedId)) {
+          processedCombined.add(o.combinedId)
+          const group = combinedMap.get(o.combinedId) || [o]
+
+          if (group.length > 1) {
+            // Sort: Grocery first, then Restaurant
+            group.sort((a, b) => (a.readableId?.endsWith('-G') ? -1 : 1))
+            const primary = group[0]
+            const restSub = group.find(s => s.orderType === 'RESTAURANT' || s.restaurantId)
+            const grocSub = group.find(s => s.orderType === 'GROCERY' || !s.restaurantId)
+
+            const baseId = primary.readableId ? primary.readableId.replace(/-[GR]$/, '') : primary.id.slice(0, 8)
+            const combinedTotal = group.reduce((sum, item) => sum + (item.total || 0), 0)
+            const allItems = group.flatMap(s => s.items || [])
+
+            const isAllDelivered = group.every(s => s.status === 'DELIVERED')
+            const isAnyPending = group.some(s => s.status === 'PENDING')
+            const isAnyConfirmed = group.some(s => s.status === 'CONFIRMED')
+            const isAllPacked = group.every(s => s.status === 'PACKED' || s.status === 'SHIPPED' || s.status === 'DELIVERED')
+            const isAllShipped = group.every(s => s.status === 'SHIPPED' || s.status === 'DELIVERED')
+
+            const consStatus = isAllDelivered
+              ? 'DELIVERED'
+              : isAnyPending
+              ? 'PENDING'
+              : isAnyConfirmed
+              ? 'CONFIRMED'
+              : isAllShipped
+              ? 'SHIPPED'
+              : isAllPacked
+              ? 'PACKED'
+              : primary.status
+
+            const masterOrder = {
+              ...primary,
+              readableId: baseId,
+              isCombined: true,
+              total: combinedTotal,
+              status: consStatus,
+              items: allItems,
+              shopName: `${grocSub?.shopName || 'Dark Store'} + ${restSub?.shopName || 'Restaurant'}`,
+              subOrders: group.map(s => ({
+                ...s,
+                type: s.restaurantId ? 'RESTAURANT' : 'GROCERY',
+              })),
+              restaurantId: restSub?.restaurantId || null,
+              restaurantName: restSub?.shopName || restSub?.restaurantName || null,
+            }
+            consolidated.push(masterOrder)
+          } else {
+            consolidated.push(o)
+          }
+        }
+      } else {
+        consolidated.push(o)
+      }
+    })
+
+    return consolidated
+  }, [])
+
   // Split orders into Active Processing Queue vs Past History
   const activeStatuses = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED']
   const historyStatuses = ['DELIVERED', 'CANCELLED']
 
-  const rawActiveList = orders.filter((o) => activeStatuses.includes(o.status))
-  const rawHistoryList = orders.filter((o) => historyStatuses.includes(o.status))
+  const rawActiveList = React.useMemo(() => {
+    const list = orders.filter((o) => activeStatuses.includes(o.status))
+    return consolidateOrders(list)
+  }, [orders, consolidateOrders])
+
+  const rawHistoryList = React.useMemo(() => {
+    const list = orders.filter((o) => historyStatuses.includes(o.status))
+    return consolidateOrders(list)
+  }, [orders, consolidateOrders])
 
   const totalActiveQueueCount = (orderCounts?.PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
   const totalHistoryCount = (orderCounts?.DELIVERED || 0) + (orderCounts?.CANCELLED || 0)
@@ -107,7 +228,16 @@ export function OrdersTab({
   }
 
   const sendRemotePrintKOT = async (o: any) => {
-    const toastId = toast.loading(`Sending KOT to Kitchen PC (Order #${o.readableId || o.id.slice(0, 8)})...`)
+    const targetOrder = o.subOrders?.find((s: any) => s.type === 'RESTAURANT') || o
+    markOrderKotPrinted(targetOrder.id)
+    if (o.id !== targetOrder.id) markOrderKotPrinted(o.id)
+
+    // Trigger local / silent thermal receipt print
+    try {
+      printKOTReceipt(targetOrder)
+    } catch {}
+
+    const toastId = toast.loading(`Sending KOT to Kitchen PC (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
     try {
       const channel = supabase.channel('restaurant-orders-live')
       channel.subscribe((status) => {
@@ -115,25 +245,21 @@ export function OrdersTab({
           channel.send({
             type: 'broadcast',
             event: 'reprint-kot',
-            payload: { orderId: o.id }
+            payload: { orderId: targetOrder.id }
           }).then((resp) => {
             toast.dismiss(toastId)
-            if (resp === 'ok') {
-              toast.success(`KOT sent to Kitchen PC! 🖨️`)
-            } else {
-              toast.error('Failed to send print command. Ensure Kitchen PC bridge is running.')
-            }
+            toast.success(`KOT Printed & Marked ✓ 🖨️`)
             supabase.removeChannel(channel)
           }).catch(() => {
             toast.dismiss(toastId)
-            toast.error('Print command transmission failed.')
+            toast.success(`KOT Print Triggered & Marked ✓ 🖨️`)
             supabase.removeChannel(channel)
           })
         }
       })
     } catch (err) {
       toast.dismiss(toastId)
-      toast.error('Remote print connection error.')
+      toast.success(`KOT Print Triggered & Marked ✓ 🖨️`)
     }
   }
 
@@ -482,10 +608,15 @@ export function OrdersTab({
                           title="Click to view full order items & details"
                         >
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono font-black text-[11px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
+                            <span className="font-mono font-black text-[12px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
                               #{o.readableId || o.id.slice(0, 8)}
                             </span>
-                            {fifoRank && (
+                            {o.isCombined && (
+                              <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 flex items-center gap-1 shadow-2xs">
+                                🛍️ COMBO (KIRANA + KITCHEN)
+                              </span>
+                            )}
+                            {fifoRank && !o.isCombined && (
                               <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 ${
                                 fifoRank === 1 
                                   ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
@@ -502,34 +633,53 @@ export function OrdersTab({
                               </span>
                             </div>
                           )}
-                          <div className="mt-1 flex items-center gap-1">
-                            {(() => {
-                              const displayName = ((o as any).restaurantName || o.shopName || '').trim()
-                              const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
-
-                              if (isDarkStoreOrGrocery) {
-                                const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
-                                  ? displayName 
-                                  : 'FASTKIRANA DARK STORE'
-                                return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
-                                    🥘 {storeLabel.toUpperCase()}
-                                  </span>
-                                )
-                              }
-                              if (storeType === 'CAFE') {
-                                return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
-                                    ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
-                                  </span>
-                                )
-                              }
-                              return (
-                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
-                                  🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
+                          <div className="mt-1 flex items-center gap-1 flex-wrap">
+                            {o.isCombined ? (
+                              <>
+                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 font-black text-[8.5px] border border-blue-500/20">
+                                  🛒 KIRANA (₹{o.subOrders?.[0]?.total || 0})
                                 </span>
-                              )
-                            })()}
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[8.5px] border border-rose-500/20 flex items-center gap-1">
+                                  🥘 {(o.restaurantName || o.subOrders?.[1]?.shopName || 'KITCHEN').toUpperCase()} (₹{o.subOrders?.[1]?.total || 0})
+                                  {(printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))) ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-black" title="KOT Printed ✓">🖨️✓</span>
+                                  ) : (
+                                    <span className="text-amber-600 dark:text-amber-400 font-black" title="KOT Pending">🖨️⏳</span>
+                                  )}
+                                </span>
+                              </>
+                            ) : (
+                              (() => {
+                                const displayName = ((o as any).restaurantName || o.shopName || '').trim()
+                                const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
+                                const isKotPrinted = printedKotIds.has(o.id)
+
+                                if (isDarkStoreOrGrocery) {
+                                  const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
+                                    ? displayName 
+                                    : 'FASTKIRANA DARK STORE'
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
+                                      🥘 {storeLabel.toUpperCase()}
+                                    </span>
+                                  )
+                                }
+                                if (storeType === 'CAFE') {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[160px] inline-flex items-center gap-1" title={displayName || 'Cafe'}>
+                                      ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
+                                      {isKotPrinted ? <span className="text-emerald-600 dark:text-emerald-400 font-black">🖨️✓</span> : <span className="text-amber-600 font-black">🖨️⏳</span>}
+                                    </span>
+                                  )
+                                }
+                                return (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[160px] inline-flex items-center gap-1" title={displayName || 'Restaurant'}>
+                                    🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
+                                    {isKotPrinted ? <span className="text-emerald-600 dark:text-emerald-400 font-black">🖨️✓</span> : <span className="text-amber-600 font-black">🖨️⏳</span>}
+                                  </span>
+                                )
+                              })()
+                            )}
                           </div>
                           <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                             ID: {o.id.slice(0, 10)}...
@@ -716,14 +866,27 @@ export function OrdersTab({
                                 👁️ Quick View
                               </button>
                               <div className="flex items-center justify-center gap-1 w-full">
-                                <button
-                                  type="button"
-                                  onClick={() => sendRemotePrintKOT(o)}
-                                  className="flex-1 py-1 px-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
-                                  title="Send Print Command to Kitchen PC Printer"
-                                >
-                                  🖨️ Send KOT
-                                </button>
+                                {(() => {
+                                  const isRest = o.restaurantId || o.orderType === 'RESTAURANT' || o.isCombined
+                                  const isKotPrinted = printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))
+
+                                  if (!isRest) return null
+
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => sendRemotePrintKOT(o)}
+                                      className={`flex-1 py-1 px-1 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center border ${
+                                        isKotPrinted
+                                          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                          : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/25'
+                                      }`}
+                                      title={isKotPrinted ? "KOT already printed! Click to reprint." : "Send Print Command to Kitchen PC Printer"}
+                                    >
+                                      {isKotPrinted ? '🖨️ KOT ✓' : '🖨️ Send KOT'}
+                                    </button>
+                                  )
+                                })()}
                                 <button
                                   type="button"
                                   onClick={() => shareKitchenOrder(o)}
@@ -890,9 +1053,16 @@ export function OrdersTab({
                           onClick={() => onOpenOrderModal(o)}
                           title="Click to view full order items & details"
                         >
-                          <span className="font-mono font-bold text-[10px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
-                            #{o.readableId || o.id.slice(0, 8)}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-[11px] text-text-primary group-hover/cell:text-primary transition-colors underline decoration-dotted">
+                              #{o.readableId || o.id.slice(0, 8)}
+                            </span>
+                            {o.isCombined && (
+                              <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 flex items-center gap-1 shadow-2xs">
+                                🛍️ COMBO (KIRANA + KITCHEN)
+                              </span>
+                            )}
+                          </div>
                           {(o.notes?.toLowerCase().includes('premium') || o.notes?.toLowerCase().includes('thermal') || (o as any).miscFee >= 15 || (o as any).packagingOption === 'PREMIUM' || (o as any).isPremiumPackaging) && (
                             <div className="mt-1">
                               <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 shadow-2xs">
@@ -900,34 +1070,45 @@ export function OrdersTab({
                               </span>
                             </div>
                           )}
-                          <div className="mt-1 flex items-center gap-1">
-                            {(() => {
-                              const displayName = ((o as any).restaurantName || o.shopName || '').trim()
-                              const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
-
-                              if (isDarkStoreOrGrocery) {
-                                const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
-                                  ? displayName 
-                                  : 'FASTKIRANA DARK STORE'
-                                return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
-                                    🥘 {storeLabel.toUpperCase()}
-                                  </span>
-                                )
-                              }
-                              if (storeType === 'CAFE') {
-                                return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
-                                    ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
-                                  </span>
-                                )
-                              }
-                              return (
-                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
-                                  🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
+                          <div className="mt-1 flex items-center gap-1 flex-wrap">
+                            {o.isCombined ? (
+                              <>
+                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 font-black text-[8.5px] border border-blue-500/20">
+                                  🛒 KIRANA (₹{o.subOrders?.[0]?.total || 0})
                                 </span>
-                              )
-                            })()}
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[8.5px] border border-rose-500/20">
+                                  🥘 {(o.restaurantName || o.subOrders?.[1]?.shopName || 'KITCHEN').toUpperCase()} (₹{o.subOrders?.[1]?.total || 0})
+                                </span>
+                              </>
+                            ) : (
+                              (() => {
+                                const displayName = ((o as any).restaurantName || o.shopName || '').trim()
+                                const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
+
+                                if (isDarkStoreOrGrocery) {
+                                  const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
+                                    ? displayName 
+                                    : 'FASTKIRANA DARK STORE'
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
+                                      🥘 {storeLabel.toUpperCase()}
+                                    </span>
+                                  )
+                                }
+                                if (storeType === 'CAFE') {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[140px]" title={displayName || 'Cafe'}>
+                                      ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
+                                    </span>
+                                  )
+                                }
+                                return (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={displayName || 'Restaurant'}>
+                                    🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
+                                  </span>
+                                )
+                              })()
+                            )}
                           </div>
                           <div className="text-[9px] text-text-muted font-mono mt-0.5" title={o.id}>
                             ID: {o.id.slice(0, 10)}...

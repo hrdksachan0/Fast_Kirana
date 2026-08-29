@@ -149,6 +149,15 @@ export async function GET() {
         select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true }
       })
 
+      // Set individual outlet open/closed keys for every active outlet
+      for (const r of activeRestaurants) {
+        const opStatus = checkStoreOperatingStatus(r)
+        settingsMap[`outlet_open_${r.id}`] = opStatus.isOpen ? 'true' : 'false'
+        if (r.slug) {
+          settingsMap[`outlet_open_${r.slug}`] = opStatus.isOpen ? 'true' : 'false'
+        }
+      }
+
       const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
       if (wedson) {
         const wedsonStatus = checkStoreOperatingStatus(wedson)

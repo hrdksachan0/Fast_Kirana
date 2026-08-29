@@ -430,13 +430,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
                     final locationTitle = selectedAddress != null
-                        ? (selectedAddress.label.isNotEmpty ? selectedAddress.label : 'Saved Location')
-                        : 'Ghatampur, UP';
+                        ? selectedAddress.displayLabel
+                        : 'Home';
                     final locationSubtitle = selectedAddress != null
-                        ? selectedAddress.area.isNotEmpty
-                            ? selectedAddress.area
-                            : selectedAddress.fullAddress
-                        : 'Fast Delivery Zone';
+                        ? selectedAddress.displayArea
+                        : 'Ghatampur Zone';
 
                     return GestureDetector(
                       onTap: () {

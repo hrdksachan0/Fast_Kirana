@@ -15,6 +15,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/auth/admin_login.dart';
 import '../../features/location/delivery_location_screen.dart';
+import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_delivery_loading_screen.dart';
 import '../../features/splash/grocery_delivery_loading_screen.dart';
 import '../theme/design_system.dart';
@@ -30,6 +31,8 @@ class AppRouter {
         return FadeSlideRoute(page: const MainShell());
       case '/location':
         return FadeSlideRoute(page: const DeliveryLocationScreen());
+      case '/map-picker':
+        return FadeSlideRoute(page: const MapPickerScreen());
       case '/login':
         return FadeSlideRoute(page: const LoginScreen());
       case '/admin':

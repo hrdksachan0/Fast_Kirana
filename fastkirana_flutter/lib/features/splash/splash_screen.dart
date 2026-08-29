@@ -73,9 +73,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       if (token == null || token.isEmpty) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      } else if (!hasChosenLocation) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
       } else {
+        // User is logged in — directly go to Home screen without annoying location prompts!
         Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {

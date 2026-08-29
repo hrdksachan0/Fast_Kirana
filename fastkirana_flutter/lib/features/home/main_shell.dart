@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +14,6 @@ import '../../widgets/floating_cart_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/services/battery_optimization_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -31,7 +31,6 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
   bool _isBottomNavVisible = true;
   Timer? _autoShowTimer;
-  bool _batteryCheckDone = false;
 
   @override
   void initState() {
@@ -39,9 +38,11 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        NotificationService().registerDeviceToken(ref.read(dioProvider));
-      } catch (_) {}
+      if (!kIsWeb) {
+        try {
+          NotificationService().registerDeviceToken(ref.read(dioProvider));
+        } catch (_) {}
+      }
     });
   }
 
@@ -49,17 +50,14 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       // Re-register any pending FCM token when the app comes to foreground
-      _reRegisterPendingToken();
-
-      // Prompt battery optimization exemption once (Android only)
-      if (!_batteryCheckDone) {
-        _batteryCheckDone = true;
-        BatteryOptimizationService.ensureExempt();
+      if (!kIsWeb) {
+        _reRegisterPendingToken();
       }
     }
   }
 
   Future<void> _reRegisterPendingToken() async {
+    if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final pending = prefs.getString('pending_fcm_token');
