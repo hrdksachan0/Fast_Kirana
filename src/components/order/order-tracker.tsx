@@ -382,30 +382,34 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const routeLineRef = useRef<any>(null)
 
 
-  // 2. Poll order status from API every 5 seconds
+  // 2. Fallback polling for order status (Supabase/SSE handles instant updates; polling is just a safety fallback)
   useEffect(() => {
-    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') return
+    const isMainTerminal = order.status === 'DELIVERED' || order.status === 'CANCELLED'
+    const isCompTerminal = !compOrder || compOrder.status === 'DELIVERED' || compOrder.status === 'CANCELLED'
+    if (isMainTerminal && isCompTerminal) return
 
     const pollInterval = setInterval(async () => {
-      if (document.visibilityState !== 'visible') return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       try {
-        const res = await fetch(`/api/orders/${order.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data && data.status) {
-            setOrder((prev) => {
-              if (JSON.stringify(data) !== JSON.stringify(prev)) {
-                if (data.status !== prev.status) {
-                  toast.success(`Order Update: ${data.status} ✅`)
+        if (!isMainTerminal) {
+          const res = await fetch(`/api/orders/${order.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data && data.status) {
+              setOrder((prev) => {
+                if (JSON.stringify(data) !== JSON.stringify(prev)) {
+                  if (data.status !== prev.status) {
+                    toast.success(`Order Update: ${data.status} ✅`)
+                  }
+                  return data
                 }
-                return data
-              }
-              return prev
-            })
+                return prev
+              })
+            }
           }
         }
 
-        if (compOrder) {
+        if (compOrder && !isCompTerminal) {
           const compRes = await fetch(`/api/orders/${compOrder.id}`)
           if (compRes.ok) {
             const compData = await compRes.json()
@@ -425,10 +429,10 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
       } catch {
         // silently ignore polling errors
       }
-    }, 15000)
+    }, 45000)
 
     return () => clearInterval(pollInterval)
-  }, [order.id, order.status, compOrder?.id])
+  }, [order.id, order.status, compOrder?.id, compOrder?.status])
 
   // Supabase Realtime connection to listen for updates (status changes, edits)
   useEffect(() => {

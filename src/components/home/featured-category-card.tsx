@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useCart } from '@/hooks/use-cart';
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
-import { isProductStoreClosed } from '@/lib/utils';
+import { isProductStoreClosed, getOptimizedImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Category {
@@ -367,7 +367,14 @@ export default function FeaturedCategoryCard({
                   {/* Image Area */}
                   <div className="pcard-img relative" style={{ background: p.bgColor || '#f8fafc' }}>
                     {p.imageUrl ? (
-                      <Image src={p.imageUrl} alt={p.name} width={300} height={300} className={`pcard-image-el ${isSoldOut ? 'grayscale opacity-60' : ''}`} />
+                      <Image
+                        src={getOptimizedImageUrl(p.imageUrl, 260) || p.imageUrl}
+                        alt={p.name}
+                        width={260}
+                        height={260}
+                        sizes="(max-width: 640px) 140px, (max-width: 1024px) 180px, 200px"
+                        className={`pcard-image-el ${isSoldOut ? 'grayscale opacity-60' : ''}`}
+                      />
                     ) : (
                       <span className="pcard-emoji">{p.emoji || '🍽️'}</span>
                     )}

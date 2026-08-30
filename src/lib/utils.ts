@@ -52,7 +52,22 @@ export function isCafeProduct(p: any): boolean {
 export function getOptimizedImageUrl(url: string | null | undefined, width = 300): string | null {
   if (!url) return null
   if (url.includes('cloudinary.com') && url.includes('/image/upload/')) {
+    if (url.includes('/image/upload/f_auto') || url.includes('/image/upload/w_')) {
+      return url
+    }
     return url.replace('/image/upload/', `/image/upload/f_auto,q_auto,w_${width},c_limit/`)
+  }
+  if (url.includes('images.unsplash.com')) {
+    try {
+      const u = new URL(url)
+      u.searchParams.set('auto', 'format')
+      u.searchParams.set('fit', 'crop')
+      u.searchParams.set('q', '75')
+      u.searchParams.set('w', String(width))
+      return u.toString()
+    } catch {
+      return url
+    }
   }
   return url
 }

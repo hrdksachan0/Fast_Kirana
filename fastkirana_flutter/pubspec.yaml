@@ -68,6 +68,10 @@ dependencies:
   audioplayers: ^6.0.0
   permission_handler: ^11.3.1
 
+  # Maps & Realtime Location
+  google_maps_flutter: ^2.5.3
+  supabase_flutter: ^2.3.4
+
   # Notifications
   flutter_local_notifications: ^17.1.2
   firebase_core: ^2.27.0

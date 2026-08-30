@@ -8,6 +8,7 @@ import 'core/theme/design_system.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/supabase_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -95,6 +96,13 @@ void main() async {
     } catch (e) {
       debugPrint("Firebase initialization failed: $e");
     }
+  }
+
+  // ─── Supabase Realtime Initialization ───────────────────────────
+  try {
+    await SupabaseService.initialize();
+  } catch (e) {
+    debugPrint("Supabase initialization error: $e");
   }
 
   // ─── Launch App ─────────────────────────────────────────────────

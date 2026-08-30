@@ -1,22 +1,22 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:confetti/confetti.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../core/theme/responsive.dart';
 import '../../core/config/app_config.dart';
-import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
+import '../../core/services/supabase_service.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../widgets/sponsored_ad_card.dart';
 import '../profile/add_review_screen.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
@@ -27,16 +27,39 @@ class OrderTrackingScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
-class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
+class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with SingleTickerProviderStateMixin {
   Order? _order;
   bool _isLoading = true;
+  bool _isRealtimeConnected = false;
+
+  // Google Maps Controller & State
+  GoogleMapController? _mapController;
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+
+  // Live Location & ETA
+  LatLng? _riderPosition;
+  double _riderHeading = 0.0;
+  LatLng? _storePosition;
+  LatLng? _customerPosition;
+  String _etaText = 'Calculating ETA...';
+  String _distanceText = '-- km';
+
+  // Subscriptions & Timers
+  RealtimeChannel? _supabaseChannel;
   Timer? _pollTimer;
-  dynamic _sseRequest;
-  bool _sseConnected = false;
-  Timer? _sseReconnectTimer;
+  Timer? _etaUpdateTimer;
   StreamSubscription<String>? _sseLineSubscription;
   Razorpay? _razorpay;
   bool _isProcessingPayment = false;
+
+  // Animation controller for smooth rider marker movement
+  late AnimationController _riderAnimController;
+  LatLng? _prevRiderPosition;
+  LatLng? _targetRiderPosition;
+
+  // Confetti for Delivery Celebration
+  late ConfettiController _confettiController;
 
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color brandGreen = Color(0xFF00A344);
@@ -44,20 +67,36 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   static const Color slateMuted = Color(0xFF64748B);
   static const Color slateBorder = Color(0xFFE2E8F0);
 
-  /// SSE endpoint on Next.js (Railway) — same backend that handles order REST APIs.
-  /// Admin status changes are broadcast via SSE so we get real-time updates here.
-  static const String _sseEndpoint = '/api/sse/orders';
-  String get _sseUrl => '$_sseEndpoint?id=${widget.orderId}';
-
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 4));
+    _riderAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..addListener(_interpolateRiderMarker);
+
     _initRazorpay();
     _fetchLiveOrder();
-    _connectSSE();
-    _pollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+    _initSupabaseRealtime();
+
+    // Fallback polling every 15 seconds to ensure absolute state consistency
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       _silentPollOrder();
     });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _etaUpdateTimer?.cancel();
+    _sseLineSubscription?.cancel();
+    _riderAnimController.dispose();
+    _confettiController.dispose();
+    _mapController?.dispose();
+    _razorpay?.clear();
+    SupabaseService.unsubscribe(_supabaseChannel);
+    super.dispose();
   }
 
   void _initRazorpay() {
@@ -65,7 +104,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       _razorpay = Razorpay();
       _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
       _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-      _razorpay?.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     } catch (e) {
       debugPrint('Razorpay init error: $e');
     }
@@ -104,7 +142,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error updating paid status on backend: $e');
+      debugPrint('Error updating paid status: $e');
       if (mounted) setState(() => _isProcessingPayment = false);
     }
   }
@@ -122,17 +160,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
             'Payment Incomplete: ${response.message ?? "Transaction cancelled"}',
             style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
           ),
-        ),
-      );
-    }
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Wallet Selected: ${response.walletName}'),
-          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -169,144 +196,298 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           backgroundColor: primaryRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Text('Could not open Razorpay gateway: $e'),
+          content: Text('Could not open payment gateway: $e'),
         ),
       );
     }
   }
 
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    _sseReconnectTimer?.cancel();
-    _closeSSE();
-    _razorpay?.clear();
-    super.dispose();
-  }
+  /// Initialize Supabase Realtime subscription for live location and order status updates
+  Future<void> _initSupabaseRealtime() async {
+    await SupabaseService.initialize();
+    _supabaseChannel = SupabaseService.subscribeToOrderLocation(
+      orderId: widget.orderId,
+      onLocationUpdate: (locationData) {
+        if (!mounted) return;
+        final lat = locationData['lat'] as double?;
+        final lng = locationData['lng'] as double?;
+        final heading = (locationData['heading'] as num?)?.toDouble() ?? 0.0;
 
-  void _closeSSE() {
-    _sseLineSubscription?.cancel();
-    _sseLineSubscription = null;
-    _sseRequest = null;
-    _sseConnected = false;
-  }
-
-  Future<void> _connectSSE() async {
-    if (mounted) setState(() {});
-    try {
-      final dio = ref.read(dioProvider);
-      final response = await dio.get<ResponseBody>(
-        _sseUrl,
-        options: Options(
-          responseType: ResponseType.stream,
-          headers: {
-            'Accept': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-          },
-        ),
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        _sseConnected = true;
-        if (mounted) setState(() {});
-
-        _sseLineSubscription = response.data!.stream
-            .cast<List<int>>()
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())
-            .listen(
-              (line) => _handleSseLine(line),
-              onDone: () {
-                debugPrint('SSE connection closed');
-                _sseConnected = false;
-                if (mounted) setState(() {});
-                _scheduleSseReconnect();
-              },
-              onError: (error) {
-                debugPrint('SSE error: $error');
-                _sseConnected = false;
-                if (mounted) setState(() {});
-                _scheduleSseReconnect();
-              },
-            );
-      } else {
-        debugPrint('SSE rejected: HTTP ${response.statusCode}');
-        _sseConnected = false;
-        if (mounted) setState(() {});
-        _scheduleSseReconnect();
-      }
-    } catch (e) {
-      debugPrint('SSE connection failed: $e');
-      _sseConnected = false;
-      if (mounted) setState(() {});
-      _scheduleSseReconnect();
-    }
-  }
-
-  void _handleSseLine(String line) {
-    if (line.startsWith('data:')) {
-      final dataStr = line.substring(5).trim();
-      if (dataStr.isEmpty) return;
-      try {
-        final data = jsonDecode(dataStr) as Map<String, dynamic>;
-        debugPrint('SSE data: $data');
-        final serverStatus = data['status']?.toString().toLowerCase();
-        if (serverStatus != null && mounted) {
-          OrderStatus? newStatus;
-          try { newStatus = OrderStatus.values.firstWhere((e) => e.name.toLowerCase() == serverStatus); } catch (_) {}
-          if (_order == null || _order!.status != newStatus) {
-            _fetchLiveOrder();
-          }
+        if (lat != null && lng != null) {
+          _updateRiderLocation(LatLng(lat, lng), heading);
         }
-      } catch (e) {
-        debugPrint('SSE parse error: $e');
-      }
+      },
+      onStatusUpdate: (newStatusStr) {
+        if (!mounted) return;
+        debugPrint('[OrderTracking] Realtime status change: $newStatusStr');
+        _fetchLiveOrder();
+      },
+    );
+
+    if (_supabaseChannel != null) {
+      setState(() => _isRealtimeConnected = true);
     }
   }
 
-  void _scheduleSseReconnect() {
-    _sseReconnectTimer?.cancel();
-    _sseReconnectTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) _connectSSE();
-    });
-  }
-
-  Future<void> _silentPollOrder() async {
-    if (_sseConnected) return;
+  Future<void> _fetchLiveOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
       final order = await repo.getOrder(widget.orderId);
       if (mounted && order != null) {
-        setState(() { _order = order; });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _fetchLiveOrder() async {
-    setState(() => _isLoading = true);
-    try {
-      final repo = OrderRepository(ref.read(dioProvider));
-      final order = await repo.getOrder(widget.orderId);
-      if (mounted) {
+        final prevStatus = _order?.status;
         setState(() {
           _order = order;
           _isLoading = false;
         });
+
+        if (order.status == OrderStatus.delivered && prevStatus != OrderStatus.delivered) {
+          _confettiController.play();
+          HapticFeedback.heavyImpact();
+        }
+
+        _setupCoordinatesFromOrder(order);
       }
     } catch (e) {
+      debugPrint('[OrderTracking] Fetch error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _silentPollOrder() async {
+    try {
+      final repo = OrderRepository(ref.read(dioProvider));
+      final order = await repo.getOrder(widget.orderId);
+      if (mounted && order != null) {
+        setState(() => _order = order);
+        _setupCoordinatesFromOrder(order);
+      }
+    } catch (_) {}
+  }
+
+  void _setupCoordinatesFromOrder(Order order) {
+    // 1. Customer Position
+    final custLat = order.deliveryLat ?? order.address?.lat;
+    final custLng = order.deliveryLng ?? order.address?.lng;
+    if (custLat != null && custLng != null && custLat != 0.0 && custLng != 0.0) {
+      _customerPosition = LatLng(custLat, custLng);
+    } else {
+      _customerPosition = LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
+    }
+
+    // 2. Store Position
+    _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+
+    // 3. Rider Position
+    if (order.status == OrderStatus.shipped) {
+      if (order.deliveryLat != null && order.deliveryLng != null) {
+        _updateRiderLocation(LatLng(order.deliveryLat!, order.deliveryLng!), 0.0);
+      } else if (_riderPosition == null) {
+        _updateRiderLocation(_storePosition!, 0.0);
+      }
+    }
+
+    _refreshMapElements();
+    _calculateETA();
+  }
+
+  /// Smoothly animate rider marker between positions
+  void _updateRiderLocation(LatLng newPos, double heading) {
+    if (_riderPosition == null) {
+      setState(() {
+        _riderPosition = newPos;
+        _riderHeading = heading;
+      });
+      _refreshMapElements();
+      _calculateETA();
+      return;
+    }
+
+    _prevRiderPosition = _riderPosition;
+    _targetRiderPosition = newPos;
+    _riderHeading = heading;
+
+    _riderAnimController.reset();
+    _riderAnimController.forward();
+  }
+
+  void _interpolateRiderMarker() {
+    if (_prevRiderPosition == null || _targetRiderPosition == null) return;
+    final progress = _riderAnimController.value;
+    final curLat = _prevRiderPosition!.latitude + (_targetRiderPosition!.latitude - _prevRiderPosition!.latitude) * progress;
+    final curLng = _prevRiderPosition!.longitude + (_targetRiderPosition!.longitude - _prevRiderPosition!.longitude) * progress;
+
+    setState(() {
+      _riderPosition = LatLng(curLat, curLng);
+    });
+    _refreshMapElements();
+  }
+
+  /// Calculate distance & estimated arrival time using Haversine formula (Throttled, No excess API calls)
+  void _calculateETA() {
+    if (_customerPosition == null) return;
+    final start = _riderPosition ?? _storePosition ?? _customerPosition!;
+    final distanceKm = _getHaversineDistance(start, _customerPosition!);
+
+    setState(() {
+      _distanceText = '${distanceKm.toStringAsFixed(1)} km away';
+      if (_order?.status == OrderStatus.delivered) {
+        _etaText = 'Delivered 🎉';
+      } else if (_order?.status == OrderStatus.shipped) {
+        // Average speed 22 km/h in city + 3 min buffer
+        final estMinutes = math.max(3, ((distanceKm / 22.0) * 60).round() + 3);
+        _etaText = '$estMinutes mins';
+      } else if (_order?.status == OrderStatus.packed) {
+        _etaText = '15-20 mins';
+      } else {
+        _etaText = '20-25 mins';
+      }
+    });
+  }
+
+  double _getHaversineDistance(LatLng pos1, LatLng pos2) {
+    const p = 0.017453292519943295; // Math.PI / 180
+    final c = math.cos;
+    final a = 0.5 -
+        c((pos2.latitude - pos1.latitude) * p) / 2 +
+        c(pos1.latitude * p) * c(pos2.latitude * p) * (1 - c((pos2.longitude - pos1.longitude) * p)) / 2;
+    return 12742 * math.asin(math.sqrt(a)); // 2 * R; R = 6371 km
+  }
+
+  /// Build Google Map markers and polyline
+  void _refreshMapElements() {
+    final markers = <Marker>{};
+    final polylineCoords = <LatLng>[];
+
+    // Store Marker
+    if (_storePosition != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('store'),
+          position: _storePosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(
+            title: _order?.shopName ?? 'FastKirana Store',
+            snippet: 'Store / Pickup Location',
+          ),
+        ),
+      );
+    }
+
+    // Customer Marker
+    if (_customerPosition != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('customer'),
+          position: _customerPosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: 'Your Delivery Location',
+            snippet: _order?.address?.formattedAddress ?? 'Doorstep',
+          ),
+        ),
+      );
+    }
+
+    // Live Rider Marker
+    if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('rider'),
+          position: _riderPosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          rotation: _riderHeading,
+          flat: true,
+          anchor: const Offset(0.5, 0.5),
+          infoWindow: InfoWindow(
+            title: '🛵 Delivery Executive',
+            snippet: _etaText,
+          ),
+        ),
+      );
+
+      // Route Polyline from Rider to Customer
+      if (_customerPosition != null) {
+        polylineCoords.add(_riderPosition!);
+        polylineCoords.add(_customerPosition!);
+      }
+    } else if (_storePosition != null && _customerPosition != null) {
+      polylineCoords.add(_storePosition!);
+      polylineCoords.add(_customerPosition!);
+    }
+
+    final polylines = <Polyline>{};
+    if (polylineCoords.length >= 2) {
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route'),
+          points: polylineCoords,
+          color: primaryRed,
+          width: 4,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          patterns: [PatternItem.dash(12), PatternItem.gap(6)],
+        ),
+      );
+    }
+
+    setState(() {
+      _markers.clear();
+      _markers.addAll(markers);
+      _polylines.clear();
+      _polylines.addAll(polylines);
+    });
+  }
+
+  void _fitMapBounds() {
+    if (_mapController == null) return;
+    final points = <LatLng>[];
+    if (_storePosition != null) points.add(_storePosition!);
+    if (_customerPosition != null) points.add(_customerPosition!);
+    if (_riderPosition != null) points.add(_riderPosition!);
+
+    if (points.isEmpty) return;
+
+    if (points.length == 1) {
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 15.5));
+      return;
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
   }
 
   int _getStatusStep(OrderStatus? status) {
     if (status == null) return 1;
     switch (status) {
-      case OrderStatus.pending: return 0;
-      case OrderStatus.confirmed: return 1;
-      case OrderStatus.packed: return 2;
-      case OrderStatus.shipped: return 3;
-      case OrderStatus.delivered: return 4;
-      case OrderStatus.cancelled: return -1;
+      case OrderStatus.pending:
+        return 0; // Order Confirmed
+      case OrderStatus.confirmed:
+        return 1; // Preparing
+      case OrderStatus.packed:
+        return 2; // Ready for Pickup / Rider Assigned
+      case OrderStatus.shipped:
+        return 3; // Out for Delivery
+      case OrderStatus.delivered:
+        return 4; // Delivered
+      case OrderStatus.cancelled:
+        return -1;
     }
   }
 
@@ -318,6 +499,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     final isPaid = _order?.paymentStatus == 'PAID';
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
     final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
+
+    final initialTarget = _riderPosition ?? _storePosition ?? LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -339,7 +522,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Track Your Delivery',
+              'Live Delivery Tracking',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -354,15 +537,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ],
         ),
         actions: [
-          // WebSocket live indicator
+          // Supabase Realtime Live Badge
           Container(
             margin: const EdgeInsets.only(right: 6),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-              color: _sseConnected ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
+              color: _isRealtimeConnected ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: _sseConnected ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+                color: _isRealtimeConnected ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
               ),
             ),
             child: Row(
@@ -372,16 +555,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _sseConnected ? const Color(0xFF00A344) : const Color(0xFFD97706),
+                    color: _isRealtimeConnected ? const Color(0xFF00A344) : const Color(0xFFD97706),
                   ),
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  _sseConnected ? 'LIVE' : 'SYNC',
+                  _isRealtimeConnected ? 'LIVE GPS' : 'SYNC',
                   style: GoogleFonts.inter(
                     fontSize: 8.5,
                     fontWeight: FontWeight.w900,
-                    color: _sseConnected ? const Color(0xFF059669) : const Color(0xFFB45309),
+                    color: _isRealtimeConnected ? const Color(0xFF059669) : const Color(0xFFB45309),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -397,44 +580,467 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: brandGreen))
-          : ResponsiveContainer(
-              maxWidth: Responsive.defaultMaxContentWidth,
-              fillHeight: true,
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 36),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!isPaid && !isDelivered && !isCancelled && _order?.deliveryMethod != 'PICKUP') ...[
-                      _buildPayOnlineCard(),
-                      const SizedBox(height: 12),
-                    ],
-                    _buildTrackingHeroCard(statusStep, isDelivered, cleanDisplayId),
-                    const SizedBox(height: 12),
-                    if (_order?.deliveryMethod != 'PICKUP') ...[
-                      _buildDeliveryDestinationCard(),
-                      const SizedBox(height: 12),
-                    ] else ...[
-                      _buildPickupLocationCard(),
-                      const SizedBox(height: 12),
-                    ],
-                    _buildOrderReceiptCard(),
-                    const SizedBox(height: 14),
-                    if (isDelivered) ...[
-                      _buildReviewCard(),
-                      const SizedBox(height: 12),
-                    ],
-                    _buildSupportFooter(),
-                  ],
+      body: Stack(
+        children: [
+          _isLoading
+              ? const Center(child: CircularProgressIndicator(color: brandGreen))
+              : ResponsiveContainer(
+                  maxWidth: Responsive.defaultMaxContentWidth,
+                  fillHeight: true,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 36),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Pay Online Banner (if COD)
+                        if (!isPaid && !isDelivered && !isCancelled && _order?.deliveryMethod != 'PICKUP') ...[
+                          _buildPayOnlineCard(),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 1. Google Maps Viewport with Live Rider & ETA Overlay
+                        _buildGoogleMapsCard(initialTarget, isDelivered),
+                        const SizedBox(height: 14),
+
+                        // 2. Sponsored Local-Business Ad Banner (BELOW MAP)
+                        const SponsoredAdCard(
+                          title: '🔥 Special Offer — 20% OFF at AS Restaurant',
+                          subtitle: 'Craving delicious biryani, snacks & drinks? Order now.',
+                          promoCode: 'FAST20',
+                          discountText: 'FLAT 20% OFF',
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 3. Rider Profile & Contact Card (When Assigned/Out for Delivery)
+                        if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
+                          _buildRiderCard(),
+                          const SizedBox(height: 14),
+                        ],
+
+                        // 4. Swiggy/Zomato Multi-Stage Order Stepper
+                        _buildStatusStepperCard(statusStep, isDelivered, cleanDisplayId),
+                        const SizedBox(height: 14),
+
+                        // 5. Delivery Address Card
+                        if (_order?.deliveryMethod != 'PICKUP') ...[
+                          _buildDeliveryDestinationCard(),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 6. Order Items & Receipt Card
+                        _buildOrderReceiptCard(),
+                        const SizedBox(height: 14),
+
+                        // 7. Review Card (If delivered)
+                        if (isDelivered) ...[
+                          _buildReviewCard(),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 8. Help & Support
+                        _buildSupportFooter(),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+
+          // Confetti Overlay on Delivery
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                Color(0xFFE20A22),
+                Color(0xFF00A344),
+                Color(0xFF2563EB),
+                Color(0xFFF59E0B),
+                Color(0xFFEC4899),
+              ],
             ),
+          ),
+        ],
+      ),
     );
   }
 
+  /// 1. Interactive Google Map Card with Live Rider, Store & Customer Pinpoints
+  Widget _buildGoogleMapsCard(LatLng initialTarget, bool isDelivered) {
+    return Container(
+      height: 250,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: slateBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: initialTarget,
+              zoom: 14.5,
+            ),
+            markers: _markers,
+            polylines: _polylines,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            compassEnabled: true,
+            mapToolbarEnabled: false,
+            onMapCreated: (controller) {
+              _mapController = controller;
+              _fitMapBounds();
+            },
+          ),
+
+          // Floating ETA & Distance Badge
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: isDelivered ? const Color(0xFFDCFCE7) : const Color(0xFFFEF2F2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isDelivered ? Icons.check_circle_rounded : Icons.delivery_dining_rounded,
+                      color: isDelivered ? brandGreen : primaryRed,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isDelivered ? 'Order Delivered' : 'Estimated Delivery: $_etaText',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: slateDark,
+                          ),
+                        ),
+                        Text(
+                          isDelivered ? 'Delivered safely at your doorstep' : '🛵 Rider is $_distanceText',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: slateMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Map Re-center Floating Button
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: FloatingActionButton.small(
+              heroTag: 'recenter_map',
+              backgroundColor: Colors.white,
+              foregroundColor: slateDark,
+              elevation: 4,
+              onPressed: _fitMapBounds,
+              child: const Icon(Icons.my_location_rounded, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 3. Rider Profile Card with Call Button & Delivery PIN
+  Widget _buildRiderCard() {
+    final riderName = _order?.deliveryUser?.name ?? 'FastKirana Delivery Partner';
+    final riderPhone = _order?.deliveryUser?.phone ?? '+919696503759';
+    final displayId = _order?.readableId ?? widget.orderId;
+    final pin = (displayId.hashCode.abs() % 9000 + 1000).toString();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: slateBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Avatar
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('🛵', style: TextStyle(fontSize: 22)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Rider Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          riderName,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: slateDark,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                        const SizedBox(width: 2),
+                        Text(
+                          '4.9 (500+ Deliveries)',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: slateMuted),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Call Rider Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  launchUrl(Uri.parse('tel:$riderPhone'));
+                },
+                icon: const Icon(Icons.phone_rounded, size: 14, color: Colors.white),
+                label: Text(
+                  'Call Rider',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: brandGreen,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: slateBorder),
+          const SizedBox(height: 10),
+          // Delivery PIN Handover Pill
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Delivery Security PIN:',
+                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: slateMuted),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Text(
+                  pin,
+                  style: GoogleFonts.robotoMono(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: slateDark,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 4. Swiggy/Zomato Status Stepper Card
+  Widget _buildStatusStepperCard(int statusStep, bool isDelivered, String cleanDisplayId) {
+    final steps = [
+      {'title': 'Order Confirmed', 'subtitle': 'Store has accepted your order', 'icon': Icons.check_circle_outline_rounded},
+      {'title': 'Preparing Fresh', 'subtitle': 'Packing fresh items from warehouse', 'icon': Icons.inventory_2_outlined},
+      {'title': 'Ready for Pickup', 'subtitle': 'Rider assigned and picking up', 'icon': Icons.storefront_outlined},
+      {'title': 'Out for Delivery', 'subtitle': 'Rider on the way to your door', 'icon': Icons.two_wheeler_rounded},
+      {'title': 'Delivered', 'subtitle': 'Delivered safely at your location', 'icon': Icons.done_all_rounded},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: slateBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Live Order Status',
+                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDelivered ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isDelivered ? 'COMPLETED' : 'IN TRANSIT',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: isDelivered ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...steps.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final item = entry.value;
+            final isCompleted = idx <= statusStep;
+            final isCurrent = idx == statusStep;
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isCompleted
+                            ? (isCurrent ? primaryRed : brandGreen)
+                            : const Color(0xFFF1F5F9),
+                        border: Border.all(
+                          color: isCompleted ? Colors.transparent : const Color(0xFFCBD5E1),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          item['icon'] as IconData,
+                          size: 14,
+                          color: isCompleted ? Colors.white : slateMuted,
+                        ),
+                      ),
+                    ),
+                    if (idx < steps.length - 1)
+                      Container(
+                        width: 2,
+                        height: 24,
+                        color: isCompleted ? brandGreen : const Color(0xFFE2E8F0),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2, bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['title'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
+                            color: isCurrent ? slateDark : (isCompleted ? const Color(0xFF1E293B) : slateMuted),
+                          ),
+                        ),
+                        Text(
+                          item['subtitle'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: slateMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// Pay Online Card (For COD Orders)
   Widget _buildPayOnlineCard() {
     final grandTotal = _order?.total ?? 0.0;
     return Container(
@@ -444,7 +1050,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFDCFCE7), width: 1.2),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF00A344).withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(color: const Color(0xFF00A344).withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -453,22 +1059,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00A344).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'PAY ONLINE',
-                      style: GoogleFonts.inter(
-                        fontSize: 9.5, fontWeight: FontWeight.w900, color: const Color(0xFF00A344), letterSpacing: 0.5,
-                      ),
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00A344).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'PAY ONLINE',
+                  style: GoogleFonts.inter(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF00A344),
+                    letterSpacing: 0.5,
                   ),
-                ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -499,7 +1104,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFF00A344), Color(0xFF008736)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: const Color(0xFF00A344).withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: const Color(0xFF00A344).withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2))],
               ),
               child: _isProcessingPayment
                   ? const Center(
@@ -527,583 +1132,42 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     );
   }
 
-  Widget _buildTrackingHeroCard(int statusStep, bool isDelivered, String cleanDisplayId) {
-    final isCancelled = _order?.status == OrderStatus.cancelled || statusStep == -1;
-
-    if (isCancelled) {
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: slateDark, borderRadius: BorderRadius.circular(6)),
-                  child: Text(cleanDisplayId,
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.cancel_rounded, size: 13, color: Color(0xFFDC2626)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'CANCELLED',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFDC2626),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFECDD3)),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: Color(0xFFDC2626), size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order Cancelled',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: slateDark,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'This order has been cancelled by store/customer.',
-                        style: GoogleFonts.inter(fontSize: 12, color: slateMuted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF64748B)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _order?.paymentStatus == 'PAID'
-                          ? 'Refund status: Paid online. Your refund of ₹${(_order?.total ?? 0).toInt()} has been initiated and will be credited to your original payment method in 2-4 business days.'
-                          : 'No amount was charged since this was a Cash on Delivery order.',
-                      style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        color: const Color(0xFF475569),
-                        height: 1.35,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:+918112849854')),
-                    icon: const Icon(Icons.headset_mic_rounded, size: 15, color: slateDark),
-                    label: Text('Call Support', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: slateDark)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryRed,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      elevation: 0,
-                    ),
-                    child: Text('Order Again', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    String statusTitle = 'Order Confirmed';
-    String statusDesc = 'Your order has been received and is being prepared fresh.';
-    Color statusBadgeColor = const Color(0xFF2563EB);
-    Color statusBadgeBg = const Color(0xFFEFF6FF);
-    String statusBadgeText = 'CONFIRMED';
-
-    if (isDelivered) {
-      statusTitle = 'Order Delivered';
-      statusDesc = 'Package handed over safely at your delivery address.';
-      statusBadgeColor = const Color(0xFF16A34A);
-      statusBadgeBg = const Color(0xFFDCFCE7);
-      statusBadgeText = 'DELIVERED';
-    } else if (statusStep >= 3) {
-      statusTitle = 'Rider On The Way';
-      statusDesc = 'Your delivery partner has picked up the order and is on the way.';
-      statusBadgeColor = const Color(0xFF2563EB);
-      statusBadgeBg = const Color(0xFFEFF6FF);
-      statusBadgeText = 'OUT FOR DELIVERY';
-    } else if (statusStep == 2) {
-      statusTitle = 'Order Packed & Sealed';
-      statusDesc = 'Items packed and assigned to delivery partner.';
-      statusBadgeColor = const Color(0xFFD97706);
-      statusBadgeBg = const Color(0xFFFEF3C7);
-      statusBadgeText = 'PACKED';
-    }
-
-    final destination = _order?.customerAddress ?? 'Express Delivery Address';
-    final riderName = _order?.deliveryBoyName ?? 'Delivery Executive';
-    final riderPhone = _order?.deliveryBoyPhone ?? '+919696503759';
-    final cleanPhone = riderPhone.replaceAll(RegExp(r'[^0-9+]'), '');
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, offset: const Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: slateDark, borderRadius: BorderRadius.circular(6)),
-                child: Text(cleanDisplayId,
-                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: statusBadgeBg, borderRadius: BorderRadius.circular(6)),
-                child: Text(statusBadgeText,
-                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: statusBadgeColor, letterSpacing: 0.3)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: Icon(Icons.location_on_rounded, size: 13, color: primaryRed),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Delivery to: $destination',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F172A),
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(statusTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: slateDark, letterSpacing: -0.3)),
-          const SizedBox(height: 3),
-          Text(statusDesc, style: GoogleFonts.inter(fontSize: 12, color: slateMuted, height: 1.3)),
-          const SizedBox(height: 14),
-          _buildHorizontalStepper(statusStep, isDelivered),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFBAE6FD))),
-            child: Row(
-              children: [
-                const Icon(Icons.notifications_active_outlined, size: 13, color: Color(0xFF0284C7)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text('We will notify you when your order gets closer to your doorstep',
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF0369A1))),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildStoreProgressCard(),
-          const SizedBox(height: 12),
-          _buildDeliveryExecutiveCard(riderName, cleanPhone),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHorizontalStepper(int statusStep, bool isDelivered) {
-    return Row(
-      children: [
-        _buildStepperNode(label: 'Placed', icon: Icons.check_rounded, isCompleted: statusStep >= 0, isActive: statusStep == 0),
-        _buildStepperLine(statusStep >= 1),
-        _buildStepperNode(label: 'Preparing', icon: Icons.inventory_2_outlined, isCompleted: statusStep >= 1, isActive: statusStep == 1 || statusStep == 2),
-        _buildStepperLine(statusStep >= 3),
-        _buildStepperNode(label: 'On The Way', icon: Icons.two_wheeler_rounded, isCompleted: statusStep >= 3, isActive: statusStep == 3, isRedAccent: statusStep == 3),
-        _buildStepperLine(statusStep >= 4),
-        _buildStepperNode(label: 'Delivered', icon: Icons.done_all_rounded, isCompleted: isDelivered || statusStep >= 4, isActive: isDelivered),
-      ],
-    );
-  }
-
-  Widget _buildStepperNode({required String label, required IconData icon, required bool isCompleted, required bool isActive, bool isRedAccent = false}) {
-    Color circleColor = const Color(0xFFF1F5F9);
-    Color iconColor = const Color(0xFF94A3B8);
-    if (isRedAccent) { circleColor = primaryRed; iconColor = Colors.white; }
-    else if (isCompleted || isActive) { circleColor = const Color(0xFF00A344); iconColor = Colors.white; }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 30, height: 30,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle, color: circleColor,
-            boxShadow: isActive ? [BoxShadow(color: circleColor.withValues(alpha: 0.35), blurRadius: 6, offset: const Offset(0, 2))] : null,
-          ),
-          child: Icon(icon, size: 15, color: iconColor),
-        ),
-        const SizedBox(height: 4),
-        Text(label,
-            style: GoogleFonts.inter(
-              fontSize: 9.5,
-              fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
-              color: isActive ? (isRedAccent ? primaryRed : const Color(0xFF00A344)) : (isCompleted ? slateDark : slateMuted),
-            )),
-      ],
-    );
-  }
-
-  Widget _buildStepperLine(bool isCompleted) {
-    return Expanded(
-      child: Container(height: 2.5, margin: const EdgeInsets.only(bottom: 16), color: isCompleted ? const Color(0xFF00A344) : const Color(0xFFE2E8F0)),
-    );
-  }
-
-  Widget _buildStoreProgressCard() {
-    final shopName = _order?.shopName?.isNotEmpty == true ? _order!.shopName! : 'FastKirana Darkstore';
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFFAF5FF), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFF3E8FF))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Text('', style: TextStyle(fontSize: 12)),
-                  const SizedBox(width: 5),
-                  Text('STORE PREPARATION PROGRESS',
-                      style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w900, color: const Color(0xFF7E22CE), letterSpacing: 0.4)),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(4)),
-                child: Text('1 DELIVERY',
-                    style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w800, color: const Color(0xFF6B21A8))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE9D5FF))),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.shopping_bag_outlined, size: 15, color: Color(0xFF7E22CE)),
-                    const SizedBox(width: 6),
-                    Text(shopName, style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: slateDark)),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(4)),
-                  child: Text('PACKED', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFF2563EB))),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeliveryExecutiveCard(String riderName, String cleanPhone) {
-    const defaultRiderName = 'Delivery Executive (FastKirana)';
-    const defaultRiderTel = '+919696503759';
-
-    final effectiveName = (riderName.isNotEmpty && riderName != 'Delivery Partner Assigned')
-        ? riderName
-        : defaultRiderName;
-    final rawDigits = cleanPhone.replaceAll(RegExp(r'\D'), '');
-    final last10 = (rawDigits.length >= 10 && !rawDigits.contains('7054470303'))
-        ? rawDigits.substring(rawDigits.length - 10)
-        : '9696503759';
-    final displayPhone = '+91 $last10';
-    final telUri = 'tel:+91$last10';
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFDCFCE7)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFDCFCE7),
-                ),
-                child: const Center(
-                  child: Text('🛵', style: TextStyle(fontSize: 18)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'DELIVERY PARTNER ASSIGNED',
-                          style: GoogleFonts.inter(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF15803D),
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified_rounded, size: 11, color: Color(0xFF15803D)),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      effectiveName,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: slateDark,
-                      ),
-                    ),
-                    Text(
-                      'Official FastKirana Rider • $displayPhone',
-                      style: GoogleFonts.inter(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF16A34A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              launchUrl(Uri.parse(telUri));
-            },
-            child: Container(
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00A344), Color(0xFF008736)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00A344).withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.phone_rounded, color: Colors.white, size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Call Rider ($displayPhone)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// Delivery Destination Address Card
   Widget _buildDeliveryDestinationCard() {
-    final destination = (_order?.customerAddress != null && _order!.customerAddress!.trim().isNotEmpty)
-        ? _order!.customerAddress!
-        : 'FastKirana Express Delivery Zone';
-
+    final addr = _order?.address;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: slateBorder),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.location_on_rounded, color: primaryRed, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'Delivery Destination',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: slateDark,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.location_on_rounded, color: Color(0xFF2563EB), size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  addr?.label ?? 'Delivery Address',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            destination,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () {
-              final query = Uri.encodeComponent(destination);
-              launchUrl(
-                Uri.parse('https://www.google.com/maps/search/?api=1&query=$query'),
-                mode: LaunchMode.externalApplication,
-              );
-            },
-            child: Container(
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.navigation_outlined, size: 14, color: Color(0xFF047857)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Locate Delivery Address on Google Maps',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF047857),
-                    ),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  addr?.formattedAddress ?? 'Ghatampur, Kanpur Nagar - 209206',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, height: 1.3),
+                ),
+              ],
             ),
           ),
         ],
@@ -1111,141 +1175,80 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     );
   }
 
-  Widget _buildPickupLocationCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFFFFFBEB), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFFDE68A))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text('', style: TextStyle(fontSize: 15)),
-              const SizedBox(width: 6),
-              Text('Pickup Counter: FastKirana Darkstore',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF92400E))),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text('Station Road Market, Ghatampur • Show Order ID at counter',
-              style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFFB45309))),
-        ],
-      ),
-    );
-  }
-
+  /// Order Items and Billing Receipt Card
   Widget _buildOrderReceiptCard() {
     final items = _order?.items ?? [];
     final subtotal = _order?.subtotal ?? 0.0;
     final deliveryFee = _order?.deliveryFee ?? 0.0;
-    final miscFee = _order?.miscFee ?? 5.0;
     final discount = _order?.discount ?? 0.0;
-    final grandTotal = _order?.total ?? (subtotal + deliveryFee + miscFee - discount);
-    final isPaid = _order?.paymentStatus == 'PAID';
+    final total = _order?.total ?? 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))]),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: slateBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.receipt_long_rounded, size: 16, color: slateDark),
-                  const SizedBox(width: 6),
-                  Text(
-                    'ORDER RECEIPT',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: slateDark,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isPaid ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Text(
-                    isPaid ? 'PAID • ONLINE' : 'COD • PAY ON DELIVERY',
-                    style: GoogleFonts.inter(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      color: isPaid ? const Color(0xFF15803D) : const Color(0xFF92400E),
-                      letterSpacing: 0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            'Order Items (${items.length})',
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(6)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('FASTKIRANA GROCERY & RESTAURANT',
-                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: slateMuted, letterSpacing: 0.4)),
-                Text('${items.length} ${items.length == 1 ? 'ITEM' : 'ITEMS'}',
-                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: slateMuted)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
           ...items.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
-            child: Row(
-              children: [
-                const Text('', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('${item.name}${item.quantity > 1 ? ' x ${item.quantity}' : ''}',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: slateDark),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${item.quantity}x ${item.name}',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: slateDark),
+                      ),
+                    ),
+                    Text(
+                      '₹${(item.price * item.quantity).toInt()}',
+                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: slateDark),
+                    ),
+                  ],
                 ),
-                Text('₹${(item.price * item.quantity).toInt()}',
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: slateDark)),
-              ],
-            ),
-          )),
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Color(0xFFF1F5F9))),
-          _buildReceiptRow('Subtotal', '₹${subtotal.toInt()}'),
-          const SizedBox(height: 5),
-          _buildReceiptRow('Delivery Charge', deliveryFee == 0.0 ? 'FREE' : '₹${deliveryFee.toInt()}', isFree: deliveryFee == 0.0),
-          const SizedBox(height: 5),
-          _buildReceiptRow('Packaging & Handling Fee', '₹${miscFee.toInt()}'),
-          if (discount > 0) ...[
-            const SizedBox(height: 5),
-            _buildReceiptRow('Discount', '-₹${discount.toInt()}', isDiscount: true),
-          ],
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Color(0xFFF1F5F9))),
+              )),
+          const Divider(height: 16, color: slateBorder),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('GRAND TOTAL',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark, letterSpacing: 0.3)),
-              Text('₹${grandTotal.toInt()}',
-                  style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: primaryRed, letterSpacing: -0.3)),
+              Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: slateDark)),
+            ],
+          ),
+          if (deliveryFee > 0) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Delivery Fee', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                Text('₹${deliveryFee.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: slateDark)),
+              ],
+            ),
+          ],
+          if (discount > 0) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Discount', style: GoogleFonts.inter(fontSize: 12, color: brandGreen)),
+                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: brandGreen)),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total Bill', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
+              Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: primaryRed)),
             ],
           ),
         ],
@@ -1253,73 +1256,80 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     );
   }
 
-  Widget _buildReceiptRow(String label, String value, {bool isFree = false, bool isDiscount = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
-        Text(value,
-            style: GoogleFonts.inter(
-              fontSize: 11.5,
-              fontWeight: (isFree || isDiscount) ? FontWeight.w800 : FontWeight.w700,
-              color: isFree ? const Color(0xFF16A34A) : (isDiscount ? primaryRed : slateDark),
-            )),
-      ],
+  /// Review Card (Delivered State)
+  Widget _buildReviewCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDCFCE7)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.sentiment_very_satisfied_rounded, size: 36, color: brandGreen),
+          const SizedBox(height: 6),
+          Text(
+            'How was your delivery experience?',
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Help us improve our delivery speed & quality.',
+            style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddReviewScreen(
+                    productName: _order?.items?.firstOrNull?.name ?? 'FastKirana Delivery',
+                    restaurantId: _order?.restaurantId,
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: brandGreen,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              'Rate Delivery Partner & Order',
+              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildReviewCard() {
-    return GestureDetector(
-      onTap: () {
-        final firstItemName = (_order?.items?.isNotEmpty == true) ? _order!.items!.first.name : 'FastKirana Order';
-        Navigator.push(context, FadeSlideRoute(page: AddReviewScreen(productName: firstItemName, restaurantId: _order?.restaurantId)));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: const Color(0xFFFFFBEB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFDE68A))),
-        child: Row(
+  /// Help & Support Footer
+  Widget _buildSupportFooter() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('', style: TextStyle(fontSize: 18)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('How was your order experience?',
-                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: const Color(0xFF92400E))),
-                  Text('Leave a review to help us serve you better',
-                      style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFFB45309))),
-                ],
-              ),
+            const Icon(Icons.headset_mic_rounded, size: 14, color: slateMuted),
+            const SizedBox(width: 6),
+            Text(
+              'Need assistance with this order?',
+              style: GoogleFonts.inter(fontSize: 12, color: slateMuted, fontWeight: FontWeight.w500),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Color(0xFF92400E)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSupportFooter() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.headset_mic_outlined, size: 16, color: slateMuted),
-              const SizedBox(width: 8),
-              Text('Need help with this order?', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: slateDark)),
-            ],
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () => launchUrl(Uri.parse('tel:${AppConfig.supportPhone}')),
+          child: Text(
+            'Call FastKirana Support (${AppConfig.supportPhone})',
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: primaryRed),
           ),
-          GestureDetector(
-            onTap: () => launchUrl(Uri.parse('tel:+918112849854')),
-            child: Text('Call Support',
-                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w900, color: brandGreen)),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

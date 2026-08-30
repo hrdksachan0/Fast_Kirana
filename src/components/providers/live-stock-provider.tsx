@@ -29,7 +29,7 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
 
     fetchTimeoutRef.current = setTimeout(async () => {
       const now = Date.now()
-      const CACHE_TTL = 180000 // 180 seconds client cache TTL — reduced background polling frequency
+      const CACHE_TTL = 240000 // 240 seconds (4 minutes) client cache TTL — optimized for lower serverless traffic
 
       const onScreenIds = Object.entries(registryRef.current)
         .filter(([_, count]) => count > 0)
@@ -108,17 +108,23 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Background polling effect (every 90 seconds for active items)
+  // Background polling effect (every 4 minutes / 240s for active items)
   useEffect(() => {
+    let lastFocusFetchTime = Date.now()
+
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        triggerBatchFetch(true)
+        triggerBatchFetch(false)
       }
-    }, 90000) // poll interval matches cache TTL to avoid redundant fetches
+    }, 240000) // 4-minute interval matches client cache TTL
 
-    // Also fetch on window focus to ensure freshness
+    // Only revalidate on focus if at least 3 minutes have elapsed since last check
     const handleFocus = () => {
-      triggerBatchFetch(true)
+      const now = Date.now()
+      if (now - lastFocusFetchTime > 180000) {
+        lastFocusFetchTime = now
+        triggerBatchFetch(false)
+      }
     }
     window.addEventListener('focus', handleFocus)
 

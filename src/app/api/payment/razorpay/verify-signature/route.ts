@@ -161,13 +161,7 @@ export async function POST(req: Request) {
         console.warn('Supabase broadcast notice:', sbErr)
       }
 
-      // Revalidate storefront and admin orders cache
-      try {
-        const { revalidateStorefront } = await import('@/lib/revalidate')
-        revalidateStorefront()
-      } catch (e) {
-        console.warn('Revalidation notice:', e)
-      }
+
 
     } catch (notifErr) {
       console.error('Notification error after payment verification:', notifErr)

@@ -932,7 +932,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, tablet: 3, desktop: 4),
-                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.68, mobile: 0.70, tablet: 0.76, desktop: 0.80),
+                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.62, mobile: 0.64, tablet: 0.70, desktop: 0.76),
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
                       ),

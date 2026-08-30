@@ -18,11 +18,28 @@ class AppConfig {
     defaultValue: 'https://fastkirana.in',
   );
 
+  // ─── Supabase Realtime Configuration ────────────────────────────
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://bberzasmxwioxjynbuaf.supabase.co',
+  );
+
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'sb_publishable_txJDOmH1qWQuOLCKrnV69A_RQ1XS4o-',
+  );
+
+  // ─── Google Maps Platform ───────────────────────────────────────
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: 'AIzaSyBA-OzFRbcw89zAZeELDWOiRl_Ce0uQYrc',
+  );
+
   // ─── Payment Gateway (passed via --dart-define=RAZORPAY_KEY_ID) ──
   // Default is for development only. Override at build time with real keys.
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
-    defaultValue: 'rzp_test_placeholder',
+    defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
   );
 
   // ─── Brand Assets ───────────────────────────────────────────────

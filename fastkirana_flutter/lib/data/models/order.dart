@@ -86,6 +86,9 @@ class Order {
   final String? shopPhone;
   final String? deliveryBoyName;
   final String? deliveryBoyPhone;
+  final double? deliveryLat;
+  final double? deliveryLng;
+  final Map<String, dynamic>? addressRaw;
   final String? notes;
   final String? couponCode;
   final String? customerName;
@@ -120,6 +123,9 @@ class Order {
     this.shopPhone,
     this.deliveryBoyName,
     this.deliveryBoyPhone,
+    this.deliveryLat,
+    this.deliveryLng,
+    this.addressRaw,
     this.notes,
     this.couponCode,
     this.customerName,
@@ -132,6 +138,16 @@ class Order {
     this.deliveredAt,
     this.items,
   });
+
+  ({String? name, String? phone})? get deliveryUser =>
+      (deliveryBoyName != null || deliveryBoyPhone != null) ? (name: deliveryBoyName, phone: deliveryBoyPhone) : null;
+
+  ({String label, String formattedAddress, double? lat, double? lng})? get address => {
+        'label': 'Delivery Location',
+        'formattedAddress': customerAddress ?? 'Ghatampur Zone',
+        'lat': (addressRaw?['lat'] as num?)?.toDouble() ?? (addressRaw?['latitude'] as num?)?.toDouble() ?? deliveryLat,
+        'lng': (addressRaw?['lng'] as num?)?.toDouble() ?? (addressRaw?['longitude'] as num?)?.toDouble() ?? deliveryLng,
+      } as dynamic;
 
   String get displayId {
     if (readableId != null && readableId!.trim().isNotEmpty) {
@@ -272,6 +288,11 @@ class Order {
       shopPhone: json['shopPhone']?.toString(),
       deliveryBoyName: parseDeliveryBoyName(),
       deliveryBoyPhone: parseDeliveryBoyPhone(),
+      deliveryLat: (json['deliveryLat'] as num?)?.toDouble() ??
+          (json['address'] is Map ? (json['address']['lat'] as num?)?.toDouble() : null),
+      deliveryLng: (json['deliveryLng'] as num?)?.toDouble() ??
+          (json['address'] is Map ? (json['address']['lng'] as num?)?.toDouble() : null),
+      addressRaw: json['address'] is Map ? Map<String, dynamic>.from(json['address']) : null,
       notes: json['notes']?.toString(),
       couponCode: json['couponCode']?.toString(),
       customerName: json['customerName']?.toString() ?? json['userName']?.toString(),

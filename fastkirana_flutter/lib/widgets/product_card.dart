@@ -163,7 +163,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             children: [
               // 1. PRODUCT IMAGE SHOWCASE BOX WITH ALL WEB APP BADGES
               Container(
-                height: widget.isCompact ? 100 : (isFood ? 126 : 116),
+                height: widget.isCompact ? 110 : (isFood ? 132 : 116),
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
@@ -690,27 +690,33 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       }
       return ClipRRect(
         borderRadius: BorderRadius.circular(13),
-        child: CachedNetworkImage(
-          imageUrl: imgUrl,
-          fit: isFood ? BoxFit.cover : BoxFit.contain,
-          memCacheWidth: 400,
-          memCacheHeight: 400,
-          maxWidthDiskCache: 600,
-          maxHeightDiskCache: 600,
-          fadeInDuration: const Duration(milliseconds: 160),
-          errorWidget: (context, url, error) => Center(
-            child: Text(
-              _getEmojiForProduct(product.name),
-              style: const TextStyle(fontSize: 36),
+        child: Container(
+          color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
+          padding: isFood ? const EdgeInsets.all(6) : EdgeInsets.zero,
+          child: CachedNetworkImage(
+            imageUrl: imgUrl,
+            fit: isFood ? BoxFit.contain : BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            memCacheWidth: 400,
+            memCacheHeight: 400,
+            maxWidthDiskCache: 600,
+            maxHeightDiskCache: 600,
+            fadeInDuration: const Duration(milliseconds: 160),
+            errorWidget: (context, url, error) => Center(
+              child: Text(
+                _getEmojiForProduct(product.name),
+                style: const TextStyle(fontSize: 36),
+              ),
             ),
-          ),
-          placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: const Color(0xFFF1F5F9),
-            highlightColor: const Color(0xFFFAFAFA),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(13),
+            placeholder: (context, url) => Shimmer.fromColors(
+              baseColor: const Color(0xFFF1F5F9),
+              highlightColor: const Color(0xFFFAFAFA),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(13),
+                ),
               ),
             ),
           ),

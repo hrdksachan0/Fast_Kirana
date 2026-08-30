@@ -2,13 +2,37 @@
   "buildCommand": "npx prisma generate && next build",
   "regions": ["bom1"],
   "functions": {
-    "src/app/**/*": {
+    "src/app/api/admin/reports/**/*": {
       "memory": 1024,
       "maxDuration": 60
     },
-    "src/app/api/**/*": {
+    "src/app/api/admin/restaurant-sales/**/*": {
       "memory": 1024,
       "maxDuration": 60
+    },
+    "src/app/api/admin/products/bulk-import/**/*": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/admin/inventory/import/**/*": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/admin/bulk-update/**/*": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/cron/**/*": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/**/*": {
+      "memory": 512,
+      "maxDuration": 25
+    },
+    "src/app/api/**/*": {
+      "memory": 512,
+      "maxDuration": 25
     }
   },
   "crons": [
