@@ -156,21 +156,7 @@ export default function RiderWalletView({
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2.5">
-        <div className="bg-card border border-border rounded-2xl p-3.5 flex flex-col items-center text-center shadow-xs">
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1 block">Today's COD</span>
-          <span className="text-base font-black text-amber-600 dark:text-amber-400">{formatPrice(todayCodCollected)}</span>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-3.5 flex flex-col items-center text-center shadow-xs">
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1 block">Deliveries</span>
-          <span className="text-base font-black text-emerald-600 dark:text-emerald-400">{todayDeliveries} Orders</span>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-3.5 flex flex-col items-center text-center shadow-xs">
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1 block">Deposited</span>
-          <span className="text-base font-black text-blue-600 dark:text-blue-400">{formatPrice(walletInfo.totalDeposited)}</span>
-        </div>
-      </motion.div>
+
 
       {/* Deposit CTA */}
       {(walletInfo.isLocked || walletInfo.isWarning) && (
